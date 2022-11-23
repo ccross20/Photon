@@ -1,0 +1,4 @@
+QSplitter::handle:vertical {
+    width: 2px;
+    background: red;
+}

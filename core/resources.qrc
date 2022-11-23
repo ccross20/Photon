@@ -1,0 +1,11 @@
+<RCC>
+    <qresource prefix="/">
+        <file>resources/test.mtl</file>
+        <file>resources/test.obj</file>
+        <file>resources/test.dae</file>
+        <file>resources/test.fbx</file>
+        <file>resources/shader/example.frag</file>
+        <file>resources/shader/example.vert</file>
+        <file>resources/styles.css</file>
+    </qresource>
+</RCC>

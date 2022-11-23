@@ -1,0 +1,11 @@
+<RCC>
+    <qresource prefix="/">
+        <file>resources/shader/solid.frag</file>
+        <file>resources/shader/simple.vert</file>
+        <file>resources/shader/basic_lighting.vert</file>
+        <file>resources/shader/basic_lighting.frag</file>
+        <file>resources/shader/visible_light.vert</file>
+        <file>resources/shader/visible_light.frag</file>
+        <file>resources/model/moving-head.fbx</file>
+    </qresource>
+</RCC>
