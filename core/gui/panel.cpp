@@ -40,6 +40,7 @@ Panel::Panel(const PanelId &id, QWidget *parent) : QWidget(parent), m_impl(new P
 {
     setLayout(m_impl->layout);
     setMinimumSize(100,20);
+    setObjectName(id);
     setSizePolicy(QSizePolicy::Minimum,QSizePolicy::Minimum);
     setProperty("styleClass","panel");
 /*

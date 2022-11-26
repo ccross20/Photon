@@ -41,7 +41,7 @@ public:
     QVector<SequenceClip*> selectedClips;
     double currentTime = 0;
     double offset = 0;
-    double scale = 5.0;
+    double scale = 20.0;
     bool isPlaying = false;
 };
 

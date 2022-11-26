@@ -24,6 +24,7 @@ QString AbstractTreeData::name()
 void AbstractTreeData::setName(const QString &t_name)
 {
     m_name = t_name;
+    emit metadataUpdated(this);
 }
 
 void AbstractTreeData::insertChild(AbstractTreeData* t_child, int index)
@@ -44,6 +45,7 @@ void AbstractTreeData::insertChild(AbstractTreeData* t_child, int index)
     connect(t_child, &AbstractTreeData::childWasAdded, this, &AbstractTreeData::childWasAdded);
     connect(t_child, &AbstractTreeData::childWillBeRemoved, this, &AbstractTreeData::childWillBeRemoved);
     connect(t_child, &AbstractTreeData::childWasRemoved, this, &AbstractTreeData::childWasRemoved);
+    connect(t_child, &AbstractTreeData::metadataUpdated, this, &AbstractTreeData::metadataUpdated);
 }
 
 void AbstractTreeData::addChild(AbstractTreeData* t_child)
@@ -58,6 +60,7 @@ void AbstractTreeData::addChild(AbstractTreeData* t_child)
     connect(t_child, &AbstractTreeData::childWasAdded, this, &AbstractTreeData::childWasAdded);
     connect(t_child, &AbstractTreeData::childWillBeRemoved, this, &AbstractTreeData::childWillBeRemoved);
     connect(t_child, &AbstractTreeData::childWasRemoved, this, &AbstractTreeData::childWasRemoved);
+    connect(t_child, &AbstractTreeData::metadataUpdated, this, &AbstractTreeData::metadataUpdated);
 }
 
 void AbstractTreeData::removeChild(AbstractTreeData* t_child)
@@ -66,6 +69,7 @@ void AbstractTreeData::removeChild(AbstractTreeData* t_child)
     disconnect(t_child, &AbstractTreeData::childWasAdded, this, &AbstractTreeData::childWasAdded);
     disconnect(t_child, &AbstractTreeData::childWillBeRemoved, this, &AbstractTreeData::childWillBeRemoved);
     disconnect(t_child, &AbstractTreeData::childWasRemoved, this, &AbstractTreeData::childWasRemoved);
+    disconnect(t_child, &AbstractTreeData::metadataUpdated, this, &AbstractTreeData::metadataUpdated);
 
     emit childWillBeRemoved(this, t_child->index());
     m_children.removeAt(t_child->index());
@@ -88,6 +92,7 @@ ChannelData::ChannelData(Channel *t_channel):AbstractTreeData(t_channel->info().
     connect(t_channel, &Channel::effectAdded, this, &ChannelData::effectAdded);
     connect(t_channel, &Channel::effectRemoved, this, &ChannelData::effectRemoved);
     connect(t_channel, &Channel::effectMoved, this, &ChannelData::effectMoved);
+    connect(t_channel, &Channel::channelUpdated, this, &ChannelData::channelUpdated);
 
     for(int i = 0; i < t_channel->effectCount(); ++i)
     {
@@ -108,6 +113,11 @@ ChannelEffectData *ChannelData::findEffectData(ChannelEffect *t_effect)
         }
     }
     return nullptr;
+}
+
+void ChannelData::channelUpdated()
+{
+    setName(m_channel->info().name);
 }
 
 void ChannelData::effectAdded(photon::ChannelEffect *t_effect)
@@ -136,6 +146,9 @@ ClipData::ClipData(Clip *t_clip) : AbstractTreeData(t_clip->name()),m_clip(t_cli
     m_falloffData = new FalloffData(m_clip);
     m_channelFolder = new FolderData("Channels", DataChannel, false);
 
+    connect(t_clip, &Clip::channelAdded, this, &ClipData::channelAdded);
+    connect(t_clip, &Clip::channelRemoved, this, &ClipData::channelRemoved);
+
     addChild(m_maskFolder);
     addChild(m_falloffData);
     addChild(m_channelFolder);
@@ -146,6 +159,31 @@ ClipData::ClipData(Clip *t_clip) : AbstractTreeData(t_clip->name()),m_clip(t_cli
         m_channelFolder->addChild(channelData);
     }
 }
+
+void ClipData::channelAdded(photon::Channel *t_channel)
+{
+    auto channelData = new ChannelData(t_channel);
+    m_channelFolder->addChild(channelData);
+}
+
+void ClipData::channelRemoved(photon::Channel *t_channel)
+{
+    for(auto child : m_channelFolder->children())
+    {
+        auto channelChild = dynamic_cast<ChannelData*>(child);
+        if(channelChild && channelChild->channel() == t_channel)
+        {
+            m_channelFolder->removeChild(child);
+            return;
+        }
+    }
+}
+
+void ClipData::channelMoved(photon::Channel *)
+{
+
+}
+
 
 FolderData::FolderData(const QString &name, TreeDataType allowedTypes, bool showCreateItem): AbstractTreeData(name),m_showCreate(showCreateItem),m_allowedTypes(allowedTypes)
 {
@@ -225,6 +263,7 @@ ClipModel::ClipModel()
     connect(m_root, &AbstractTreeData::childWasAdded, this, &ClipModel::childWasAdded);
     connect(m_root, &AbstractTreeData::childWillBeRemoved, this, &ClipModel::childWillBeRemoved);
     connect(m_root, &AbstractTreeData::childWasRemoved, this, &ClipModel::childWasRemoved);
+    connect(m_root, &AbstractTreeData::metadataUpdated, this, &ClipModel::metadataUpdated);
 }
 
 ClipModel::~ClipModel()
@@ -262,6 +301,12 @@ void ClipModel::childWillBeAdded(photon::AbstractTreeData* t_data, int t_index)
 void ClipModel::childWasAdded(photon::AbstractTreeData*)
 {
     endInsertRows();
+}
+
+void ClipModel::metadataUpdated(photon::AbstractTreeData* t_data)
+{
+    auto index = indexForData(static_cast<AbstractTreeData*>(t_data));
+    emit dataChanged(index, index);
 }
 
 void ClipModel::childWillBeRemoved(photon::AbstractTreeData* t_data, int t_index)

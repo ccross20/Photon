@@ -11,10 +11,10 @@ public:
     SequenceWidget *sequenceViewer;
 };
 
-SequencePanel::SequencePanel() : Panel("sequence"),m_impl(new Impl)
+SequencePanel::SequencePanel() : Panel("photon.sequence"),m_impl(new Impl)
 {
 
-
+    setName("Sequence");
     m_impl->sequenceViewer = new SequenceWidget;
 
     setPanelWidget(m_impl->sequenceViewer);

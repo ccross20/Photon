@@ -54,7 +54,7 @@ public:
 
     virtual void evaluate(EvaluationContext *context) const;
     virtual void buttonClicked(const Parameter *);
-    void markDirty();
+    virtual void markDirty();
     void markClean();
     bool isDirty() const;
 

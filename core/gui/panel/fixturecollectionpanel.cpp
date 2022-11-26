@@ -93,11 +93,12 @@ int FixtureCollectionModel::rowCount(const QModelIndex &) const
     return m_collection->fixtureCount();
 }
 
-FixtureCollectionPanel::FixtureCollectionPanel() : Panel("Fixtures"),m_impl(new Impl)
+FixtureCollectionPanel::FixtureCollectionPanel() : Panel("photon.fixture-collection"),m_impl(new Impl)
 {
     m_impl->editorWidget = new FixtureEditorWidget;
     QVBoxLayout *vLayout = new QVBoxLayout;
 
+    setName("Fixtures");
 
     m_impl->listView = new QListView;
     m_impl->listView->setSizePolicy(QSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::MinimumExpanding));

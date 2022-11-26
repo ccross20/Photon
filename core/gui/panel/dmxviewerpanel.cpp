@@ -16,10 +16,11 @@ public:
     DMXViewerCells *cells;
 };
 
-DMXViewerPanel::DMXViewerPanel() : Panel("DMX Viewer"),m_impl(new Impl)
+DMXViewerPanel::DMXViewerPanel() : Panel("photon.dmx-viewer"),m_impl(new Impl)
 {
     m_impl->cells = new DMXViewerCells;
     setPanelWidget(m_impl->cells);
+    setName("DMX Viewer");
 
     connect(photonApp->busEvaluator(), &BusEvaluator::evaluationCompleted, this, &DMXViewerPanel::tick);
 }

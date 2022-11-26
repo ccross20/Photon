@@ -45,6 +45,9 @@ public:
 public slots:
     void channelUpdatedSlot(photon::Channel *);
     void falloffUpdatedSlot(photon::FalloffEffect *);
+    void channelAddedSlot(int index);
+    void channelRemovedSlot(int index);
+    void routineChannelUpdatedSlot(int index);
 
 signals:
 
@@ -56,6 +59,9 @@ signals:
     void timeChanged(double);
     void durationChanged(double);
     void channelUpdated(photon::Channel *);
+    void channelAdded(photon::Channel *);
+    void channelRemoved(photon::Channel *);
+    void channelMoved(photon::Channel *);
     void falloffUpdated(photon::FalloffEffect *);
 
 private:

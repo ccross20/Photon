@@ -25,6 +25,7 @@ public:
     QTransform transform() const;
     QRectF sceneBounds() const;
     QPointF viewScale() const;
+    QPointF viewOffset() const;
 
 signals:
     void relayout();
@@ -50,9 +51,9 @@ private:
     QPoint m_startPt;
     QPoint m_lastPt;
     double m_xScale = 1;
-    double m_yScale = -5;
+    double m_yScale = -50;
     double m_xOffset = 0;
-    double m_yOffset = 0;
+    double m_yOffset = 200;
     bool m_pathsDirty = true;
 };
 

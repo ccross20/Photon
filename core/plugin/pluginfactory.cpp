@@ -18,15 +18,17 @@
 #include "graph/bus/sequencenode.h"
 #include "routine/node/fixturewriternode.h"
 #include "routine/node/globalsnode.h"
+#include "routine/node/numberinputnode.h"
 #include "graph/node/math/trigonometrynode.h"
 #include "graph/node/math/arithmeticnode.h"
 
 #include "falloff/constantfalloffeffect.h"
-
+#include "sequence/constantchanneleffect.h"
 
 #include "model/parameter/decimalparameter.h"
 #include "model/parameter/integerparameter.h"
 #include "model/parameter/buttonparameter.h"
+#include "model/parameter/stringparameter.h"
 #include "graph/parameter/dmxmatrixparameter.h"
 
 namespace photon {
@@ -122,13 +124,13 @@ void PluginFactory::init()
     m_impl->init();
 
     //registerPluginNode(StylesheetBolt::info());
-    registerPluginPanel("bus",[](){return new BusPanel;});
-    registerPluginPanel("Sequences",[](){return new SequencePanel;});
-    registerPluginPanel("Routines",[](){return new RoutineCollectionPanel;});
-    registerPluginPanel("sequence-collection",[](){return new SequenceCollectionPanel;});
-    registerPluginPanel("Fixtures",[](){return new FixtureCollectionPanel;});
-    registerPluginPanel("routine-edit",[](){return new RoutineEditPanel;});
-    registerPluginPanel("dmx-viewer",[](){return new DMXViewerPanel;});
+    registerPluginPanel("photon.bus",[](){return new BusPanel;});
+    registerPluginPanel("photon.sequence",[](){return new SequencePanel;});
+    registerPluginPanel("photon.routine-collection",[](){return new RoutineCollectionPanel;});
+    registerPluginPanel("photon.sequence-collection",[](){return new SequenceCollectionPanel;});
+    registerPluginPanel("photon.fixture-collection",[](){return new FixtureCollectionPanel;});
+    registerPluginPanel("photon.routine",[](){return new RoutineEditPanel;});
+    registerPluginPanel("photon.dmx-viewer",[](){return new DMXViewerPanel;});
 
     registerNode(FixtureWriterNode::info());
     registerNode(GlobalsNode::info());
@@ -137,12 +139,16 @@ void PluginFactory::init()
     registerNode(DMXWriterNode::info());
     registerNode(DMXGenerateMatrixNode::info());
     registerNode(SequenceNode::info());
+    registerNode(NumberInputNode::info());
 
     registerFalloffEffect(ConstantFalloffEffect::info());
+
+    registerChannelEffect(ConstantChannelEffect::info());
 
     m_impl->nodeLibrary.registerParameter(keira::DecimalParameter::ParameterId,[](){return new keira::DecimalParameter();});
     m_impl->nodeLibrary.registerParameter(keira::IntegerParameter::ParameterId,[](){return new keira::IntegerParameter();});
     m_impl->nodeLibrary.registerParameter(keira::ButtonParameter::ParameterId,[](){return new keira::ButtonParameter();});
+    m_impl->nodeLibrary.registerParameter(keira::StringParameter::ParameterId,[](){return new keira::StringParameter();});
     m_impl->nodeLibrary.registerParameter(DMXMatrixParameter::ParameterId,[](){return new DMXMatrixParameter();});
 
     //qDebug() << "Node Count:" << m_impl->nodeHash.size();

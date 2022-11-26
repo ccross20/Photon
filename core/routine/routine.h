@@ -21,6 +21,7 @@ public:
     void setName(const QString &);
 
     void addChannel(const ChannelInfo &info);
+    void updateChannel(int index, const ChannelInfo &info);
     void removeChannel(int index);
     int channelCount() const;
     ChannelInfo channelInfoAtIndex(int index);
@@ -34,6 +35,12 @@ public:
 signals:
     void channelAdded(int index);
     void channelRemoved(int index);
+    void channelUpdated(int index);
+
+protected:
+
+    void nodeAdded(keira::Node *) override;
+    void nodeRemoved(keira::Node *) override;
 
 private:
     class Impl;

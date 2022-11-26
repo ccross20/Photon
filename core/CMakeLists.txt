@@ -77,6 +77,8 @@ set(PROJECT_SOURCES
         gui/dmxviewer/dmxviewer.cpp
         gui/dmxviewer/dmxviewercells.h
         gui/dmxviewer/dmxviewercells.cpp
+        gui/gizmo/rectanglegizmo.h
+        gui/gizmo/rectanglegizmo.cpp
         gui/fixturefalloff2deditor.h
         gui/fixturefalloff2deditor_p.h
         gui/fixturefalloff2deditor.cpp
@@ -117,6 +119,8 @@ set(PROJECT_SOURCES
         routine/node/fixturewriternode.cpp
         routine/node/globalsnode.h
         routine/node/globalsnode.cpp
+        routine/node/numberinputnode.h
+        routine/node/numberinputnode.cpp
         routine/routineevaluationcontext.h
         routine/routine.h
         routine/routine.cpp
@@ -134,6 +138,8 @@ set(PROJECT_SOURCES
         sequence/clip.h
         sequence/clip_p.h
         sequence/clip.cpp
+        sequence/constantchanneleffect.h
+        sequence/constantchanneleffect.cpp
         sequence/layer.h
         sequence/layer_p.h
         sequence/layer.cpp

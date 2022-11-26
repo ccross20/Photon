@@ -35,6 +35,7 @@ public:
     QString stylesheet;
     QMenuBar *menubar() const;
     ads::CDockManager *dockManager() const{return m_dockManager;}
+    ads::CDockAreaWidget *centralArea;
     QWidget *popOverWidget = nullptr;
     QString mainWindowTitle;
     Window *window;

@@ -16,12 +16,12 @@ public:
     keira::Scene *scene = nullptr;
 };
 
-BusPanel::BusPanel() : Panel("Bus"),m_impl(new Impl)
+BusPanel::BusPanel() : Panel("photon.bus"),m_impl(new Impl)
 {
 
     m_impl->viewer = new keira::Viewer;
     setPanelWidget(m_impl->viewer);
-
+    setName("Bus");
 
 
 }
@@ -33,7 +33,6 @@ BusPanel::~BusPanel()
 
 void BusPanel::projectDidOpen(photon::Project* project)
 {
-    qDebug() << "Did open";
     m_impl->scene = new keira::Scene;
     m_impl->scene->setIsAutoEvaluate(false);
     m_impl->scene->setGraph(project->bus());

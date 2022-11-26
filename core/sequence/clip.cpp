@@ -210,6 +210,8 @@ void Clip::setRoutine(Routine *t_routine)
 {
     if(m_impl->routine == t_routine)
         return;
+    for(auto channel : m_impl->channels)
+        delete channel;
     m_impl->channels.clear();
     m_impl->routine = t_routine;
 
@@ -219,9 +221,33 @@ void Clip::setRoutine(Routine *t_routine)
         m_impl->channels.append(channel);
     }
 
+    connect(t_routine, &Routine::channelAdded, this, &Clip::channelAddedSlot);
+    connect(t_routine, &Routine::channelRemoved, this, &Clip::channelRemovedSlot);
+    connect(t_routine, &Routine::channelUpdated, this, &Clip::routineChannelUpdatedSlot);
     emit routineChanged(m_impl->routine);
     m_impl->markChanged();
 }
+
+void Clip::channelAddedSlot(int index)
+{
+    auto channel = new Channel(this, m_impl->routine->channelInfoAtIndex(index));
+    m_impl->channels.append(channel);
+    emit channelAdded(channel);
+}
+
+void Clip::channelRemovedSlot(int index)
+{
+    auto channel = m_impl->channels[index];
+    m_impl->channels.removeAt(index);
+    emit channelRemoved(channel);
+    delete channel;
+}
+
+void Clip::routineChannelUpdatedSlot(int index)
+{
+    m_impl->channels[index]->updateInfo(m_impl->routine->channelInfoAtIndex(index));
+}
+
 
 Routine *Clip::routine() const
 {

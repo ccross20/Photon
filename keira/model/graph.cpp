@@ -31,6 +31,7 @@ void Graph::addNode(Node *t_node)
     m_impl->nodes.append(t_node);
     t_node->m_impl->graph = this;
 
+    nodeAdded(t_node);
     emit nodeWasAdded(t_node);
 
     markDirty();
@@ -42,7 +43,18 @@ void Graph::removeNode(Node *t_node)
         return;
     disconnectNode(t_node);
     m_impl->nodes.removeOne(t_node);
+    nodeRemoved(t_node);
     emit nodeWasRemoved(t_node);
+}
+
+void Graph::nodeAdded(keira::Node *t_node)
+{
+
+}
+
+void Graph::nodeRemoved(keira::Node *t_node)
+{
+
 }
 
 const QVector<Node*> &Graph::nodes() const

@@ -51,20 +51,21 @@ void GuiManager::Impl::createAppWindow()
     window = new Window();
     //window->setAttribute(Qt::WA_DeleteOnClose);
 
-    Panel *panel1 = createPanel("bus");
+    Panel *panel1 = createPanel("photon.bus");
     addPanel(panel1);
 
     ads::CDockWidget* DockWidget = new ads::CDockWidget("Bus");
-    DockWidget->setObjectName("bus");
+    DockWidget->setObjectName("photon.bus");
     DockWidget->setWidget(panel1);
     DockWidget->setFeature(ads::CDockWidget::DockWidgetClosable, false);
+
 
     QToolBar *toolBar = new QToolBar("root");
     toolBar->setObjectName("deco.core.toolbars.root");
     toolBar->setOrientation(Qt::Horizontal);
     //menus->populateToolBar(toolBar, toolBar->id());
 
-    toolBar->addAction("Open DMX Viewer",[](){photonApp->gui()->createFloatingPanel("dmx-viewer");});
+    toolBar->addAction("Open DMX Viewer",[](){photonApp->gui()->createFloatingPanel("photon.dmx-viewer");});
     toolBar->addAction("Open Visualizer",[](){photonApp->gui()->createFloatingPanel("visualizer");});
     toolBar->addAction("Save",[](){photonApp->project()->save();});
     toolBar->addAction("Load",[](){photonApp->loadProject();});
@@ -75,14 +76,16 @@ void GuiManager::Impl::createAppWindow()
     window->addToolBar(Qt::ToolBarArea::TopToolBarArea, toolBar);
     //window->addToolBar(Qt::ToolBarArea::TopToolBarArea, contextToolbar);
 
-    m_dockManager->setCentralWidget(DockWidget);
+    centralArea = m_dockManager->setCentralWidget(DockWidget);
+
     window->setCentralWidget(m_dockManager);
 
 
-
-    m_ext->createDockedPanel("routine-collection", RightDockWidgetArea);
-    m_ext->createDockedPanel("sequence-collection", RightDockWidgetArea);
-    m_ext->createDockedPanel("fixture-collection", RightDockWidgetArea);
+/*
+    m_ext->createDockedPanel("photon.routine-collection", RightDockWidgetArea);
+    m_ext->createDockedPanel("photon.sequence-collection", RightDockWidgetArea);
+    m_ext->createDockedPanel("photon.fixture-collection", RightDockWidgetArea);
+    */
 
 
     QSettings qsettings;
@@ -365,8 +368,9 @@ Panel *GuiManager::createFloatingPanel(const PanelId &panelId)
     if(!panel)
         return nullptr;
     m_impl->addPanel(panel);
-    ads::CDockWidget* DockWidget = new ads::CDockWidget(panel->name());
-    DockWidget->setObjectName(panel->name());
+    ads::CDockWidget* DockWidget = new ads::CDockWidget(panel->id());
+    DockWidget->setObjectName(panel->id());
+    DockWidget->setWindowTitle(panel->name());
     DockWidget->setWidget(panel);
     DockWidget->setMinimumSizeHintMode(ads::CDockWidget::MinimumSizeHintFromContent);
     DockWidget->setFeature(ads::CDockWidget::DockWidgetAlwaysCloseAndDelete, true);
@@ -387,16 +391,19 @@ Panel *GuiManager::createDockedPanel(const PanelId &panelId, DockWidgetArea t_ar
     if(!panel)
         return nullptr;
     m_impl->addPanel(panel);
-    ads::CDockWidget* DockWidget = new ads::CDockWidget(panel->name());
-    DockWidget->setObjectName(panel->name());
+    ads::CDockWidget* DockWidget = new ads::CDockWidget(panel->id());
+    DockWidget->setObjectName(panel->id());
+    DockWidget->setWindowTitle(panel->name());
     DockWidget->setWidget(panel);
     DockWidget->setMinimumSizeHintMode(ads::CDockWidget::MinimumSizeHintFromContent);
     DockWidget->setFeature(ads::CDockWidget::DockWidgetAlwaysCloseAndDelete, true);
 
     connect(panel, &Panel::nameUpdated, DockWidget, [panel, DockWidget](){ DockWidget->setWindowTitle(panel->name());});
 
+    auto busDock = m_impl->dockManager()->findDockWidget("photon.bus");
+
     if(t_isTab)
-        m_impl->dockManager()->addDockWidgetTab(static_cast<ads::DockWidgetArea>(t_area), DockWidget);
+        m_impl->dockManager()->addDockWidgetTabToArea(DockWidget,busDock ? busDock->dockAreaWidget() : nullptr);
     else
         m_impl->dockManager()->addDockWidget(static_cast<ads::DockWidgetArea>(t_area), DockWidget);
     return panel;

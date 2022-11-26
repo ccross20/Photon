@@ -89,10 +89,11 @@ int SequenceCollectionModel::rowCount(const QModelIndex &) const
     return m_collection->sequenceCount();
 }
 
-SequenceCollectionPanel::SequenceCollectionPanel() : Panel("Sequences"),m_impl(new Impl)
+SequenceCollectionPanel::SequenceCollectionPanel() : Panel("photon.sequence-collection"),m_impl(new Impl)
 {
     QVBoxLayout *vLayout = new QVBoxLayout;
 
+    setName("Sequences");
     m_impl->listView = new QListView;
     m_impl->listView->setSizePolicy(QSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::MinimumExpanding));
 

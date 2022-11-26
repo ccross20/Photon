@@ -41,6 +41,7 @@ signals:
     void childWasAdded(photon::AbstractTreeData*);
     void childWillBeRemoved(photon::AbstractTreeData*, int);
     void childWasRemoved(photon::AbstractTreeData*);
+    void metadataUpdated(photon::AbstractTreeData*);
 
 private:
     QVector<AbstractTreeData*> m_children;
@@ -68,9 +69,15 @@ private:
 
 class ClipData : public AbstractTreeData
 {
+    Q_OBJECT
 public:
     ClipData(Clip *);
     Clip *clip() const{return m_clip;}
+
+private slots:
+    void channelAdded(photon::Channel *);
+    void channelRemoved(photon::Channel *);
+    void channelMoved(photon::Channel *);
 
 private:
     FolderData *m_maskFolder;
@@ -111,6 +118,7 @@ private slots:
     void effectAdded(photon::ChannelEffect*);
     void effectRemoved(photon::ChannelEffect*);
     void effectMoved(photon::ChannelEffect*);
+    void channelUpdated();
 
 private:
     Channel *m_channel;
@@ -186,6 +194,7 @@ private slots:
     void childWasAdded(photon::AbstractTreeData*);
     void childWillBeRemoved(photon::AbstractTreeData*, int);
     void childWasRemoved(photon::AbstractTreeData*);
+    void metadataUpdated(photon::AbstractTreeData*);
 
 private:
     RootData *m_root;

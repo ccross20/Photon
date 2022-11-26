@@ -4,6 +4,8 @@
 #include "clip.h"
 #include "plugin/pluginfactory.h"
 #include "photoncore.h"
+#include "plugin/pluginfactory.h"
+#include "sequence/constantchanneleffect.h"
 
 namespace photon {
 
@@ -13,11 +15,20 @@ Channel::Channel(Clip *t_clip, const ChannelInfo &t_info):m_impl(new Impl)
 {
     m_impl->info = t_info;
     m_impl->clip = t_clip;
+
+    m_impl->effects.append(photonApp->plugins()->createChannelEffect(ConstantChannelEffect::info().effectId)); 
+    m_impl->effects.back()->m_impl->channel = this;
 }
 
 Channel::~Channel()
 {
     delete m_impl;
+}
+
+void Channel::updateInfo(const ChannelInfo &t_info)
+{
+    m_impl->info = t_info;
+    emit channelUpdated();
 }
 
 ChannelInfo Channel::info() const
@@ -90,6 +101,11 @@ void Channel::readFromJson(const QJsonObject &t_json, const LoadContext &)
     m_impl->info.description = t_json.value("description").toString();
     m_impl->info.type = static_cast<ChannelInfo::ChannelType>(t_json.value("type").toInt());
     m_impl->info.defaultValue = t_json.value("defaultValue");
+
+    for(auto effect : m_impl->effects)
+        delete effect;
+
+    m_impl->effects.clear();
 
     if(t_json.contains("effects"))
     {

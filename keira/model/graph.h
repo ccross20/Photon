@@ -35,6 +35,11 @@ public:
     virtual void readFromJson(const QJsonObject &, NodeLibrary *library);
     virtual void writeToJson(QJsonObject &) const;
 
+protected:
+
+    virtual void nodeAdded(keira::Node *);
+    virtual void nodeRemoved(keira::Node *);
+
 signals:
 
     void nodeWasAdded(keira::Node *);

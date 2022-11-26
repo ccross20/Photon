@@ -11,66 +11,6 @@ namespace photon {
 
 
 
-SquareHandle::SquareHandle(SineEffect *t_effect, std::function<void(QPointF)> t_callback):QGraphicsItem(),m_effect(t_effect),m_callback(t_callback)
-{
-    setFlags(QGraphicsItem::ItemIsMovable | QGraphicsItem::ItemSendsScenePositionChanges);
-    setAcceptHoverEvents(true);
-}
-
-void SquareHandle::setOrientation(Qt::Orientation t_orientation)
-{
-    m_orientation = t_orientation;
-}
-
-QRectF SquareHandle::boundingRect() const
-{
-    return QRectF(-5,-5,10,10);
-}
-
-QPainterPath SquareHandle::shape() const
-{
-    QPainterPath path;
-    path.addRect(-5,-5,10,10);
-    return path;
-}
-
-void SquareHandle::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
-{
-    QGraphicsItem::mouseMoveEvent(event);
-
-    m_callback(pos());
-}
-
-void SquareHandle::paint(QPainter *painter, const QStyleOptionGraphicsItem *option,
-           QWidget *widget)
-{
-    QColor fillColor = Qt::cyan;
-    if (option->state & QStyle::State_MouseOver)
-        fillColor = Qt::black;
-
-
-    painter->fillRect(-5,-5,10,10, fillColor);
-}
-
-QVariant SquareHandle::itemChange(QGraphicsItem::GraphicsItemChange change, const QVariant &value)
-{
-
-    if (change == ItemPositionChange && scene()) {
-        // value is the new position.
-
-        QPointF newPos = value.toPointF();
-        if(m_orientation == Qt::Horizontal)
-            newPos.setY(pos().y());
-        else if(m_orientation == Qt::Vertical)
-            newPos.setX(pos().x());
-        return newPos;
-    }
-
-    return QGraphicsItem::itemChange(change, value);
-}
-
-
-
 
 SineEffectEditor::SineEffectEditor(SineEffect *t_effect):ChannelEffectEditor(t_effect),m_effect(t_effect)
 {
@@ -88,19 +28,19 @@ SineEffectEditor::SineEffectEditor(SineEffect *t_effect):ChannelEffectEditor(t_e
     m_parentItem = new QGraphicsRectItem(0,0,0,0);
     addItem(m_parentItem);
 
-    m_frequencyHandle = new SquareHandle(t_effect,[this](QPointF pt){
+    m_frequencyHandle = new RectangleGizmo(QRectF(-5,-5,10,10),[this](QPointF pt){
         m_effect->setFrequency(pt.x()/scale().x());
     });
     m_frequencyHandle->setParentItem(m_parentItem);
 
 
-    m_amplitudeHandle = new SquareHandle(t_effect,[this](QPointF pt){
+    m_amplitudeHandle = new RectangleGizmo(QRectF(-5,-5,10,10),[this](QPointF pt){
         m_effect->setAmplitude(pt.y()/scale().y());
     });
     m_amplitudeHandle->setOrientation(Qt::Vertical);
     m_amplitudeHandle->setParentItem(m_parentItem);
 
-    m_originHandle = new SquareHandle(t_effect,[](QPointF pt){
+    m_originHandle = new RectangleGizmo(QRectF(-5,-5,10,10),[](QPointF pt){
 
     });
     m_originHandle->setParentItem(m_parentItem);

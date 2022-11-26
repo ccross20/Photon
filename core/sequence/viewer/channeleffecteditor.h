@@ -20,6 +20,7 @@ public:
     ChannelEffect *effect() const;
     QToolBar *toolbar() const;
     QPointF scale() const;
+    QPointF offset() const;
 
     QTransform transform() const;
 

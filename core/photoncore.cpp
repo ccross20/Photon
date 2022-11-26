@@ -183,14 +183,14 @@ SequencePanel *PhotonCore::activeSequencePanel() const
 
 void PhotonCore::editSequence(Sequence *t_sequence)
 {
-    SequencePanel *sequencePanel = static_cast<SequencePanel*>(m_impl->gui->createDockedPanel("sequence", GuiManager::CenterDockWidgetArea, true));
+    SequencePanel *sequencePanel = static_cast<SequencePanel*>(m_impl->gui->createDockedPanel("photon.sequence", GuiManager::CenterDockWidgetArea, true));
     sequencePanel->setSequence(t_sequence);
     setActiveSequencePanel(sequencePanel);
 }
 
 void PhotonCore::editRoutine(Routine *t_routine)
 {
-    RoutineEditPanel *routinePanel = static_cast<RoutineEditPanel*>(m_impl->gui->createDockedPanel("routine-edit", GuiManager::CenterDockWidgetArea, true));
+    RoutineEditPanel *routinePanel = static_cast<RoutineEditPanel*>(m_impl->gui->createDockedPanel("photon.routine", GuiManager::CenterDockWidgetArea, true));
     routinePanel->setRoutine(t_routine);
 }
 

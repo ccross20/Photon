@@ -91,11 +91,11 @@ int RoutineCollectionModel::rowCount(const QModelIndex &) const
     return m_collection->routineCount();
 }
 
-RoutineCollectionPanel::RoutineCollectionPanel() : Panel("Routines"),m_impl(new Impl)
+RoutineCollectionPanel::RoutineCollectionPanel() : Panel("photon.routine-collection"),m_impl(new Impl)
 {
     QVBoxLayout *vLayout = new QVBoxLayout;
 
-
+    setName("Routines");
     m_impl->listView = new QListView;
     m_impl->listView->setSizePolicy(QSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::MinimumExpanding));
 

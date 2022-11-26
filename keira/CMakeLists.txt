@@ -25,6 +25,8 @@ set(PROJECT_SOURCES
         model/parameter/parameter.h
         model/parameter/parameter_p.h
         model/parameter/parameter.cpp
+        model/parameter/stringparameter.h
+        model/parameter/stringparameter.cpp
         keira-global.h
         library/nodelibrary.h
         library/nodelibrary.cpp

@@ -82,6 +82,11 @@ QPointF EffectEditorViewer::viewScale() const
     return QPointF(m_xScale, m_yScale);
 }
 
+QPointF EffectEditorViewer::viewOffset() const
+{
+    return QPointF(m_xOffset, m_yOffset);
+}
+
 QRectF EffectEditorViewer::sceneBounds() const
 {
     return m_sceneBounds;
@@ -194,7 +199,6 @@ ChannelEffectEditor::ChannelEffectEditor(ChannelEffect *t_effect, QWidget *paren
     m_impl->viewer->setScene(m_impl->scene);
 
 
-
     setMinimumHeight(100);
 
     QVBoxLayout *vLayout = new QVBoxLayout;
@@ -217,6 +221,7 @@ void ChannelEffectEditor::resizeEvent(QResizeEvent *t_event)
     QWidget::resizeEvent(t_event);
 
     m_impl->scene->setSceneRect(QRect(QPoint(0,0),t_event->size()));
+    m_impl->viewer->remakeTransform();
 }
 
 void ChannelEffectEditor::paintEvent(QPaintEvent *event)
@@ -242,6 +247,11 @@ QTransform ChannelEffectEditor::transform() const
 QPointF ChannelEffectEditor::scale() const
 {
     return m_impl->viewer->viewScale();
+}
+
+QPointF ChannelEffectEditor::offset() const
+{
+    return m_impl->viewer->viewOffset();
 }
 
 ChannelEffect *ChannelEffectEditor::effect() const

@@ -28,6 +28,7 @@ public:
     ~Channel();
 
     ChannelInfo info() const;
+    void updateInfo(const ChannelInfo &);
     void addEffect(ChannelEffect *);
     void removeEffect(ChannelEffect *);
     void moveEffect(ChannelEffect *, int newPosition);
@@ -49,7 +50,7 @@ signals:
     void effectAdded(photon::ChannelEffect*);
     void effectRemoved(photon::ChannelEffect*);
     void effectMoved(photon::ChannelEffect*);
-
+    void channelUpdated();
 private:
     friend class Clip;
     class Impl;

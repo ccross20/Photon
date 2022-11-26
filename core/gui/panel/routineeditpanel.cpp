@@ -3,7 +3,6 @@
 #include "routineeditpanel.h"
 #include "view/viewer.h"
 #include "view/scene.h"
-#include "project/project.h"
 #include "routine/routine.h"
 #include "photoncore.h"
 #include "plugin/pluginfactory.h"
@@ -17,10 +16,11 @@ public:
     keira::Viewer *viewer;
 };
 
-RoutineEditPanel::RoutineEditPanel() : Panel("Routine"),m_impl(new Impl)
+RoutineEditPanel::RoutineEditPanel() : Panel("photon.routine"),m_impl(new Impl)
 {
     m_impl->viewer = new keira::Viewer;
     setPanelWidget(m_impl->viewer);
+    setName("Routine");
 
     m_impl->scene = new keira::Scene;
     //m_impl->scene->setIsAutoEvaluate(false);

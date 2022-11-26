@@ -3,35 +3,11 @@
 
 #include <QGraphicsItem>
 #include "sequence/channeleffect.h"
+#include "gui/gizmo/rectanglegizmo.h"
 
 namespace photon {
 
 class SineEffect;
-
-class SquareHandle : public QGraphicsItem
-{
-
-public:
-    SquareHandle(SineEffect *, std::function<void(QPointF)>);
-    QRectF boundingRect() const override;
-    QPainterPath shape() const override;
-    void setOrientation(Qt::Orientation);
-    void paint(QPainter *painter, const QStyleOptionGraphicsItem *option,
-               QWidget *widget) override;
-    QVariant itemChange(QGraphicsItem::GraphicsItemChange change, const QVariant &value) override;
-
-
-protected:
-    void mouseMoveEvent(QGraphicsSceneMouseEvent *event) override;
-
-private:
-    SineEffect *m_effect;
-    Qt::Orientation m_orientation = Qt::Horizontal;
-    std::function<void(QPointF)> m_callback;
-};
-
-
-
 
 
 class SineEffectEditor : public ChannelEffectEditor
@@ -51,9 +27,9 @@ private:
     SineEffect *m_effect;
     QPointF m_referencePt;
     QGraphicsRectItem *m_parentItem;
-    SquareHandle *m_originHandle;
-    SquareHandle *m_frequencyHandle;
-    SquareHandle *m_amplitudeHandle;
+    RectangleGizmo *m_originHandle;
+    RectangleGizmo *m_frequencyHandle;
+    RectangleGizmo *m_amplitudeHandle;
     QGraphicsPathItem *m_pathItem;
 
 };

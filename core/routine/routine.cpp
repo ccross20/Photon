@@ -1,9 +1,9 @@
 #include "routine.h"
 #include <math.h>
 #include "data/dmxmatrix.h"
-#include "sequence/sequence.h"
 #include "model/node.h"
 #include "routineevaluationcontext.h"
+#include "node/numberinputnode.h"
 
 namespace photon {
 
@@ -63,10 +63,39 @@ void Routine::evaluate(keira::EvaluationContext *context) const
 
 }
 
+void Routine::nodeAdded(keira::Node *t_node)
+{
+    NumberInputNode *input = dynamic_cast<NumberInputNode *>(t_node);
+    if(input)
+    {
+
+        //info.name = input->findParameter(NumberInputNode::Name)->
+        addChannel(input->channelInfo());
+        input->setChannelIndex(m_impl->channels.length()-1);
+    }
+}
+
+void Routine::nodeRemoved(keira::Node *t_node)
+{
+    NumberInputNode *input = dynamic_cast<NumberInputNode *>(t_node);
+    if(input)
+    {
+
+        //info.name = input->findParameter(NumberInputNode::Name)->
+        removeChannel(input->channelIndex());
+    }
+}
+
 void Routine::addChannel(const ChannelInfo &info)
 {
     m_impl->channels.append(info);
     emit channelAdded(m_impl->channels.length()-1);
+}
+
+void Routine::updateChannel(int index, const ChannelInfo &info)
+{
+    m_impl->channels[index] = info;
+    emit channelUpdated(index);
 }
 
 void Routine::removeChannel(int index)
