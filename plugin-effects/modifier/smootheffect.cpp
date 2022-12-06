@@ -10,7 +10,6 @@ namespace photon {
 
 SmoothEffectEditor::SmoothEffectEditor(SmoothEffect *t_effect):ChannelEffectEditor(t_effect),m_effect(t_effect)
 {
-    setMaximumHeight(40);
 
     QSpinBox *samplesSpin = new QSpinBox;
     samplesSpin->setMinimum(3);

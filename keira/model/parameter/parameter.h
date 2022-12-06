@@ -42,7 +42,7 @@ public:
     Parameter *inputParameter() const;
 
     const QVariant &value() const;
-    void setValue(const QVariant &);
+    virtual void setValue(const QVariant &);
 
     int rowHeight() const;
     bool isDirty() const;

@@ -3,6 +3,8 @@
 
 #include <QGraphicsView>
 #include <QPainterPath>
+#include <QGraphicsWidget>
+#include <QGraphicsProxyWidget>
 #include "sequence/channeleffect.h"
 #include "channeleffecteditor.h"
 
@@ -10,6 +12,40 @@ namespace photon {
 
 class EffectEditorScene : public QGraphicsScene
 {
+
+};
+
+
+class WidgetContainer : public QGraphicsWidget
+{
+    Q_OBJECT
+public:
+    WidgetContainer(QWidget *, const QString &title);
+
+    QRectF boundingRect() const override;
+
+    void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) override;
+
+    void addedToScene(QGraphicsScene *);
+    bool isCustomLayout() const{return m_customLayout;}
+
+protected:
+    void mouseMoveEvent(QGraphicsSceneMouseEvent *event) override
+    {
+        QGraphicsWidget::mouseMoveEvent(event);
+        m_customLayout = true;
+    }
+
+private slots:
+    void sizeUpdated(QSize);
+
+private:
+    int m_inset = 5;
+    bool m_customLayout = false;
+    QWidget *m_widget;
+    QString m_title;
+    QGraphicsProxyWidget *m_proxy;
+
 
 };
 
@@ -51,7 +87,7 @@ private:
     QPoint m_startPt;
     QPoint m_lastPt;
     double m_xScale = 1;
-    double m_yScale = -50;
+    double m_yScale = 50;
     double m_xOffset = 0;
     double m_yOffset = 200;
     bool m_pathsDirty = true;
@@ -62,6 +98,7 @@ class ChannelEffectEditor::Impl
 {
 public:
 
+    QVector<WidgetContainer*> containers;
     EffectEditorViewer *viewer;
     EffectEditorScene *scene;
     ChannelEffect *effect;

@@ -25,6 +25,7 @@ public:
     QTransform transform() const;
 
     void addItem(QGraphicsItem *);
+    void addWidget(QWidget *, const QString &name);
 
 signals:
     void scaleChanged(double);

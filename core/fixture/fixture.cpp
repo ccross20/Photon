@@ -371,7 +371,8 @@ void Fixture::setMode(uchar t_mode)
     for(const auto &channelName : mode.channels)
     {
         auto channel = findChannelWithName(channelName);
-        channel->setChannelNumber(counter++);
+        if(channel)
+            channel->setChannelNumber(counter++);
     }
     emit metadataChanged();
 }

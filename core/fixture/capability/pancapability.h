@@ -12,8 +12,8 @@ public:
     PanCapability(DMXRange range = DMXRange{});
     ~PanCapability();
 
-    void setAngleDegrees(double value, DMXMatrix &t_matrix);
-    void setAnglePercent(double value, DMXMatrix &t_matrix);
+    void setAngleDegrees(double value, DMXMatrix &t_matrix, double blend = 1.0);
+    void setAnglePercent(double value, DMXMatrix &t_matrix, double blend = 1.0);
     double getAnglePercent(const DMXMatrix &t_matrix);
 
     double angle() const;

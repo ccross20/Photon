@@ -23,14 +23,14 @@ TiltCapability::~TiltCapability()
     delete m_impl;
 }
 
-void TiltCapability::setAngleDegrees(double value, DMXMatrix &t_matrix)
+void TiltCapability::setAngleDegrees(double value, DMXMatrix &t_matrix, double t_blend)
 {
 
 }
 
-void TiltCapability::setAnglePercent(double value, DMXMatrix &t_matrix)
+void TiltCapability::setAnglePercent(double value, DMXMatrix &t_matrix, double t_blend)
 {
-    t_matrix.setValuePercent(fixture()->universe()-1,channel()->universalChannelNumber(), value);
+    t_matrix.setValuePercent(fixture()->universe()-1,channel()->universalChannelNumber(), value, t_blend);
 }
 
 double TiltCapability::getAnglePercent(const DMXMatrix &t_matrix)

@@ -54,11 +54,13 @@ SequenceWidget::SequenceWidget(QWidget *parent)
     m_impl->timeSplitter = new QSplitter(Qt::Horizontal);
 
     m_impl->timebar = new TimeBar;
+    m_impl->timebar->setScale(m_impl->scale);
     m_impl->timeToolBar = new QToolBar;
     m_impl->scene = new TimelineScene;
     m_impl->viewer = new TimelineViewer;
     //m_impl->viewer->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
     m_impl->viewer->setScene(m_impl->scene);
+    m_impl->viewer->setScale(m_impl->scale);
 
     m_impl->details = new TimelineHeader;
     m_impl->curvePropertyEditor = new ClipStructureViewer;

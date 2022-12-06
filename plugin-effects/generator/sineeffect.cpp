@@ -1,4 +1,4 @@
-#include <QHBoxLayout>
+#include <QVBoxLayout>
 #include <QLabel>
 #include <QDoubleSpinBox>
 #include <QStyleOptionGraphicsItem>
@@ -6,6 +6,7 @@
 #include "sineeffect.h"
 #include "sequence/channel.h"
 #include "sequence/clip.h"
+#include "sequence/viewer/stackedparameterwidget.h"
 
 namespace photon {
 
@@ -25,17 +26,27 @@ SineEffectEditor::SineEffectEditor(SineEffect *t_effect):ChannelEffectEditor(t_e
     ampSpin->setValue(m_effect->amplitude());
     connect(ampSpin, &QDoubleSpinBox::valueChanged, this, &SineEffectEditor::amplitudeChanged);
 
+    StackedParameterWidget *paramWidget = new StackedParameterWidget;
+    paramWidget->addWidget(freqSpin, "Frequency");
+    paramWidget->addWidget(ampSpin, "Amplitude");
+    paramWidget->setMinimumWidth(120);
+
+    addWidget(paramWidget, "Sinewave");
+
+
     m_parentItem = new QGraphicsRectItem(0,0,0,0);
     addItem(m_parentItem);
 
-    m_frequencyHandle = new RectangleGizmo(QRectF(-5,-5,10,10),[this](QPointF pt){
+    m_frequencyHandle = new RectangleGizmo(QRectF(-5,-5,10,10),[this, freqSpin](QPointF pt){
         m_effect->setFrequency(pt.x()/scale().x());
+        freqSpin->setValue(m_effect->frequency());
     });
     m_frequencyHandle->setParentItem(m_parentItem);
 
 
-    m_amplitudeHandle = new RectangleGizmo(QRectF(-5,-5,10,10),[this](QPointF pt){
+    m_amplitudeHandle = new RectangleGizmo(QRectF(-5,-5,10,10),[this, ampSpin](QPointF pt){
         m_effect->setAmplitude(pt.y()/scale().y());
+        ampSpin->setValue(m_effect->amplitude());
     });
     m_amplitudeHandle->setOrientation(Qt::Vertical);
     m_amplitudeHandle->setParentItem(m_parentItem);

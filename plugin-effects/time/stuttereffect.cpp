@@ -3,13 +3,15 @@
 #include <QDoubleSpinBox>
 #include <qmath.h>
 #include "stuttereffect.h"
+#include "sequence/channel.h"
+#include "sequence/clip.h"
+
 
 namespace photon {
 
 StutterEffectEditor::StutterEffectEditor(StutterEffect *t_effect):ChannelEffectEditor(t_effect),m_effect(t_effect)
 {
-    setMaximumHeight(40);
-
+/*
     QDoubleSpinBox *durationSpin = new QDoubleSpinBox;
     durationSpin->setValue(m_effect->duration());
     connect(durationSpin, &QDoubleSpinBox::valueChanged, this, &StutterEffectEditor::durationChanged);
@@ -26,6 +28,22 @@ StutterEffectEditor::StutterEffectEditor(StutterEffect *t_effect):ChannelEffectE
     hLayout->addWidget(gapSpin);
     hLayout->addStretch();
     setLayout(hLayout);
+    */
+
+
+    m_parentItem = new QGraphicsRectItem(0,0,0,0);
+    addItem(m_parentItem);
+
+
+    m_durationHandle = new RectangleGizmo(QRectF(-5,-5,10,10),[this](QPointF pt){
+        m_effect->setDuration(pt.x()/scale().x());
+    });
+    m_durationHandle->setParentItem(m_parentItem);
+
+    m_gapHandle = new RectangleGizmo(QRectF(-5,-5,10,10),[this](QPointF pt){
+        m_effect->setGap(pt.x()/scale().x());
+    });
+    m_gapHandle->setParentItem(m_durationHandle);
 }
 
 void StutterEffectEditor::durationChanged(double t_value)
@@ -38,7 +56,33 @@ void StutterEffectEditor::gapChanged(double t_value)
     m_effect->setGap(t_value);
 }
 
+void StutterEffectEditor::relayout(const QRectF &t_sceneRect)
+{
+    auto t = transform();
 
+    double gap = m_effect->gap();
+    double duration = m_effect->duration();
+    double startTime = m_effect->channel()->clip()->startTime();
+
+    double x = startTime;
+
+    if(t_sceneRect.left() > startTime)
+    {
+        x = (ceil((t_sceneRect.left() - startTime) / gap) * gap) + startTime;
+    }
+    m_parentItem->setPos(t.map(QPointF(x,0)));
+
+    m_gapHandle->setPos(QPointF(gap * scale().x(),0));
+    m_durationHandle->setPos(QPointF(duration * scale().x(),0));
+
+    /*
+    QPainterPath path;
+    path.moveTo(m_frequencyHandle->pos());
+    path.lineTo(m_originHandle->pos());
+    path.lineTo(m_amplitudeHandle->pos());
+    m_pathItem->setPath(path);
+    */
+}
 
 
 

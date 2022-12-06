@@ -163,6 +163,8 @@ set(PROJECT_SOURCES
         sequence/viewer/clipstructureviewer.cpp
         sequence/viewer/clipeffecteditor.h
         sequence/viewer/clipeffecteditor.cpp
+        sequence/viewer/stackedparameterwidget.h
+        sequence/viewer/stackedparameterwidget.cpp
         sequence/viewer/timebar.h
         sequence/viewer/timebar.cpp
         sequence/viewer/timelineheader.h

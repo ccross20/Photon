@@ -2,6 +2,7 @@
 #define PHOTON_STUTTEREFFECT_H
 
 #include "sequence/channeleffect.h"
+#include "gui/gizmo/rectanglegizmo.h"
 
 namespace photon {
 
@@ -18,8 +19,14 @@ private slots:
     void gapChanged(double);
     void durationChanged(double);
 
+protected:
+    void relayout(const QRectF &) override;
+
 private:
     StutterEffect *m_effect;
+    QGraphicsRectItem *m_parentItem;
+    RectangleGizmo *m_gapHandle;
+    RectangleGizmo *m_durationHandle;
 };
 
 class StutterEffect : public ChannelEffect

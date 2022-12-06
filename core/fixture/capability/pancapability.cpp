@@ -23,14 +23,14 @@ PanCapability::~PanCapability()
     delete m_impl;
 }
 
-void PanCapability::setAngleDegrees(double value, DMXMatrix &t_matrix)
+void PanCapability::setAngleDegrees(double value, DMXMatrix &t_matrix, double t_blend)
 {
 
 }
 
-void PanCapability::setAnglePercent(double value, DMXMatrix &t_matrix)
+void PanCapability::setAnglePercent(double value, DMXMatrix &t_matrix, double t_blend)
 {
-    t_matrix.setValuePercent(fixture()->universe()-1,channel()->universalChannelNumber(), value);
+    t_matrix.setValuePercent(fixture()->universe()-1,channel()->universalChannelNumber(), value, t_blend);
 }
 
 double PanCapability::getAnglePercent(const DMXMatrix &t_matrix)

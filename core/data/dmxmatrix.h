@@ -11,20 +11,28 @@ public:
     {
         channels.resize(t_universeCount);
     }
-    void setValue(uint t_universe, uint t_channel, uchar t_value)
+
+    void blend(uchar &t_current, uchar t_target, double t_blend)
     {
-        if(t_universe < channels.size() && t_channel < 512)
-            channels[t_universe][t_channel] = t_value;
+        int current = t_current;
+        int target = t_target;
+        t_current = t_target;
     }
-    void setValuePercent(uint t_universe, uint t_channel, double t_value)
+
+    void setValue(uint t_universe, uint t_channel, uchar t_value, double t_blend = 1.0)
     {
         if(t_universe < channels.size() && t_channel < 512)
-            channels[t_universe][t_channel] = floor(t_value * 255.0);
+            blend(channels[t_universe][t_channel], t_value, t_blend);
     }
-    void setValueIntFloor(uint t_universe, uint t_channel, int t_value)
+    void setValuePercent(uint t_universe, uint t_channel, double t_value, double t_blend = 1.0)
     {
         if(t_universe < channels.size() && t_channel < 512)
-            channels[t_universe][t_channel] = std::min(std::max(t_value,0), 255);
+            blend(channels[t_universe][t_channel], floor(t_value * 255.0), t_blend);
+    }
+    void setValueIntFloor(uint t_universe, uint t_channel, int t_value, double t_blend = 1.0)
+    {
+        if(t_universe < channels.size() && t_channel < 512)
+            blend(channels[t_universe][t_channel], std::min(std::max(t_value,0), 255), t_blend);
     }
     uchar value(uint t_universe, uint t_channel) const
     {

@@ -18,6 +18,8 @@ public:
     void setMaximum(double);
     void setPrecision(uint);
 
+    void setValue(const QVariant &) override;
+
     QWidget *createWidget(NodeItem *) const override;
     void updateWidget(QWidget *) const override;
     QVariant updateValue(QWidget *) const override;

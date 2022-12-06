@@ -22,7 +22,7 @@ SetFixtureTilt::SetFixtureTilt() : keira::Node("photon.plugin.node.set-fixture-t
 void SetFixtureTilt::createParameters()
 {
     m_angleParam = new keira::DecimalParameter("angleInput","Angle", 0.0);
-    m_angleParam->setMinimum(0.0);
+    m_angleParam->setMinimum(-1.0);
     m_angleParam->setMaximum(1.0);
     addParameter(m_angleParam);
 
@@ -30,6 +30,11 @@ void SetFixtureTilt::createParameters()
     m_capabilityParam->setMinimum(0);
     m_capabilityParam->setMaximum(100);
     addParameter(m_capabilityParam);
+
+    m_blendParam = new keira::DecimalParameter("blendInput","Blend", 1.0);
+    m_blendParam->setMinimum(0.0);
+    m_blendParam->setMaximum(1.0);
+    addParameter(m_blendParam);
 }
 
 void SetFixtureTilt::evaluate(keira::EvaluationContext *t_context) const
@@ -42,7 +47,7 @@ void SetFixtureTilt::evaluate(keira::EvaluationContext *t_context) const
         int index = m_capabilityParam->value().toInt();
         if(index < pans.length())
         {
-            static_cast<TiltCapability*>(pans[index])->setAnglePercent(m_angleParam->value().toDouble(), context->dmxMatrix);
+            static_cast<TiltCapability*>(pans[index])->setAnglePercent(m_angleParam->value().toDouble() * m_blendParam->value().toDouble(), context->dmxMatrix);
         }
     }
 

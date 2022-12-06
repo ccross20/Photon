@@ -82,6 +82,7 @@ Node *NodeLibrary::createNode(const QByteArray &nodeId)
     if(result != m_impl->nodes.cend())
     {
         auto node = (*result).callback();
+        node->setName((*result).name);
         node->createParameters();
         return node;
     }

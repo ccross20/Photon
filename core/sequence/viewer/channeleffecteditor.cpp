@@ -1,12 +1,74 @@
 #include <QPainter>
 #include <QResizeEvent>
 #include <QVBoxLayout>
+#include <QGraphicsLinearLayout>
 #include "channeleffecteditor_p.h"
 #include "sequence/channeleffect.h"
 #include "sequence/channel.h"
 #include "sequence/clip.h"
+#include "sequence/viewer/stackedparameterwidget.h"
 
 namespace photon {
+
+
+
+WidgetContainer::WidgetContainer(QWidget *t_widget, const QString &t_title):QGraphicsWidget(),m_widget(t_widget),m_title(t_title)
+{
+
+    //setFlag(QGraphicsItem::ItemIsSelectable);
+    setFlag(QGraphicsItem::ItemIsMovable);
+    m_widget->setStyleSheet("QLabel{color:white;}");
+
+    auto stacked = dynamic_cast<StackedParameterWidget*>(t_widget);
+    if(stacked)
+        connect(stacked, &StackedParameterWidget::widgetResized, this, &WidgetContainer::sizeUpdated);
+}
+
+QRectF WidgetContainer::boundingRect() const
+{
+    return QRect{0,0,m_widget->width() + (m_inset * 2), m_widget->height() + 25 + (m_inset * 2)};
+}
+
+void WidgetContainer::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget)
+{
+    painter->setRenderHint(QPainter::Antialiasing);
+
+    QColor color = Qt::black;
+    color.setAlphaF(.7);
+
+    painter->setBrush(color);
+
+    painter->drawRoundedRect(boundingRect(),8,8, Qt::SizeMode::RelativeSize);
+
+    QFont font;
+    font.setBold(true);
+    painter->setFont(font);
+
+    painter->setPen(Qt::white);
+    //painter->setBrush(Qt::white);
+    painter->drawText(QRect(m_inset,m_inset,m_widget->width(),25), Qt::AlignCenter, m_title);
+}
+
+void WidgetContainer::addedToScene(QGraphicsScene *t_scene)
+{
+    QGraphicsLinearLayout *linearLayout = new QGraphicsLinearLayout(Qt::Vertical);
+    m_proxy = t_scene->addWidget(m_widget);
+
+    linearLayout->addItem(m_proxy);
+
+    linearLayout->setContentsMargins(m_inset,25 + m_inset, m_inset, m_inset);
+    setLayout(linearLayout);
+}
+
+void WidgetContainer::sizeUpdated(QSize t_size)
+{
+    prepareGeometryChange();
+}
+
+
+
+
+
 
 EffectEditorViewer::EffectEditorViewer(ChannelEffect *t_effect):QGraphicsView(),m_effect(t_effect)
 {
@@ -17,6 +79,7 @@ EffectEditorViewer::EffectEditorViewer(ChannelEffect *t_effect):QGraphicsView(),
 
 }
 
+
 void EffectEditorViewer::drawBackground(QPainter *painter, const QRectF &rect)
 {
     QGraphicsView::drawBackground(painter, rect);
@@ -25,13 +88,71 @@ void EffectEditorViewer::drawBackground(QPainter *painter, const QRectF &rect)
         rebuildPaths();
 
 
-    painter->setPen(QPen(Qt::white, 0));
+    painter->setPen(QPen(QColor(80,80,80), 0));
 
 
+    double yScale = m_yScale;
 
 
-    painter->drawLine(m_transform.map(QPointF(0,0)),m_transform.map(QPointF(width(),0)));
+    double rulerUnit = 1;
 
+    double markSpacing =  yScale;
+
+    double inverseSpacing = (1.0/markSpacing)*rulerUnit;
+    double zoomMultiple = 1.0;
+    int counter = 0;
+
+    if(yScale > 25)
+    {
+        while(markSpacing * zoomMultiple > 500 && counter < 100)
+        {
+            zoomMultiple /= 10;
+            counter++;
+        }
+    }
+    else{
+        while(markSpacing * zoomMultiple < 50 && counter < 100)
+        {
+            zoomMultiple *= 10;
+            counter++;
+        }
+    }
+
+    //if(yScale > 2)
+    {
+        markSpacing *= zoomMultiple;
+        double unitDivisor = 1.0 / zoomMultiple;
+
+        double markStartPos = std::remainder(m_yOffset, markSpacing) - markSpacing;
+
+        //qDebug() << markStartPos << "  " << markSpacing;
+        double maxSize = height() ;
+
+        double markSubSpacing = markSpacing * .1;
+        double markPos = markStartPos;
+
+        if(markSubSpacing > 4)
+        {
+            while(markPos < maxSize && markSubSpacing > 4)
+            {
+                painter->drawLine(0, static_cast<int>(markPos),width(), static_cast<int>(markPos));
+                markPos += markSubSpacing;
+            }
+
+            painter->setPen(QPen(QColor(130,130,130), 0));
+            markPos = markStartPos;
+            while(markPos < maxSize)
+            {
+                painter->drawLine(0, static_cast<int>(markPos), width(), static_cast<int>(markPos));
+                double time = (round(((markPos - m_yOffset)*inverseSpacing) * unitDivisor) * zoomMultiple);
+
+                painter->drawText(2, static_cast<int>(markPos)+ 1, QString::number(time));
+                //painter.drawText(static_cast<int>(markPos)+ 1,10, QString::number((((markPos - m_origin)*inverseSpacing) * unitDivisor) * zoomMultiple));
+                markPos += markSpacing;
+            }
+        }
+
+    }
 
 
     m_pathsDirty = false;
@@ -62,7 +183,7 @@ void EffectEditorViewer::remakeTransform()
 {
     m_transform = QTransform();
     m_transform.translate(-m_xOffset,m_yOffset);
-    m_transform.scale(m_xScale,m_yScale);
+    m_transform.scale(m_xScale,-m_yScale);
 
 
     m_sceneBounds = m_transform.inverted().mapRect(rect());
@@ -121,6 +242,15 @@ void EffectEditorViewer::mouseMoveEvent(QMouseEvent *event)
         m_yOffset += deltaPt.y();
         remakeTransform();
     }
+    if(event->buttons() & Qt::LeftButton && event->modifiers() & Qt::ControlModifier)
+    {
+        double y = sqrt(m_yScale);
+        y *= 1.0 + (deltaPt.y()/25.0);
+        m_yScale = y * y;
+
+        //m_yScale = std::min(m_yScale, -.1);
+        remakeTransform();
+    }
 
     m_lastPt = event->pos();
 
@@ -136,9 +266,10 @@ void EffectEditorViewer::wheelEvent(QWheelEvent *event)
 {
     if(event->modifiers() & Qt::ControlModifier)
     {
-        m_yScale += event->angleDelta().y()/5.0;
+        double y = sqrt(m_yScale);
+        y *= 1.0 + (event->angleDelta().y()/360.0);
+        m_yScale = y * y;
 
-        m_yScale = std::min(m_yScale, -.1);
         remakeTransform();
     }
 }
@@ -155,12 +286,19 @@ void EffectEditorViewer::rebuildPaths()
         double initialValue = m_effect->channel()->info().defaultValue.toDouble();
 
         double startTime = m_effect->channel()->clip()->startTime();
+        double endTime = m_effect->channel()->clip()->endTime();
+
+        if(startTime > m_sceneBounds.right() || endTime < m_sceneBounds.left() + (1 / m_xScale))
+            return;
 
         double left = std::max(m_sceneBounds.left(), startTime);
         double right = std::min(m_sceneBounds.right(), m_effect->channel()->clip()->endTime());
 
 
         double interval = (right - left)/width();
+
+
+
         m_path.moveTo(left,m_effect->process(initialValue, left - startTime));
 
         //qDebug() << left << right << (right - left) / interval;
@@ -222,6 +360,19 @@ void ChannelEffectEditor::resizeEvent(QResizeEvent *t_event)
 
     m_impl->scene->setSceneRect(QRect(QPoint(0,0),t_event->size()));
     m_impl->viewer->remakeTransform();
+
+    QPoint delta{t_event->size().width() - t_event->oldSize().width(), 0};
+
+    for(auto container : m_impl->containers)
+    {
+        if(!container->isCustomLayout())
+        {
+            auto r = container->rect();
+            container->setPos(QPointF(t_event->size().width() - (r.width() + 10), 10));
+        }
+        else
+            container->setPos(container->pos() + delta);
+    }
 }
 
 void ChannelEffectEditor::paintEvent(QPaintEvent *event)
@@ -237,6 +388,19 @@ ChannelEffectEditor::~ChannelEffectEditor()
 void ChannelEffectEditor::addItem(QGraphicsItem *t_item)
 {
     m_impl->scene->addItem(t_item);
+}
+
+void ChannelEffectEditor::addWidget(QWidget *t_widget, const QString &t_name)
+{
+    WidgetContainer *container = new WidgetContainer(t_widget, t_name);
+    m_impl->scene->addItem(container);
+    container->addedToScene(m_impl->scene);
+
+    m_impl->containers.append(container);
+
+    auto r = container->rect();
+
+    container->setPos(QPointF(width() -(r.width() + 10), 10));
 }
 
 QTransform ChannelEffectEditor::transform() const

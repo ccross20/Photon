@@ -18,6 +18,7 @@ private slots:
     void samplesChanged(int);
     void spreadChanged(double);
 
+
 private:
     SmoothEffect *m_effect;
 };

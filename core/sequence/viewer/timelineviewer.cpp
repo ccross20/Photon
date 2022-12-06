@@ -58,6 +58,7 @@ void TimelineViewer::setScale(double t_value)
     if(m_impl->scale == t_value)
         return;
     m_impl->scale = t_value;
+    setTransform(QTransform::fromScale(m_impl->scale, 1.0));
     emit scaleChanged(m_impl->scale);
 }
 
@@ -140,8 +141,8 @@ void TimelineViewer::mousePressEvent(QMouseEvent *event)
                 break;
         }
     }
-
-    QGraphicsView::mousePressEvent(event);
+    if(!(event->buttons() & Qt::MiddleButton))
+        QGraphicsView::mousePressEvent(event);
 }
 
 void TimelineViewer::mouseMoveEvent(QMouseEvent *event)
@@ -220,7 +221,8 @@ void TimelineViewer::mouseMoveEvent(QMouseEvent *event)
 
     m_impl->lastPosition = event->pos();
 
-    QGraphicsView::mouseMoveEvent(event);
+    if(!(event->buttons() & Qt::MiddleButton))
+        QGraphicsView::mouseMoveEvent(event);
 }
 
 void TimelineViewer::mouseReleaseEvent(QMouseEvent *event)
@@ -231,7 +233,9 @@ void TimelineViewer::mouseReleaseEvent(QMouseEvent *event)
     }
     m_impl->moveDatas.clear();
     m_impl->interactionMode = Impl::InteractionSelect;
-    QGraphicsView::mouseReleaseEvent(event);
+
+    if(!(event->buttons() & Qt::MiddleButton))
+        QGraphicsView::mouseReleaseEvent(event);
 }
 
 void TimelineViewer::wheelEvent(QWheelEvent *event)
