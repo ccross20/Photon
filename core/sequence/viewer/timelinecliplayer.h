@@ -1,7 +1,7 @@
 #ifndef PHOTON_TIMELINELAYER_H
 #define PHOTON_TIMELINELAYER_H
 
-#include <QGraphicsObject>
+#include "layeritem.h"
 #include "photon-global.h"
 
 namespace photon {
@@ -9,18 +9,16 @@ namespace photon {
 class SequenceClip;
 class TimelineScene;
 
-class TimelineLayer : public QGraphicsObject
+class TimelineClipLayer : public LayerItem
 {
     Q_OBJECT
 public:
-    TimelineLayer(Layer *);
-    ~TimelineLayer();
+    TimelineClipLayer(ClipLayer *);
+    ~TimelineClipLayer();
 
     void addClip(SequenceClip *t_clip);
     QRectF boundingRect() const override;
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *item, QWidget *widget) override;
-
-    Layer *layer() const;
 
 public slots:
 
@@ -31,11 +29,12 @@ public slots:
     void removeLayer();
 
 protected:
-    void addedToScene(TimelineScene *);
+    void addedToScene(TimelineScene *) override;
     void contextMenuEvent(QGraphicsSceneContextMenuEvent *event) override;
 
 private:
     friend class TimelineScene;
+    friend class TimelineLayerGroup;
     class Impl;
     Impl *m_impl;
 };

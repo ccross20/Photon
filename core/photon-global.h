@@ -6,6 +6,7 @@
 #include <QVariant>
 #include <QPointF>
 #include <QVector3D>
+#include <QUuid>
 #include <QCoreApplication>
 #include <QJsonObject>
 #include <QJsonArray>
@@ -33,10 +34,14 @@ using CategoryList = QVector<QByteArray>;
 class BusEvaluator;
 class BusGraph;
 class DMXMatrix;
+class Canvas;
+class CanvasCollection;
+class CanvasLayerGroup;
 class Channel;
 class ChannelEffect;
 class ChannelEffectEditor;
 class Clip;
+class ClipLayer;
 class FalloffEffect;
 class Fixture;
 class FixtureChannel;
@@ -46,7 +51,9 @@ class FixtureFalloffMap;
 class FixtureMask;
 class GuiManager;
 class Layer;
+class LayerGroup;
 class MaskEffect;
+class MasterLayer;
 class Panel;
 class PatchBay;
 class PhotonCore;

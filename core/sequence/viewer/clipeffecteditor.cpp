@@ -29,13 +29,7 @@ void CurveViewport::clear()
     update();
 }
 
-void CurveViewport::timeChanged(double)
-{
-    m_pathsDirty = true;
-    update();
-}
-
-void CurveViewport::durationChanged(double)
+void CurveViewport::clipChanged(Clip *)
 {
     m_pathsDirty = true;
     update();
@@ -79,10 +73,10 @@ void CurveViewport::rebuildPaths()
     {
         double initialValue = m_effect->channel()->info().defaultValue.toDouble();
 
-        double startTime = m_effect->channel()->clip()->startTime();
+        double startTime = m_effect->channel()->startTime();
 
         double left = std::max(m_sceneBounds.left(), startTime);
-        double right = std::min(m_sceneBounds.right(), m_effect->channel()->clip()->endTime());
+        double right = std::min(m_sceneBounds.right(), m_effect->channel()->endTime());
 
 
         double interval = 1.0/m_scale;
@@ -112,23 +106,19 @@ void CurveViewport::rebuildPaths()
 
 void CurveViewport::addEffect(photon::ChannelEffect *t_effect)
 {
-    if(m_clip)
+    if(m_channel)
     {
-        disconnect(m_clip, &Clip::timeChanged, this, &CurveViewport::timeChanged);
-        disconnect(m_clip, &Clip::durationChanged, this, &CurveViewport::durationChanged);
-        disconnect(m_clip, &Clip::channelUpdated, this, &CurveViewport::channelUpdated);
+        disconnect(m_channel, &Channel::channelUpdated, this, &CurveViewport::channelUpdated);
     }
     m_effect = t_effect;
     if(m_effect)
     {
-        m_clip = m_effect->channel()->clip();
-        connect(m_clip, &Clip::timeChanged, this, &CurveViewport::timeChanged);
-        connect(m_clip, &Clip::durationChanged, this, &CurveViewport::durationChanged);
-        connect(m_clip, &Clip::channelUpdated, this, &CurveViewport::channelUpdated);
+        m_channel = m_effect->channel();
+        connect(m_channel, &Channel::channelUpdated, this, &CurveViewport::channelUpdated);
         m_pathsDirty = true;
     }
     else
-        m_clip = nullptr;
+        m_channel = nullptr;
 
     update();
 }

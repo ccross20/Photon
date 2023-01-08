@@ -3,13 +3,12 @@
 #include <QDoubleSpinBox>
 #include <QCheckBox>
 #include "loopeffect.h"
+#include "sequence/viewer/stackedparameterwidget.h"
 
 namespace photon {
 
 LoopEffectEditor::LoopEffectEditor(LoopEffect *t_effect):ChannelEffectEditor(t_effect),m_effect(t_effect)
 {
-    setMaximumHeight(40);
-
     QDoubleSpinBox *durationSpin = new QDoubleSpinBox;
     durationSpin->setValue(m_effect->duration());
     connect(durationSpin, &QDoubleSpinBox::valueChanged, this, &LoopEffectEditor::durationChanged);
@@ -19,6 +18,12 @@ LoopEffectEditor::LoopEffectEditor(LoopEffect *t_effect):ChannelEffectEditor(t_e
     mirrorCheck->setChecked(m_effect->mirror());
     connect(mirrorCheck, &QCheckBox::toggled, this, &LoopEffectEditor::mirrorChanged);
 
+
+    StackedParameterWidget *paramWidget = new StackedParameterWidget;
+    paramWidget->addWidget(durationSpin, "Duration");
+    paramWidget->addWidget(mirrorCheck, "Mirror");
+
+    addWidget(paramWidget, "Sinewave");
 }
 
 void LoopEffectEditor::durationChanged(double t_value)

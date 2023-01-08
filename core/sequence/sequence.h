@@ -28,11 +28,13 @@ public:
     void setName(const QString &);
     void addLayer(Layer *);
     void removeLayer(Layer *);
+    Layer *findLayerByGuid(const QUuid &guid);
     const QVector<Layer*> &layers() const;
     Project *project() const;
 
     void processChannels(ProcessContext &, double lastTime);
 
+    void restore(Project &);
     void readFromJson(const QJsonObject &, const LoadContext &);
     void writeToJson(QJsonObject &) const;
 

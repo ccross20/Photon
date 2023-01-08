@@ -18,18 +18,21 @@ SineEffectEditor::SineEffectEditor(SineEffect *t_effect):ChannelEffectEditor(t_e
     //setMaximumHeight(40);
 
     QDoubleSpinBox *freqSpin = new QDoubleSpinBox;
+    freqSpin->setMinimum(.001);
+    freqSpin->setMaximum(9999);
     freqSpin->setValue(m_effect->frequency());
     connect(freqSpin, &QDoubleSpinBox::valueChanged, this, &SineEffectEditor::frequencyChanged);
 
 
     QDoubleSpinBox *ampSpin = new QDoubleSpinBox;
+    ampSpin->setMinimum(-255);
+    ampSpin->setMaximum(255);
     ampSpin->setValue(m_effect->amplitude());
     connect(ampSpin, &QDoubleSpinBox::valueChanged, this, &SineEffectEditor::amplitudeChanged);
 
     StackedParameterWidget *paramWidget = new StackedParameterWidget;
     paramWidget->addWidget(freqSpin, "Frequency");
     paramWidget->addWidget(ampSpin, "Amplitude");
-    paramWidget->setMinimumWidth(120);
 
     addWidget(paramWidget, "Sinewave");
 
@@ -77,7 +80,7 @@ void SineEffectEditor::relayout(const QRectF &t_sceneRect)
     auto t = transform();
 
     double scaledFreq = m_effect->frequency();
-    double startTime = m_effect->channel()->clip()->startTime();
+    double startTime = m_effect->channel()->startTime();
 
     double x = startTime;
 

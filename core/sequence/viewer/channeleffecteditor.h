@@ -34,8 +34,7 @@ signals:
 public slots:
     void setScale(double);
     void setOffset(double);
-    void clipStartUpdated(double);
-    void clipDurationUpdated(double);
+    void channelUpdated(photon::Channel *);
     void effectUpdated(photon::ChannelEffect *);
 
 private slots:

@@ -9,13 +9,13 @@ namespace photon
     {
     public:
         Impl(Clip *);
-        void setLayer(Layer *);
+        void setLayer(ClipLayer *);
         void setSequence(Sequence *);
         void markChanged();
         void rebuildFalloffCache();
         double falloff(Fixture *);
 
-        Layer *layer = nullptr;
+        ClipLayer *layer = nullptr;
         Sequence *sequence = nullptr;
         FixtureMask *mask = nullptr;
         QHash<Fixture*, double> cachedFalloffs;

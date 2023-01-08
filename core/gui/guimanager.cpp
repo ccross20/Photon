@@ -51,6 +51,20 @@ void GuiManager::Impl::createAppWindow()
     window = new Window();
     //window->setAttribute(Qt::WA_DeleteOnClose);
 
+    QMenuBar *menubar = new QMenuBar;
+    window->setMenuBar(menubar);
+
+    QMenu *fileMenu = new QMenu("File");
+    fileMenu->addAction("Quit");
+    menubar->addMenu(fileMenu);
+
+    QMenu *windowMenu = new QMenu("Window");
+    windowMenu->addAction("Canvas", [](){photonApp->gui()->createFloatingPanel("photon.canvas-collection");});
+    windowMenu->addAction("Fixture", [](){photonApp->gui()->createFloatingPanel("photon.fixture-collection");});
+    windowMenu->addAction("Routine", [](){photonApp->gui()->createFloatingPanel("photon.routine-collection");});
+    windowMenu->addAction("Sequence", [](){photonApp->gui()->createFloatingPanel("photon.sequence-collection");});
+    menubar->addMenu(windowMenu);
+
     Panel *panel1 = createPanel("photon.bus");
     addPanel(panel1);
 
@@ -58,6 +72,8 @@ void GuiManager::Impl::createAppWindow()
     DockWidget->setObjectName("photon.bus");
     DockWidget->setWidget(panel1);
     DockWidget->setFeature(ads::CDockWidget::DockWidgetClosable, false);
+
+
 
 
     QToolBar *toolBar = new QToolBar("root");
@@ -578,6 +594,8 @@ bool GuiManager::restoreLayout(const QString &t_filename)
     //m_impl->window->restoreGeometry(Settings.value("mainWindow/Geometry").toByteArray());
     m_impl->window->restoreState(Settings.value("mainWindow/State").toByteArray());
     m_impl->dockManager()->restoreState(Settings.value("mainWindow/DockingState").toByteArray());
+
+    //m_impl->dockManager()->setCentralWidget(nullptr);
 
     return true;
 }

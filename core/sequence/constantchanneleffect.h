@@ -1,17 +1,12 @@
 #ifndef PHOTON_CONSTANTCHANNELEFFECT_H
 #define PHOTON_CONSTANTCHANNELEFFECT_H
 
-#include <QGraphicsItem>
 #include "sequence/channeleffect.h"
 #include "gui/gizmo/rectanglegizmo.h"
 
 namespace photon {
 
 class ConstantChannelEffect;
-
-
-
-
 
 class ConstantEffectEditor : public ChannelEffectEditor
 {

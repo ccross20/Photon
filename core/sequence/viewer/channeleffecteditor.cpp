@@ -285,14 +285,14 @@ void EffectEditorViewer::rebuildPaths()
     {
         double initialValue = m_effect->channel()->info().defaultValue.toDouble();
 
-        double startTime = m_effect->channel()->clip()->startTime();
-        double endTime = m_effect->channel()->clip()->endTime();
+        double startTime = m_effect->channel()->startTime();
+        double endTime = m_effect->channel()->endTime();
 
         if(startTime > m_sceneBounds.right() || endTime < m_sceneBounds.left() + (1 / m_xScale))
             return;
 
         double left = std::max(m_sceneBounds.left(), startTime);
-        double right = std::min(m_sceneBounds.right(), m_effect->channel()->clip()->endTime());
+        double right = std::min(m_sceneBounds.right(), m_effect->channel()->endTime());
 
 
         double interval = (right - left)/width();
@@ -347,8 +347,7 @@ ChannelEffectEditor::ChannelEffectEditor(ChannelEffect *t_effect, QWidget *paren
     setLayout(vLayout);
 
 
-    connect(t_effect->channel()->clip(), &Clip::timeChanged, this, &ChannelEffectEditor::clipStartUpdated);
-    connect(t_effect->channel()->clip(), &Clip::durationChanged, this, &ChannelEffectEditor::clipDurationUpdated);
+    connect(t_effect->channel(), &Channel::channelUpdated, this, &ChannelEffectEditor::channelUpdated);
     connect(t_effect->channel(), &Channel::effectModified, this, &ChannelEffectEditor::effectUpdated);
     connect(m_impl->viewer, &EffectEditorViewer::relayout, this, &ChannelEffectEditor::relayoutSlot);
     //setSizePolicy(QSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::MinimumExpanding));
@@ -452,14 +451,9 @@ void ChannelEffectEditor::setScale(double t_value)
     m_impl->viewer->setScale(t_value);
 }
 
-void ChannelEffectEditor::clipStartUpdated(double)
+void ChannelEffectEditor::channelUpdated(Channel *)
 {
      m_impl->viewer->remakeTransform();
-}
-
-void ChannelEffectEditor::clipDurationUpdated(double)
-{
-    m_impl->viewer->remakeTransform();
 }
 
 void ChannelEffectEditor::relayoutSlot()

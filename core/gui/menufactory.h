@@ -38,7 +38,19 @@ public:
         return nullptr;
     }
     void addChild(NodeTreeElement *element){m_children.append(element);}
-    void sortAlphabetically(){}
+    void sortAlphabetically(bool recursive){
+        std::sort(m_children.begin(), m_children.end(),[](NodeTreeElement *a, NodeTreeElement *b){return a->name() < b->name();});
+        if(recursive)
+        {
+            for(auto child : m_children)
+            {
+                if(child->isFolder())
+                {
+                    static_cast<FolderElement*>(child)->sortAlphabetically(recursive);
+                }
+            }
+        }
+    }
 
 private:
     QVector<NodeTreeElement*> m_children;
@@ -96,6 +108,8 @@ public:
         //QMenu *rootMenu = menu.addMenu("Add Effect");
 
 
+        rootFolder->sortAlphabetically(true);
+
         std::function<void(QMenu &menu, NodeTreeElement *)> treeLoop;
         treeLoop = [&treeLoop](QMenu &menu, NodeTreeElement *rootElement){
             for(uint i = 0; i < rootElement->childCount(); ++i)
@@ -116,6 +130,7 @@ public:
         };
 
         treeLoop(menu, rootFolder);
+
 
         QAction *action = menu.exec(pos);
 

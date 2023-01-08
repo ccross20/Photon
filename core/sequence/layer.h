@@ -9,30 +9,33 @@ class PHOTONCORE_EXPORT Layer : public QObject
 {
     Q_OBJECT
 public:
-    explicit Layer(const QString &name = QString{}, QObject *parent = nullptr);
-    ~Layer();
+    explicit Layer(const QString &name, const QByteArray &layerType, QObject *parent = nullptr);
+    virtual ~Layer();
 
     Sequence *sequence() const;
-    void addClip(Clip *);
-    void removeClip(Clip *);
-    int height() const;
-    const QVector<Clip*> &clips() const;
+    virtual int height() const;
     QString name() const;
     void setName(const QString &name);
+    QUuid guid() const;
+    QByteArray layerType() const;
 
-    void processChannels(ProcessContext &);
-    void readFromJson(const QJsonObject &, const LoadContext &);
-    void writeToJson(QJsonObject &) const;
+
+    virtual bool isGroup() const{return false;}
+    virtual Layer *findLayerByGuid(const QUuid &guid);
+    virtual void processChannels(ProcessContext &);
+    virtual void restore(Project &);
+    virtual void readFromJson(const QJsonObject &, const LoadContext &);
+    virtual void writeToJson(QJsonObject &) const;
 
 signals:
+    void metadataChanged();
 
-    void clipAdded(photon::Clip *);
-    void clipRemoved(photon::Clip *);
-    void clipModified(photon::Clip *);
+protected:
+    virtual void sequenceChanged(Sequence *);
 
 private:
     friend class Sequence;
-    friend class Clip;
+    friend class LayerGroup;
 
     class Impl;
     Impl *m_impl;

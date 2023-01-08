@@ -13,6 +13,22 @@ FolderElement *FolderElement::folderWithName(const QString &name) const
     return nullptr;
 }
 
+void FolderElement::sortAlphabetically(bool t_recursive)
+{
+    std::sort(m_children.begin(), m_children.end(),[](NodeTreeElement *a, NodeTreeElement *b){return a->name() < b->name();});
+    if(t_recursive)
+    {
+        for(auto child : m_children)
+        {
+            if(child->isFolder())
+            {
+                static_cast<FolderElement*>(child)->sortAlphabetically(t_recursive);
+            }
+        }
+    }
+
+}
+
 class NodeLibrary::Impl
 {
 public:
@@ -71,6 +87,8 @@ FolderElement *NodeLibrary::createNodeTree(std::function<bool(const NodeInformat
 
         currentFolder->addChild(new NodeElement(info));
     }
+    rootFolder->sortAlphabetically(true);
+
     return rootFolder;
 }
 

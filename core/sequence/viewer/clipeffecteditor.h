@@ -18,8 +18,7 @@ public slots:
     void setViewBounds(const QRectF &rect);
     void clear();
     void addEffect(photon::ChannelEffect *);
-    void timeChanged(double);
-    void durationChanged(double);
+    void clipChanged(photon::Clip *);
     void channelUpdated(photon::Channel*);
     void setXOffset(int);
     void setScale(double);
@@ -33,7 +32,7 @@ private:
     void remakeSceneBounds();
 
     ChannelEffect *m_effect = nullptr;
-    Clip *m_clip = nullptr;
+    Channel *m_channel = nullptr;
     QPainterPath m_path;
     QPainterPath m_channelPath;
     QRectF m_viewBounds;

@@ -2,8 +2,12 @@
 #include <QGraphicsSceneContextMenuEvent>
 #include "timelinescene.h"
 #include "sequence/sequence.h"
-#include "sequence/layer.h"
-#include "timelinelayer.h"
+#include "sequence/cliplayer.h"
+#include "sequence/canvaslayergroup.h"
+#include "sequence/masterlayer.h"
+#include "timelinecliplayer.h"
+#include "timelinemasterlayer.h"
+#include "timelinelayergroup.h"
 
 namespace photon {
 
@@ -11,12 +15,12 @@ class TimelineScene::Impl
 {
 public:
     Impl(TimelineScene *t_facade, Sequence *t_sequence);
-    TimelineLayer *addLayer(Layer *);
-    TimelineLayer *findLayer(Layer *);
+    LayerItem *addLayer(Layer *);
+    LayerItem *findLayer(Layer *);
     void layoutLayers();
 
     Sequence *sequence = nullptr;
-    QVector<TimelineLayer*> layers;
+    QVector<LayerItem*> layers;
     TimelineScene *facade;
 };
 
@@ -25,9 +29,9 @@ TimelineScene::Impl::Impl(TimelineScene *t_facade, Sequence *t_sequence):facade(
 
 }
 
-TimelineLayer *TimelineScene::Impl::findLayer(Layer *t_layer)
+LayerItem *TimelineScene::Impl::findLayer(Layer *t_layer)
 {
-    auto result = std::find_if(layers.cbegin(), layers.cend(),[t_layer](const TimelineLayer *t_testLayer){
+    auto result = std::find_if(layers.cbegin(), layers.cend(),[t_layer](const LayerItem *t_testLayer){
                      return t_testLayer->layer() == t_layer;
                  });
     if(result != layers.cend())
@@ -35,15 +39,47 @@ TimelineLayer *TimelineScene::Impl::findLayer(Layer *t_layer)
     return nullptr;
 }
 
-TimelineLayer *TimelineScene::Impl::addLayer(Layer *t_layer)
+LayerItem *TimelineScene::Impl::addLayer(Layer *t_layer)
 {
-    TimelineLayer *timelineLayer = new TimelineLayer(t_layer);
+    auto clipLayer = dynamic_cast<ClipLayer*>(t_layer);
+    if(clipLayer)
+    {
+        TimelineClipLayer *timelineLayer = new TimelineClipLayer(clipLayer);
 
-    layers.append(timelineLayer);
-    facade->addItem(timelineLayer);
-    timelineLayer->addedToScene(facade);
+        layers.append(timelineLayer);
+        facade->addItem(timelineLayer);
+        timelineLayer->addedToScene(facade);
 
-    return timelineLayer;
+        return timelineLayer;
+    }
+
+    auto masterLayer = dynamic_cast<MasterLayer*>(t_layer);
+    if(masterLayer)
+    {
+        TimelineMasterLayer *timelineLayer = new TimelineMasterLayer(masterLayer);
+
+        layers.append(timelineLayer);
+        facade->addItem(timelineLayer);
+        timelineLayer->addedToScene(facade);
+
+        return timelineLayer;
+    }
+
+    auto canvasGroup = dynamic_cast<CanvasLayerGroup*>(t_layer);
+    if(canvasGroup)
+    {
+        TimelineLayerGroup *timelineLayer = new TimelineLayerGroup(canvasGroup);
+
+        layers.append(timelineLayer);
+        facade->addItem(timelineLayer);
+        timelineLayer->addedToScene(facade);
+
+        return timelineLayer;
+    }
+
+
+    return nullptr;
+
 }
 
 void TimelineScene::Impl::layoutLayers()
@@ -116,8 +152,14 @@ void TimelineScene::layerRemoved(photon::Layer* t_layer)
 
 void TimelineScene::createLayer()
 {
-    Layer *layer = new Layer;
+    ClipLayer *layer = new ClipLayer;
     layer->setName("Layer " + QString::number(m_impl->sequence->layers().length()+1));
+    m_impl->sequence->addLayer(layer);
+}
+
+void TimelineScene::createCanvasLayerGroup()
+{
+    CanvasLayerGroup *layer = new CanvasLayerGroup(nullptr, "Canvas Group");
     m_impl->sequence->addLayer(layer);
 }
 
@@ -129,8 +171,19 @@ void TimelineScene::contextMenuEvent(QGraphicsSceneContextMenuEvent *contextMenu
         return;
 
     QMenu menu;
-    QAction *createLayer = menu.addAction("Create Layer");
+    QAction *createLayer = menu.addAction("Create Empty Layer");
     connect(createLayer, &QAction::triggered, this, &TimelineScene::createLayer);
+
+    QAction *createCanvasLayer = menu.addAction("Create Canvas Layer Group");
+    connect(createCanvasLayer, &QAction::triggered, this, &TimelineScene::createCanvasLayerGroup);
+
+    menu.addSeparator();
+
+    menu.addAction("Create Master Curve",[this](){
+        MasterLayer *layer = new MasterLayer("Master Curve");
+        m_impl->sequence->addLayer(layer);
+    });
+
     menu.exec(contextMenuEvent->screenPos());
 }
 

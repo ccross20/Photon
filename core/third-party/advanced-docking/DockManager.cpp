@@ -300,6 +300,7 @@ bool DockManagerPrivate::restoreStateFromXml(const QByteArray &state,  int versi
 			qWarning() << "Object name of central widget does not match name of central widget in saved state.";
 			return false;
 		}
+
     }
 
     int DockContainerCount = 0;
@@ -673,10 +674,11 @@ QByteArray CDockManager::saveState(int version) const
 		s.writeAttribute("Version", QString::number(CurrentVersion));
 		s.writeAttribute("UserVersion", QString::number(version));
 		s.writeAttribute("Containers", QString::number(d->Containers.count()));
-		if (d->CentralWidget)
-		{
-			s.writeAttribute("CentralWidget", d->CentralWidget->objectName());
-		}
+
+        if (d->CentralWidget)
+        {
+            s.writeAttribute("CentralWidget", d->CentralWidget->objectName());
+        }
 		for (auto Container : d->Containers)
 		{
 			Container->saveState(s);

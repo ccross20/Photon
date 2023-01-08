@@ -1,7 +1,7 @@
 #include <QJsonArray>
 #include "channel_p.h"
 #include "channeleffect_p.h"
-#include "clip.h"
+#include "sequence.h"
 #include "plugin/pluginfactory.h"
 #include "photoncore.h"
 #include "plugin/pluginfactory.h"
@@ -11,10 +11,11 @@ namespace photon {
 
 
 
-Channel::Channel(Clip *t_clip, const ChannelInfo &t_info):m_impl(new Impl)
+Channel::Channel(const ChannelInfo &t_info, double t_startTime, double t_duration, QObject *t_parent):QObject(t_parent), m_impl(new Impl)
 {
     m_impl->info = t_info;
-    m_impl->clip = t_clip;
+    m_impl->startTime = t_startTime;
+    m_impl->duration = t_duration;
 
     m_impl->effects.append(photonApp->plugins()->createChannelEffect(ConstantChannelEffect::info().effectId)); 
     m_impl->effects.back()->m_impl->channel = this;
@@ -25,20 +26,66 @@ Channel::~Channel()
     delete m_impl;
 }
 
+Sequence *Channel::sequence() const
+{
+    QObject *par = parent();
+
+    while(par)
+    {
+        Sequence *seq = dynamic_cast<Sequence *>(par);
+        if(seq)
+            return seq;
+        par = par->parent();
+    }
+
+    return nullptr;
+}
+
+void Channel::setDuration(double t_duration)
+{
+    if(m_impl->duration == t_duration)
+        return;
+    m_impl->duration = t_duration;
+    emit channelUpdated(this);
+}
+
+double Channel::duration() const
+{
+    return m_impl->duration;
+}
+
+void Channel::setStartTime(double t_start)
+{
+    if(m_impl->startTime == t_start)
+        return;
+    m_impl->startTime = t_start;
+    emit channelUpdated(this);
+}
+
+double Channel::startTime() const
+{
+    return m_impl->startTime;
+}
+
+void Channel::setEndTime(double t_value)
+{
+    setDuration(t_value - m_impl->startTime);
+}
+
+double Channel::endTime() const
+{
+    return m_impl->startTime + m_impl->duration;
+}
+
 void Channel::updateInfo(const ChannelInfo &t_info)
 {
     m_impl->info = t_info;
-    emit channelUpdated();
+    emit channelUpdated(this);
 }
 
 ChannelInfo Channel::info() const
 {
     return m_impl->info;
-}
-
-Clip *Channel::clip() const
-{
-    return m_impl->clip;
 }
 
 void Channel::addEffect(ChannelEffect *t_effect)
@@ -81,8 +128,8 @@ double Channel::processDouble(double time)
 
 void Channel::effectUpdated(ChannelEffect *t_effect)
 {
-    m_impl->clip->channelUpdatedSlot(this);
     emit effectModified(t_effect);
+    emit channelUpdated(this);
 }
 
 int Channel::effectCount() const
@@ -93,6 +140,12 @@ int Channel::effectCount() const
 ChannelEffect *Channel::effectAtIndex(int index) const
 {
     return m_impl->effects.at(index);
+}
+
+void Channel::restore(Project &t_project)
+{
+    for(auto effect : m_impl->effects)
+        effect->restore(t_project);
 }
 
 void Channel::readFromJson(const QJsonObject &t_json, const LoadContext &)

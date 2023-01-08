@@ -184,4 +184,16 @@ void ClipStructureViewer::removeClip(Clip *t_clip)
     emit clearSelection();
 }
 
+void ClipStructureViewer::addMasterLayer(MasterLayer *t_layer)
+{
+    m_model->addMasterLayer(t_layer);
+    m_treeView->expandAll();
+}
+
+void ClipStructureViewer::removeMasterLayer(MasterLayer *t_layer)
+{
+    m_model->removeMasterLayer(t_layer);
+    emit clearSelection();
+}
+
 } // namespace photon

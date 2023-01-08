@@ -11,12 +11,12 @@ class PHOTONCORE_EXPORT Clip : public QObject
     Q_OBJECT
 public:
     explicit Clip(QObject *parent = nullptr);
-    Clip(double t_start, double t_duration);
+    Clip(double t_start, double t_duration, QObject *parent = nullptr);
     ~Clip();
 
     QString name() const;
     Sequence *sequence() const;
-    Layer *layer() const;
+    ClipLayer *layer() const;
     void processChannels(ProcessContext &);
     Channel *channelAtIndex(int index) const;
     int channelCount() const;
@@ -39,6 +39,7 @@ public:
     double endTime() const;
     double duration() const;
 
+    void restore(Project &);
     void readFromJson(const QJsonObject &, const LoadContext &);
     void writeToJson(QJsonObject &) const;
 
@@ -56,8 +57,7 @@ signals:
     void maskChanged(photon::FixtureMask *);
     void routineChanged(photon::Routine *);
     void falloffMapChanged(photon::FixtureFalloffMap *);
-    void timeChanged(double);
-    void durationChanged(double);
+    void clipUpdated(photon::Clip *);
     void channelUpdated(photon::Channel *);
     void channelAdded(photon::Channel *);
     void channelRemoved(photon::Channel *);
@@ -65,7 +65,7 @@ signals:
     void falloffUpdated(photon::FalloffEffect *);
 
 private:
-    friend class Layer;
+    friend class ClipLayer;
     friend class Sequence;
 
     class Impl;

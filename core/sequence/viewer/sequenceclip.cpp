@@ -4,7 +4,7 @@
 #include <QMenu>
 #include "sequenceclip.h"
 #include "sequence/clip.h"
-#include "sequence/layer.h"
+#include "sequence/cliplayer.h"
 
 namespace photon {
 

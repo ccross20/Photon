@@ -1,5 +1,6 @@
 #include "clipmodel.h"
 #include "sequence/clip.h"
+#include "sequence/masterlayer.h"
 #include "sequence/channel.h"
 #include "sequence/channeleffect.h"
 #include "falloff/falloffeffect.h"
@@ -138,6 +139,18 @@ void ChannelData::effectMoved(photon::ChannelEffect *t_effect)
 {
 
 }
+
+
+MasterLayerData::MasterLayerData(MasterLayer *t_layer) : AbstractTreeData(t_layer->name()),m_layer(t_layer)
+{
+    m_channelFolder = new FolderData("Channels", DataChannel, false);
+    addChild(m_channelFolder);
+
+    auto channelData = new ChannelData(t_layer->channel());
+    m_channelFolder->addChild(channelData);
+
+}
+
 
 
 ClipData::ClipData(Clip *t_clip) : AbstractTreeData(t_clip->name()),m_clip(t_clip)
@@ -281,10 +294,28 @@ void ClipModel::removeClip(Clip *t_clip)
 {
     for(int i = 0; i < m_root->childCount(); ++i)
     {
-        ClipData *clipData = static_cast<ClipData*>(m_root->childAtIndex(i));
+        ClipData *clipData = dynamic_cast<ClipData*>(m_root->childAtIndex(i));
         if(clipData->clip() == t_clip)
         {
             m_root->removeChild(clipData);
+            return;
+        }
+    }
+}
+
+void ClipModel::addMasterLayer(MasterLayer *t_layer)
+{
+    m_root->addChild(new MasterLayerData(t_layer));
+}
+
+void ClipModel::removeMasterLayer(MasterLayer *t_layer)
+{
+    for(int i = 0; i < m_root->childCount(); ++i)
+    {
+        MasterLayerData *layerData = dynamic_cast<MasterLayerData*>(m_root->childAtIndex(i));
+        if(layerData->layer() == t_layer)
+        {
+            m_root->removeChild(layerData);
             return;
         }
     }

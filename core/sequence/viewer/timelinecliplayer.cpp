@@ -2,9 +2,9 @@
 #include <QMenu>
 #include <QGraphicsScene>
 #include <QGraphicsSceneContextMenuEvent>
-#include "timelinelayer.h"
+#include "timelinecliplayer.h"
 #include "sequenceclip.h"
-#include "sequence/layer.h"
+#include "sequence/cliplayer.h"
 #include "sequence/clip.h"
 #include "sequence/sequence.h"
 #include "photoncore.h"
@@ -15,24 +15,23 @@
 namespace photon {
 
 
-class TimelineLayer::Impl
+class TimelineClipLayer::Impl
 {
 public:
-    Impl(TimelineLayer *t_facade, Layer *t_layer);
+    Impl(TimelineClipLayer *t_facade);
     SequenceClip *findClip(Clip *, QVector<SequenceClip*>::const_iterator* t_it= nullptr);
     void removeClip(Clip *);
     SequenceClip * addClip(Clip *);
     QVector<SequenceClip*> clips;
-    Layer *layer;
-    TimelineLayer *facade;
+    TimelineClipLayer *facade;
 };
 
-TimelineLayer::Impl::Impl(TimelineLayer *t_facade, Layer *t_layer):layer(t_layer),facade(t_facade)
+TimelineClipLayer::Impl::Impl(TimelineClipLayer *t_facade):facade(t_facade)
 {
 
 }
 
-SequenceClip *TimelineLayer::Impl::findClip(Clip *t_clip, QVector<SequenceClip*>::const_iterator* t_it)
+SequenceClip *TimelineClipLayer::Impl::findClip(Clip *t_clip, QVector<SequenceClip*>::const_iterator* t_it)
 {
     auto result = std::find_if(clips.cbegin(), clips.cend(),[t_clip](SequenceClip *t_testClip){
                      return t_testClip->clip() == t_clip;
@@ -45,7 +44,7 @@ SequenceClip *TimelineLayer::Impl::findClip(Clip *t_clip, QVector<SequenceClip*>
     return nullptr;
 }
 
-SequenceClip *TimelineLayer::Impl::addClip(Clip *t_clip)
+SequenceClip *TimelineClipLayer::Impl::addClip(Clip *t_clip)
 {
     SequenceClip *sequenceClip = new SequenceClip(t_clip);
     clips.append(sequenceClip);
@@ -55,7 +54,7 @@ SequenceClip *TimelineLayer::Impl::addClip(Clip *t_clip)
     return sequenceClip;
 }
 
-void TimelineLayer::Impl::removeClip(Clip *t_clip)
+void TimelineClipLayer::Impl::removeClip(Clip *t_clip)
 {
     QVector<SequenceClip*>::const_iterator it;
     auto result = findClip(t_clip, &it);
@@ -69,43 +68,43 @@ void TimelineLayer::Impl::removeClip(Clip *t_clip)
 }
 
 
-TimelineLayer::TimelineLayer(Layer *t_layer): QGraphicsObject(),m_impl(new Impl(this, t_layer))
+TimelineClipLayer::TimelineClipLayer(ClipLayer *t_layer): LayerItem(t_layer),m_impl(new Impl(this))
 {
-    connect(t_layer, &Layer::clipAdded, this, &TimelineLayer::clipAdded);
-    connect(t_layer, &Layer::clipRemoved, this, &TimelineLayer::clipRemoved);
-    connect(t_layer, &Layer::clipModified, this, &TimelineLayer::clipModified);
+    connect(t_layer, &ClipLayer::clipAdded, this, &TimelineClipLayer::clipAdded);
+    connect(t_layer, &ClipLayer::clipRemoved, this, &TimelineClipLayer::clipRemoved);
+    connect(t_layer, &ClipLayer::clipModified, this, &TimelineClipLayer::clipModified);
 }
 
-TimelineLayer::~TimelineLayer()
+TimelineClipLayer::~TimelineClipLayer()
 {
     delete m_impl;
 }
 
-void TimelineLayer::addedToScene(TimelineScene *t_scene)
+void TimelineClipLayer::addedToScene(TimelineScene *t_scene)
 {
-    for(Clip *clip : m_impl->layer->clips())
+    for(Clip *clip : static_cast<ClipLayer*>(layer())->clips())
     {
         m_impl->addClip(clip);
     }
 }
 
-void TimelineLayer::addClip(SequenceClip *t_clip)
+void TimelineClipLayer::addClip(SequenceClip *t_clip)
 {
     t_clip->setParentItem(this);
     t_clip->setPos(t_clip->clip()->startTime(),0);
 }
 
-void TimelineLayer::clipAdded(photon::Clip *t_clip)
+void TimelineClipLayer::clipAdded(photon::Clip *t_clip)
 {
     m_impl->addClip(t_clip);
 }
 
-void TimelineLayer::clipRemoved(photon::Clip *t_clip)
+void TimelineClipLayer::clipRemoved(photon::Clip *t_clip)
 {
     m_impl->removeClip(t_clip);
 }
 
-void TimelineLayer::clipModified(photon::Clip *t_clip)
+void TimelineClipLayer::clipModified(photon::Clip *t_clip)
 {
     auto sequenceClip = m_impl->findClip(t_clip);
     if(sequenceClip)
@@ -115,12 +114,12 @@ void TimelineLayer::clipModified(photon::Clip *t_clip)
     }
 }
 
-void TimelineLayer::removeLayer()
+void TimelineClipLayer::removeLayer()
 {
-    m_impl->layer->sequence()->removeLayer(m_impl->layer);
+    layer()->sequence()->removeLayer(layer());
 }
 
-QRectF TimelineLayer::boundingRect() const
+QRectF TimelineClipLayer::boundingRect() const
 {
     /*
     if(scene())
@@ -128,28 +127,23 @@ QRectF TimelineLayer::boundingRect() const
 
     else
     */
-        return QRectF(0,0,300, m_impl->layer->height());
+        return QRectF(0,0,300, layer()->height());
 
 }
 
-void TimelineLayer::paint(QPainter *painter, const QStyleOptionGraphicsItem *item, QWidget *widget)
+void TimelineClipLayer::paint(QPainter *painter, const QStyleOptionGraphicsItem *item, QWidget *widget)
 {
     painter->fillRect(boundingRect(), QColor(40,40,40));
 }
 
-Layer *TimelineLayer::layer() const
-{
-    return m_impl->layer;
-}
-
-void TimelineLayer::addRoutine(photon::Routine *t_routine, double t_time)
+void TimelineClipLayer::addRoutine(photon::Routine *t_routine, double t_time)
 {
     Clip *clip = new Clip(t_time, 5.0);
     clip->setRoutine(t_routine);
-    m_impl->layer->addClip(clip);
+    static_cast<ClipLayer*>(layer())->addClip(clip);
 }
 
-void TimelineLayer::contextMenuEvent(QGraphicsSceneContextMenuEvent *event)
+void TimelineClipLayer::contextMenuEvent(QGraphicsSceneContextMenuEvent *event)
 {
     QGraphicsObject::contextMenuEvent(event);
     if(event->isAccepted())
@@ -168,7 +162,7 @@ void TimelineLayer::contextMenuEvent(QGraphicsSceneContextMenuEvent *event)
 
     menu.addSeparator();
     QAction *removeLayer = menu.addAction("Remove Layer");
-    connect(removeLayer, &QAction::triggered, this, &TimelineLayer::removeLayer);
+    connect(removeLayer, &QAction::triggered, this, &TimelineClipLayer::removeLayer);
 
     menu.exec(event->screenPos());
 }

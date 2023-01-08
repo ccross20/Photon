@@ -29,7 +29,7 @@ public:
     NodeTreeElement *elementAt(uint index) const override{return m_children.at(index);}
     FolderElement *folderWithName(const QString &name) const;
     void addChild(NodeTreeElement *element){m_children.append(element);}
-    void sortAlphabetically(){}
+    void sortAlphabetically(bool recursive);
 
 private:
     QVector<NodeTreeElement*> m_children;

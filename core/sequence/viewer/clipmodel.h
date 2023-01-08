@@ -87,6 +87,19 @@ private:
 
 };
 
+class MasterLayerData : public AbstractTreeData
+{
+    Q_OBJECT
+public:
+    MasterLayerData(MasterLayer *);
+    MasterLayer *layer() const{return m_layer;}
+
+private:
+    FolderData *m_channelFolder;
+    MasterLayer *m_layer;
+
+};
+
 class CreateData : public AbstractTreeData
 {
 public:
@@ -188,6 +201,8 @@ public:
 
     void addClip(Clip *);
     void removeClip(Clip *);
+    void addMasterLayer(MasterLayer *);
+    void removeMasterLayer(MasterLayer *);
 
 private slots:
     void childWillBeAdded(photon::AbstractTreeData*, int);

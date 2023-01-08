@@ -4,6 +4,7 @@
 #include <QSpinBox>
 #include <qmath.h>
 #include "smootheffect.h"
+#include "sequence/viewer/stackedparameterwidget.h"
 
 
 namespace photon {
@@ -22,13 +23,11 @@ SmoothEffectEditor::SmoothEffectEditor(SmoothEffect *t_effect):ChannelEffectEdit
     spreadSpin->setValue(m_effect->spread());
     connect(spreadSpin, &QDoubleSpinBox::valueChanged, this, &SmoothEffectEditor::spreadChanged);
 
-    QHBoxLayout *hLayout = new QHBoxLayout;
-    hLayout->addWidget(new QLabel("Samples:"));
-    hLayout->addWidget(samplesSpin);
-    hLayout->addWidget(new QLabel("Spread:"));
-    hLayout->addWidget(spreadSpin);
-    hLayout->addStretch();
-    setLayout(hLayout);
+    StackedParameterWidget *paramWidget = new StackedParameterWidget;
+    paramWidget->addWidget(samplesSpin, "Samples");
+    paramWidget->addWidget(spreadSpin, "Spread");
+
+    addWidget(paramWidget, "Sinewave");
 }
 
 void SmoothEffectEditor::samplesChanged(int t_value)

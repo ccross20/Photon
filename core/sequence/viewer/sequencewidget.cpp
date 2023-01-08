@@ -10,6 +10,7 @@
 #include "timelineviewer.h"
 #include "timelinescene.h"
 #include "sequenceclip.h"
+#include "timelinemasterlayer.h"
 #include "sequence/sequence.h"
 #include "photoncore.h"
 #include "timekeeper.h"
@@ -17,6 +18,7 @@
 #include "clipstructureviewer.h"
 #include "sequence/channeleffect.h"
 #include "sequence/clip.h"
+#include "sequence/masterlayer.h"
 #include "falloff/falloffeffect.h"
 #include "timebar.h"
 
@@ -39,6 +41,7 @@ public:
     TimelineScene *scene;
     QElapsedTimer timer;
     QVector<SequenceClip*> selectedClips;
+    QVector<TimelineMasterLayer*> selectedLayers;
     double currentTime = 0;
     double offset = 0;
     double scale = 20.0;
@@ -189,6 +192,8 @@ void SequenceWidget::selectionChanged()
     auto newSelection = m_impl->scene->selectedItems();
     QVector<SequenceClip*> removed;
     QVector<SequenceClip*> added;
+    QVector<TimelineMasterLayer*> removedLayers;
+    QVector<TimelineMasterLayer*> addedLayers;
 
     for(auto item : m_impl->selectedClips)
     {
@@ -198,6 +203,16 @@ void SequenceWidget::selectionChanged()
             removed.append(item);
             if(clip)
                 m_impl->curvePropertyEditor->removeClip(clip->clip());
+        }
+    }
+    for(auto item : m_impl->selectedLayers)
+    {
+        if(!newSelection.contains(item))
+        {
+            auto layer = dynamic_cast<TimelineMasterLayer*>(item);
+            removedLayers.append(item);
+            if(layer)
+                m_impl->curvePropertyEditor->removeMasterLayer(static_cast<MasterLayer*>(layer->layer()));
         }
     }
 
@@ -212,12 +227,25 @@ void SequenceWidget::selectionChanged()
                 m_impl->curvePropertyEditor->addClip(clip->clip());
             }
         }
+
+        auto layer = dynamic_cast<TimelineMasterLayer*>(item);
+        if(layer)
+        {
+            if(!m_impl->selectedLayers.contains(layer))
+            {
+                addedLayers.append(layer);
+                m_impl->curvePropertyEditor->addMasterLayer(static_cast<MasterLayer*>(layer->layer()));
+            }
+        }
     }
 
     for(auto clip : removed)
         m_impl->selectedClips.removeOne(clip);
+    for(auto layer : removedLayers)
+        m_impl->selectedLayers.removeOne(layer);
 
     m_impl->selectedClips.append(added);
+    m_impl->selectedLayers.append(addedLayers);
 }
 
 void SequenceWidget::xOffsetChanged(int t_value)

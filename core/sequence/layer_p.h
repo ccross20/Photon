@@ -10,12 +10,10 @@ class Layer::Impl
 {
 public:
     Impl(Layer *);
-    void addClip(Clip *);
-    void removeClip(Clip *);
     void setSequence(Sequence *t_sequence);
-    void notifyClipWasModified(Clip *);
-    QVector<Clip *> clips;
     QString name;
+    QByteArray type;
+    QUuid guid;
     Sequence *sequence = nullptr;
     Layer *facade;
 };

@@ -15,6 +15,7 @@ public:
 StackedParameterWidget::StackedParameterWidget(QWidget *parent)
     : QWidget{parent},m_impl(new Impl)
 {
+    setMinimumWidth(120);
     m_impl->layout = new QVBoxLayout;
     m_impl->layout->setContentsMargins(0,0,0,0);
     setAttribute(Qt::WidgetAttribute::WA_TranslucentBackground);
@@ -28,7 +29,13 @@ StackedParameterWidget::~StackedParameterWidget()
 
 void StackedParameterWidget::addWidget(QWidget *t_widget, const QString &t_name)
 {
-    m_impl->layout->addWidget(new QLabel(t_name));
+    auto label = new QLabel(t_name);
+
+    QFont f;
+    f.setCapitalization(QFont::AllUppercase);
+    f.setPixelSize(9);
+    label->setFont(f);
+    m_impl->layout->addWidget(label);
     m_impl->layout->addWidget(t_widget);
 }
 

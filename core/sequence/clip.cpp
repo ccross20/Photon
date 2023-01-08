@@ -1,6 +1,6 @@
 #include <QJsonArray>
 #include "clip_p.h"
-#include "layer_p.h"
+#include "cliplayer_p.h"
 #include "falloff/falloffeffect_p.h"
 #include "falloff/constantfalloffeffect.h"
 #include "fixture/fixturemask.h"
@@ -21,7 +21,7 @@ Clip::Impl::Impl(Clip *t_facade):facade(t_facade)
     falloffEffects.back()->m_impl->clip = t_facade;
 }
 
-void Clip::Impl::setLayer(Layer *t_layer)
+void Clip::Impl::setLayer(ClipLayer *t_layer)
 {
     layer = t_layer;
 }
@@ -60,13 +60,13 @@ void Clip::Impl::markChanged()
     rebuildFalloffCache();
 }
 
-Clip::Clip(QObject *parent)
-    : QObject{parent}, m_impl(new Impl(this))
+Clip::Clip(QObject *t_parent)
+    : QObject{t_parent}, m_impl(new Impl(this))
 {
 
 }
 
-Clip::Clip(double t_start, double t_duration) : Clip()
+Clip::Clip(double t_start, double t_duration, QObject *t_parent) : Clip(t_parent)
 {
     m_impl->startTime = t_start;
     m_impl->duration = t_duration;
@@ -92,7 +92,7 @@ Sequence *Clip::sequence() const
     return m_impl->sequence;
 }
 
-Layer *Clip::layer() const
+ClipLayer *Clip::layer() const
 {
     return m_impl->layer;
 }
@@ -217,7 +217,8 @@ void Clip::setRoutine(Routine *t_routine)
 
     for(const auto &info : m_impl->routine->channelInfo())
     {
-        auto channel = new Channel(this, info);
+        auto channel = new Channel(info, m_impl->startTime, m_impl->duration, this);
+        connect(channel, &Channel::channelUpdated, this, &Clip::channelUpdatedSlot);
         m_impl->channels.append(channel);
     }
 
@@ -230,7 +231,8 @@ void Clip::setRoutine(Routine *t_routine)
 
 void Clip::channelAddedSlot(int index)
 {
-    auto channel = new Channel(this, m_impl->routine->channelInfoAtIndex(index));
+    auto channel = new Channel(m_impl->routine->channelInfoAtIndex(index), m_impl->startTime, m_impl->duration, this);
+    connect(channel, &Channel::channelUpdated, this, &Clip::channelUpdatedSlot);
     m_impl->channels.append(channel);
     emit channelAdded(channel);
 }
@@ -277,8 +279,12 @@ void Clip::setStartTime(double t_value)
     if(m_impl->startTime == t_value)
         return;
     m_impl->startTime = t_value;
+    for(auto channel : m_impl->channels)
+    {
+        channel->setStartTime(t_value);
+    }
     m_impl->markChanged();
-    emit timeChanged(t_value);
+    emit clipUpdated(this);
 }
 
 void Clip::setEndTime(double t_value)
@@ -291,8 +297,12 @@ void Clip::setDuration(double t_value)
     if(m_impl->duration == t_value)
         return;
     m_impl->duration = t_value;
+    for(auto channel : m_impl->channels)
+    {
+        channel->setDuration(t_value);
+    }
     m_impl->markChanged();
-    emit durationChanged(t_value);
+    emit clipUpdated(this);
 }
 
 double Clip::startTime() const
@@ -322,6 +332,12 @@ void Clip::falloffUpdatedSlot(photon::FalloffEffect *t_falloff)
     m_impl->markChanged();
 }
 
+void Clip::restore(Project &t_project)
+{
+    for(auto channel : m_impl->channels)
+        channel->restore(t_project);
+}
+
 void Clip::readFromJson(const QJsonObject &t_json, const LoadContext &t_context)
 {
     for(auto effect : m_impl->falloffEffects)
@@ -335,7 +351,8 @@ void Clip::readFromJson(const QJsonObject &t_json, const LoadContext &t_context)
     auto channelArray = t_json.value("channels").toArray();
     for(auto channelJson : channelArray)
     {
-        Channel *channel = new Channel(this, ChannelInfo());
+        Channel *channel = new Channel(ChannelInfo(), m_impl->startTime, m_impl->duration, this);
+        connect(channel, &Channel::channelUpdated, this, &Clip::channelUpdatedSlot);
         channel->readFromJson(channelJson.toObject(), t_context);
         m_impl->channels.append(channel);
     }

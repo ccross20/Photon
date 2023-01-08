@@ -28,6 +28,8 @@ public:
 
     void addClip(Clip *);
     void removeClip(Clip *);
+    void addMasterLayer(MasterLayer *);
+    void removeMasterLayer(MasterLayer *);
 
 signals:
     void selectEffect(photon::ChannelEffect *);

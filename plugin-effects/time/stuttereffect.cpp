@@ -2,16 +2,18 @@
 #include <QLabel>
 #include <QDoubleSpinBox>
 #include <qmath.h>
+#include <QDoubleSpinBox>
 #include "stuttereffect.h"
 #include "sequence/channel.h"
 #include "sequence/clip.h"
+#include "sequence/viewer/stackedparameterwidget.h"
 
 
 namespace photon {
 
 StutterEffectEditor::StutterEffectEditor(StutterEffect *t_effect):ChannelEffectEditor(t_effect),m_effect(t_effect)
 {
-/*
+
     QDoubleSpinBox *durationSpin = new QDoubleSpinBox;
     durationSpin->setValue(m_effect->duration());
     connect(durationSpin, &QDoubleSpinBox::valueChanged, this, &StutterEffectEditor::durationChanged);
@@ -21,27 +23,26 @@ StutterEffectEditor::StutterEffectEditor(StutterEffect *t_effect):ChannelEffectE
     gapSpin->setValue(m_effect->gap());
     connect(gapSpin, &QDoubleSpinBox::valueChanged, this, &StutterEffectEditor::gapChanged);
 
-    QHBoxLayout *hLayout = new QHBoxLayout;
-    hLayout->addWidget(new QLabel("Duration:"));
-    hLayout->addWidget(durationSpin);
-    hLayout->addWidget(new QLabel("Gap:"));
-    hLayout->addWidget(gapSpin);
-    hLayout->addStretch();
-    setLayout(hLayout);
-    */
+    StackedParameterWidget *paramWidget = new StackedParameterWidget;
+    paramWidget->addWidget(durationSpin, "Duration");
+    paramWidget->addWidget(gapSpin, "Gap");
+
+    addWidget(paramWidget, "Stutter");
 
 
     m_parentItem = new QGraphicsRectItem(0,0,0,0);
     addItem(m_parentItem);
 
 
-    m_durationHandle = new RectangleGizmo(QRectF(-5,-5,10,10),[this](QPointF pt){
+    m_durationHandle = new RectangleGizmo(QRectF(-5,-5,10,10),[this, durationSpin](QPointF pt){
         m_effect->setDuration(pt.x()/scale().x());
+        durationSpin->setValue(m_effect->duration());
     });
     m_durationHandle->setParentItem(m_parentItem);
 
-    m_gapHandle = new RectangleGizmo(QRectF(-5,-5,10,10),[this](QPointF pt){
+    m_gapHandle = new RectangleGizmo(QRectF(-5,-5,10,10),[this, gapSpin](QPointF pt){
         m_effect->setGap(pt.x()/scale().x());
+            gapSpin->setValue(m_effect->gap());
     });
     m_gapHandle->setParentItem(m_durationHandle);
 }
@@ -62,7 +63,7 @@ void StutterEffectEditor::relayout(const QRectF &t_sceneRect)
 
     double gap = m_effect->gap();
     double duration = m_effect->duration();
-    double startTime = m_effect->channel()->clip()->startTime();
+    double startTime = m_effect->channel()->startTime();
 
     double x = startTime;
 

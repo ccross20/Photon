@@ -71,8 +71,22 @@ set(PROJECT_SOURCES
         graph/node/math/arithmeticnode.cpp
         graph/node/math/trigonometrynode.h
         graph/node/math/trigonometrynode.cpp
+        graph/parameter/colorparameter.h
+        graph/parameter/colorparameter.cpp
         graph/parameter/dmxmatrixparameter.h
         graph/parameter/dmxmatrixparameter.cpp
+        gui/color/colorslider.h
+        gui/color/colorslider.cpp
+        gui/color/colorwheelswatch.h
+        gui/color/colorwheelswatch.cpp
+        gui/color/colorselectorwidget.h
+        gui/color/colorselectorwidget.cpp
+        gui/color/colorselectordialog.h
+        gui/color/colorselectordialog.cpp
+        gui/color/huebox.h
+        gui/color/huebox.cpp
+        gui/color/simpleswatch.h
+        gui/color/simpleswatch.cpp
         gui/dmxviewer/dmxviewer.h
         gui/dmxviewer/dmxviewer.cpp
         gui/dmxviewer/dmxviewercells.h
@@ -92,6 +106,9 @@ set(PROJECT_SOURCES
         gui/panel.cpp
         gui/panel/buspanel.h
         gui/panel/buspanel.cpp
+        gui/panel/canvascollectionpanel.h
+        gui/panel/canvascollectionpanel_p.h
+        gui/panel/canvascollectionpanel.cpp
         gui/panel/dmxviewerpanel.h
         gui/panel/dmxviewerpanel.cpp
         gui/panel/fixturecollectionpanel.h
@@ -121,14 +138,22 @@ set(PROJECT_SOURCES
         routine/node/globalsnode.cpp
         routine/node/numberinputnode.h
         routine/node/numberinputnode.cpp
+        routine/node/colorinputnode.h
+        routine/node/colorinputnode.cpp
         routine/routineevaluationcontext.h
         routine/routine.h
         routine/routine.cpp
         routine/routinecollection.h
         routine/routinecollection.cpp
         plugin/iplugin.h
+        pixel/canvas.h
+        pixel/canvas.cpp
+        pixel/canvascollection.h
+        pixel/canvascollection.cpp
         plugin/pluginfactory.h
         plugin/pluginfactory.cpp
+        sequence/canvaslayergroup.h
+        sequence/canvaslayergroup.cpp
         sequence/channel.h
         sequence/channel_p.h
         sequence/channel.cpp
@@ -138,11 +163,21 @@ set(PROJECT_SOURCES
         sequence/clip.h
         sequence/clip_p.h
         sequence/clip.cpp
+        sequence/cliplayer.h
+        sequence/cliplayer_p.h
+        sequence/cliplayer.cpp
         sequence/constantchanneleffect.h
         sequence/constantchanneleffect.cpp
         sequence/layer.h
         sequence/layer_p.h
         sequence/layer.cpp
+        sequence/layergroup.h
+        sequence/layergroup_p.h
+        sequence/layergroup.cpp
+        sequence/masterlayerchanneleffect.h
+        sequence/masterlayerchanneleffect.cpp
+        sequence/masterlayer.h
+        sequence/masterlayer.cpp
         sequence/sequence.h
         sequence/sequence_p.h
         sequence/sequence.cpp
@@ -163,14 +198,20 @@ set(PROJECT_SOURCES
         sequence/viewer/clipstructureviewer.cpp
         sequence/viewer/clipeffecteditor.h
         sequence/viewer/clipeffecteditor.cpp
+        sequence/viewer/layeritem.h
+        sequence/viewer/layeritem.cpp
         sequence/viewer/stackedparameterwidget.h
         sequence/viewer/stackedparameterwidget.cpp
         sequence/viewer/timebar.h
         sequence/viewer/timebar.cpp
         sequence/viewer/timelineheader.h
         sequence/viewer/timelineheader.cpp
-        sequence/viewer/timelinelayer.h
-        sequence/viewer/timelinelayer.cpp
+        sequence/viewer/timelinecliplayer.h
+        sequence/viewer/timelinecliplayer.cpp
+        sequence/viewer/timelinelayergroup.h
+        sequence/viewer/timelinelayergroup.cpp
+        sequence/viewer/timelinemasterlayer.h
+        sequence/viewer/timelinemasterlayer.cpp
         sequence/viewer/timelinescene.h
         sequence/viewer/timelinescene.cpp
         sequence/viewer/timelineviewer.h

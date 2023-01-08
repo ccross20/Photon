@@ -9,7 +9,8 @@ class Channel::Impl
 public:
     ChannelInfo info;
     QVector<ChannelEffect*> effects;
-    Clip *clip = nullptr;
+    double startTime = 0;
+    double duration = 0;
 };
 }
 

@@ -39,6 +39,7 @@ public:
     void updated();
 
     ChannelEffect *previousEffect() const;
+    virtual void restore(Project &);
     virtual void readFromJson(const QJsonObject &);
     virtual void writeToJson(QJsonObject &) const;
 

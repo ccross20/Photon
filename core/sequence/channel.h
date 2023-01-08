@@ -24,7 +24,7 @@ class PHOTONCORE_EXPORT Channel : public QObject
 {
     Q_OBJECT
 public:
-    Channel(Clip *clip, const ChannelInfo &info);
+    Channel(const ChannelInfo &info, double startTime, double duration, QObject *parent = nullptr);
     ~Channel();
 
     ChannelInfo info() const;
@@ -34,13 +34,24 @@ public:
     void moveEffect(ChannelEffect *, int newPosition);
 
     double processDouble(double time);
-    Clip *clip() const;
+
+    void setDuration(double);
+    double duration() const;
+
+    void setStartTime(double);
+    double startTime() const;
+
+    void setEndTime(double);
+    double endTime() const;
 
     int effectCount() const;
     ChannelEffect *effectAtIndex(int index) const;
 
+    Sequence *sequence() const;
+
     void effectUpdated(ChannelEffect *);
 
+    void restore(Project &);
     void readFromJson(const QJsonObject &, const LoadContext &);
     void writeToJson(QJsonObject &) const;
 
@@ -50,9 +61,8 @@ signals:
     void effectAdded(photon::ChannelEffect*);
     void effectRemoved(photon::ChannelEffect*);
     void effectMoved(photon::ChannelEffect*);
-    void channelUpdated();
+    void channelUpdated(photon::Channel*);
 private:
-    friend class Clip;
     class Impl;
     Impl *m_impl;
 };

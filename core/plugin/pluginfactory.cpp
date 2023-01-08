@@ -10,6 +10,7 @@
 #include "gui/panel/sequencecollectionpanel.h"
 #include "gui/panel/routinecollectionpanel.h"
 #include "gui/panel/fixturecollectionpanel.h"
+#include "gui/panel/canvascollectionpanel.h"
 #include "gui/panel/routineeditpanel.h"
 #include "gui/panel/dmxviewerpanel.h"
 
@@ -19,17 +20,20 @@
 #include "routine/node/fixturewriternode.h"
 #include "routine/node/globalsnode.h"
 #include "routine/node/numberinputnode.h"
+#include "routine/node/colorinputnode.h"
 #include "graph/node/math/trigonometrynode.h"
 #include "graph/node/math/arithmeticnode.h"
 
 #include "falloff/constantfalloffeffect.h"
 #include "sequence/constantchanneleffect.h"
+#include "sequence/masterlayerchanneleffect.h"
 
 #include "model/parameter/decimalparameter.h"
 #include "model/parameter/integerparameter.h"
 #include "model/parameter/buttonparameter.h"
 #include "model/parameter/stringparameter.h"
 #include "graph/parameter/dmxmatrixparameter.h"
+#include "graph/parameter/colorparameter.h"
 
 namespace photon {
 
@@ -129,6 +133,7 @@ void PluginFactory::init()
     registerPluginPanel("photon.routine-collection",[](){return new RoutineCollectionPanel;});
     registerPluginPanel("photon.sequence-collection",[](){return new SequenceCollectionPanel;});
     registerPluginPanel("photon.fixture-collection",[](){return new FixtureCollectionPanel;});
+    registerPluginPanel("photon.canvas-collection",[](){return new CanvasCollectionPanel;});
     registerPluginPanel("photon.routine",[](){return new RoutineEditPanel;});
     registerPluginPanel("photon.dmx-viewer",[](){return new DMXViewerPanel;});
 
@@ -140,16 +145,19 @@ void PluginFactory::init()
     registerNode(DMXGenerateMatrixNode::info());
     registerNode(SequenceNode::info());
     registerNode(NumberInputNode::info());
+    registerNode(ColorInputNode::info());
 
     registerFalloffEffect(ConstantFalloffEffect::info());
 
     registerChannelEffect(ConstantChannelEffect::info());
+    registerChannelEffect(MasterLayerChannelEffect::info());
 
     m_impl->nodeLibrary.registerParameter(keira::DecimalParameter::ParameterId,[](){return new keira::DecimalParameter();});
     m_impl->nodeLibrary.registerParameter(keira::IntegerParameter::ParameterId,[](){return new keira::IntegerParameter();});
     m_impl->nodeLibrary.registerParameter(keira::ButtonParameter::ParameterId,[](){return new keira::ButtonParameter();});
     m_impl->nodeLibrary.registerParameter(keira::StringParameter::ParameterId,[](){return new keira::StringParameter();});
     m_impl->nodeLibrary.registerParameter(DMXMatrixParameter::ParameterId,[](){return new DMXMatrixParameter();});
+    m_impl->nodeLibrary.registerParameter(ColorParameter::ParameterId,[](){return new ColorParameter();});
 
     //qDebug() << "Node Count:" << m_impl->nodeHash.size();
 }

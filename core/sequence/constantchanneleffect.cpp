@@ -1,5 +1,7 @@
 #include <QPen>
+#include <QDoubleSpinBox>
 #include "constantchanneleffect.h"
+#include "sequence/viewer/stackedparameterwidget.h"
 
 namespace photon {
 
@@ -8,9 +10,21 @@ ConstantEffectEditor::ConstantEffectEditor(ConstantChannelEffect *t_effect):Chan
     //setMaximumHeight(40);
 
 
+    QDoubleSpinBox *constantSpin = new QDoubleSpinBox;
+    constantSpin->setMinimum(-255);
+    constantSpin->setMaximum(255);
+    constantSpin->setValue(m_effect->value());
+    connect(constantSpin, &QDoubleSpinBox::valueChanged, this, &ConstantEffectEditor::valueChanged);
 
-    m_originHandle = new RectangleGizmo(QRectF(-5,-5,10,10),[this](QPointF pt){
-        m_effect->setValue( (pt.y() - offset().y())/scale().y());
+    StackedParameterWidget *paramWidget = new StackedParameterWidget;
+    paramWidget->addWidget(constantSpin, "Value");
+
+    addWidget(paramWidget, "Constant");
+
+
+    m_originHandle = new RectangleGizmo(QRectF(-5,-5,10,10),[this, constantSpin](QPointF pt){
+        m_effect->setValue( (pt.y() - offset().y())/-scale().y());
+        constantSpin->setValue(m_effect->value());
     });
     //m_originHandle->setOrientation(Qt::Vertical | Qt::Horizontal);
     addItem(m_originHandle);

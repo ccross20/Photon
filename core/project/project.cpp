@@ -7,6 +7,8 @@
 #include "fixture/fixture.h"
 #include "photoncore.h"
 #include "plugin/pluginfactory.h"
+#include "pixel/canvascollection.h"
+#include "pixel/canvas.h"
 #include "sequence/sequencecollection.h"
 #include "routine/routinecollection.h"
 #include "routine/routine.h"
@@ -23,6 +25,7 @@ class Project::Impl
 public:
     Impl();
     ~Impl();
+    CanvasCollection canvases;
     FixtureCollection fixtures;
     SequenceCollection sequences;
     RoutineCollection routines;
@@ -94,6 +97,11 @@ SequenceCollection *Project::sequences() const
 FixtureCollection *Project::fixtures() const
 {
     return &m_impl->fixtures;
+}
+
+CanvasCollection *Project::canvases() const
+{
+    return &m_impl->canvases;
 }
 
 
@@ -171,8 +179,15 @@ void Project::load(const QString &path)
     QJsonDocument loadDoc(QJsonDocument::fromJson(saveData));
 
     readFromJson(loadDoc.object());
+    restore(*this);
 
     qDebug() << "Load from: " << loadFile.fileName();
+}
+
+void Project::restore(Project &t_project)
+{
+    for(auto sequence : m_impl->sequences.sequences())
+        sequence->restore(t_project);
 }
 
 void Project::readFromJson(const QJsonObject &json)
@@ -224,6 +239,19 @@ void Project::readFromJson(const QJsonObject &json)
         }
     }
 
+    if(json.contains("canvases"))
+    {
+        QJsonArray canvasArray = json.value("canvases").toArray();
+        for(const auto &canvas : canvasArray)
+        {
+            const QJsonObject &canvasObj = canvas.toObject();
+
+            Canvas *c = new Canvas;
+            c->readFromJson(canvasObj, context);
+            m_impl->canvases.addCanvas(c);
+        }
+    }
+
 }
 
 void Project::writeToJson(QJsonObject &json) const
@@ -259,6 +287,15 @@ void Project::writeToJson(QJsonObject &json) const
         routineArray.append(routineObj);
     }
     json.insert("routines", routineArray);
+
+    QJsonArray canvasArray;
+    for(auto canvas : m_impl->canvases.canvases())
+    {
+        QJsonObject canvasObj;
+        canvas->writeToJson(canvasObj);
+        canvasArray.append(canvasObj);
+    }
+    json.insert("canvases", canvasArray);
 }
 
 } // namespace photon

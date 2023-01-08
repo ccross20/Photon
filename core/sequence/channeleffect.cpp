@@ -56,6 +56,11 @@ ChannelEffect *ChannelEffect::previousEffect() const
     return m_impl->previousEffect;
 }
 
+void ChannelEffect::restore(Project &)
+{
+
+}
+
 void ChannelEffect::readFromJson(const QJsonObject &t_json)
 {
     if(t_json.contains("name"))

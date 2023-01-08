@@ -1,5 +1,7 @@
 #include "sequence_p.h"
 #include "layer_p.h"
+#include "cliplayer_p.h"
+#include "masterlayer.h"
 #include "project/project.h"
 #include "photoncore.h"
 
@@ -38,7 +40,18 @@ Sequence::~Sequence()
 
 void Sequence::init()
 {
-    addLayer(new Layer("Layer 1"));
+    addLayer(new ClipLayer("Layer 1"));
+}
+
+Layer *Sequence::findLayerByGuid(const QUuid &t_guid)
+{
+    for(auto layer : m_impl->layers)
+    {
+        auto results = layer->findLayerByGuid(t_guid);
+        if(results)
+            return results;
+    }
+    return nullptr;
 }
 
 Project *Sequence::project() const
@@ -82,6 +95,12 @@ void Sequence::processChannels(ProcessContext &t_context, double lastTime)
         layer->processChannels(t_context);
 }
 
+void Sequence::restore(Project &t_project)
+{
+    for(auto layer : m_impl->layers)
+        layer->restore(t_project);
+}
+
 void Sequence::readFromJson(const QJsonObject &t_json, const LoadContext &t_context)
 {
     m_impl->name = t_json.value("name").toString();
@@ -89,9 +108,19 @@ void Sequence::readFromJson(const QJsonObject &t_json, const LoadContext &t_cont
     auto array = t_json.value("layers").toArray();
     for(auto layerJson : array)
     {
-        auto layer = new Layer;
-        m_impl->addLayer(layer);
-        layer->readFromJson(layerJson.toObject(), t_context);
+        auto layerObj = layerJson.toObject();
+        if(layerObj.value("type").toString() == "ClipLayer")
+        {
+            auto layer = new ClipLayer("", this);
+            m_impl->addLayer(layer);
+            layer->readFromJson(layerObj, t_context);
+        }
+        if(layerObj.value("type").toString() == "MasterLayer")
+        {
+            auto layer = new MasterLayer(this);
+            m_impl->addLayer(layer);
+            layer->readFromJson(layerObj, t_context);
+        }
     }
 }
 

@@ -18,10 +18,12 @@ public:
     FixtureCollection *fixtures() const;
     RoutineCollection *routines() const;
     SequenceCollection *sequences() const;
+    CanvasCollection *canvases() const;
     BusGraph *bus() const;
 
     void save(const QString &path = QString{}) const;
     void load(const QString &path = QString{});
+    void restore(Project &);
     void readFromJson(const QJsonObject &json);
     void writeToJson(QJsonObject &json) const;
 signals:
