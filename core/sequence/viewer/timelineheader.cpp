@@ -1,12 +1,19 @@
 #include <QScrollArea>
 #include <QVBoxLayout>
+#include <QHBoxLayout>
 #include <QLabel>
+#include <QComboBox>
 #include <QPainter>
 #include <QPaintEvent>
 #include <QScrollBar>
 #include "sequence/layer.h"
+#include "sequence/layergroup.h"
 #include "sequence/sequence.h"
 #include "timelineheader.h"
+#include "photoncore.h"
+#include "project/project.h"
+#include "pixel/canvascollection.h"
+#include "pixel/canvas.h"
 
 namespace photon {
 
@@ -19,27 +26,37 @@ public:
 
 LayerHeader::LayerHeader(Layer *t_layer):m_impl(new Impl)
 {
+
+    m_impl->layer = t_layer;
     QString layerName = t_layer->name();
     if(layerName.isEmpty())
         layerName = "[Unnamed]";
-    m_impl->layer = t_layer;
     m_impl->label = new QLabel(layerName);
+
+    setStyleSheet("background-color:rgb(80,80,80);");
+    setMinimumHeight(m_impl->layer->height());
+    setMaximumHeight(m_impl->layer->height());
+}
+
+LayerHeader::~LayerHeader()
+{
+    delete m_impl;
+}
+
+QLabel *LayerHeader::label() const
+{
+    return m_impl->label;
+}
+
+void LayerHeader::buildLayout()
+{
+
     QVBoxLayout *vLayout = new QVBoxLayout;
     vLayout->setContentsMargins(0,0,0,0);
     vLayout->addWidget(m_impl->label);
     vLayout->addStretch();
     setLayout(vLayout);
 
-    setStyleSheet("background-color:rgb(80,80,80);");
-    //setSizePolicy(QSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::Fixed));
-
-    setMinimumHeight(t_layer->height());
-    setMaximumHeight(t_layer->height());
-}
-
-LayerHeader::~LayerHeader()
-{
-    delete m_impl;
 }
 
 void LayerHeader::paintEvent(QPaintEvent *event)
@@ -57,6 +74,57 @@ Layer *LayerHeader::layer() const
 {
     return m_impl->layer;
 }
+
+
+class LayerGroupHeader::Impl
+{
+public:
+    QComboBox *canvasCombo;
+};
+
+
+
+LayerGroupHeader::LayerGroupHeader(LayerGroup *t_group) : LayerHeader(t_group),m_impl(new Impl)
+{
+
+}
+
+LayerGroupHeader::~LayerGroupHeader()
+{
+    delete m_impl;
+}
+
+LayerGroup *LayerGroupHeader::group() const
+{
+    return static_cast<LayerGroup*>(layer());
+}
+
+void LayerGroupHeader::buildLayout()
+{
+    QVBoxLayout *vLayout = new QVBoxLayout;
+    vLayout->setContentsMargins(0,0,0,0);
+
+    QHBoxLayout *hLayout = new QHBoxLayout;
+    hLayout->setContentsMargins(0,0,0,0);
+    hLayout->addWidget(label());
+
+    m_impl->canvasCombo = new QComboBox;
+
+    for(auto canvas : photonApp->project()->canvases()->canvases())
+        m_impl->canvasCombo->addItem(canvas->name());
+
+    hLayout->addWidget(m_impl->canvasCombo);
+
+    vLayout->addLayout(hLayout);
+    vLayout->addStretch();
+    setLayout(vLayout);
+}
+
+
+
+
+
+
 
 class TimelineHeader::Impl
 {
@@ -160,9 +228,21 @@ void TimelineHeader::layerUpdated(photon::Layer *)
 
 void TimelineHeader::layerAdded(photon::Layer *t_layer)
 {
-    LayerHeader *header = new LayerHeader(t_layer);
+    LayerHeader *header = nullptr;
+    if(t_layer->isGroup())
+    {
+        header = new LayerGroupHeader(static_cast<LayerGroup*>(t_layer));
+    }
+    else
+    {
+        header = new LayerHeader(t_layer);
+    }
+
+    if(!header)
+        return;
+
+    header->buildLayout();
     m_impl->vLayout->addWidget(header);
-    //m_impl->vLayout->insertWidget(m_impl->headers.length(),header);
     m_impl->headers.append(header);
 }
 

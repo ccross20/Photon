@@ -94,14 +94,25 @@ void Routine::addChannel(const ChannelInfo &info)
 
 void Routine::updateChannel(int index, const ChannelInfo &info)
 {
-    m_impl->channels[index] = info;
-    emit channelUpdated(index);
+    if(index < m_impl->channels.length())
+    {
+        m_impl->channels[index] = info;
+        emit channelUpdated(index);
+    }
+    else
+        qWarning() << "Index " << index << "out of bounds";
 }
 
 void Routine::removeChannel(int index)
 {
-    m_impl->channels.removeAt(index);
-    emit channelRemoved(index);
+    if(index < m_impl->channels.length())
+    {
+        m_impl->channels.removeAt(index);
+        emit channelRemoved(index);
+    }
+    else
+        qWarning() << "Index " << index << "out of bounds";
+
 }
 
 int Routine::channelCount() const

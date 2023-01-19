@@ -16,6 +16,12 @@ set(SOURCES
     plugin-nodes-global.h
     pluginnodes.cpp
     pluginnodes.h
+    canvas/canvasreader.h
+    canvas/canvasreader.cpp
+    canvas/canvaswriter.h
+    canvas/canvaswriter.cpp
+    canvas/drawrectangle.h
+    canvas/drawrectangle.cpp
     fixture/setfixturepan.h
     fixture/setfixturepan.cpp
     fixture/setfixturetilt.h

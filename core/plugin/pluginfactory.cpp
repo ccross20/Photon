@@ -13,6 +13,7 @@
 #include "gui/panel/canvascollectionpanel.h"
 #include "gui/panel/routineeditpanel.h"
 #include "gui/panel/dmxviewerpanel.h"
+#include "gui/panel/canvasviewerpanel.h"
 
 #include "graph/bus/dmxgeneratematrixnode.h"
 #include "graph/bus/dmxwriternode.h"
@@ -34,6 +35,7 @@
 #include "model/parameter/stringparameter.h"
 #include "graph/parameter/dmxmatrixparameter.h"
 #include "graph/parameter/colorparameter.h"
+#include "graph/parameter/canvasparameter.h"
 
 namespace photon {
 
@@ -136,6 +138,7 @@ void PluginFactory::init()
     registerPluginPanel("photon.canvas-collection",[](){return new CanvasCollectionPanel;});
     registerPluginPanel("photon.routine",[](){return new RoutineEditPanel;});
     registerPluginPanel("photon.dmx-viewer",[](){return new DMXViewerPanel;});
+    registerPluginPanel("photon.canvas-viewer",[](){return new CanvasViewerPanel;});
 
     registerNode(FixtureWriterNode::info());
     registerNode(GlobalsNode::info());
@@ -158,6 +161,7 @@ void PluginFactory::init()
     m_impl->nodeLibrary.registerParameter(keira::StringParameter::ParameterId,[](){return new keira::StringParameter();});
     m_impl->nodeLibrary.registerParameter(DMXMatrixParameter::ParameterId,[](){return new DMXMatrixParameter();});
     m_impl->nodeLibrary.registerParameter(ColorParameter::ParameterId,[](){return new ColorParameter();});
+    m_impl->nodeLibrary.registerParameter(CanvasParameter::ParameterId,[](){return new CanvasParameter();});
 
     //qDebug() << "Node Count:" << m_impl->nodeHash.size();
 }

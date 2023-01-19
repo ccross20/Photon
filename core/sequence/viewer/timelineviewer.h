@@ -13,6 +13,7 @@ public:
     TimelineViewer();
     ~TimelineViewer();
 
+
 public slots:
     void movePlayheadTo(double t_time);
     void setScale(double);

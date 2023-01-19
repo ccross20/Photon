@@ -14,6 +14,7 @@ public:
     void removeLayer(Layer*);
     QVector<Layer*> layers;
     QString name;
+    QString filePath;
     Sequence *facade;
 };
 

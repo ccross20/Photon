@@ -4,6 +4,8 @@
 #include <QWidget>
 #include "photon-global.h"
 
+class QLabel;
+
 namespace photon {
 
 class PHOTONCORE_EXPORT LayerHeader : public QWidget
@@ -11,13 +13,30 @@ class PHOTONCORE_EXPORT LayerHeader : public QWidget
     Q_OBJECT
 public:
     LayerHeader(Layer *);
-    ~LayerHeader();
+    virtual ~LayerHeader();
+    QLabel *label() const;
     Layer *layer() const;
+    virtual void buildLayout();
 
-    QSize sizeHint() const override;
+    virtual QSize sizeHint() const override;
 
 protected:
-     void paintEvent(QPaintEvent *event) override;
+     virtual void paintEvent(QPaintEvent *event) override;
+
+private:
+    class Impl;
+    Impl *m_impl;
+};
+
+class PHOTONCORE_EXPORT LayerGroupHeader : public LayerHeader
+{
+    Q_OBJECT
+public:
+    LayerGroupHeader(LayerGroup *);
+    ~LayerGroupHeader();
+    LayerGroup *group() const;
+
+    void buildLayout() override;
 
 private:
     class Impl;

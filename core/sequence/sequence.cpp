@@ -1,7 +1,8 @@
 #include "sequence_p.h"
 #include "layer_p.h"
-#include "cliplayer_p.h"
+#include "cliplayer.h"
 #include "masterlayer.h"
+#include "canvaslayergroup.h"
 #include "project/project.h"
 #include "photoncore.h"
 
@@ -74,6 +75,22 @@ void Sequence::setName(const QString &t_value)
     m_impl->name = t_value;
 }
 
+QString Sequence::filePath() const
+{
+    return m_impl->filePath;
+}
+
+void Sequence::setAudioPath(const QString &t_path)
+{
+    if(m_impl->filePath == t_path)
+        return;
+    m_impl->filePath = t_path;
+
+    qDebug() << t_path;
+
+    emit fileChanged(m_impl->filePath);
+}
+
 void Sequence::addLayer(Layer *t_layer)
 {
     m_impl->addLayer(t_layer);
@@ -104,6 +121,7 @@ void Sequence::restore(Project &t_project)
 void Sequence::readFromJson(const QJsonObject &t_json, const LoadContext &t_context)
 {
     m_impl->name = t_json.value("name").toString();
+    m_impl->filePath = t_json.value("filePath").toString();
 
     auto array = t_json.value("layers").toArray();
     for(auto layerJson : array)
@@ -121,12 +139,19 @@ void Sequence::readFromJson(const QJsonObject &t_json, const LoadContext &t_cont
             m_impl->addLayer(layer);
             layer->readFromJson(layerObj, t_context);
         }
+        if(layerObj.value("type").toString() == "CanvasGroup")
+        {
+            auto layer = new CanvasLayerGroup(this);
+            m_impl->addLayer(layer);
+            layer->readFromJson(layerObj, t_context);
+        }
     }
 }
 
 void Sequence::writeToJson(QJsonObject &t_json) const
 {
     t_json.insert("name", m_impl->name);
+    t_json.insert("filePath", m_impl->filePath);
 
     QJsonArray array;
     for(auto layer : m_impl->layers)

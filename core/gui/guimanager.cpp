@@ -63,6 +63,7 @@ void GuiManager::Impl::createAppWindow()
     windowMenu->addAction("Fixture", [](){photonApp->gui()->createFloatingPanel("photon.fixture-collection");});
     windowMenu->addAction("Routine", [](){photonApp->gui()->createFloatingPanel("photon.routine-collection");});
     windowMenu->addAction("Sequence", [](){photonApp->gui()->createFloatingPanel("photon.sequence-collection");});
+    windowMenu->addAction("Canvas Viewer", [](){photonApp->gui()->createFloatingPanel("photon.canvas-viewer");});
     menubar->addMenu(windowMenu);
 
     Panel *panel1 = createPanel("photon.bus");

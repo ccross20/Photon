@@ -1,8 +1,15 @@
 #include "layergroup_p.h"
 #include "layer_p.h"
 #include "cliplayer.h"
+#include "masterlayer.h"
 
 namespace photon {
+
+LayerGroup::LayerGroup(const QByteArray &t_layerType, QObject *t_parent) :
+    Layer("", t_layerType, t_parent),m_impl(new Impl)
+{
+
+}
 
 LayerGroup::LayerGroup(const QString &t_name, const QByteArray &t_layerType, QObject *t_parent) :
     Layer(t_name, t_layerType, t_parent),m_impl(new Impl)
@@ -70,13 +77,40 @@ void LayerGroup::restore(Project &t_project)
         layer->restore(t_project);
 }
 
-void LayerGroup::readFromJson(const QJsonObject &, const LoadContext &)
+void LayerGroup::readFromJson(const QJsonObject &t_json, const LoadContext &t_context)
 {
-
+    Layer::readFromJson(t_json, t_context);
+    auto array = t_json.value("layers").toArray();
+    for(auto layerJson : array)
+    {
+        auto layerObj = layerJson.toObject();
+        if(layerObj.value("type").toString() == "ClipLayer")
+        {
+            auto layer = new ClipLayer("", this);
+            addLayer(layer);
+            layer->readFromJson(layerObj, t_context);
+        }
+        if(layerObj.value("type").toString() == "MasterLayer")
+        {
+            auto layer = new MasterLayer(this);
+            addLayer(layer);
+            layer->readFromJson(layerObj, t_context);
+        }
+    }
 }
 
-void LayerGroup::writeToJson(QJsonObject &) const
+void LayerGroup::writeToJson(QJsonObject &t_json) const
 {
+    Layer::writeToJson(t_json);
+
+    QJsonArray array;
+    for(auto layer : m_impl->layers)
+    {
+        QJsonObject layerJson;
+        layer->writeToJson(layerJson);
+        array.append(layerJson);
+    }
+    t_json.insert("layers", array);
 
 }
 

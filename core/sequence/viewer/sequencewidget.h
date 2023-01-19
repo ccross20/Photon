@@ -23,6 +23,7 @@ public slots:
     void rewind();
     void setScale(double);
     void gotoTime(double);
+    void pickFile();
 
 private slots:
     void tick();

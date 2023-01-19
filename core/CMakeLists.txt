@@ -20,6 +20,7 @@ find_package(Qt6 REQUIRED COMPONENTS
     3DLogic
     3DExtras
     3DAnimation
+    MultimediaWidgets
 )
 
 set(PROJECT_SOURCES
@@ -71,6 +72,8 @@ set(PROJECT_SOURCES
         graph/node/math/arithmeticnode.cpp
         graph/node/math/trigonometrynode.h
         graph/node/math/trigonometrynode.cpp
+        graph/parameter/canvasparameter.h
+        graph/parameter/canvasparameter.cpp
         graph/parameter/colorparameter.h
         graph/parameter/colorparameter.cpp
         graph/parameter/dmxmatrixparameter.h
@@ -109,6 +112,8 @@ set(PROJECT_SOURCES
         gui/panel/canvascollectionpanel.h
         gui/panel/canvascollectionpanel_p.h
         gui/panel/canvascollectionpanel.cpp
+        gui/panel/canvasviewerpanel.h
+        gui/panel/canvasviewerpanel.cpp
         gui/panel/dmxviewerpanel.h
         gui/panel/dmxviewerpanel.cpp
         gui/panel/fixturecollectionpanel.h
@@ -126,6 +131,8 @@ set(PROJECT_SOURCES
         gui/panel/sequencepanel.cpp
         gui/vector3edit.h
         gui/vector3edit.cpp
+        gui/waveformwidget.h
+        gui/waveformwidget.cpp
         gui/window.h
         gui/window.cpp
         photoncore.h
@@ -280,6 +287,7 @@ target_link_libraries(photon-core PRIVATE
     Qt6::3DLogic
     Qt6::3DExtras
     Qt6::3DAnimation
+    Qt6::MultimediaWidgets
 )
 
 target_compile_definitions(photon-core PRIVATE PHOTONCORE_LIBRARY)

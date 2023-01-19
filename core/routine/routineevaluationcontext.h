@@ -11,6 +11,7 @@ struct RoutineEvaluationContext : keira::EvaluationContext
     RoutineEvaluationContext(DMXMatrix &matrix):dmxMatrix(matrix){}
     DMXMatrix &dmxMatrix;
     Fixture *fixture = nullptr;
+    QImage *canvasImage = nullptr;
     QVector<QVariant> channelValues;
     double relativeTime = 0.0;
     double globalTime = 0.0;

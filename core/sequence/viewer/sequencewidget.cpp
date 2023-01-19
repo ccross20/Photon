@@ -4,9 +4,13 @@
 #include <QScrollBar>
 #include <QShowEvent>
 #include <QToolBar>
+#include <QFileDialog>
 #include <QStackedWidget>
+#include <QMediaPlayer>
+#include <QMediaMetaData>
+#include <QAudioDevice>
+#include <QAudioOutput>
 #include "sequencewidget.h"
-#include "clipeffecteditor.h"
 #include "timelineviewer.h"
 #include "timelinescene.h"
 #include "sequenceclip.h"
@@ -21,15 +25,21 @@
 #include "sequence/masterlayer.h"
 #include "falloff/falloffeffect.h"
 #include "timebar.h"
+#include "graph/bus/busevaluator.h"
+#include "gui/waveformwidget.h"
 
 namespace photon {
 
 class SequenceWidget::Impl
 {
 public:
+    double visibleStartTime() const;
+    double visibleEndTime() const;
+
     QSplitter *horizontalSplitter;
     QSplitter *verticalSplitter;
     QSplitter *detailsSplitter;
+    QSplitter *waveformSplitter;
     QSplitter *timeSplitter;
     TimelineViewer *viewer = nullptr;
     TimelineHeader *details;
@@ -38,15 +48,29 @@ public:
     ClipStructureViewer *curvePropertyEditor;
     QWidget *effectEditorContainer;
     QWidget *effectEditor = nullptr;
+    WaveformWidget *waveform = nullptr;
+    QMediaPlayer *player = nullptr;
+    QAudioOutput *audioOutput = nullptr;
     TimelineScene *scene;
     QElapsedTimer timer;
     QVector<SequenceClip*> selectedClips;
     QVector<TimelineMasterLayer*> selectedLayers;
     double currentTime = 0;
+    double lastPreviewTime = -1;
     double offset = 0;
     double scale = 20.0;
     bool isPlaying = false;
 };
+
+double SequenceWidget::Impl::visibleStartTime() const
+{
+    return offset / scale;
+}
+
+double SequenceWidget::Impl::visibleEndTime() const
+{
+    return (offset + waveform->width()) / scale;
+}
 
 SequenceWidget::SequenceWidget(QWidget *parent)
     : QWidget{parent},m_impl(new Impl)
@@ -55,12 +79,14 @@ SequenceWidget::SequenceWidget(QWidget *parent)
     m_impl->verticalSplitter = new QSplitter(Qt::Vertical);
     m_impl->detailsSplitter = new QSplitter(Qt::Vertical);
     m_impl->timeSplitter = new QSplitter(Qt::Horizontal);
+    m_impl->waveformSplitter = new QSplitter(Qt::Horizontal);
 
     m_impl->timebar = new TimeBar;
     m_impl->timebar->setScale(m_impl->scale);
     m_impl->timeToolBar = new QToolBar;
     m_impl->scene = new TimelineScene;
     m_impl->viewer = new TimelineViewer;
+    m_impl->waveform = new WaveformWidget;
     //m_impl->viewer->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
     m_impl->viewer->setScene(m_impl->scene);
     m_impl->viewer->setScale(m_impl->scale);
@@ -73,18 +99,27 @@ SequenceWidget::SequenceWidget(QWidget *parent)
     m_impl->timeSplitter->addWidget(m_impl->timeToolBar);
     m_impl->timeSplitter->addWidget(m_impl->timebar);
 
+    m_impl->waveformSplitter->addWidget(new QWidget);
+    m_impl->waveformSplitter->addWidget(m_impl->waveform);
+
+
+    m_impl->player = new QMediaPlayer(this);
+    m_impl->audioOutput = new QAudioOutput(this);
+    m_impl->player->setAudioOutput(m_impl->audioOutput);
 
 
     connect(m_impl->timeToolBar->addAction("Rewind"), &QAction::triggered, this, &SequenceWidget::rewind);
     auto playAction = m_impl->timeToolBar->addAction("Play");
     playAction->setCheckable(true);
     connect(playAction, &QAction::toggled, this, &SequenceWidget::togglePlay);
+    connect(m_impl->timeToolBar->addAction("Load"), &QAction::triggered, this, &SequenceWidget::pickFile);
 
 
 
     QVBoxLayout *vLayout = new QVBoxLayout;
     vLayout->setSpacing(0);
     vLayout->setContentsMargins(0,0,0,0);
+    vLayout->addWidget(m_impl->waveformSplitter);
     vLayout->addWidget(m_impl->timeSplitter);
     vLayout->addWidget(m_impl->horizontalSplitter);
 
@@ -128,6 +163,8 @@ void SequenceWidget::setSequence(Sequence *t_sequence)
     m_impl->scene->setSequence(t_sequence);
     m_impl->viewer->centerOn(0,0);
     m_impl->details->setSequence(t_sequence);
+    m_impl->player->setSource(t_sequence->filePath());
+    m_impl->waveform->loadAudio(t_sequence->filePath());
 }
 
 Sequence *SequenceWidget::sequence() const
@@ -140,6 +177,7 @@ void SequenceWidget::setScale(double t_scale)
     m_impl->scale = t_scale;
     m_impl->timebar->setScale(t_scale);
     m_impl->viewer->setScale(t_scale);
+    m_impl->waveform->frameTime(m_impl->visibleStartTime(), m_impl->visibleEndTime());
 }
 
 void SequenceWidget::selectEffect(photon::ChannelEffect *t_effect)
@@ -251,12 +289,16 @@ void SequenceWidget::selectionChanged()
 void SequenceWidget::xOffsetChanged(int t_value)
 {
     m_impl->offset = t_value;
+    m_impl->waveform->frameTime(m_impl->visibleStartTime(), m_impl->visibleEndTime());
 }
 
 void SequenceWidget::gotoTime(double t_time)
 {
     m_impl->currentTime = t_time;
     m_impl->viewer->movePlayheadTo(m_impl->currentTime);
+    photonApp->busEvaluator()->evaluate();
+    m_impl->player->setPosition(m_impl->currentTime*1000);
+    m_impl->waveform->setPlayhead(m_impl->currentTime);
 }
 
 void SequenceWidget::tick()
@@ -268,6 +310,7 @@ void SequenceWidget::tick()
     m_impl->currentTime += m_impl->timer.elapsed()/1000.0;
     m_impl->timer.restart();
     m_impl->viewer->movePlayheadTo(m_impl->currentTime);
+    m_impl->waveform->setPlayhead(m_impl->currentTime);
 }
 
 void SequenceWidget::detailsSplitterMoved(int pos, int index)
@@ -283,26 +326,49 @@ void SequenceWidget::editorSplitterMoved(int pos, int index)
 void SequenceWidget::horizontalSplitterMoved(int pos, int index)
 {
     m_impl->timeSplitter->setSizes(m_impl->horizontalSplitter->sizes());
+    m_impl->waveformSplitter->setSizes(m_impl->horizontalSplitter->sizes());
 }
 
 void SequenceWidget::processPreview(ProcessContext &context)
 {
-    if(!m_impl->isPlaying)
+    if(abs(m_impl->currentTime - m_impl->lastPreviewTime) < .005)
         return;
     context.globalTime = m_impl->currentTime;
     m_impl->scene->sequence()->processChannels(context, 0);
+    m_impl->lastPreviewTime = m_impl->currentTime;
 }
 
 void SequenceWidget::togglePlay(bool t_value)
 {
     m_impl->timer.restart();
     m_impl->isPlaying = t_value;
+
+    if(m_impl->isPlaying)
+        m_impl->player->play();
+    else
+        m_impl->player->pause();
 }
 
 void SequenceWidget::rewind()
 {
     m_impl->currentTime = 0.0;
     m_impl->viewer->movePlayheadTo(m_impl->currentTime);
+    m_impl->player->setPosition(0);
+}
+
+void SequenceWidget::pickFile()
+{
+    QString fileName = QFileDialog::getOpenFileName(this, tr("Open File"),
+                                                    m_impl->scene->sequence()->filePath(),
+                                                    "Audio Files (*.mp3 *.wav)");
+
+    if(!fileName.isEmpty())
+    {
+        m_impl->scene->sequence()->setAudioPath(fileName);
+        m_impl->player->setSource(fileName);
+        m_impl->waveform->loadAudio(fileName);
+    }
+
 }
 
 void SequenceWidget::showEvent(QShowEvent*t_event)
@@ -314,6 +380,8 @@ void SequenceWidget::showEvent(QShowEvent*t_event)
     m_impl->verticalSplitter->setSizes({halfHeight,halfHeight});
     m_impl->detailsSplitter->setSizes({halfHeight,halfHeight});
     m_impl->timeSplitter->setSizes(m_impl->horizontalSplitter->sizes());
+    m_impl->waveformSplitter->setSizes(m_impl->horizontalSplitter->sizes());
+    m_impl->waveform->frameTime(m_impl->visibleStartTime(), m_impl->visibleEndTime());
 }
 
 

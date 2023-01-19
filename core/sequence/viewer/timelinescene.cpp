@@ -8,6 +8,10 @@
 #include "timelinecliplayer.h"
 #include "timelinemasterlayer.h"
 #include "timelinelayergroup.h"
+#include "photoncore.h"
+#include "project/project.h"
+#include "pixel/canvascollection.h"
+#include "pixel/canvas.h"
 
 namespace photon {
 
@@ -159,7 +163,9 @@ void TimelineScene::createLayer()
 
 void TimelineScene::createCanvasLayerGroup()
 {
-    CanvasLayerGroup *layer = new CanvasLayerGroup(nullptr, "Canvas Group");
+    auto canvas = photonApp->project()->canvases()->canvasAtIndex(0);
+    CanvasLayerGroup *layer = new CanvasLayerGroup(canvas, "Canvas Group");
+
     m_impl->sequence->addLayer(layer);
 }
 

@@ -225,12 +225,32 @@ void Viewer::keyPressEvent(QKeyEvent *event)
 {
     m_impl->key = event->key();
     QGraphicsView::keyPressEvent(event);
+
+    if(event->key() == Qt::Key_Delete || event->key() == Qt::Key_Backspace)
+    {
+        deleteSelected();
+    }
 }
 
 void Viewer::keyReleaseEvent(QKeyEvent *event)
 {
     m_impl->key = -1;
     QGraphicsView::keyReleaseEvent(event);
+}
+
+void Viewer::deleteSelected()
+{
+    auto selectedItems = scene()->selectedItems();
+
+    for(auto item : selectedItems)
+    {
+        auto nodeItem = dynamic_cast<NodeItem*>(item);
+
+        if(nodeItem)
+        {
+            graph()->removeNode(nodeItem->node());
+        }
+    }
 }
 
 void Viewer::wheelEvent(QWheelEvent *event)

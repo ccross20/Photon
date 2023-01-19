@@ -155,7 +155,7 @@ void Clip::processChannels(ProcessContext &t_context)
     localContext.globalTime = t_context.globalTime;
     localContext.relativeTime = initialRelativeTime;
     localContext.fixture = t_context.fixture;
-
+    localContext.canvasImage = t_context.canvasImage;
 
 
     if(!m_impl->mask)

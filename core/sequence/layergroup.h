@@ -8,6 +8,7 @@ class PHOTONCORE_EXPORT LayerGroup : public Layer
 {
     Q_OBJECT
 public:
+    LayerGroup(const QByteArray &layerType, QObject *parent = nullptr);
     LayerGroup(const QString &name, const QByteArray &layerType, QObject *parent = nullptr);
     virtual ~LayerGroup();
 

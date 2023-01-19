@@ -11,6 +11,7 @@ class ProcessContext
 public:
     ProcessContext(DMXMatrix &matrix):dmxMatrix(matrix){}
     Fixture *fixture = nullptr;
+    QImage *canvasImage = nullptr;
     DMXMatrix &dmxMatrix;
     double globalTime;
     double relativeTime;
@@ -26,6 +27,8 @@ public:
     void init();
     QString name() const;
     void setName(const QString &);
+    QString filePath() const;
+    void setAudioPath(const QString &);
     void addLayer(Layer *);
     void removeLayer(Layer *);
     Layer *findLayerByGuid(const QUuid &guid);
@@ -42,6 +45,7 @@ signals:
     void layerUpdated(photon::Layer *);
     void layerAdded(photon::Layer *);
     void layerRemoved(photon::Layer *);
+    void fileChanged(const QString &);
 
 private slots:
 

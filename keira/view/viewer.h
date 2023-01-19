@@ -17,6 +17,8 @@ public:
     void zoom(double value);
     void zoom(double value, QPointF pt);
 
+    void deleteSelected();
+
 signals:
     void zoomChanged(double value);
 

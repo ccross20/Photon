@@ -74,6 +74,7 @@ void TimelineViewer::movePlayheadTo(double t_time)
 
     m_impl->playheadTime = newTime;
 
+
     //double mappedTime = mapFromScene(QPointF(m_impl->playheadTime,0)).x();
 
     scene()->update(updateRect.adjusted(-2,0,4,0));
