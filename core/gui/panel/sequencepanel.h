@@ -21,6 +21,8 @@ protected:
 
     void didDeactivate() override;
     void didActivate() override;
+    bool panelKeyPress(QKeyEvent *event) override;
+    bool panelKeyRelease(QKeyEvent *event) override;
 
 private:
     class Impl;

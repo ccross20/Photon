@@ -27,6 +27,7 @@ void CubeMesh::setZSize(double value)
 
 void CubeMesh::rebuild(QOpenGLContext *context)
 {
+    qDebug() << "Rebuild";
     QVector<QVector3D> vertices;
     QVector<GLushort> indices{0,  1,  2,  3,  3,     // Face 0 - triangle strip ( v0,  v1,  v2,  v3)
                            4,  4,  5,  6,  7,  7, // Face 1 - triangle strip ( v4,  v5,  v6,  v7)

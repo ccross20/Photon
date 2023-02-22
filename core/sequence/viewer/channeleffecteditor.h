@@ -28,11 +28,13 @@ public:
     void addWidget(QWidget *, const QString &name);
 
 signals:
-    void scaleChanged(double);
+    void scaleChanged(QPointF);
+    void xScaleChanged(double);
     void offsetChanged(double);
 
 public slots:
-    void setScale(double);
+    void setScale(QPointF);
+    void setXScale(double);
     void setOffset(double);
     void channelUpdated(photon::Channel *);
     void effectUpdated(photon::ChannelEffect *);

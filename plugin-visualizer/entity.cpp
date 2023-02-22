@@ -6,7 +6,7 @@ namespace photon {
 Entity::Entity(Entity *t_parent):m_parent(t_parent)
 {
     if(m_parent)
-        m_parent->m_children.append(this);
+        m_parent->addChild(this);
 }
 
 Entity *Entity::parent() const
@@ -14,25 +14,89 @@ Entity *Entity::parent() const
     return m_parent;
 }
 
+Entity *Entity::root() const
+{
+    if(m_parent)
+        return m_parent;
+    return const_cast<Entity*>(this);
+}
+
 void Entity::setParent(Entity *t_parent)
 {
     if(m_parent)
-        m_parent->m_children.removeOne(this);
+        m_parent->removeChild(this);
     m_parent = t_parent;
     if(m_parent)
-        m_parent->m_children.append(this);
+        m_parent->addChild(this);
+}
+
+void Entity::gatherFamily(QVector<Entity*> &t_results) const
+{
+    t_results.append(const_cast<Entity*>(this));
+    for(auto childIt = m_children.begin(); childIt != m_children.end(); ++childIt)
+    {
+        (*childIt)->gatherFamily(t_results);
+    }
+}
+
+void Entity::addChild(Entity *t_child)
+{
+    if(m_children.contains(t_child))
+        return;
+    m_children.append(t_child);
+
+    connect(t_child, &Entity::componentAdded, this, &Entity::componentAddedToDescendant);
+    connect(t_child, &Entity::componentRemoved, this, &Entity::componentRemovedFromDescendant);
+    connect(t_child, &Entity::componentAddedToDescendant, this, &Entity::componentAddedToDescendant);
+    connect(t_child, &Entity::componentRemovedFromDescendant, this, &Entity::componentRemovedFromDescendant);
+
+    connect(t_child, &Entity::descendantAdded, this, &Entity::descendantAdded);
+    connect(t_child, &Entity::descendantRemoved, this, &Entity::descendantRemoved);
+    emit descendantAdded(t_child);
+}
+
+void Entity::removeChild(Entity *t_child)
+{
+    if(!m_children.contains(t_child))
+        return;
+    m_children.removeOne(t_child);
+
+    disconnect(t_child, &Entity::componentAdded, this, &Entity::componentAddedToDescendant);
+    disconnect(t_child, &Entity::componentRemoved, this, &Entity::componentRemovedFromDescendant);
+    disconnect(t_child, &Entity::componentAddedToDescendant, this, &Entity::componentAddedToDescendant);
+    disconnect(t_child, &Entity::componentRemovedFromDescendant, this, &Entity::componentRemovedFromDescendant);
+
+    disconnect(t_child, &Entity::descendantAdded, this, &Entity::descendantAdded);
+    disconnect(t_child, &Entity::descendantRemoved, this, &Entity::descendantRemoved);
+    emit descendantRemoved(t_child);
 }
 
 void Entity::addComponent(AbstractComponent *t_component)
 {
+    if(m_components.contains(t_component))
+        return;
     m_components.append(t_component);
     t_component->addEntity(this);
+
+    auto xform = dynamic_cast<TransformComponent*>(t_component);
+    if(xform)
+        m_transform = xform;
+
+    emit componentAdded(t_component);
 }
 
 void Entity::removeComponent(AbstractComponent *t_component)
 {
+    if(!m_components.contains(t_component))
+        return;
     m_components.removeOne(t_component);
     t_component->removeEntity(this);
+
+    auto xform = dynamic_cast<TransformComponent*>(t_component);
+    if(xform && m_transform == xform)
+        m_transform = nullptr;
+
+    emit componentRemoved(t_component);
 }
 
 void Entity::setDirty(int dirty)

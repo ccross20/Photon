@@ -1,3 +1,4 @@
+#include <QKeyEvent>
 #include "sequencepanel.h"
 #include "sequence/sequence.h"
 #include "photoncore.h"
@@ -43,6 +44,21 @@ void SequencePanel::setSequence(Sequence *t_sequence)
 Sequence *SequencePanel::sequence() const
 {
     return m_impl->sequenceViewer->sequence();
+}
+
+bool SequencePanel::panelKeyPress(QKeyEvent *event)
+{
+    if(event->key() == Qt::Key_Space)
+    {
+        m_impl->sequenceViewer->togglePlay(!m_impl->sequenceViewer->isPlaying());
+        return true;
+    }
+    return false;
+}
+
+bool SequencePanel::panelKeyRelease(QKeyEvent *event)
+{
+    return false;
 }
 
 void SequencePanel::didActivate()

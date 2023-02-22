@@ -49,9 +49,43 @@ void Camera::rebuildMatrix()
 {
     m_matrix.setToIdentity();
 
-    m_matrix.perspective(45,m_aspect,0.01,500);
+    m_matrix.perspective(45,m_aspect,.01,100);
     //m_matrix.translate(-m_position);
     m_matrix.lookAt(-m_position,QVector3D(0,0,0), QVector3D(0,1,0));
+}
+void Camera::keyPressEvent(QKeyEvent *event)
+{
+
+}
+
+void Camera::keyReleaseEvent(QKeyEvent *event)
+{
+
+}
+
+void Camera::mousePressEvent(QMouseEvent *event)
+{
+
+}
+
+void Camera::mouseMoveEvent(QMouseEvent *event)
+{
+
+}
+
+void Camera::mouseReleaseEvent(QMouseEvent *event)
+{
+
+}
+
+void Camera::mouseDoubleClickEvent(QMouseEvent *event)
+{
+
+}
+
+void Camera::wheelEvent(QWheelEvent *event)
+{
+
 }
 
 

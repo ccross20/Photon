@@ -22,6 +22,13 @@ void AbstractComponent::removeEntity(Entity *t_entity)
     m_entities.removeOne(t_entity);
 }
 
+Entity *AbstractComponent::entity() const
+{
+    if(m_entities.empty())
+        return nullptr;
+    return m_entities.first();
+}
+
 void AbstractComponent::setDirty(int t_dirty)
 {
     m_dirty |= t_dirty;

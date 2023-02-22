@@ -56,7 +56,7 @@ public:
     EffectEditorViewer(ChannelEffect *);
 
     void setOffset(double);
-    void setScale(double);
+    void setScale(QPointF);
     void remakeTransform();
     QTransform transform() const;
     QRectF sceneBounds() const;
@@ -65,6 +65,9 @@ public:
 
 signals:
     void relayout();
+    void scaleChanged(QPointF);
+    void xScaleChanged(double);
+    void offsetChanged(double);
 
 protected:
     void drawBackground(QPainter *painter, const QRectF &rect) override;
@@ -90,6 +93,7 @@ private:
     double m_yScale = 50;
     double m_xOffset = 0;
     double m_yOffset = 200;
+    double m_startXPos;
     bool m_pathsDirty = true;
 };
 
@@ -104,7 +108,7 @@ public:
     ChannelEffect *effect;
     QToolBar *toolbar;
     QRectF sceneBounds;
-    double scale;
+    QPointF scale;
     double offset;
 
 };

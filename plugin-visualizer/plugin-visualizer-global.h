@@ -28,6 +28,7 @@ enum DirtyModes
 class AbstractComponent;
 class Entity;
 class Camera;
+class Scene;
 
 class DrawContext
 {

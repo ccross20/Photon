@@ -13,6 +13,7 @@ public:
 
 Timekeeper::Impl::Impl(Timekeeper *t_facade):facade(t_facade)
 {
+    //timer.setTimerType(Qt::TimerType::PreciseTimer);
     timer.setInterval(1000/30.0);
     timer.start();
 }

@@ -13,12 +13,13 @@ bool PluginVisualizer::initialize(const PluginContext &context)
 
     //initPluginResource();
 
-    /*
+
     QSurfaceFormat format;
     format.setDepthBufferSize(24);
+    format.setSamples(4);
     format.setProfile(QSurfaceFormat::OpenGLContextProfile::CoreProfile);
     QSurfaceFormat::setDefaultFormat(format);
-    */
+
 
     photonApp->plugins()->registerPluginPanel("visualizer",[](){return new VisualizerPanel;});
 

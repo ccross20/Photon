@@ -19,16 +19,22 @@ set(SOURCES
     component/transformcomponent.cpp
     component/abstractmesh.h
     component/abstractmesh.cpp
+    component/abstractlight.h
+    component/abstractlight.cpp
     component/cameracomponent.h
     component/cameracomponent.cpp
     component/cubemesh.h
     component/cubemesh.cpp
+    component/infinitelight.h
+    component/infinitelight.cpp
     component/planemesh.h
     component/planemesh.cpp
     component/materialcomponent.h
     component/materialcomponent.cpp
     component/material/visiblelightmaterial.h
     component/material/visiblelightmaterial.cpp
+    component/spotlight.h
+    component/spotlight.cpp
     camera.h
     camera.cpp
     freecamera.h
@@ -52,6 +58,8 @@ set(SOURCES
     plugin-visualizer-global.h
     pluginvisualizer.cpp
     pluginvisualizer.h
+    scene.h
+    scene.cpp
     texture.h
     texture.cpp
     visualizerpanel.h

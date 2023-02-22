@@ -4,6 +4,7 @@
 #include <QOpenGLShaderProgram>
 #include <QColor>
 #include "component/abstractcomponent.h"
+#include "texture.h"
 
 namespace photon {
 
@@ -30,10 +31,12 @@ public:
 
 private:
 
+    void populateLights(QOpenGLContext *context);
     QOpenGLShaderProgram m_program;
     QString m_vertexSourcePath;
     QString m_fragmentSourcePath;
     QColor m_diffuse;
+    Texture *m_texture;
 };
 
 } // namespace photon

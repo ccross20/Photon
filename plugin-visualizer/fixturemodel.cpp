@@ -6,6 +6,7 @@
 #include "modifier/modelmodifier.h"
 #include "modifier/panmodelmodifier.h"
 #include "modifier/tiltmodelmodifier.h"
+#include "component/spotlight.h"
 
 namespace photon {
 
@@ -22,6 +23,10 @@ FixtureModel::FixtureModel(Fixture *t_fixture, QObject *parent)
 
     recursiveAddModifiers(m_entity);
 
+    TransformComponent *xform = m_entity->findComponent<TransformComponent*>();
+
+    xform->setScale(QVector3D{.01,.01,.01});
+
     transformUpdated();
 }
 
@@ -35,6 +40,15 @@ void FixtureModel::recursiveAddModifiers(Entity *t_entity)
     if(t_entity->name().startsWith("tilt_"))
     {
         m_modifiers.append(new TiltModelModifier(this, t_entity));
+    }
+
+    if(t_entity->name() == "lamp")
+    {
+        SpotLight *light = new SpotLight;
+        light->setColor(QColor::fromRgbF(.6,.2,.6));
+        light->setAngle(25.0);
+        light->setHardness(.8);
+        t_entity->addComponent(light);
     }
 
     for(auto child : t_entity->children())

@@ -14,6 +14,7 @@ public:
     void addEntity(Entity *);
     void removeEntity(Entity *);
     const QVector<Entity*> &entities() const{return m_entities;}
+    Entity *entity() const;
 
     virtual void create(QOpenGLContext *context);
     virtual void rebuild(QOpenGLContext *context);

@@ -47,8 +47,16 @@ void AbstractMesh::rebuild(QOpenGLContext *context)
     AbstractComponent::rebuild(context);
 }
 
+void AbstractMesh::draw(DrawContext *context)
+{
+    AbstractComponent::draw(context);
+}
+
 void AbstractMesh::drawMesh(DrawContext *context, QOpenGLShaderProgram *program)
 {
+
+    if(dirty() & Dirty_Rebuild)
+        rebuild(context->openGLContext);
     m_vertexBuffer.bind();
     m_indexBuffer.bind();
     int vertexLocation = program->attributeLocation("aPos");
@@ -73,10 +81,10 @@ void AbstractMesh::drawMesh(DrawContext *context, QOpenGLShaderProgram *program)
     }
 
 
-/*
-    if(entities().length() > 0)
-        qDebug() << "Draw: "<< entities().front()->name() << "   " << m_vertices.size();
-*/
+
+    //if(entities().length() > 0)
+    //    qDebug() << "Draw: "<< entities().front()->name() << "   " << m_vertices.size();
+
 
     glDrawElements(m_primitve, m_indices.size(), GL_UNSIGNED_SHORT, nullptr);
 

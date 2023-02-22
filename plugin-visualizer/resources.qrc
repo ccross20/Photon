@@ -7,5 +7,7 @@
         <file>resources/shader/visible_light.vert</file>
         <file>resources/shader/visible_light.frag</file>
         <file>resources/model/moving-head.fbx</file>
+        <file>resources/shader/lighting.frag</file>
+        <file>resources/cookie.png</file>
     </qresource>
 </RCC>

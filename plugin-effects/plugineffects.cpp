@@ -1,6 +1,7 @@
 #include "plugineffects.h"
 #include "plugin/pluginfactory.h"
 #include "generator/sineeffect.h"
+#include "generator/pulseeffect.h"
 #include "generator/sawtootheffect.h"
 #include "time/stuttereffect.h"
 #include "time/loopeffect.h"
@@ -15,7 +16,7 @@ bool PluginEffects::initialize(const PluginContext &context)
     //initPluginResource();
     Q_UNUSED(context)
 
-
+    photonApp->plugins()->registerChannelEffect(PulseEffect::info());
     photonApp->plugins()->registerChannelEffect(SineEffect::info());
     photonApp->plugins()->registerChannelEffect(SawtoothEffect::info());
     photonApp->plugins()->registerChannelEffect(StutterEffect::info());

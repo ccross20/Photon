@@ -3,7 +3,12 @@
 
 #include "plugin-visualizer-global.h"
 
+class QKeyEvent;
+class QMouseEvent;
+class QWheelEvent;
+
 namespace photon {
+
 
 class Camera
 {
@@ -19,6 +24,14 @@ public:
     virtual QVector3D position() const;
 
     virtual QMatrix4x4 matrix() const{return m_matrix;}
+
+    virtual void keyPressEvent(QKeyEvent *event);
+    virtual void keyReleaseEvent(QKeyEvent *event);
+    virtual void mousePressEvent(QMouseEvent *event);
+    virtual void mouseMoveEvent(QMouseEvent *event);
+    virtual void mouseReleaseEvent(QMouseEvent *event);
+    virtual void mouseDoubleClickEvent(QMouseEvent *event);
+    virtual void wheelEvent(QWheelEvent *event);
 
 private:
     void rebuildMatrix();

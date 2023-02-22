@@ -5,7 +5,6 @@
 #include <QPainter>
 #include "sineeffect.h"
 #include "sequence/channel.h"
-#include "sequence/clip.h"
 #include "sequence/viewer/stackedparameterwidget.h"
 
 namespace photon {

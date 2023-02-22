@@ -73,6 +73,7 @@ private:
 
     double m_playheadTime = 0;
     Range m_selectionRange;
+    Range m_visibleRange;
     double m_hOffset = 0;
     double m_hZoomRatio = -1;
     bool m_showPlayhead = false;

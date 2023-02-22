@@ -5,10 +5,10 @@
 #include <QOpenGLFunctions>
 #include <QBasicTimer>
 #include <QMatrix4x4>
-#include "freecamera.h"
-#include "entity.h"
 
 namespace photon {
+
+class Scene;
 
 class OpenGLViewport : public QOpenGLWidget, protected QOpenGLFunctions
 {
@@ -18,7 +18,7 @@ public:
 
 public slots:
     void cleanup();
-    void setRootEntity(photon::Entity *entity);
+    void setScene(photon::Scene *scene);
 
 protected:
     void timerEvent(QTimerEvent *e) override;
@@ -45,13 +45,12 @@ protected:
 
 private:
     QBasicTimer m_timer;
-    FreeCamera m_camera;
     QString m_vendor;
     QString m_version;
     QString m_model;
     QPointF m_lastPosition;
     QVector3D m_startWorldPoint;
-    Entity *m_rootEntity = nullptr;
+    Scene *m_scene = nullptr;
     bool m_openGLInitialized = false;
 };
 

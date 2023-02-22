@@ -14,10 +14,11 @@ public:
     AbstractMesh();
     virtual ~AbstractMesh(){}
 
-    virtual void create(QOpenGLContext *context);
-    virtual void rebuild(QOpenGLContext *context);
+    virtual void create(QOpenGLContext *context) override;
+    virtual void rebuild(QOpenGLContext *context) override;
     virtual void drawMesh(DrawContext *context, QOpenGLShaderProgram *program);
-    virtual void destroy(QOpenGLContext *context);
+    virtual void destroy(QOpenGLContext *context) override;
+    virtual void draw(DrawContext *context) override;
 
     void setPrimitveType(int value);
 
@@ -45,6 +46,7 @@ private:
     QOpenGLBuffer m_normalBuffer;
     QOpenGLBuffer m_indexBuffer;
 
+    //int m_primitve = GL_TRIANGLE_STRIP;
     int m_primitve = GL_TRIANGLES;
 };
 

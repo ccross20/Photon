@@ -179,6 +179,14 @@ public:
 
     }
 
+    void keyPressEvent(QKeyEvent *event) override;
+    void keyReleaseEvent(QKeyEvent *event) override;
+    void mousePressEvent(QMouseEvent *event) override;
+    void mouseMoveEvent(QMouseEvent *event) override;
+    void mouseReleaseEvent(QMouseEvent *event) override;
+    void mouseDoubleClickEvent(QMouseEvent *event) override;
+    void wheelEvent(QWheelEvent *event) override;
+
 
 private:
     // calculates the front vector from the Camera's (updated) Euler Angles
@@ -209,6 +217,9 @@ private:
     QMatrix4x4 m_orbitMatrix;
     QMatrix4x4 m_orbitStartMatrix;
     QVector3D m_orbitStartPosition;
+
+    QPointF m_lastPosition;
+    QVector3D m_startWorldPoint;
     // euler Angles
     float m_yaw;
     float m_pitch;

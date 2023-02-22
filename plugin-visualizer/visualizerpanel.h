@@ -7,6 +7,8 @@
 namespace photon {
 
 class FixtureModel;
+class TransformComponent;
+class MaterialComponent;
 
 class VisualizerPanel : public Panel
 {
@@ -16,6 +18,7 @@ public:
     ~VisualizerPanel();
 
 protected:
+    virtual void mousePressEvent(QMouseEvent *event) override;
 
 private slots:
 
@@ -24,6 +27,9 @@ private slots:
 private:
     OpenGLViewport *m_viewport;
     QVector<FixtureModel*> m_models;
+    TransformComponent *m_transform;
+    MaterialComponent *m_material;
+    int m_clickCounter = 0;
 };
 
 } // namespace photon

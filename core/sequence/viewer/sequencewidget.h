@@ -17,6 +17,7 @@ public:
     Sequence *sequence() const;
 
     void processPreview(ProcessContext &context);
+    bool isPlaying() const;
 
 public slots:
     void togglePlay(bool);
@@ -32,6 +33,7 @@ private slots:
     void horizontalSplitterMoved(int, int);
     void selectionChanged();
     void xOffsetChanged(int);
+    void positionChanged(qint64);
     void selectEffect(photon::ChannelEffect *);
     void selectFalloff(photon::FalloffEffect *);
     void clearEditor();
@@ -41,7 +43,8 @@ signals:
     void removedFromSelection(photon::Clip*);
 
 protected:
-    void showEvent(QShowEvent*);
+    void showEvent(QShowEvent*) override;
+    void resizeEvent(QResizeEvent*) override;
 
 private:
     class Impl;

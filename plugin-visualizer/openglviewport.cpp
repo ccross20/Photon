@@ -1,6 +1,8 @@
 #include <QMouseEvent>
 #include <QPaintEvent>
 #include "openglviewport.h"
+#include "scene.h"
+#include "camera.h"
 
 namespace photon {
 
@@ -17,9 +19,9 @@ OpenGLViewport::~OpenGLViewport()
     disconnect(context(), &QOpenGLContext::aboutToBeDestroyed, this, &OpenGLViewport::cleanup);
 }
 
-void OpenGLViewport::setRootEntity(Entity *t_entity)
+void OpenGLViewport::setScene(Scene *t_scene)
 {
-    m_rootEntity = t_entity;
+    m_scene = t_scene;
 }
 
 void OpenGLViewport::cleanup()
@@ -36,13 +38,13 @@ void OpenGLViewport::cleanup()
 }
 void OpenGLViewport::timerEvent(QTimerEvent *)
 {
-    if(!m_rootEntity)
+    if(!m_scene)
         return;
     makeCurrent();
 
-    m_rootEntity->destroy(context());
-    m_rootEntity->create(context());
-    m_rootEntity->rebuild(context());
+    m_scene->destroy(context());
+    m_scene->create(context());
+    m_scene->rebuild(context());
 
     doneCurrent();
     update();
@@ -58,6 +60,7 @@ void OpenGLViewport::initializeGL()
     glClearColor(1.f, 1.f, 1.f, 1);
     glBlendEquation (GL_FUNC_ADD);
     glEnable(GL_BLEND);
+    glEnable(GL_MULTISAMPLE);
     //glEnable(GL_DEPTH_TEST);
     //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     //glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
@@ -78,7 +81,7 @@ void OpenGLViewport::initializeGL()
 
     m_openGLInitialized = true;
 
-    m_timer.start(20, this);
+    m_timer.start(16, this);
 
 
 
@@ -89,7 +92,9 @@ void OpenGLViewport::resizeGL(int w, int h)
     // Calculate aspect ratio
     qreal aspect = qreal(w) / qreal(h ? h : 1);
 
-    m_camera.setAspect(aspect);
+    if(!m_scene)
+        return;
+    m_scene->camera()->setAspect(aspect);
 
 }
 
@@ -114,12 +119,13 @@ void OpenGLViewport::paintGL()
     //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE);
 
-    if(!m_rootEntity)
+
+    if(!m_scene)
         return;
 
-    DrawContext *drawContext = new DrawContext(context(), &m_camera);
+    DrawContext *drawContext = new DrawContext(context(), m_scene->camera());
 
-    m_rootEntity->draw(drawContext);
+    m_scene->draw(drawContext);
 
 }
 
@@ -141,82 +147,36 @@ void OpenGLViewport::leaveEvent(QEvent *event)
 
 void OpenGLViewport::keyPressEvent(QKeyEvent *event)
 {
-    switch (event->key()) {
-    case Qt::Key_Left:
-        m_camera.ProcessKeyboard(LEFT, 1);
-        update();
-        break;
-    case Qt::Key_Right:
-        m_camera.ProcessKeyboard(RIGHT, 1);
-        update();
-        break;
-    case Qt::Key_Up:
-        m_camera.ProcessKeyboard(FORWARD, 1);
-        update();
-        break;
-    case Qt::Key_Down:
-        m_camera.ProcessKeyboard(BACKWARD, 1);
-        update();
-        break;
-    default:
-        break;
-    }
+    if(!m_scene)
+        return;
+    m_scene->camera()->keyPressEvent(event);
 }
 
 void OpenGLViewport::keyReleaseEvent(QKeyEvent *event)
 {
-
+    if(!m_scene)
+        return;
+    m_scene->camera()->keyReleaseEvent(event);
 }
 
 void OpenGLViewport::mousePressEvent(QMouseEvent *event)
 {
+    if(!m_scene)
+        return;
     QOpenGLWidget::mousePressEvent(event);
-    m_lastPosition = event->pos();
 
-    QVector3D pt(m_lastPosition.x(), m_lastPosition.y(), -1);
-    auto mat = m_camera.matrix();
-    m_startWorldPoint =  mat.map(pt);
-
-    if(event->buttons() & Qt::LeftButton)
-        m_camera.StartOrbit();
-    if(event->buttons() & Qt::RightButton)
-        m_camera.StartOrbit(m_camera.position());
+    m_scene->camera()->mousePressEvent(event);
 }
 
 void OpenGLViewport::mouseMoveEvent(QMouseEvent *event)
 {
+    if(!m_scene)
+        return;
     QOpenGLWidget::mouseMoveEvent(event);
 
-    if(event->buttons() & Qt::RightButton)
-    {
-        QPointF delta = event->pos() - m_lastPosition;
-
-        m_camera.FreeRotate(delta.x(), delta.y());
-        //m_camera.ProcessMouseMovement(delta.x(), delta.y());
-
-        update();
-    }
-
-    if(event->buttons() & Qt::LeftButton)
-    {
-        QPointF delta = event->pos() - m_lastPosition;
-
-        m_camera.Orbit(delta.x(), delta.y());
-
-        update();
-    }
+    m_scene->camera()->mouseMoveEvent(event);
 
 
-    if(event->buttons() & Qt::MiddleButton)
-    {
-        QPointF delta = event->pos() - m_lastPosition;
-
-        m_camera.ProcessMousePan(delta.x(), delta.y());
-
-
-        m_lastPosition = event->pos();
-        update();
-    }
 
     //m_lastPosition = event->pos();
 
@@ -224,17 +184,26 @@ void OpenGLViewport::mouseMoveEvent(QMouseEvent *event)
 
 void OpenGLViewport::mouseReleaseEvent(QMouseEvent *event)
 {
+    if(!m_scene)
+        return;
     QOpenGLWidget::mouseReleaseEvent(event);
+    m_scene->camera()->mouseReleaseEvent(event);
 }
 
 void OpenGLViewport::mouseDoubleClickEvent(QMouseEvent *event)
 {
+    if(!m_scene)
+        return;
     QOpenGLWidget::mouseDoubleClickEvent(event);
+    m_scene->camera()->mouseDoubleClickEvent(event);
 }
 
 void OpenGLViewport::wheelEvent(QWheelEvent *event)
 {
-    m_camera.ProcessMouseScroll(event->angleDelta().y()/5.0);
+    if(!m_scene)
+        return;
+    QOpenGLWidget::wheelEvent(event);
+    m_scene->camera()->wheelEvent(event);
 
 
     update();

@@ -154,9 +154,12 @@ void TimelineViewer::mouseMoveEvent(QMouseEvent *event)
 
         if(event->modifiers() & Qt::ControlModifier)
         {
-
+            double const ZOOM_INCREMENT = 1.1;
             QPointF delta = event->pos() - m_impl->lastPosition;
-            m_impl->scale += delta.x() / 5.0;
+            if(delta.x() < 0)
+                m_impl->scale /= ZOOM_INCREMENT;
+            else
+                m_impl->scale *= ZOOM_INCREMENT;
 
             if(m_impl->scale < .001)
                 m_impl->scale = .25;

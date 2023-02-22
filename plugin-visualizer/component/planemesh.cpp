@@ -46,7 +46,7 @@ void PlaneMesh::rebuild(QOpenGLContext *context)
     vertices.append(QVector3D(                 0,   0,  -1.0f * m_size.y()));
     vertices.append(QVector3D( 1.0f * m_size.x(),   0,  -1.0f * m_size.y()));
     vertices.append(QVector3D(-1.0f * m_size.x(),   0,                   0));
-    vertices.append(QVector3D(                 0,  1.0,                   0));
+    vertices.append(QVector3D(                 0,   0,                   0));
     vertices.append(QVector3D( 1.0f * m_size.x(),   0,                   0));
     vertices.append(QVector3D(-1.0f * m_size.x(),   0,   1.0f * m_size.y()));
     vertices.append(QVector3D(                 0,   0,   1.0f * m_size.y()));
@@ -62,6 +62,8 @@ void PlaneMesh::rebuild(QOpenGLContext *context)
     uvs.append(QVector2D(1.0, 0));
     */
 
+
+
     uvs.append(QVector2D(  0,   0));
     uvs.append(QVector2D( .5,   0));
     uvs.append(QVector2D(  1,   0));
@@ -72,10 +74,17 @@ void PlaneMesh::rebuild(QOpenGLContext *context)
     uvs.append(QVector2D( .5,   1));
     uvs.append(QVector2D(  1,   1));
 
+    QVector<QVector3D> normals;
+    for(int i = 0; i < vertices.length(); ++i)
+        normals.append(QVector3D(0, 1.0, 0));
+
 
     setVertices(vertices);
+    setNormals(normals);
     setUVs(uvs);
     setIndices(indices);
+
+    qDebug() << "Rebuild plane";
 
     AbstractMesh::rebuild(context);
 }

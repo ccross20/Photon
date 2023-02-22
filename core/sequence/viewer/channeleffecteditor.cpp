@@ -186,7 +186,7 @@ void EffectEditorViewer::remakeTransform()
     m_transform.scale(m_xScale,-m_yScale);
 
 
-    m_sceneBounds = m_transform.inverted().mapRect(rect());
+    m_sceneBounds = m_transform.inverted().mapRect(rect().toRectF());
 
     m_pathsDirty = true;
     scene()->invalidate();
@@ -213,16 +213,24 @@ QRectF EffectEditorViewer::sceneBounds() const
     return m_sceneBounds;
 }
 
-void EffectEditorViewer::setScale(double t_value)
+void EffectEditorViewer::setScale(QPointF t_value)
 {
-    m_xScale = t_value;
+    if(t_value.x() == m_xScale && t_value.y() == m_yScale)
+        return;
+    m_xScale = t_value.x();
+    m_yScale = t_value.y();
     remakeTransform();
+    emit xScaleChanged(m_xScale);
+    emit scaleChanged(t_value);
 }
 
 void EffectEditorViewer::setOffset(double t_value)
 {
+    if(m_xOffset == t_value)
+        return;
     m_xOffset = t_value;
     remakeTransform();
+    emit offsetChanged(m_xOffset);
 }
 
 void EffectEditorViewer::mousePressEvent(QMouseEvent *event)
@@ -230,6 +238,7 @@ void EffectEditorViewer::mousePressEvent(QMouseEvent *event)
     QGraphicsView::mousePressEvent(event);
     m_startPt = event->pos();
     m_lastPt = m_startPt;
+    m_startXPos = (m_startPt.x() + m_xOffset) / m_xScale;
 }
 
 void EffectEditorViewer::mouseMoveEvent(QMouseEvent *event)
@@ -240,16 +249,33 @@ void EffectEditorViewer::mouseMoveEvent(QMouseEvent *event)
     if(event->buttons() & Qt::MiddleButton)
     {
         m_yOffset += deltaPt.y();
+        setOffset(m_xOffset + deltaPt.x());
         remakeTransform();
     }
     if(event->buttons() & Qt::LeftButton && event->modifiers() & Qt::ControlModifier)
     {
-        double y = sqrt(m_yScale);
-        y *= 1.0 + (deltaPt.y()/25.0);
-        m_yScale = y * y;
+        double newScaleY = m_yScale;
+        double newScaleX = m_xScale;
 
-        //m_yScale = std::min(m_yScale, -.1);
-        remakeTransform();
+        if(deltaPt.y() > 0)
+            newScaleY *= 1.04;
+        else if(deltaPt.y() < 0)
+            newScaleY /= 1.04;
+
+
+        if(deltaPt.x() > 0)
+            newScaleX *= 1.1;
+        else if(deltaPt.x() < 0)
+            newScaleX /= 1.1;
+
+
+        setScale(QPointF(newScaleX, newScaleY));
+
+        double newXPos = (m_startPt.x() + m_xOffset) / newScaleX;
+
+        setOffset(m_xOffset - ((newXPos - m_startXPos) * newScaleX) );
+        m_startXPos = (m_startPt.x() + m_xOffset) / newScaleX;
+
     }
 
     m_lastPt = event->pos();
@@ -294,9 +320,7 @@ void EffectEditorViewer::rebuildPaths()
         double left = std::max(m_sceneBounds.left(), startTime);
         double right = std::min(m_sceneBounds.right(), m_effect->channel()->endTime());
 
-
         double interval = (right - left)/width();
-
 
 
         m_path.moveTo(left,m_effect->process(initialValue, left - startTime));
@@ -350,6 +374,9 @@ ChannelEffectEditor::ChannelEffectEditor(ChannelEffect *t_effect, QWidget *paren
     connect(t_effect->channel(), &Channel::channelUpdated, this, &ChannelEffectEditor::channelUpdated);
     connect(t_effect->channel(), &Channel::effectModified, this, &ChannelEffectEditor::effectUpdated);
     connect(m_impl->viewer, &EffectEditorViewer::relayout, this, &ChannelEffectEditor::relayoutSlot);
+    connect(m_impl->viewer, &EffectEditorViewer::scaleChanged, this, &ChannelEffectEditor::scaleChanged);
+    connect(m_impl->viewer, &EffectEditorViewer::xScaleChanged, this, &ChannelEffectEditor::xScaleChanged);
+    connect(m_impl->viewer, &EffectEditorViewer::offsetChanged, this, &ChannelEffectEditor::offsetChanged);
     //setSizePolicy(QSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::MinimumExpanding));
 }
 
@@ -445,7 +472,13 @@ void ChannelEffectEditor::setOffset(double t_value)
     m_impl->viewer->setOffset(t_value);
 }
 
-void ChannelEffectEditor::setScale(double t_value)
+void ChannelEffectEditor::setXScale(double t_value)
+{
+    m_impl->scale.setX(t_value);
+    m_impl->viewer->setScale(QPointF(t_value, m_impl->scale.y()));
+}
+
+void ChannelEffectEditor::setScale(QPointF t_value)
 {
     m_impl->scale = t_value;
     m_impl->viewer->setScale(t_value);

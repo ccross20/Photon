@@ -13,6 +13,8 @@ find_package(QT NAMES Qt6 REQUIRED COMPONENTS Core Widgets)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Widgets)
 
 set(SOURCES
+    generator/pulseeffect.h
+    generator/pulseeffect.cpp
     generator/sawtootheffect.h
     generator/sawtootheffect.cpp
     generator/sineeffect.h
@@ -29,8 +31,17 @@ set(SOURCES
 
 add_library(plugin-effects SHARED ${SOURCES})
 
+
+
 target_link_libraries(plugin-effects PRIVATE Qt${QT_VERSION_MAJOR}::Core)
-target_link_libraries(plugin-effects PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)
+target_link_libraries(plugin-effects PRIVATE
+    Qt${QT_VERSION_MAJOR}::Widgets
+)
+
+
+include_directories("${PROJECT_SOURCE_DIR}/third-party")
+
+
 
 #target_compile_definitions(plugin-visualizer PRIVATE PLUGINVISUALIZER_LIBRARY)
 
@@ -44,5 +55,8 @@ set_target_properties(plugin-effects PROPERTIES
 
 add_custom_command(TARGET plugin-effects POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/support-files" "${PROJECT_BINARY_DIR}/../photon-desktop/extensions/channel-effects/"
+)
+add_custom_command(TARGET plugin-effects POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/dlls/windows" "${PROJECT_BINARY_DIR}/../photon-desktop/"
 )
 

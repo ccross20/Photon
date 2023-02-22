@@ -555,20 +555,22 @@ void WaveformWidget::frameAll()
 {
     if(!m_sound)
         return;
-    m_hZoomRatio = (double)m_sound->GetLength() / (double)width();
-    m_hOffset = 0;
-    m_redrawWaveform = true;
-    update();
+
+    frameTime(0, m_sound->GetLength() / m_sound->m_samplesPerSecond);
 }
 
 void WaveformWidget::frameTime(double start, double end)
 {
-    if(!m_sound)
-        return;
     if(end < start)
         std::swap(start, end);
-    double w = end - start;
 
+    m_visibleRange.start = start;
+    m_visibleRange.end = end;
+
+    if(!m_sound)
+        return;
+
+    double w = end - start;
     m_redrawWaveform = true;
     m_hZoomRatio = (w * m_sound->m_samplesPerSecond) / (double)width();
     m_hOffset = start * m_sound->m_samplesPerSecond;
@@ -587,7 +589,12 @@ void WaveformWidget::finished()
     m_sound->Complete();
     m_redrawWaveform = true;
     m_isRenderable = true;
-    frameAll();
+
+    if(m_visibleRange.end == 0)
+        frameAll();
+    else
+        frameTime(m_visibleRange.start, m_visibleRange.end);
+
 }
 
 void WaveformWidget::resizeEvent(QResizeEvent *t_event)

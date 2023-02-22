@@ -3,6 +3,7 @@
 #include <QSplitter>
 #include <QScrollBar>
 #include <QShowEvent>
+#include <QResizeEvent>
 #include <QToolBar>
 #include <QFileDialog>
 #include <QStackedWidget>
@@ -39,7 +40,6 @@ public:
     QSplitter *horizontalSplitter;
     QSplitter *verticalSplitter;
     QSplitter *detailsSplitter;
-    QSplitter *waveformSplitter;
     QSplitter *timeSplitter;
     TimelineViewer *viewer = nullptr;
     TimelineHeader *details;
@@ -55,6 +55,8 @@ public:
     QElapsedTimer timer;
     QVector<SequenceClip*> selectedClips;
     QVector<TimelineMasterLayer*> selectedLayers;
+    qint64 startTimeMS;
+    double lastCurrentTime = 0;
     double currentTime = 0;
     double lastPreviewTime = -1;
     double offset = 0;
@@ -79,7 +81,6 @@ SequenceWidget::SequenceWidget(QWidget *parent)
     m_impl->verticalSplitter = new QSplitter(Qt::Vertical);
     m_impl->detailsSplitter = new QSplitter(Qt::Vertical);
     m_impl->timeSplitter = new QSplitter(Qt::Horizontal);
-    m_impl->waveformSplitter = new QSplitter(Qt::Horizontal);
 
     m_impl->timebar = new TimeBar;
     m_impl->timebar->setScale(m_impl->scale);
@@ -99,8 +100,6 @@ SequenceWidget::SequenceWidget(QWidget *parent)
     m_impl->timeSplitter->addWidget(m_impl->timeToolBar);
     m_impl->timeSplitter->addWidget(m_impl->timebar);
 
-    m_impl->waveformSplitter->addWidget(new QWidget);
-    m_impl->waveformSplitter->addWidget(m_impl->waveform);
 
 
     m_impl->player = new QMediaPlayer(this);
@@ -110,6 +109,7 @@ SequenceWidget::SequenceWidget(QWidget *parent)
 
     connect(m_impl->timeToolBar->addAction("Rewind"), &QAction::triggered, this, &SequenceWidget::rewind);
     auto playAction = m_impl->timeToolBar->addAction("Play");
+    playAction->setShortcut(Qt::Key_Space);
     playAction->setCheckable(true);
     connect(playAction, &QAction::toggled, this, &SequenceWidget::togglePlay);
     connect(m_impl->timeToolBar->addAction("Load"), &QAction::triggered, this, &SequenceWidget::pickFile);
@@ -119,18 +119,19 @@ SequenceWidget::SequenceWidget(QWidget *parent)
     QVBoxLayout *vLayout = new QVBoxLayout;
     vLayout->setSpacing(0);
     vLayout->setContentsMargins(0,0,0,0);
-    vLayout->addWidget(m_impl->waveformSplitter);
     vLayout->addWidget(m_impl->timeSplitter);
     vLayout->addWidget(m_impl->horizontalSplitter);
 
     //m_impl->scene->setSceneRect(0,0,300,100);
 
     m_impl->verticalSplitter->addWidget(m_impl->viewer);
+    m_impl->verticalSplitter->addWidget(m_impl->waveform);
     m_impl->verticalSplitter->addWidget(m_impl->effectEditorContainer);
 
     m_impl->viewer->centerOn(0,0);
 
     m_impl->detailsSplitter->addWidget(m_impl->details);
+    m_impl->detailsSplitter->addWidget(new QWidget);
     m_impl->detailsSplitter->addWidget(m_impl->curvePropertyEditor);
 
     m_impl->horizontalSplitter->addWidget(m_impl->detailsSplitter);
@@ -150,6 +151,8 @@ SequenceWidget::SequenceWidget(QWidget *parent)
     connect(m_impl->timebar, &TimeBar::changeTime, this, &SequenceWidget::gotoTime);
     connect(m_impl->viewer->horizontalScrollBar(), &QAbstractSlider::valueChanged, m_impl->timebar, &TimeBar::setOffset);
     connect(m_impl->viewer->horizontalScrollBar(), &QAbstractSlider::valueChanged, this, &SequenceWidget::xOffsetChanged);
+
+    connect(m_impl->player, &QMediaPlayer::positionChanged, this, &SequenceWidget::positionChanged);
 
 }
 
@@ -187,9 +190,10 @@ void SequenceWidget::selectEffect(photon::ChannelEffect *t_effect)
 
     auto editor = t_effect->createEditor();
     editor->setOffset(m_impl->offset);
-    editor->setScale(m_impl->scale);
+    editor->setScale(QPointF(m_impl->scale,editor->scale().y()));
     connect(m_impl->viewer->horizontalScrollBar(), &QAbstractSlider::valueChanged, editor, &ChannelEffectEditor::setOffset);
-    connect(m_impl->viewer, &TimelineViewer::scaleChanged, editor, &ChannelEffectEditor::setScale);
+    connect(m_impl->viewer, &TimelineViewer::scaleChanged, editor, &ChannelEffectEditor::setXScale);
+    connect(editor, &ChannelEffectEditor::xScaleChanged, m_impl->viewer, &TimelineViewer::setScale);
 
     QHBoxLayout *layout = new QHBoxLayout;
     layout->setContentsMargins(0,0,0,0);
@@ -295,19 +299,40 @@ void SequenceWidget::xOffsetChanged(int t_value)
 void SequenceWidget::gotoTime(double t_time)
 {
     m_impl->currentTime = t_time;
+    m_impl->startTimeMS = QDateTime::currentMSecsSinceEpoch();
+    m_impl->lastCurrentTime = t_time;
+    m_impl->timer.restart();
     m_impl->viewer->movePlayheadTo(m_impl->currentTime);
+
     photonApp->busEvaluator()->evaluate();
     m_impl->player->setPosition(m_impl->currentTime*1000);
     m_impl->waveform->setPlayhead(m_impl->currentTime);
+}
+
+void SequenceWidget::positionChanged(qint64 t_time)
+{
+    /*
+    m_impl->currentTime = t_time/1000.0;
+    m_impl->viewer->movePlayheadTo(m_impl->currentTime);
+
+    photonApp->busEvaluator()->evaluate();
+    */
+    //m_impl->waveform->setPlayhead(t_time/1000.0);
 }
 
 void SequenceWidget::tick()
 {
     if(!m_impl->isPlaying)
         return;
-
+/*
+    if(m_impl->player->playbackState() == QMediaPlayer::PlayingState)
+        return;
+        */
     //m_impl->currentTime += m_impl->timer.nsecsElapsed() * 1000000.0;
-    m_impl->currentTime += m_impl->timer.elapsed()/1000.0;
+
+    qint64 deltaTime = QDateTime::currentMSecsSinceEpoch() - m_impl->startTimeMS;
+
+    m_impl->currentTime = m_impl->lastCurrentTime + (deltaTime / 1000.0);
     m_impl->timer.restart();
     m_impl->viewer->movePlayheadTo(m_impl->currentTime);
     m_impl->waveform->setPlayhead(m_impl->currentTime);
@@ -326,7 +351,6 @@ void SequenceWidget::editorSplitterMoved(int pos, int index)
 void SequenceWidget::horizontalSplitterMoved(int pos, int index)
 {
     m_impl->timeSplitter->setSizes(m_impl->horizontalSplitter->sizes());
-    m_impl->waveformSplitter->setSizes(m_impl->horizontalSplitter->sizes());
 }
 
 void SequenceWidget::processPreview(ProcessContext &context)
@@ -338,10 +362,18 @@ void SequenceWidget::processPreview(ProcessContext &context)
     m_impl->lastPreviewTime = m_impl->currentTime;
 }
 
+bool SequenceWidget::isPlaying() const
+{
+    return m_impl->isPlaying;
+}
+
 void SequenceWidget::togglePlay(bool t_value)
 {
     m_impl->timer.restart();
     m_impl->isPlaying = t_value;
+
+    m_impl->lastCurrentTime = m_impl->currentTime;
+    m_impl->startTimeMS = QDateTime::currentMSecsSinceEpoch();
 
     if(m_impl->isPlaying)
         m_impl->player->play();
@@ -352,6 +384,8 @@ void SequenceWidget::togglePlay(bool t_value)
 void SequenceWidget::rewind()
 {
     m_impl->currentTime = 0.0;
+    m_impl->lastCurrentTime = 0.0;
+    m_impl->startTimeMS = QDateTime::currentMSecsSinceEpoch();
     m_impl->viewer->movePlayheadTo(m_impl->currentTime);
     m_impl->player->setPosition(0);
 }
@@ -375,14 +409,19 @@ void SequenceWidget::showEvent(QShowEvent*t_event)
 {
     QWidget::showEvent(t_event);
 
-    int halfHeight = height()/2;
+    int waveHeight = 100;
+    int halfHeight = (height() - waveHeight) / 2;
     m_impl->horizontalSplitter->setSizes({static_cast<int>(width()*.2),static_cast<int>(width()*.8)});
-    m_impl->verticalSplitter->setSizes({halfHeight,halfHeight});
-    m_impl->detailsSplitter->setSizes({halfHeight,halfHeight});
+    m_impl->verticalSplitter->setSizes({halfHeight,waveHeight,halfHeight});
+    m_impl->detailsSplitter->setSizes({halfHeight,waveHeight,halfHeight});
     m_impl->timeSplitter->setSizes(m_impl->horizontalSplitter->sizes());
-    m_impl->waveformSplitter->setSizes(m_impl->horizontalSplitter->sizes());
     m_impl->waveform->frameTime(m_impl->visibleStartTime(), m_impl->visibleEndTime());
 }
 
+void SequenceWidget::resizeEvent(QResizeEvent* t_event)
+{
+    QWidget::resizeEvent(t_event);
+    m_impl->waveform->frameTime(m_impl->visibleStartTime(), m_impl->visibleEndTime());
+}
 
 } // namespace photon
