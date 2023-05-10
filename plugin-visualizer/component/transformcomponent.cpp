@@ -38,6 +38,11 @@ QVector3D TransformComponent::position() const
     return m_position;
 }
 
+QVector3D TransformComponent::rotationEuler() const
+{
+    return m_rotation;
+}
+
 void TransformComponent::setRotationEuler(const QVector3D &t_rotation)
 {
     m_rotation = t_rotation;

@@ -23,7 +23,7 @@ private slots:
     void updateComments();
     void setIdentifier(const QString &);
     void setUniverse(uint universe);
-    void setOffset(uchar channel);
+    void setOffset(uint channel);
     void setMode(int index);
     void setPosition(const QVector3D &);
     void setRotation(const QVector3D &);

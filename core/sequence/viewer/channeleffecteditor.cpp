@@ -146,7 +146,7 @@ void EffectEditorViewer::drawBackground(QPainter *painter, const QRectF &rect)
                 painter->drawLine(0, static_cast<int>(markPos), width(), static_cast<int>(markPos));
                 double time = (round(((markPos - m_yOffset)*inverseSpacing) * unitDivisor) * zoomMultiple);
 
-                painter->drawText(2, static_cast<int>(markPos)+ 1, QString::number(time));
+                painter->drawText(2, static_cast<int>(markPos)+ 1, QString::number(time * -1));
                 //painter.drawText(static_cast<int>(markPos)+ 1,10, QString::number((((markPos - m_origin)*inverseSpacing) * unitDivisor) * zoomMultiple));
                 markPos += markSpacing;
             }

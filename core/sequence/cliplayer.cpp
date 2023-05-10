@@ -1,5 +1,7 @@
 #include "cliplayer_p.h"
 #include "clip_p.h"
+#include "routineclip.h"
+#include "stateclip.h"
 #include "sequence.h"
 
 namespace photon {
@@ -18,12 +20,14 @@ void ClipLayer::Impl::addClip(Clip *t_clip)
     t_clip->m_impl->setSequence(facade->sequence());
 }
 
-void ClipLayer::Impl::removeClip(Clip *t_clip)
+bool ClipLayer::Impl::removeClip(Clip *t_clip)
 {
-    clips.removeOne(t_clip);
+    if(!clips.removeOne(t_clip))
+        return false;
     t_clip->m_impl->setLayer(nullptr);
     t_clip->setParent(nullptr);
     t_clip->m_impl->setSequence(nullptr);
+    return true;
 }
 
 void ClipLayer::Impl::notifyClipWasModified(Clip *t_clip)
@@ -56,7 +60,8 @@ void ClipLayer::addClip(Clip *t_clip)
 
 void ClipLayer::removeClip(Clip *t_clip)
 {
-    m_impl->removeClip(t_clip);
+    if(!m_impl->removeClip(t_clip))
+        return;
 
     emit clipRemoved(t_clip);
 }
@@ -65,13 +70,8 @@ void ClipLayer::processChannels(ProcessContext &t_context)
 {
     for(auto clip : m_impl->clips)
     {
-        if(clip->startTime() > t_context.globalTime)
-            return;
-        if(clip->endTime() > t_context.globalTime)
-        {
+        if(clip->timeIsValid(t_context.globalTime))
             clip->processChannels(t_context);
-            return;
-        }
     }
 }
 
@@ -97,9 +97,19 @@ void ClipLayer::readFromJson(const QJsonObject &t_json, const LoadContext &t_con
     auto clipArray = t_json.value("clips").toArray();
     for(auto clipJson : clipArray)
     {
-        auto clip = new Clip;
+        auto clipObj = clipJson.toObject();
+        Clip *clip = nullptr;
+        if(clipObj.value("type").toString() == "routine")
+        {
+            clip = new RoutineClip;
+        }
+        else if(clipObj.value("type").toString() == "state")
+        {
+            clip = new StateClip;
+        }
+
         m_impl->addClip(clip);
-        clip->readFromJson(clipJson.toObject(), t_context);
+        clip->readFromJson(clipObj, t_context);
     }
 }
 

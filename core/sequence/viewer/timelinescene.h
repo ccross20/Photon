@@ -7,6 +7,7 @@
 namespace photon {
 
 class SequenceClip;
+class LayerItem;
 
 class PHOTONCORE_EXPORT TimelineScene : public QGraphicsScene
 {
@@ -16,6 +17,9 @@ public:
     ~TimelineScene();
     void setSequence(Sequence *);
     Sequence *sequence() const;
+    LayerItem *layerAtY(double) const;
+    LayerItem *itemForLayer(Layer*) const;
+    SequenceClip *itemForClip(Clip*) const;
 
 private slots:
     void layerAdded(photon::Layer*);

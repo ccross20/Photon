@@ -2,6 +2,8 @@
 #define PHOTON_ABSTRACTFIXTURE_H
 #include "photon-global.h"
 #include "capability/fixturecapability.h"
+#include "fixturechannel.h"
+#include "scene/sceneobject.h"
 
 namespace photon {
 
@@ -15,7 +17,7 @@ struct FixtureMode
 };
 
 
-class PHOTONCORE_EXPORT Fixture : public QObject
+class PHOTONCORE_EXPORT Fixture : public SceneObject
 {
     Q_OBJECT
 public:
@@ -64,8 +66,8 @@ public:
         QString bulbDescription;
         float colorTemperature = 0.f;
         float lumens = 0.f;
-        float lensMinimum = 0.0f;
-        float lensMaximum = 0.0f;
+        float lensMinimum = 1.0f;
+        float lensMaximum = 25.0f;
         QVector3D matrixPixelDimensions;
         QVector3D matrixPixelSpacing;
     };
@@ -74,25 +76,14 @@ public:
     Fixture(const QString &path = QString{});
     ~Fixture();
 
-    QString name() const;
     QString description() const;
     QString manufacturer() const;
     QString comments() const;
     QString identifier() const;
-    QString id() const;
-    QVector3D position() const;
-    QVector3D rotation() const;
 
-    void setPosition(const QVector3D &);
-    void setRotation(const QVector3D &);
-    void setName(const QString &);
     void setComments(const QString &);
     void setIdentifier(const QString &);
 
-    void setBrightness(double, DMXMatrix &) const;
-    double brightness(const DMXMatrix &) const;
-    void setColor(const QColor &, DMXMatrix &) const;
-    QColor color(const DMXMatrix &) const;
     void setDMXOffset(int offset);
     int dmxOffset() const;
     int dmxSize() const;
@@ -102,22 +93,45 @@ public:
     const QVector<FixtureChannel*> &channels() const;
     FixtureChannel* findChannelWithName(const QString &name) const;
 
-    QVector<FixtureCapability*> findCapability(CapabilityType type) const;
+    QVector<FixtureCapability*> findCapability(CapabilityType type, int index = 0) const;
+
+    template<class V>
+    QVector<V> findCapability() const
+    {
+        QVector<V> results;
+
+        for(auto it = channels().cbegin(); it != channels().cend(); ++it)
+        {
+            auto channel = *it;
+
+            for(auto capabilityIt = channel->capabilities().cbegin(); capabilityIt != channel->capabilities().cend(); ++capabilityIt)
+            {
+                auto cap = dynamic_cast<V>(*capabilityIt);
+                if(cap)
+                    results.append(cap);
+            }
+        }
+
+        return results;
+    }
+
+
+    QWidget *createEditor() override;
+
     QVector<FixtureMode> modes() const;
 
     void setMode(uchar mode);
+    int mode() const;
 
     Physical physical() const;
 
     void loadFixtureDefinition(const QString &path);
     void readFromOpenFixtureJson(const QJsonObject &);
 
-    virtual void readFromJson(const QJsonObject &);
-    virtual void writeToJson(QJsonObject &) const;
+    void readFromJson(const QJsonObject &) override;
+    void writeToJson(QJsonObject &) const override;
 
 signals:
-    void metadataChanged();
-    void transformChanged();
     void WillBeDestroyed();
 
 private:

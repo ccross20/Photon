@@ -23,11 +23,14 @@
 #include "clipstructureviewer.h"
 #include "sequence/channeleffect.h"
 #include "sequence/clip.h"
+#include "state/state.h"
 #include "sequence/masterlayer.h"
 #include "falloff/falloffeffect.h"
 #include "timebar.h"
 #include "graph/bus/busevaluator.h"
 #include "gui/waveformwidget.h"
+#include "sequence/viewer/stateeditor.h"
+#include "sequence/stateclip.h"
 
 namespace photon {
 
@@ -146,6 +149,7 @@ SequenceWidget::SequenceWidget(QWidget *parent)
     connect(m_impl->detailsSplitter, &QSplitter::splitterMoved, this, &SequenceWidget::detailsSplitterMoved);
     connect(m_impl->horizontalSplitter, &QSplitter::splitterMoved, this, &SequenceWidget::horizontalSplitterMoved);
     connect(m_impl->curvePropertyEditor, &ClipStructureViewer::selectFalloff, this, &SequenceWidget::selectFalloff);
+    connect(m_impl->curvePropertyEditor, &ClipStructureViewer::selectState, this, &SequenceWidget::selectState);
     connect(m_impl->curvePropertyEditor, &ClipStructureViewer::selectEffect, this, &SequenceWidget::selectEffect);
     connect(m_impl->curvePropertyEditor, &ClipStructureViewer::clearSelection, this, &SequenceWidget::clearEditor);
     connect(m_impl->timebar, &TimeBar::changeTime, this, &SequenceWidget::gotoTime);
@@ -192,6 +196,7 @@ void SequenceWidget::selectEffect(photon::ChannelEffect *t_effect)
     editor->setOffset(m_impl->offset);
     editor->setScale(QPointF(m_impl->scale,editor->scale().y()));
     connect(m_impl->viewer->horizontalScrollBar(), &QAbstractSlider::valueChanged, editor, &ChannelEffectEditor::setOffset);
+    connect(editor, &ChannelEffectEditor::offsetChanged, m_impl->viewer->horizontalScrollBar(), &QAbstractSlider::setValue);
     connect(m_impl->viewer, &TimelineViewer::scaleChanged, editor, &ChannelEffectEditor::setXScale);
     connect(editor, &ChannelEffectEditor::xScaleChanged, m_impl->viewer, &TimelineViewer::setScale);
 
@@ -215,6 +220,28 @@ void SequenceWidget::selectFalloff(photon::FalloffEffect *t_effect)
     auto editor = t_effect->createEditor();
     layout->addWidget(editor);
     m_impl->effectEditor = editor;
+    m_impl->effectEditorContainer->setLayout(layout);
+
+}
+
+void SequenceWidget::selectState(photon::State *t_state)
+{
+    clearEditor();
+    QHBoxLayout *layout = new QHBoxLayout;
+    layout->setContentsMargins(0,0,0,0);
+
+    auto editor = new StateEditor;
+
+    if(m_impl->selectedClips.length() > 0)
+    {
+        auto clip = dynamic_cast<StateClip *>(m_impl->selectedClips[0]->clip());
+        if(clip)
+            editor->setClip(clip);
+    }
+
+    layout->addWidget(editor);
+    m_impl->effectEditor = editor;
+
     m_impl->effectEditorContainer->setLayout(layout);
 
 }
@@ -244,7 +271,7 @@ void SequenceWidget::selectionChanged()
             SequenceClip *clip = dynamic_cast<SequenceClip*>(item);
             removed.append(item);
             if(clip)
-                m_impl->curvePropertyEditor->removeClip(clip->clip());
+                m_impl->curvePropertyEditor->setClip(nullptr);
         }
     }
     for(auto item : m_impl->selectedLayers)
@@ -266,7 +293,7 @@ void SequenceWidget::selectionChanged()
             if(!m_impl->selectedClips.contains(clip))
             {
                 added.append(clip);
-                m_impl->curvePropertyEditor->addClip(clip->clip());
+                m_impl->curvePropertyEditor->setClip(clip->clip());
             }
         }
 
@@ -288,6 +315,8 @@ void SequenceWidget::selectionChanged()
 
     m_impl->selectedClips.append(added);
     m_impl->selectedLayers.append(addedLayers);
+
+    m_impl->curvePropertyEditor->restoreState();
 }
 
 void SequenceWidget::xOffsetChanged(int t_value)
@@ -360,6 +389,22 @@ void SequenceWidget::processPreview(ProcessContext &context)
     context.globalTime = m_impl->currentTime;
     m_impl->scene->sequence()->processChannels(context, 0);
     m_impl->lastPreviewTime = m_impl->currentTime;
+}
+
+DMXMatrix SequenceWidget::getDMX()
+{
+    qint64 deltaTime = QDateTime::currentMSecsSinceEpoch() - m_impl->startTimeMS;
+
+    m_impl->currentTime = m_impl->lastCurrentTime + (deltaTime / 1000.0);
+    m_impl->timer.restart();
+
+    DMXMatrix matrix;
+    ProcessContext context{matrix};
+
+    context.globalTime = m_impl->currentTime;
+    m_impl->scene->sequence()->processChannels(context, 0);
+
+    return matrix;
 }
 
 bool SequenceWidget::isPlaying() const

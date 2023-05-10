@@ -28,6 +28,11 @@ Layer::~Layer()
     delete m_impl;
 }
 
+QByteArray Layer::uniqueId() const
+{
+    return m_impl->guid.toByteArray();
+}
+
 QUuid Layer::guid() const
 {
     return m_impl->guid;
@@ -64,7 +69,7 @@ Sequence *Layer::sequence() const
 
 int Layer::height() const
 {
-    return 50;
+    return 25;
 }
 
 void Layer::sequenceChanged(Sequence *)

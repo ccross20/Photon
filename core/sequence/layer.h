@@ -12,6 +12,7 @@ public:
     explicit Layer(const QString &name, const QByteArray &layerType, QObject *parent = nullptr);
     virtual ~Layer();
 
+    QByteArray uniqueId() const;
     Sequence *sequence() const;
     virtual int height() const;
     QString name() const;

@@ -29,6 +29,7 @@ public:
     virtual ~FalloffEffect();
 
     QByteArray id() const;
+    QByteArray uniqueId() const;
     void setId(const QByteArray &);
     void setName(const QString &);
     QString name() const;

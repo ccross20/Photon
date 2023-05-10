@@ -29,9 +29,19 @@ SequencePanel::~SequencePanel()
     delete m_impl;
 }
 
+bool SequencePanel::isPlaying() const
+{
+    return m_impl->sequenceViewer->isPlaying();
+}
+
+DMXMatrix SequencePanel::getDMX()
+{
+    return m_impl->sequenceViewer->getDMX();
+}
 
 void SequencePanel::processPreview(ProcessContext &context)
 {
+
     m_impl->sequenceViewer->processPreview(context);
 }
 

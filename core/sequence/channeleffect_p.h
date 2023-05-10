@@ -9,6 +9,7 @@ class ChannelEffect::Impl
 public:
     QString name;
     QByteArray id;
+    QByteArray uniqueId;
     Channel *channel = nullptr;
     ChannelEffect *previousEffect = nullptr;
 };

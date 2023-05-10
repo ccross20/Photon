@@ -3,6 +3,7 @@
 
 #include "model/node.h"
 #include "graph/parameter/canvasparameter.h"
+#include "graph/parameter/colorparameter.h"
 #include "model/parameter/decimalparameter.h"
 
 namespace photon {
@@ -21,6 +22,8 @@ private:
     CanvasParameter *m_canvasOutputParam;
     keira::DecimalParameter *m_widthParam;
     keira::DecimalParameter *m_heightParam;
+    keira::DecimalParameter *m_alphaParam;
+    ColorParameter *m_colorParam;
 };
 
 } // namespace photon

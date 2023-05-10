@@ -26,7 +26,8 @@ public:
 
     ShutterEffect shutterEffect() const;
 
-    void setSpeed(double value);
+    void setSpeedPercent(double value, DMXMatrix &t_matrix);
+    double getSpeedPercent(const DMXMatrix &t_matrix);
 
     bool hasSoundCapability() const;
     bool hasRandomCapability() const;

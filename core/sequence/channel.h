@@ -11,12 +11,30 @@ struct PHOTONCORE_EXPORT ChannelInfo
     enum ChannelType
     {
         ChannelTypeNumber,
+        ChannelTypeInteger,
+        ChannelTypeIntegerStep,
+        ChannelTypeBool,
         ChannelTypeColor
     };
 
+    ChannelInfo(ChannelType type = ChannelTypeNumber, const QString &name = QString{}, const QString &description = QString{}, const QVariant &defaultValue = QVariant{}):
+    name(name),
+      description(description),
+      defaultValue(defaultValue),
+      type(type)
+    {
+        uniqueId = QUuid::createUuid().toByteArray();
+    }
+
+
+    void readFromJson(const QJsonObject &);
+    void writeToJson(QJsonObject &) const;
+
+    QStringList options;
     QString name;
     QString description;
     QVariant defaultValue;
+    QByteArray uniqueId;
     ChannelType type;
 };
 
@@ -27,6 +45,7 @@ public:
     Channel(const ChannelInfo &info, double startTime, double duration, QObject *parent = nullptr);
     ~Channel();
 
+    QByteArray uniqueId() const;
     ChannelInfo info() const;
     void updateInfo(const ChannelInfo &);
     void addEffect(ChannelEffect *);
@@ -34,6 +53,7 @@ public:
     void moveEffect(ChannelEffect *, int newPosition);
 
     double processDouble(double time);
+    QColor processColor(double time);
 
     void setDuration(double);
     double duration() const;

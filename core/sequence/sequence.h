@@ -11,6 +11,7 @@ class ProcessContext
 public:
     ProcessContext(DMXMatrix &matrix):dmxMatrix(matrix){}
     Fixture *fixture = nullptr;
+    Project *project = nullptr;
     QImage *canvasImage = nullptr;
     DMXMatrix &dmxMatrix;
     double globalTime;

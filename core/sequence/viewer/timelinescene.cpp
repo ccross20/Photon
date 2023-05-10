@@ -12,6 +12,7 @@
 #include "project/project.h"
 #include "pixel/canvascollection.h"
 #include "pixel/canvas.h"
+#include "sequence/clip.h"
 
 namespace photon {
 
@@ -106,6 +107,19 @@ TimelineScene::~TimelineScene()
     delete m_impl;
 }
 
+LayerItem *TimelineScene::itemForLayer(Layer* t_layer) const
+{
+    return m_impl->findLayer(t_layer);
+}
+
+SequenceClip *TimelineScene::itemForClip(Clip* t_clip) const
+{
+    auto layer = itemForLayer(t_clip->layer());
+    if(layer)
+        return static_cast<TimelineClipLayer*>(layer)->itemForClip(t_clip);
+    return nullptr;
+}
+
 void TimelineScene::setSequence(Sequence *t_sequence)
 {
     if(m_impl->sequence == t_sequence)
@@ -139,6 +153,18 @@ void TimelineScene::layerAdded(photon::Layer* t_layer)
     if(!m_impl->findLayer(t_layer))
         m_impl->addLayer(t_layer);
     m_impl->layoutLayers();
+}
+
+LayerItem *TimelineScene::layerAtY(double t_y) const
+{
+    for(auto layer : m_impl->layers)
+    {
+        //qDebug() << layer->boundingRect();
+        auto globalRect = layer->mapRectToScene(layer->boundingRect());
+        if(globalRect.top() < t_y && globalRect.bottom() > t_y)
+            return layer;
+    }
+    return nullptr;
 }
 
 void TimelineScene::layerRemoved(photon::Layer* t_layer)

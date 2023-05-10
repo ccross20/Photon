@@ -15,6 +15,7 @@ public:
 
     void setBus(BusGraph *);
     BusGraph *bus();
+    double elapsed() const;
 
     const DMXMatrix &dmxMatrix() const;
 

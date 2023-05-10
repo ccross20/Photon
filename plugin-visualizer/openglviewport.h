@@ -5,6 +5,7 @@
 #include <QOpenGLFunctions>
 #include <QBasicTimer>
 #include <QMatrix4x4>
+#include <QElapsedTimer>
 
 namespace photon {
 
@@ -45,6 +46,7 @@ protected:
 
 private:
     QBasicTimer m_timer;
+    QElapsedTimer m_elapsedTimer;
     QString m_vendor;
     QString m_version;
     QString m_model;

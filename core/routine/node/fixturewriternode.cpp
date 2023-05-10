@@ -47,11 +47,6 @@ void FixtureWriterNode::createParameters()
 
 void FixtureWriterNode::evaluate(keira::EvaluationContext *t_context) const
 {
-    RoutineEvaluationContext *context = static_cast<RoutineEvaluationContext*>(t_context);
-    if(context->fixture)
-    {
-        context->fixture->setBrightness(m_impl->brightnessParam->value().toDouble() * context->strength, context->dmxMatrix);
-    }
 
 }
 

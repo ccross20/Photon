@@ -2,8 +2,9 @@
 #include <QColor>
 #include <QJsonDocument>
 #include <QFile>
-#include "data/dmxmatrix.h"
-#include "fixturechannel.h"
+#include "fixturechannel_p.h"
+#include "fixturevirtualchannel.h"
+#include "fixtureeditorwidget.h"
 
 namespace photon {
 
@@ -12,16 +13,13 @@ class Fixture::Impl
 public:
     Fixture::Physical physical;
     QVector<FixtureChannel*> channels;
+    QVector<FixtureVirtualChannel*> virtualChannels;
     QVector<FixtureMode> modes;
     QString definitionPath;
-    QString name;
     QString description;
     QString manufacturer;
     QString comments;
     QString identifier;
-    QString id;
-    QVector3D position;
-    QVector3D rotation;
     int dmxOffset = 0;
     int dmxSize = 0;
     int universe = 1;
@@ -30,7 +28,7 @@ public:
 
 const QByteArray Fixture::FixtureMime = "application/x-photonfixture";
 
-Fixture::Fixture(const QString &path) : m_impl(new Impl)
+Fixture::Fixture(const QString &path) :SceneObject("fixture"), m_impl(new Impl)
 {
     if(!path.isEmpty())
         loadFixtureDefinition(path);
@@ -41,28 +39,63 @@ Fixture::~Fixture()
     delete m_impl;
 }
 
-QVector<FixtureCapability*> Fixture::findCapability(CapabilityType t_type) const
+QWidget *Fixture::createEditor()
+{
+    auto editor = new FixtureEditorWidget;
+    editor->setFixtures(QVector<Fixture*>{this});
+    return editor;
+}
+
+QVector<FixtureCapability*> Fixture::findCapability(CapabilityType t_type, int t_index) const
 {
     QVector<FixtureCapability*> results;
 
+    int channelCounter = 0;
     for(auto it = m_impl->channels.cbegin(); it != m_impl->channels.cend(); ++it)
     {
         auto channel = *it;
 
-        for(auto capabilityIt = channel->capabilities().cbegin(); capabilityIt != channel->capabilities().cend(); ++capabilityIt)
-        {            
-            if((*capabilityIt)->type() == t_type)
-                results.append(*capabilityIt);
+        if(channel->capabilityType() == t_type)
+        {
+            if(t_index < 0 || channelCounter == t_index)
+            {
+                for(auto capabilityIt = channel->capabilities().cbegin(); capabilityIt != channel->capabilities().cend(); ++capabilityIt)
+                {
+                    if((*capabilityIt)->type() == t_type)
+                        results.append(*capabilityIt);
+                }
+            }
+
+            if(channelCounter == t_index)
+                return results;
+
+            ++channelCounter;
+        }
+    }
+
+    for(auto it = m_impl->virtualChannels.cbegin(); it != m_impl->virtualChannels.cend(); ++it)
+    {
+        auto channel = *it;
+
+        if(channel->capabilityType() == t_type)
+        {
+            if(t_index < 0 || channelCounter == t_index)
+            {
+                for(auto capabilityIt = channel->capabilities().cbegin(); capabilityIt != channel->capabilities().cend(); ++capabilityIt)
+                {
+                    if((*capabilityIt)->type() == t_type)
+                        results.append(*capabilityIt);
+                }
+            }
+
+            if(channelCounter == t_index)
+                return results;
+
+            ++channelCounter;
         }
     }
 
     return results;
-}
-
-void Fixture::setName(const QString &t_value)
-{
-    m_impl->name = t_value;
-    emit metadataChanged();
 }
 
 void Fixture::setComments(const QString &t_value)
@@ -75,37 +108,6 @@ void Fixture::setIdentifier(const QString &t_value)
 {
     m_impl->identifier = t_value;
     emit metadataChanged();
-}
-
-QVector3D Fixture::position() const
-{
-    return m_impl->position;
-}
-
-QVector3D Fixture::rotation() const
-{
-    return m_impl->rotation;
-}
-
-void Fixture::setPosition(const QVector3D &t_position)
-{
-    if(m_impl->position == t_position)
-        return;
-    m_impl->position = t_position;
-    emit transformChanged();
-}
-
-void Fixture::setRotation(const QVector3D &t_rotation)
-{
-    if(m_impl->rotation == t_rotation)
-        return;
-    m_impl->rotation = t_rotation;
-    emit transformChanged();
-}
-
-QString Fixture::name() const
-{
-    return m_impl->name;
 }
 
 QString Fixture::description() const
@@ -126,11 +128,6 @@ QString Fixture::comments() const
 QString Fixture::identifier() const
 {
     return m_impl->identifier;
-}
-
-QString Fixture::id() const
-{
-    return m_impl->id;
 }
 
 int Fixture::dmxSize() const
@@ -175,32 +172,6 @@ FixtureChannel* Fixture::findChannelWithName(const QString &t_name) const
     return nullptr;
 }
 
-void Fixture::setBrightness(double t_brightness, DMXMatrix &t_matrix) const
-{
-    t_matrix.setValuePercent(0,m_impl->dmxOffset, t_brightness);
-}
-
-double Fixture::brightness(const DMXMatrix &t_matrix) const
-{
-    return t_matrix.valuePercent(0,m_impl->dmxOffset);
-}
-
-void Fixture::setColor(const QColor &t_color, DMXMatrix &t_matrix) const
-{
-    t_matrix.setValue(0,m_impl->dmxOffset+1, t_color.red());
-    t_matrix.setValue(0,m_impl->dmxOffset+2, t_color.green());
-    t_matrix.setValue(0,m_impl->dmxOffset+3, t_color.blue());
-}
-
-QColor Fixture::color(const DMXMatrix &t_matrix) const
-{
-    QColor c;
-    c.setRed(t_matrix.value(0,m_impl->dmxOffset + 1));
-    c.setRed(t_matrix.value(0,m_impl->dmxOffset + 2));
-    c.setRed(t_matrix.value(0,m_impl->dmxOffset + 3));
-    return c;
-}
-
 Fixture::Physical Fixture::physical() const
 {
     return m_impl->physical;
@@ -226,7 +197,8 @@ void Fixture::loadFixtureDefinition(const QString &t_path)
 
 void Fixture::readFromOpenFixtureJson(const QJsonObject &t_json)
 {
-    m_impl->name = t_json.value("name").toString(m_impl->name);
+    if(name().isEmpty())
+        setName(t_json.value("name").toString(name()));
     if(t_json.contains("physical"))
     {
         auto physicalObj = t_json.value("physical").toObject();
@@ -301,6 +273,8 @@ void Fixture::readFromOpenFixtureJson(const QJsonObject &t_json)
     if(t_json.contains("availableChannels"))
     {
         auto channels = t_json.value("availableChannels").toObject();
+        QVector<FixtureChannel*> colorChannels;
+
 
         for(auto it = channels.constBegin(); it != channels.constEnd(); ++it)
         {
@@ -309,8 +283,39 @@ void Fixture::readFromOpenFixtureJson(const QJsonObject &t_json)
             FixtureChannel *fixtureChannel = new FixtureChannel(it.key(), 0);
             fixtureChannel->setFixture(this);
             fixtureChannel->readFromOpenFixtureJson(channelObj);
+            fixtureChannel->m_impl->channelNumber = -1;
+            fixtureChannel->m_impl->globalChannelNumber = 0;
             m_impl->channels.append(fixtureChannel);
+
+            for(const auto &alias : fixtureChannel->m_impl->fineChannelsAliases)
+            {
+                FixtureChannel *fineChannel = new FixtureChannel(alias, 0);
+                fineChannel->setFixture(this);
+                fineChannel->m_impl->channelNumber = -1;
+                fineChannel->m_impl->globalChannelNumber = 0;
+                m_impl->channels.append(fineChannel);
+                fixtureChannel->m_impl->fineChannels.append(fineChannel);
+            }
+
+
+            if(fixtureChannel->capabilityType() == Capability_Cyan ||
+                    fixtureChannel->capabilityType() == Capability_Magenta ||
+                    fixtureChannel->capabilityType() == Capability_Yellow)
+            {
+                colorChannels.append(fixtureChannel);
+
+                if(colorChannels.length() == 3)
+                {
+                    auto vChannel = new FixtureVirtualChannel(colorChannels);
+                    vChannel->setFixture(this);
+                    m_impl->virtualChannels.append(vChannel);
+                    colorChannels.clear();
+                }
+            }
+
+
         }
+
     }
 
     if(t_json.contains("modes"))
@@ -363,26 +368,35 @@ void Fixture::setMode(uchar t_mode)
 
     m_impl->selectedMode = t_mode;
 
-
-
-    const FixtureMode &mode = m_impl->modes[t_mode];
+    const FixtureMode &mode = m_impl->modes[m_impl->selectedMode];
+    m_impl->dmxSize = mode.channels.length();
 
     uchar counter = 0;
     for(const auto &channelName : mode.channels)
     {
         auto channel = findChannelWithName(channelName);
         if(channel)
+        {
             channel->setChannelNumber(counter++);
+        }
+        else
+        {
+            qDebug() << "Could not find:" << channelName;
+        }
     }
     emit metadataChanged();
 }
 
+int Fixture::mode() const
+{
+    return m_impl->selectedMode;
+}
+
 void Fixture::readFromJson(const QJsonObject &json)
 {
+    SceneObject::readFromJson(json);
     //QString version = json.value("version").toString();
-    m_impl->name = json.value("name").toString();
     m_impl->description = json.value("description").toString();
-    m_impl->id = json.value("id").toString();
     m_impl->dmxOffset = json.value("dmxOffset").toInt(0);
     m_impl->dmxSize = json.value("dmxSize").toInt(0);
     m_impl->universe = json.value("universe").toInt(1);
@@ -393,22 +407,13 @@ void Fixture::readFromJson(const QJsonObject &json)
     loadFixtureDefinition(m_impl->definitionPath);
     setMode(json.value("selectedMode").toInt(-1));
 
-    QJsonObject positionObj = json.value("position").toObject();
-    m_impl->position = QVector3D{static_cast<float>(positionObj.value("x").toDouble()),
-                                    static_cast<float>(positionObj.value("y").toDouble()),
-                                    static_cast<float>(positionObj.value("z").toDouble())};
-    QJsonObject rotationObj = json.value("rotation").toObject();
-    m_impl->rotation = QVector3D{static_cast<float>(rotationObj.value("x").toDouble()),
-                                    static_cast<float>(rotationObj.value("y").toDouble()),
-                                    static_cast<float>(rotationObj.value("z").toDouble())};
 }
 
 void Fixture::writeToJson(QJsonObject &json) const
 {
+    SceneObject::writeToJson(json);
     json.insert("version", "1.0");
-    json.insert("name", m_impl->name);
     json.insert("description", m_impl->description);
-    json.insert("id", m_impl->id);
     json.insert("dmxOffset", m_impl->dmxOffset);
     json.insert("dmxSize", m_impl->dmxSize);
     json.insert("universe", m_impl->universe);
@@ -418,17 +423,6 @@ void Fixture::writeToJson(QJsonObject &json) const
     json.insert("selectedMode", m_impl->selectedMode);
     json.insert("definitionPath", m_impl->definitionPath);
 
-    QJsonObject positionObj;
-    positionObj.insert("x", m_impl->position.x());
-    positionObj.insert("y", m_impl->position.y());
-    positionObj.insert("z", m_impl->position.z());
-    json.insert("position", positionObj);
-
-    QJsonObject rotationObj;
-    rotationObj.insert("x", m_impl->rotation.x());
-    rotationObj.insert("y", m_impl->rotation.y());
-    rotationObj.insert("z", m_impl->rotation.z());
-    json.insert("rotation", rotationObj);
 }
 
 } // namespace photon

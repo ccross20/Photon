@@ -15,9 +15,14 @@ public:
 
 private slots:
     void addClicked();
+    void addFixture();
+    void addGroup();
+    void addTruss();
     void removeClicked();
+    void duplicateClicked();
     void doubleClicked(const QModelIndex &);
     void selectionChanged(const QItemSelection &selected, const QItemSelection &deselected);
+    void selectionMoved(QModelIndexList indices);
 
 protected:
     void projectDidOpen(photon::Project* project) override;

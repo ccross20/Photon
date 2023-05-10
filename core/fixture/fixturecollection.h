@@ -13,22 +13,12 @@ public:
     explicit FixtureCollection(QObject *parent = nullptr);
     ~FixtureCollection();
 
-    void addFixture(Fixture *t_fixture);
-    void removeFixture(Fixture *t_fixture);
-    void removeAllFixtures();
-    int fixtureCount() const;
-    Fixture *fixtureAtIndex(uint) const;
-
     QVector<Fixture*> fixturesWithName(const QString &);
+    Fixture* fixtureById(const QByteArray &);
+    Fixture *fixtureWithId(const QByteArray &) const;
 
-    const QVector<Fixture*> &fixtures() const;
+    const QVector<Fixture*> fixtures() const;
 
-signals:
-
-    void fixtureWillBeAdded(photon::Fixture *, int);
-    void fixtureWasAdded(photon::Fixture *);
-    void fixtureWillBeRemoved(photon::Fixture *, int);
-    void fixtureWasRemoved(photon::Fixture *);
 private:
     class Impl;
     Impl *m_impl;

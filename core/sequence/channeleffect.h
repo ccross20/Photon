@@ -28,13 +28,15 @@ public:
     virtual ~ChannelEffect();
 
     QByteArray id() const;
+    QByteArray uniqueId() const;
     void setId(const QByteArray &);
     void setName(const QString &);
     QString name() const;
 
     Channel *channel() const;
     int index() const;
-    virtual double process(double value, double time) const = 0;
+    virtual double process(double value, double time) const;
+    virtual QColor processColor(QColor value, double time) const;
     virtual ChannelEffectEditor *createEditor() {return new ChannelEffectEditor(this);}
     void updated();
 

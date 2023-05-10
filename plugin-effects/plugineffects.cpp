@@ -6,6 +6,7 @@
 #include "time/stuttereffect.h"
 #include "time/loopeffect.h"
 #include "modifier/smootheffect.h"
+#include "modifier/easeeffect.h"
 
 //inline void initPluginResource() { Q_INIT_RESOURCE(resources); }
 
@@ -22,6 +23,7 @@ bool PluginEffects::initialize(const PluginContext &context)
     photonApp->plugins()->registerChannelEffect(StutterEffect::info());
     photonApp->plugins()->registerChannelEffect(LoopEffect::info());
     photonApp->plugins()->registerChannelEffect(SmoothEffect::info());
+    photonApp->plugins()->registerChannelEffect(EaseEffect::info());
 
     return true;
 }

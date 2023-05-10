@@ -17,6 +17,8 @@
 #include "graph/bus/dmxgeneratematrixnode.h"
 #include "graph/bus/sequencenode.h"
 #include "graph/bus/dmxwriternode.h"
+#include "scene/sceneobject.h"
+#include "scene/scenemanager.h"
 
 namespace photon {
 
@@ -30,10 +32,13 @@ public:
     SequenceCollection sequences;
     RoutineCollection routines;
     BusGraph *bus;
+    SceneManager *sceneManager;
 };
 
 Project::Impl::Impl()
 {
+    sceneManager = new SceneManager;
+
     DMXGenerateMatrixNode *generateNode = new DMXGenerateMatrixNode;
     generateNode->createParameters();
 
@@ -55,6 +60,7 @@ Project::Impl::Impl()
     bus->connectParameters(generateNode->findParameter(DMXGenerateMatrixNode::OutputDMX), sequenceNode->findParameter(SequenceNode::InputDMX));
     bus->connectParameters(sequenceNode->findParameter(SequenceNode::OutputDMX), writerNode->findParameter(DMXWriterNode::InputDMX));
 
+
 }
 
 Project::Impl::~Impl()
@@ -70,12 +76,23 @@ Project::Project(QObject *parent)
 
 Project::~Project()
 {
+    delete m_impl->sceneManager;
     delete m_impl;
 }
 
 BusGraph *Project::bus() const
 {
     return m_impl->bus;
+}
+
+SceneObject *Project::sceneRoot() const
+{
+    return m_impl->sceneManager->rootObject();
+}
+
+SceneManager *Project::scene() const
+{
+    return m_impl->sceneManager;
 }
 
 void Project::addSequence(Sequence *t_sequence)
@@ -192,19 +209,9 @@ void Project::restore(Project &t_project)
 
 void Project::readFromJson(const QJsonObject &json)
 {
-    auto fixtureArray = json.value("fixtures").toArray();
-
     LoadContext context;
     context.project = this;
 
-    m_impl->fixtures.removeAllFixtures();
-
-    for(const auto &fixtureJson : fixtureArray)
-    {
-        Fixture *fixture = new Fixture;
-        fixture->readFromJson(fixtureJson.toObject());
-        m_impl->fixtures.addFixture(fixture);
-    }
 
     m_impl->bus = new BusGraph;
     if(json.contains("bus"))
@@ -252,19 +259,18 @@ void Project::readFromJson(const QJsonObject &json)
         }
     }
 
+    //m_impl->sceneManager = new SceneManager;
+    if(json.contains("sceneManager"))
+    {
+        QJsonObject sceneObj = json.value("sceneManager").toObject();
+        m_impl->sceneManager->readFromJson(sceneObj);
+    }
+
+
 }
 
 void Project::writeToJson(QJsonObject &json) const
 {
-    QJsonArray fixtureArray;
-    for(auto fixture : m_impl->fixtures.fixtures())
-    {
-        QJsonObject fixtureObj;
-        fixture->writeToJson(fixtureObj);
-        fixtureArray.append(fixtureObj);
-    }
-    json.insert("fixtures", fixtureArray);
-
     QJsonObject busObj;
     m_impl->bus->writeToJson(busObj);
     json.insert("bus", busObj);
@@ -296,6 +302,11 @@ void Project::writeToJson(QJsonObject &json) const
         canvasArray.append(canvasObj);
     }
     json.insert("canvases", canvasArray);
+
+    QJsonObject sceneObj;
+    m_impl->sceneManager->writeToJson(sceneObj);
+    json.insert("sceneManager", sceneObj);
+
 }
 
 } // namespace photon

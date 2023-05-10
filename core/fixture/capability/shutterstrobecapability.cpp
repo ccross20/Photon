@@ -1,4 +1,7 @@
 #include "shutterstrobecapability.h"
+#include "data/dmxmatrix.h"
+#include "fixture/fixture.h"
+#include "fixture/fixturechannel.h"
 
 namespace photon {
 
@@ -8,7 +11,7 @@ public:
     ShutterEffect effect = Shutter_Open;
     double speed = 0.0;
     double speedStart = 0.0;
-    double speedEnd = 0.0;
+    double speedEnd = 1.0;
     double duration = 0.0;
     double durationStart = 0.0;
     double durationEnd = 0.0;
@@ -16,7 +19,7 @@ public:
     bool hasSound = false;
 };
 
-ShutterStrobeCapability::ShutterStrobeCapability(DMXRange range) : FixtureCapability(range),m_impl(new Impl)
+ShutterStrobeCapability::ShutterStrobeCapability(DMXRange range) : FixtureCapability(range, Capability_Strobe),m_impl(new Impl)
 {
 
 }
@@ -31,9 +34,15 @@ ShutterStrobeCapability::ShutterEffect ShutterStrobeCapability::shutterEffect() 
     return m_impl->effect;
 }
 
-void ShutterStrobeCapability::setSpeed(double value)
+void ShutterStrobeCapability::setSpeedPercent(double value, DMXMatrix &t_matrix)
 {
-    m_impl->speed = value;
+    t_matrix.setValue(fixture()->universe()-1,channel()->universalChannelNumber(),range().fromPercent(value));
+}
+
+double ShutterStrobeCapability::getSpeedPercent(const DMXMatrix &t_matrix)
+{
+    double speedRange = m_impl->speedEnd - m_impl->speedStart;
+    return m_impl->speedStart + (range().toPercent(t_matrix.value(fixture()->universe()-1,channel()->universalChannelNumber())) * speedRange);
 }
 
 bool ShutterStrobeCapability::hasSoundCapability() const
@@ -75,7 +84,34 @@ void ShutterStrobeCapability::readFromOpenFixtureJson(const QJsonObject &t_json)
     m_impl->hasSound = t_json.value("soundControlled").toBool(false);
     m_impl->hasRandom = t_json.value("randomTiming").toBool(false);
 
-    m_impl->speed = t_json.value("speed").toDouble(0.0);
+    if(t_json.value("speed").isDouble())
+    {
+        m_impl->speed = t_json.value("speed").toDouble(0.0);
+    }
+    else
+    {
+        auto speedString = t_json.value("speed").toString();
+        double value = 0;
+        if(constantPercent(speedString, &value))
+            m_impl->speed = value;
+    }
+
+    if(t_json.contains("speedStart"))
+    {
+        double value = 0;
+        if(constantPercent(t_json.value("speedStart").toString(), &value))
+            m_impl->speedStart = value;
+    }
+
+    if(t_json.contains("speedEnd"))
+    {
+        double value = 0;
+        if(constantPercent(t_json.value("speedEnd").toString(), &value))
+            m_impl->speedEnd = value;
+    }
+
+
+
 }
 
 

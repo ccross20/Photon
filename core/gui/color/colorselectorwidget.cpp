@@ -76,16 +76,12 @@ ColorSelectorWidget::ColorSelectorWidget(const QColor &color, int features, QWid
     m_hexEdit = new QLineEdit(this);
     m_hexEdit->setFocusPolicy(Qt::FocusPolicy::ClickFocus);
     m_hexEdit->setText(m_color.name(QColor::HexRgb));
-    connect(m_hexEdit,SIGNAL(receivedFocus()),this,SLOT(hexReceivedFocus()));
-    connect(m_hexEdit,SIGNAL(lostFocus()),this,SLOT(hexLostFocus()));
-    connect(m_hexEdit,SIGNAL(textEdited(const QString &)),this,SLOT(hexChanged(const QString &)));
+    connect(m_hexEdit,&QLineEdit::textEdited,this,&ColorSelectorWidget::hexChanged);
 
     buildSliders();
 
     if(m_features & FeatureSlider)
         hLayout->addLayout(componentVLayout);
-
-
 
     vLayout->addLayout(hLayout);
 
@@ -343,29 +339,21 @@ void ColorSelectorWidget::buildSliders()
     connect(m_sliderA,SIGNAL(beginEditing()),this,SIGNAL(beginEditing()));
     connect(m_sliderA,SIGNAL(endEditing()),this,SIGNAL(endEditing()));
     connect(m_spinA,SIGNAL(valueChanged(double)),this,SLOT(spinAChanged(double)));
-    connect(m_spinA,SIGNAL(beginShifting()),this,SIGNAL(beginEditing()));
-    connect(m_spinA,SIGNAL(endShifting()),this,SIGNAL(endEditing()));
 
     connect(m_sliderB,SIGNAL(valueChange(double)),this,SLOT(sliderChanged(double)));
     connect(m_sliderB,SIGNAL(beginEditing()),this,SIGNAL(beginEditing()));
     connect(m_sliderB,SIGNAL(endEditing()),this,SIGNAL(endEditing()));
     connect(m_spinB,SIGNAL(valueChanged(double)),this,SLOT(spinBChanged(double)));
-    connect(m_spinB,SIGNAL(beginShifting()),this,SIGNAL(beginEditing()));
-    connect(m_spinB,SIGNAL(endShifting()),this,SIGNAL(endEditing()));
 
     connect(m_sliderC,SIGNAL(valueChange(double)),this,SLOT(sliderChanged(double)));
     connect(m_sliderC,SIGNAL(beginEditing()),this,SIGNAL(beginEditing()));
     connect(m_sliderC,SIGNAL(endEditing()),this,SIGNAL(endEditing()));
     connect(m_spinC,SIGNAL(valueChanged(double)),this,SLOT(spinCChanged(double)));
-    connect(m_spinC,SIGNAL(beginShifting()),this,SIGNAL(beginEditing()));
-    connect(m_spinC,SIGNAL(endShifting()),this,SIGNAL(endEditing()));
 
     connect(m_sliderD,SIGNAL(valueChange(double)),this,SLOT(sliderChanged(double)));
     connect(m_sliderD,SIGNAL(beginEditing()),this,SIGNAL(beginEditing()));
     connect(m_sliderD,SIGNAL(endEditing()),this,SIGNAL(endEditing()));
     connect(m_spinD,SIGNAL(valueChanged(double)),this,SLOT(spinDChanged(double)));
-    connect(m_spinD,SIGNAL(beginShifting()),this,SIGNAL(beginEditing()));
-    connect(m_spinD,SIGNAL(endShifting()),this,SIGNAL(endEditing()));
 
     if(m_features & FeatureSlider)
     {

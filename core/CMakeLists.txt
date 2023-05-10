@@ -41,6 +41,7 @@ set(PROJECT_SOURCES
         fixture/fixture.h
         fixture/fixture.cpp
         fixture/fixturechannel.h
+        fixture/fixturechannel_p.h
         fixture/fixturechannel.cpp
         fixture/fixturecollection.h
         fixture/fixturecollection.cpp
@@ -48,8 +49,25 @@ set(PROJECT_SOURCES
         fixture/fixtureeditorwidget.cpp
         fixture/fixturemask.h
         fixture/fixturemask.cpp
+        fixture/fixturevirtualchannel.h
+        fixture/fixturevirtualchannel.cpp
+        fixture/maskeffect.h
+        fixture/maskeffect_p.h
+        fixture/maskeffect.cpp
+        fixture/capability/anglecapability.h
+        fixture/capability/anglecapability.cpp
+        fixture/capability/capabilityfactory.h
+        fixture/capability/capabilityfactory.cpp
+        fixture/capability/colorcapability.h
+        fixture/capability/colorcapability.cpp
+        fixture/capability/colorintensitycapability.h
+        fixture/capability/colorintensitycapability.cpp
+        fixture/capability/dimmercapability.h
+        fixture/capability/dimmercapability.cpp
         fixture/capability/fixturecapability.h
         fixture/capability/fixturecapability.cpp
+        fixture/capability/focuscapability.h
+        fixture/capability/focuscapability.cpp
         fixture/capability/nofunctioncapability.h
         fixture/capability/nofunctioncapability.cpp
         fixture/capability/pancapability.h
@@ -58,6 +76,8 @@ set(PROJECT_SOURCES
         fixture/capability/shutterstrobecapability.cpp
         fixture/capability/tiltcapability.h
         fixture/capability/tiltcapability.cpp
+        fixture/capability/zoomcapability.h
+        fixture/capability/zoomcapability.cpp
         graph/bus/busevaluator.h
         graph/bus/busevaluator.cpp
         graph/bus/busgraph.h
@@ -78,6 +98,10 @@ set(PROJECT_SOURCES
         graph/parameter/colorparameter.cpp
         graph/parameter/dmxmatrixparameter.h
         graph/parameter/dmxmatrixparameter.cpp
+        graph/parameter/fixtureparameter.h
+        graph/parameter/fixtureparameter.cpp
+        graph/parameter/vector3dparameter.h
+        graph/parameter/vector3dparameter.cpp
         gui/color/colorslider.h
         gui/color/colorslider.cpp
         gui/color/colorwheelswatch.h
@@ -147,6 +171,8 @@ set(PROJECT_SOURCES
         routine/node/numberinputnode.cpp
         routine/node/colorinputnode.h
         routine/node/colorinputnode.cpp
+        routine/node/fixtureinfonode.h
+        routine/node/fixtureinfonode.cpp
         routine/routineevaluationcontext.h
         routine/routine.h
         routine/routine.cpp
@@ -159,6 +185,20 @@ set(PROJECT_SOURCES
         pixel/canvascollection.cpp
         plugin/pluginfactory.h
         plugin/pluginfactory.cpp
+        scene/sceneiterator.h
+        scene/scenemanager.h
+        scene/scenemanager.cpp
+        scene/scenemodel.h
+        scene/scenemodel.cpp
+        scene/scenegroup.h
+        scene/scenegroup.cpp
+        scene/scenefactory.h
+        scene/scenefactory.cpp
+        scene/sceneobject.h
+        scene/sceneobject_p.h
+        scene/sceneobject.cpp
+        scene/truss.h
+        scene/truss.cpp
         sequence/canvaslayergroup.h
         sequence/canvaslayergroup.cpp
         sequence/channel.h
@@ -185,6 +225,8 @@ set(PROJECT_SOURCES
         sequence/masterlayerchanneleffect.cpp
         sequence/masterlayer.h
         sequence/masterlayer.cpp
+        sequence/routineclip.h
+        sequence/routineclip.cpp
         sequence/sequence.h
         sequence/sequence_p.h
         sequence/sequence.cpp
@@ -192,6 +234,8 @@ set(PROJECT_SOURCES
         sequence/sequencecollection.cpp
         sequence/spline.h
         sequence/spline.cpp
+        sequence/stateclip.h
+        sequence/stateclip.cpp
         sequence/track.h
         sequence/track.cpp
         sequence/viewer/clipmodel.h
@@ -225,12 +269,37 @@ set(PROJECT_SOURCES
         sequence/viewer/timelineviewer.cpp
         sequence/viewer/sequencewidget.h
         sequence/viewer/sequencewidget.cpp
+        sequence/viewer/stateeditor.h
+        sequence/viewer/stateeditor.cpp
         settings/resourcemanager.h
         settings/resourcemanager.cpp
         settings/settings.h
         settings/settings.cpp
         settings/settingspage.h
         settings/settingspage.cpp
+        state/colorstate.h
+        state/colorstate.cpp
+        state/dimmerstate.h
+        state/dimmerstate.cpp
+        state/focusstate.h
+        state/focusstate.cpp
+        state/panstate.h
+        state/panstate.cpp
+        state/stateevaluationcontext.h
+        state/shutterstate.h
+        state/shutterstate.cpp
+        state/state.h
+        state/state.cpp
+        state/statecapability.h
+        state/statecapability.cpp
+        state/tiltanglestate.h
+        state/tiltanglestate.cpp
+        state/tiltanglecenteredstate.h
+        state/tiltanglecenteredstate.cpp
+        state/tiltstate.h
+        state/tiltstate.cpp
+        state/zoomstate.h
+        state/zoomstate.cpp
         third-party/advanced-docking/ads_globals.cpp
         third-party/advanced-docking/DockAreaTabBar.cpp
         third-party/advanced-docking/DockAreaTitleBar.cpp
@@ -251,23 +320,6 @@ set(PROJECT_SOURCES
         third-party/advanced-docking/linux/FloatingWidgetTitleBar.cpp
         timekeeper.h
         timekeeper.cpp
-        viewport/geometry/Line.h
-        viewport/geometry/Line.cpp
-        viewport/geometry/Matrices.h
-        viewport/geometry/Matrices.cpp
-        viewport/geometry/Pipe.h
-        viewport/geometry/Pipe.cpp
-        viewport/geometry/Plane.h
-        viewport/geometry/Plane.cpp
-        viewport/geometry/Vectors.h
-        viewport/geometry/trussgeometry.h
-        viewport/geometry/trussgeometry.cpp
-        viewport/gridplane.h
-        viewport/gridplane.cpp
-        viewport/scenemodifier.h
-        viewport/scenemodifier.cpp
-        viewport/visualizerscene.h
-        viewport/visualizerscene.cpp
         resources.qrc
 )
 

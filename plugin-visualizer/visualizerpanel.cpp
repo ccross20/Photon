@@ -10,13 +10,11 @@
 #include "project/project.h"
 #include "fixture/fixturecollection.h"
 #include "entity.h"
-#include "fixturemodel.h"
 #include "graph/bus/busevaluator.h"
 #include "data/dmxmatrix.h"
 #include "component/planemesh.h"
 #include "component/materialcomponent.h"
 #include "component/transformcomponent.h"
-#include "component/spotlight.h"
 #include "component/infinitelight.h"
 #include "scene.h"
 
@@ -31,23 +29,19 @@ VisualizerPanel::VisualizerPanel(): Panel("Visualizer")
     Q_INIT_RESOURCE(resources);
 
 
-    Scene *scene = new Scene;
+    m_scene = new Scene;
+    m_scene->setSceneRoot(photonApp->project()->sceneRoot());
 
+    /*
     if(photonApp->project())
     {
         for(auto fixture : photonApp->project()->fixtures()->fixtures())
         {
-            FixtureModel *model = new FixtureModel(fixture);
-
-            if(model)
-                model->entity()->setParent(scene->root());
-
-            m_models.append(model);
+            m_scene->addFixture(fixture);
         }
     }
+    */
 
-
-    connect(photonApp->busEvaluator(), &BusEvaluator::evaluationCompleted, this, &VisualizerPanel::dmxUpdated);
 
 
 /*
@@ -71,7 +65,7 @@ VisualizerPanel::VisualizerPanel(): Panel("Visualizer")
 
 
 
-    Entity *infiniteEntity = new Entity(scene->root());
+    Entity *infiniteEntity = new Entity(m_scene->root());
 
     TransformComponent *infiniteTransform = new TransformComponent;
     infiniteTransform->setPosition(QVector3D(0,0,0));
@@ -86,7 +80,7 @@ VisualizerPanel::VisualizerPanel(): Panel("Visualizer")
 
 
 
-    Entity *zPlane = new Entity(scene->root());
+    Entity *zPlane = new Entity(m_scene->root());
 
     TransformComponent *zTransform = new TransformComponent;
     zTransform->setPosition(QVector3D(0,0,0));
@@ -107,7 +101,7 @@ VisualizerPanel::VisualizerPanel(): Panel("Visualizer")
     m_material = material;
 
 
-    Entity *xPlane = new Entity(scene->root());
+    Entity *xPlane = new Entity(m_scene->root());
 
     TransformComponent *xTransform = new TransformComponent;
     xTransform->setPosition(QVector3D(-5,1.5,0));
@@ -120,7 +114,28 @@ VisualizerPanel::VisualizerPanel(): Panel("Visualizer")
     xPlane->addComponent(xMesh);
     xPlane->addComponent(material);
 
-    m_viewport->setScene(scene);
+/*
+    MaterialComponent *simpleMaterial = new MaterialComponent;
+    simpleMaterial->setDiffuseColor(QColor(255,255,255));
+    simpleMaterial->setFragmentSource(":/resources/shader/basic_lighting.frag");
+    simpleMaterial->setVertexSource(":/resources/shader/basic_lighting.vert");
+
+    Entity *truss = new Entity(m_scene->root());
+
+    TransformComponent *trussTransform = new TransformComponent;
+    trussTransform->setPosition(QVector3D(0,0,0));
+    trussTransform->setRotationEuler(QVector3D(0,0,0));
+    truss->addComponent(trussTransform);
+
+    TrussGeometry *trussMesh = new TrussGeometry;
+
+    truss->addComponent(trussMesh);
+    truss->addComponent(simpleMaterial);
+    */
+
+
+
+    m_viewport->setScene(m_scene);
 
 
 
@@ -146,15 +161,6 @@ void VisualizerPanel::mousePressEvent(QMouseEvent *event)
     else
         m_transform->setRotationEuler(QVector3D(0.0,-0,0));
         */
-}
-
-void VisualizerPanel::dmxUpdated()
-{
-    auto dmx = photonApp->busEvaluator()->dmxMatrix();
-    for(auto model : m_models)
-    {
-        model->updateFromDMX(dmx);
-    }
 }
 
 } // namespace photon

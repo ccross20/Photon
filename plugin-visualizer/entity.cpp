@@ -9,6 +9,19 @@ Entity::Entity(Entity *t_parent):m_parent(t_parent)
         m_parent->addChild(this);
 }
 
+Entity::~Entity()
+{
+    for(auto it = m_components.cbegin(); it != m_components.cend(); ++it)
+    {
+        delete *it;
+    }
+
+    for(auto childIt = m_children.begin(); childIt != m_children.end(); ++childIt)
+    {
+        delete *childIt;
+    }
+}
+
 Entity *Entity::parent() const
 {
     return m_parent;
@@ -175,9 +188,29 @@ void Entity::destroy(QOpenGLContext *context)
 
     for(auto childIt = m_children.begin(); childIt != m_children.end(); ++childIt)
     {
-        (*childIt)->create(context);
+        (*childIt)->destroy(context);
     }
+    //TODO: Delete
+    //deleteLater();
 }
+
+void Entity::destroy()
+{
+    for(auto it = m_components.cbegin(); it != m_components.cend(); ++it)
+    {
+        (*it)->setDirty(Dirty_Destroy);
+    }
+
+    auto cachedChildren = m_children;
+
+    for(auto childIt = cachedChildren.begin(); childIt != cachedChildren.end(); ++childIt)
+    {
+        (*childIt)->destroy();
+    }
+    setParent(nullptr);
+}
+
+
 
 
 } // namespace photon

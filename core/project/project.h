@@ -5,7 +5,7 @@
 
 namespace photon {
 
-
+class SceneManager;
 
 class PHOTONCORE_EXPORT Project : public QObject
 {
@@ -20,6 +20,8 @@ public:
     SequenceCollection *sequences() const;
     CanvasCollection *canvases() const;
     BusGraph *bus() const;
+    SceneObject *sceneRoot() const;
+    SceneManager *scene() const;
 
     void save(const QString &path = QString{}) const;
     void load(const QString &path = QString{});

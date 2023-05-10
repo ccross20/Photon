@@ -15,7 +15,11 @@ public:
         HitNone,
         HitCenter,
         HitResizeStart,
-        HitResizeEnd
+        HitResizeEnd,
+        HitTransitionInEnd,
+        HitTransitionInStart,
+        HitTransitionOutStart,
+        HitTransitionOutEnd
     };
 
 

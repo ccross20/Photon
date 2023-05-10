@@ -56,6 +56,7 @@ ChannelInfo NumberInputNode::channelInfo() const
     info.name = m_impl->nameParam->value().toString();
     info.description = m_impl->descriptionParam->value().toString();
     info.defaultValue = m_impl->defaultValueParam->value();
+    info.uniqueId = uniqueId();
 
     return info;
 }
@@ -78,7 +79,7 @@ void NumberInputNode::createParameters()
     addParameter(m_impl->nameParam);
     m_impl->descriptionParam = new keira::StringParameter(Description,"Description", "", 0);
     addParameter(m_impl->descriptionParam);
-    m_impl->defaultValueParam = new keira::DecimalParameter(DefaultValue,"Default", 0, 0);
+    m_impl->defaultValueParam = new keira::DecimalParameter(DefaultValue,"Default", 0, keira::AllowSingleInput);
     addParameter(m_impl->defaultValueParam);
 }
 
@@ -86,10 +87,7 @@ void NumberInputNode::evaluate(keira::EvaluationContext *t_context) const
 {
     RoutineEvaluationContext *context = static_cast<RoutineEvaluationContext*>(t_context);
 
-    if(m_impl->index < context->channelValues.length())
-    m_impl->valueParam->setValue(context->channelValues[m_impl->index]);
-
-    //qDebug() << context->strength << context->relativeTime;
+    m_impl->valueParam->setValue(context->channelValues.value(uniqueId(),m_impl->defaultValueParam->value()));
 }
 
 void NumberInputNode::readFromJson(const QJsonObject &t_object, keira::NodeLibrary *t_library)

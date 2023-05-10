@@ -6,124 +6,15 @@
 #include <QDropEvent>
 #include <QList>
 #include "fixturefalloff2deditor_p.h"
-#include "fixture/fixturecollection.h"
 #include "fixture/fixture.h"
 #include "photoncore.h"
 #include "project/project.h"
+#include "scene/scenemanager.h"
 
 namespace photon {
 
 
 
-
-FalloffEditorFixtureModel::FalloffEditorFixtureModel(FixtureCollection *t_collection) : QAbstractItemModel(),m_collection(t_collection)
-{
-    connect(m_collection, &FixtureCollection::fixtureWillBeAdded, this, &FalloffEditorFixtureModel::fixtureWillBeAdded);
-    connect(m_collection, &FixtureCollection::fixtureWasAdded, this, &FalloffEditorFixtureModel::fixtureWasAdded);
-    connect(m_collection, &FixtureCollection::fixtureWillBeRemoved, this, &FalloffEditorFixtureModel::fixtureWillBeRemoved);
-    connect(m_collection, &FixtureCollection::fixtureWasRemoved, this, &FalloffEditorFixtureModel::fixtureWasRemoved);
-}
-
-QStringList FalloffEditorFixtureModel::mimeTypes() const
-{
-    return QStringList() << Fixture::FixtureMime;
-}
-
-Qt::DropActions FalloffEditorFixtureModel::supportedDragActions() const
-{
-    return Qt::CopyAction | Qt::LinkAction;
-}
-
-QMimeData *FalloffEditorFixtureModel::mimeData(const QModelIndexList &indexes) const
-{
-    QMimeData *mimeData = new QMimeData;
-    QByteArray data; //a kind of RAW format for datas
-
-    QDataStream stream(&data, QIODevice::WriteOnly);
-
-    QSet<qlonglong> fixtures;
-
-    foreach (const QModelIndex &index, indexes) {
-        fixtures.insert(reinterpret_cast<qlonglong>(m_collection->fixtureAtIndex(index.row())));
-
-    }
-    stream << QCoreApplication::applicationPid();
-    stream << fixtures.values();
-
-    mimeData->setData(Fixture::FixtureMime, data);
-    return mimeData;
-}
-
-void FalloffEditorFixtureModel::fixtureWillBeAdded(photon::Fixture *, int t_index)
-{
-    beginInsertRows(QModelIndex(), t_index, t_index);
-}
-
-void FalloffEditorFixtureModel::fixtureWasAdded(photon::Fixture *)
-{
-    endInsertRows();
-}
-
-void FalloffEditorFixtureModel::fixtureWillBeRemoved(photon::Fixture *, int t_index)
-{
-    beginRemoveRows(QModelIndex(), t_index, t_index);
-}
-
-void FalloffEditorFixtureModel::fixtureWasRemoved(photon::Fixture *)
-{
-    endRemoveRows();
-}
-
-int FalloffEditorFixtureModel::columnCount(const QModelIndex &parent) const
-{
-    return 1;
-}
-
- QModelIndex FalloffEditorFixtureModel::index(int row, int column, const QModelIndex &parent) const
- {
-     return createIndex(row, column, m_collection->fixtureAtIndex(row));
- }
-
- QModelIndex FalloffEditorFixtureModel::parent(const QModelIndex &index) const
- {
-     return QModelIndex();
- }
-
-Qt::ItemFlags FalloffEditorFixtureModel::flags(const QModelIndex &index) const
-{
-    return Qt::ItemIsSelectable | Qt::ItemIsEnabled | Qt::ItemIsDragEnabled;
-}
-
-QVariant FalloffEditorFixtureModel::data(const QModelIndex &index, int role) const
-{
-    switch(role)
-    {
-        default:
-        return QVariant();
-
-    case Qt::DisplayRole:
-        return m_collection->fixtureAtIndex(index.row())->name();
-
-    }
-}
-
-QVariant FalloffEditorFixtureModel::headerData(int section, Qt::Orientation orientation, int role) const
-{
-    switch(role)
-    {
-        default:
-            return QVariant();
-
-        case Qt::DisplayRole:
-            return "Name";
-
-    }
-}
-
-int FalloffEditorFixtureModel::rowCount(const QModelIndex &) const
-{
-    return m_collection->fixtureCount();
-}
 
 
 FalloffScene::FalloffScene() : QGraphicsScene()
@@ -137,15 +28,15 @@ FalloffScene::FalloffScene() : QGraphicsScene()
     m_endGizmo->setPos(1.0,.5);
 }
 
-void FalloffScene::addFixtureItem(FixtureItem *t_item)
+void FalloffScene::addSceneObjectItem(SceneObjectItem *t_item)
 {
-    m_fixtures.append(t_item);
+    m_sceneObjects.append(t_item);
     addItem(t_item);
 }
 
-void FalloffScene::removeFixtureItem(FixtureItem *t_item)
+void FalloffScene::removeSceneObjectItem(SceneObjectItem *t_item)
 {
-    m_fixtures.removeOne(t_item);
+    m_sceneObjects.removeOne(t_item);
 }
 
 
@@ -189,11 +80,11 @@ void FalloffView::dragEnterEvent(QDragEnterEvent *event)
 {
 
     const QMimeData *mimeData = event->mimeData();
-    if(mimeData->hasFormat(Fixture::FixtureMime))
+    if(mimeData->hasFormat(Fixture::SceneObjectMime))
     {
         event->acceptProposedAction();
 
-        QByteArray data = mimeData->data(Fixture::FixtureMime);
+        QByteArray data = mimeData->data(SceneObject::SceneObjectMime);
         QDataStream stream(&data, QIODevice::ReadOnly);
         qint64 senderPid;
         stream >> senderPid;
@@ -206,9 +97,9 @@ void FalloffView::dragEnterEvent(QDragEnterEvent *event)
 
         for(auto fixture : fixtures)
         {
-            FixtureItem *item = new FixtureItem(reinterpret_cast<Fixture *>(fixture));
+            SceneObjectItem *item = new SceneObjectItem(reinterpret_cast<SceneObject *>(fixture));
 
-            static_cast<FalloffScene *>(scene())->addFixtureItem(item);
+            static_cast<FalloffScene *>(scene())->addSceneObjectItem(item);
             item->setPos(mapToScene(event->position().toPoint()));
             m_draggingFixtures.append(item);
         }
@@ -222,7 +113,7 @@ void FalloffView::dragEnterEvent(QDragEnterEvent *event)
 
 void FalloffView::dragMoveEvent(QDragMoveEvent *event)
 {
-    if(event->mimeData()->hasFormat(Fixture::FixtureMime))
+    if(event->mimeData()->hasFormat(SceneObject::SceneObjectMime))
     {
         QPointF delta =  mapToScene(event->position().toPoint()) - m_lastPosition;
         for(auto item : m_draggingFixtures)
@@ -242,7 +133,7 @@ void FalloffView::dragLeaveEvent(QDragLeaveEvent *event)
 {
     for(auto item : m_draggingFixtures)
     {        
-        static_cast<FalloffScene *>(scene())->removeFixtureItem(item);
+        static_cast<FalloffScene *>(scene())->removeSceneObjectItem(item);
         delete item;
     }
 
@@ -256,24 +147,24 @@ void FalloffView::dropEvent(QDropEvent *event)
 
 }
 
-FixtureItem::FixtureItem(Fixture *t_fixture) : QGraphicsItem(),m_fixture(t_fixture)
+SceneObjectItem::SceneObjectItem(SceneObject *t_sceneObj) : QGraphicsItem(),m_sceneObject(t_sceneObj)
 {
     setFlags(GraphicsItemFlag::ItemIsSelectable | GraphicsItemFlag::ItemIsMovable | GraphicsItemFlag::ItemSendsScenePositionChanges);
     setScale(.002);
 
 }
 
-QRectF FixtureItem::boundingRect() const
+QRectF SceneObjectItem::boundingRect() const
 {
     return QRectF(-25,-25,50,50);
 }
 
-void FixtureItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget)
+void SceneObjectItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget)
 {
     painter->fillRect(-24,-24,48,48, isSelected() ? Qt::cyan : Qt::red);
 }
 
-QVariant FixtureItem::itemChange(GraphicsItemChange change, const QVariant &value)
+QVariant SceneObjectItem::itemChange(GraphicsItemChange change, const QVariant &value)
 {
     if (change == ItemPositionChange && scene()) {
         // value is the new position.
@@ -339,14 +230,14 @@ FixtureFalloff2DEditor::Impl::Impl(FixtureFalloff2DEditor* t_facade) : m_facade(
     hLayout->addWidget(m_view);
 
 
-    m_collectionModel = new FalloffEditorFixtureModel(photonApp->project()->fixtures());
+    m_sceneModel = new SceneModel(photonApp->project()->sceneRoot());
 
-    m_collectionView = new QListView;
-    m_collectionView->setDragEnabled(true);
-    m_collectionView->setDragDropMode(QAbstractItemView::DragOnly);
-    m_collectionView->setMaximumWidth(200);
-    m_collectionView->setModel(m_collectionModel);
-    hLayout->addWidget(m_collectionView);
+    m_treeView = new QTreeView;
+    m_treeView->setDragEnabled(true);
+    m_treeView->setDragDropMode(QAbstractItemView::DragOnly);
+    m_treeView->setMaximumWidth(200);
+    m_treeView->setModel(m_sceneModel);
+    hLayout->addWidget(m_treeView);
 
     m_facade->setLayout(hLayout);
 }
@@ -374,10 +265,12 @@ void FixtureFalloff2DEditor::sceneChanged(const QList<QRectF> &regions)
     map.setStartPosition(m_impl->m_scene->startGizmo()->pos());
     map.setEndPosition(m_impl->m_scene->endGizmo()->pos());
 
-    for(auto item : m_impl->m_scene->fixtureItems())
+    for(auto item : m_impl->m_scene->sceneObjectItems())
     {
-        map.addFixture(item->fixture(), item->pos());
+        map.addSceneObject(item->sceneObject(), item->pos());
     }
+
+    m_impl->m_map = map;
 
     emit mapUpdated();
 }
@@ -386,11 +279,15 @@ void FixtureFalloff2DEditor::setMap(const FalloffMap2D &t_map)
 {
     m_impl->m_map = t_map;
 
-    for(const auto &fixture : t_map.fixtureData())
+    for(const auto &sceneObject : t_map.sceneObjectData())
     {
-        auto item = new FixtureItem(fixture.fixture);
-        item->setPos(fixture.position);
-        m_impl->m_scene->addFixtureItem(item);
+        auto fix = photonApp->project()->scene()->findObjectById(sceneObject.sceneObjectId);
+        if(fix)
+        {
+            auto item = new SceneObjectItem(fix);
+            item->setPos(sceneObject.position);
+            m_impl->m_scene->addSceneObjectItem(item);
+        }
     }
 
     m_impl->m_scene->startGizmo()->setPos(t_map.startPosition());

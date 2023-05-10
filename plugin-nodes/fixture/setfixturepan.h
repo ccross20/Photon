@@ -19,6 +19,7 @@ public:
 private:
     keira::DecimalParameter *m_angleParam;
     keira::DecimalParameter *m_blendParam;
+    keira::IntegerParameter *m_modeParam;
     keira::IntegerParameter *m_capabilityParam;
 };
 

@@ -31,7 +31,7 @@ QMatrix4x4 SpotLight::matrix() const
     auto pos = transform->globalPosition();
 
 
-    lightMatrix.lookAt(pos, pos - globalDirection(), globalUpVector());
+    lightMatrix.lookAt(pos, pos - globalDirection(), transform->globalMatrix().mapVector(QVector3D{0,1,0}));
 
 
 
@@ -40,7 +40,7 @@ QMatrix4x4 SpotLight::matrix() const
     //lightMatrix  = transform->globalMatrix() * lightMatrix;
 
 
-    //return lightMatrix * transform->globalMatrix();
+    //return transform->globalMatrix().inverted() * lightMatrix;
 }
 
 void SpotLight::setAngle(double t_angle)

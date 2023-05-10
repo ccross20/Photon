@@ -19,6 +19,7 @@ CanvasWriter::CanvasWriter() : keira::Node("photon.plugin.node.canvas-writer")
 
 void CanvasWriter::createParameters()
 {
+
     m_canvasParam = new CanvasParameter("canvasInput","Canvas", QImage{});
     addParameter(m_canvasParam);
 

@@ -6,7 +6,7 @@
 
 namespace photon {
 
-class SequencePanel : public Panel
+class PHOTONCORE_EXPORT SequencePanel : public Panel
 {
     Q_OBJECT
 public:
@@ -16,6 +16,9 @@ public:
     Sequence *sequence() const;
 
     void processPreview(ProcessContext &context);
+    bool isPlaying() const;
+
+    DMXMatrix getDMX();
 
 protected:
 

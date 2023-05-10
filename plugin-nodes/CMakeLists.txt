@@ -22,10 +22,20 @@ set(SOURCES
     canvas/canvaswriter.cpp
     canvas/drawrectangle.h
     canvas/drawrectangle.cpp
+    fixture/lookattarget.h
+    fixture/lookattarget.cpp
+    fixture/setfixturedimmer.h
+    fixture/setfixturedimmer.cpp
+    fixture/setfixturefocus.h
+    fixture/setfixturefocus.cpp
     fixture/setfixturepan.h
     fixture/setfixturepan.cpp
+    fixture/setfixturestrobe.h
+    fixture/setfixturestrobe.cpp
     fixture/setfixturetilt.h
     fixture/setfixturetilt.cpp
+    fixture/setfixturezoom.h
+    fixture/setfixturezoom.cpp
 )
 
 add_library(plugin-nodes SHARED ${SOURCES})

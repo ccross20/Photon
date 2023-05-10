@@ -74,7 +74,7 @@ void AbstractMesh::drawMesh(DrawContext *context, QOpenGLShaderProgram *program)
 
     m_normalBuffer.bind();
     int normalLocation = program->attributeLocation("aNormal");
-    if(normalLocation >= 0)
+    if(normalLocation >= 0 && !m_normals.isEmpty())
     {
         program->enableAttributeArray(normalLocation);
         program->setAttributeBuffer(normalLocation, GL_FLOAT, 0, 3, sizeof(QVector3D));

@@ -1,37 +1,20 @@
 #ifndef PHOTON_FIXTUREMODEL_H
 #define PHOTON_FIXTUREMODEL_H
-
-#include <QObject>
-#include "photon-global.h"
+#include "sceneobjectmodel.h"
 
 namespace photon {
 
-class Entity;
-class ModelModifier;
-
-class FixtureModel : public QObject
+class FixtureModel : public SceneObjectModel
 {
-    Q_OBJECT
 public:
-    explicit FixtureModel(Fixture *fixture, QObject *parent = nullptr);
+    FixtureModel(SceneObject *sceneObj, QObject *parent = nullptr);
 
 
-    Entity *entity() const;
-    Fixture *fixture() const;
-
-    void updateFromDMX(const DMXMatrix &);
-
-signals:
-
-private slots:
-    void transformUpdated();
-
+    void preDraw(double elapsed) override;
+    void updateFromDMX(const DMXMatrix &, const double elapsed) override;
 private:
     void recursiveAddModifiers(Entity *);
     QVector<ModelModifier*> m_modifiers;
-    Fixture *m_fixture;
-    Entity *m_entity;
-
 };
 
 } // namespace photon

@@ -45,10 +45,25 @@ set(SOURCES
     entity.cpp
     fixturemodel.h
     fixturemodel.cpp
+    geometry/Line.h
+    geometry/Line.cpp
+    geometry/Matrices.h
+    geometry/Matrices.cpp
+    geometry/Pipe.h
+    geometry/Pipe.cpp
+    geometry/Plane.h
+    geometry/Plane.cpp
+    geometry/Vectors.h
+    geometry/trussgeometry.h
+    geometry/trussgeometry.cpp
+    modelfactory.h
+    modelfactory.cpp
     modelloader.h
     modelloader.cpp
     modifier/modelmodifier.h
     modifier/modelmodifier.cpp
+    modifier/lampmodifier.h
+    modifier/lampmodifier.cpp
     modifier/panmodelmodifier.h
     modifier/panmodelmodifier.cpp
     modifier/tiltmodelmodifier.h
@@ -60,8 +75,12 @@ set(SOURCES
     pluginvisualizer.h
     scene.h
     scene.cpp
+    sceneobjectmodel.h
+    sceneobjectmodel.cpp
     texture.h
     texture.cpp
+    trussmodel.h
+    trussmodel.cpp
     visualizerpanel.h
     visualizerpanel.cpp
 )

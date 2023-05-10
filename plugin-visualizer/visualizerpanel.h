@@ -6,9 +6,9 @@
 
 namespace photon {
 
-class FixtureModel;
 class TransformComponent;
 class MaterialComponent;
+class Scene;
 
 class VisualizerPanel : public Panel
 {
@@ -22,13 +22,12 @@ protected:
 
 private slots:
 
-    void dmxUpdated();
 
 private:
     OpenGLViewport *m_viewport;
-    QVector<FixtureModel*> m_models;
     TransformComponent *m_transform;
     MaterialComponent *m_material;
+    Scene *m_scene;
     int m_clickCounter = 0;
 };
 

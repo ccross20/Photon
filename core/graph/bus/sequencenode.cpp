@@ -53,6 +53,7 @@ void SequenceNode::evaluate(keira::EvaluationContext *) const
 {
     DMXMatrix matrix = m_impl->dmxInParam->value().value<DMXMatrix>();
     ProcessContext context{matrix};
+    context.project = photonApp->project();
 
     auto panel = photonApp->activeSequencePanel();
 

@@ -1,6 +1,7 @@
 #ifndef CHANNELEFFECTEDITOR_P_H
 #define CHANNELEFFECTEDITOR_P_H
 
+#include <QSettings>
 #include <QGraphicsView>
 #include <QPainterPath>
 #include <QGraphicsWidget>
@@ -53,6 +54,14 @@ class EffectEditorViewer : public QGraphicsView
 {
     Q_OBJECT
 public:
+    struct EffectViewerState
+    {
+        double offset;
+        double scale;
+    };
+
+
+
     EffectEditorViewer(ChannelEffect *);
 
     void setOffset(double);
@@ -82,6 +91,7 @@ protected:
 private:
     void rebuildPaths();
 
+    QHash<QByteArray, EffectViewerState> m_states;
     QPainterPath m_path;
     QPainterPath m_channelPath;
     QRectF m_sceneBounds;

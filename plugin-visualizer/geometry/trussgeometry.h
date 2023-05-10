@@ -1,15 +1,13 @@
 #ifndef PHOTON_TRUSSGEOMETRY_H
 #define PHOTON_TRUSSGEOMETRY_H
-#include <Qt3DCore>
-
-using namespace Qt3DCore;
+#include "component/abstractmesh.h"
 
 namespace photon {
 
-class TrussGeometry: public QGeometry
+class TrussGeometry: public AbstractMesh
 {
 public:
-    TrussGeometry(QNode *parent = nullptr);
+    TrussGeometry();
     ~TrussGeometry();
 
 
@@ -27,6 +25,7 @@ public:
     float length() const;
     float angle() const;
 
+    void rebuild(QOpenGLContext *context) override;
 
 private:
     class Impl;

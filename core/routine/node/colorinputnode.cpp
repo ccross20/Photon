@@ -18,7 +18,7 @@ public:
     ColorParameter *defaultValueParam;
     keira::StringParameter *nameParam;
     keira::StringParameter *descriptionParam;
-    uint index;
+    uint index = 0;
 };
 
 
@@ -56,6 +56,7 @@ ChannelInfo ColorInputNode::channelInfo() const
     info.name = m_impl->nameParam->value().toString();
     info.description = m_impl->descriptionParam->value().toString();
     info.defaultValue = m_impl->defaultValueParam->value();
+    info.uniqueId = uniqueId();
 
     return info;
 }
@@ -74,11 +75,11 @@ void ColorInputNode::createParameters()
 {
     m_impl->valueParam = new ColorParameter(Value,"Value", QColor(Qt::white), keira::AllowMultipleOutput);
     addParameter(m_impl->valueParam);
-    m_impl->nameParam = new keira::StringParameter(Name,"Name", "Number", 0);
+    m_impl->nameParam = new keira::StringParameter(Name,"Name", "Color", 0);
     addParameter(m_impl->nameParam);
     m_impl->descriptionParam = new keira::StringParameter(Description,"Description", "", 0);
     addParameter(m_impl->descriptionParam);
-    m_impl->defaultValueParam = new ColorParameter(Value,"Value", QColor(Qt::white));
+    m_impl->defaultValueParam = new ColorParameter(DefaultValue,"Value", QColor(Qt::white), keira::AllowSingleInput);
     addParameter(m_impl->defaultValueParam);
 }
 
@@ -86,8 +87,7 @@ void ColorInputNode::evaluate(keira::EvaluationContext *t_context) const
 {
     RoutineEvaluationContext *context = static_cast<RoutineEvaluationContext*>(t_context);
 
-    if(m_impl->index < context->channelValues.length())
-    m_impl->valueParam->setValue(context->channelValues[m_impl->index]);
+    m_impl->valueParam->setValue(context->channelValues.value(uniqueId(),m_impl->defaultValueParam->value()));
 
     //qDebug() << context->strength << context->relativeTime;
 }

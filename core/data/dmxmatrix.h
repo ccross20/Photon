@@ -1,6 +1,7 @@
 #ifndef PHOTON_DMXMATRIX_H
 #define PHOTON_DMXMATRIX_H
 #include "photon-global.h"
+#include "fixture/fixturechannel.h"
 
 namespace photon {
 
@@ -15,14 +16,40 @@ public:
     void blend(uchar &t_current, uchar t_target, double t_blend)
     {
         int current = t_current;
-        int target = t_target;
-        t_current = t_target;
+        t_current = ((t_target - current) * t_blend) + current;
+    }
+
+    double blendDouble(double t_current, double t_target, double t_blend)
+    {
+        double current = t_current;
+        return ((t_target - current) * t_blend) + current;
     }
 
     void setValue(uint t_universe, uint t_channel, uchar t_value, double t_blend = 1.0)
     {
         if(t_universe < channels.size() && t_channel < 512)
             blend(channels[t_universe][t_channel], t_value, t_blend);
+    }
+    void setValuePercent(FixtureChannel *t_channel, double t_value, double t_blend = 1.0)
+    {
+        double currentValue = valuePercent(t_channel);
+        double newValue = blendDouble(currentValue, t_value, t_blend);
+
+
+        uint universe = t_channel->universe() - 1;
+        uint channel = t_channel->universalChannelNumber();
+        if(universe < channels.size() && channel < 512)
+            blend(channels[universe][channel], floor(newValue * 255.0), 1.0);
+        if(t_channel->fineChannels().length() > 0 && t_channel->fineChannels()[0]->isValid())
+        {
+            double remainder = (newValue * 255.0) - floor(newValue * 255.0);
+
+            uint fineUniverse = t_channel->fineChannels()[0]->universe() - 1;
+            uint fineChannel = t_channel->fineChannels()[0]->universalChannelNumber();
+            if(fineUniverse < channels.size() && fineChannel < 512)
+                blend(channels[fineUniverse][fineChannel], floor(remainder * 255.0), 1.0);
+        }
+
     }
     void setValuePercent(uint t_universe, uint t_channel, double t_value, double t_blend = 1.0)
     {
@@ -39,6 +66,24 @@ public:
         if(t_universe < channels.size() && t_channel < 512)
             return channels[t_universe][t_channel];
         return 0;
+    }
+    double valuePercent(FixtureChannel *t_channel) const
+    {
+        double result = 0.0;
+        uint universe = t_channel->universe() - 1;
+        uint channel = t_channel->universalChannelNumber();
+        if(universe < channels.size() && channel < 512)
+            result = channels[universe][channel] / 255.0;
+
+        if(t_channel->fineChannels().length() > 0 && t_channel->fineChannels()[0]->isValid())
+        {
+            uint fineUniverse = t_channel->fineChannels()[0]->universe() - 1;
+            uint fineChannel = t_channel->fineChannels()[0]->universalChannelNumber();
+            if(fineUniverse < channels.size() && fineChannel < 512)
+                result = ((channels[universe][channel] + (channels[fineUniverse][fineChannel]/255.0) )/ 255.0);
+        }
+
+        return result;
     }
     double valuePercent(uint t_universe, uint t_channel) const
     {

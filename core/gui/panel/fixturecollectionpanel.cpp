@@ -8,129 +8,61 @@
 #include "photoncore.h"
 #include "project/project.h"
 #include "fixture/fixturecollection.h"
-
-
+#include "scene/scenegroup.h"
+#include "scene/truss.h"
 
 namespace photon {
 
 
-FixtureCollectionModel::FixtureCollectionModel(FixtureCollection *t_collection) : QAbstractItemModel(),m_collection(t_collection)
-{
-    connect(m_collection, &FixtureCollection::fixtureWillBeAdded, this, &FixtureCollectionModel::fixtureWillBeAdded);
-    connect(m_collection, &FixtureCollection::fixtureWasAdded, this, &FixtureCollectionModel::fixtureWasAdded);
-    connect(m_collection, &FixtureCollection::fixtureWillBeRemoved, this, &FixtureCollectionModel::fixtureWillBeRemoved);
-    connect(m_collection, &FixtureCollection::fixtureWasRemoved, this, &FixtureCollectionModel::fixtureWasRemoved);
-}
-
-void FixtureCollectionModel::fixtureWillBeAdded(photon::Fixture *, int t_index)
-{
-    beginInsertRows(QModelIndex(), t_index, t_index);
-}
-
-void FixtureCollectionModel::fixtureWasAdded(photon::Fixture *)
-{
-    endInsertRows();
-}
-
-void FixtureCollectionModel::fixtureWillBeRemoved(photon::Fixture *, int t_index)
-{
-    beginRemoveRows(QModelIndex(), t_index, t_index);
-}
-
-void FixtureCollectionModel::fixtureWasRemoved(photon::Fixture *)
-{
-    endRemoveRows();
-}
-
-int FixtureCollectionModel::columnCount(const QModelIndex &parent) const
-{
-    return 1;
-}
-
- QModelIndex FixtureCollectionModel::index(int row, int column, const QModelIndex &parent) const
- {
-     return createIndex(row, column, m_collection->fixtureAtIndex(row));
- }
-
- QModelIndex FixtureCollectionModel::parent(const QModelIndex &index) const
- {
-     return QModelIndex();
- }
-
-Qt::ItemFlags FixtureCollectionModel::flags(const QModelIndex &index) const
-{
-    return Qt::ItemIsSelectable | Qt::ItemIsEnabled;
-}
-
-QVariant FixtureCollectionModel::data(const QModelIndex &index, int role) const
-{
-    switch(role)
-    {
-        default:
-        return QVariant();
-
-    case Qt::DisplayRole:
-        return m_collection->fixtureAtIndex(index.row())->name();
-
-    }
-}
-
-QVariant FixtureCollectionModel::headerData(int section, Qt::Orientation orientation, int role) const
-{
-    switch(role)
-    {
-        default:
-            return QVariant();
-
-        case Qt::DisplayRole:
-            return "Name";
-
-    }
-}
-
-int FixtureCollectionModel::rowCount(const QModelIndex &) const
-{
-    return m_collection->fixtureCount();
-}
-
 FixtureCollectionPanel::FixtureCollectionPanel() : Panel("photon.fixture-collection"),m_impl(new Impl)
 {
-    m_impl->editorWidget = new FixtureEditorWidget;
-    QVBoxLayout *vLayout = new QVBoxLayout;
+    m_impl->editorWidget = nullptr;
+    m_impl->vLayout = new QVBoxLayout;
 
     setName("Fixtures");
 
-    m_impl->listView = new QListView;
-    m_impl->listView->setSizePolicy(QSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::MinimumExpanding));
-    m_impl->listView->setSelectionMode(QAbstractItemView::SelectionMode::ExtendedSelection);
+    m_impl->treeView = new QTreeView;
+    m_impl->treeView->setSizePolicy(QSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::MinimumExpanding));
+    m_impl->treeView->setSelectionMode(QAbstractItemView::SelectionMode::ExtendedSelection);
+    m_impl->treeView->setDragEnabled(true);
+    m_impl->treeView->setDragDropMode(QAbstractItemView::DragDrop);
 
-    vLayout->addWidget(m_impl->listView);
+    m_impl->vLayout->addWidget(m_impl->treeView);
 
     m_impl->addButton = new QPushButton("Add");
     m_impl->addButton->setEnabled(false);
     m_impl->removeButton = new QPushButton("Remove");
     m_impl->removeButton->setEnabled(false);
+    m_impl->duplicateButton = new QPushButton("Duplicate");
+    m_impl->duplicateButton->setEnabled(false);
 
     QHBoxLayout *hLayout = new QHBoxLayout;
     hLayout->addWidget(m_impl->addButton);
     hLayout->addWidget(m_impl->removeButton);
+    hLayout->addWidget(m_impl->duplicateButton);
 
-    vLayout->addLayout(hLayout);
+    m_impl->vLayout->addLayout(hLayout);
 
-    vLayout->addWidget(m_impl->editorWidget);
+    //vLayout->addWidget(m_impl->editorWidget);
 
 
-    setPanelLayout(vLayout);
+    setPanelLayout(m_impl->vLayout);
 
 
     connect(m_impl->addButton, &QPushButton::clicked, this, &FixtureCollectionPanel::addClicked);
     connect(m_impl->removeButton, &QPushButton::clicked, this, &FixtureCollectionPanel::removeClicked);
-    connect(m_impl->listView, &QListView::doubleClicked, this, &FixtureCollectionPanel::doubleClicked);
+    connect(m_impl->duplicateButton, &QPushButton::clicked, this, &FixtureCollectionPanel::duplicateClicked);
+    connect(m_impl->treeView, &QTreeView::doubleClicked, this, &FixtureCollectionPanel::doubleClicked);
 }
 
 FixtureCollectionPanel::~FixtureCollectionPanel()
 {
     delete m_impl;
+}
+
+void FixtureCollectionPanel::selectionMoved(QModelIndexList indices)
+{
+    m_impl->treeView->selectionModel()->select(indices[0], QItemSelectionModel::ClearAndSelect);
 }
 
 void FixtureCollectionPanel::doubleClicked(const QModelIndex &t_index)
@@ -144,6 +76,41 @@ void FixtureCollectionPanel::doubleClicked(const QModelIndex &t_index)
 }
 
 void FixtureCollectionPanel::addClicked()
+{
+    QMenu menu;
+    menu.addAction("Fixture",[this](){addFixture();});
+    menu.addAction("Group",[this](){addGroup();});
+    menu.addAction("Truss",[this](){addTruss();});
+
+    menu.exec(m_impl->addButton->mapToGlobal(m_impl->addButton->rect().bottomLeft()));
+}
+
+void FixtureCollectionPanel::duplicateClicked()
+{
+    auto indicies = m_impl->treeView->selectionModel()->selectedRows();
+
+    QVector<Fixture*> toClone;
+    for(auto &index : indicies)
+    {
+        toClone.append(static_cast<Fixture*>(index.internalPointer()));
+    }
+
+    for(auto c : toClone)
+    {
+        auto newObj = c->clone();
+        if(newObj)
+        {
+            if(c->typeId() == "fixture")
+            {
+                auto fix = static_cast<Fixture*>(c);
+                fix->setDMXOffset(fix->dmxOffset() + fix->dmxSize());
+            }
+            newObj->setParentSceneObject(c->parentSceneObject(),c->index() + 1);
+        }
+    }
+}
+
+void FixtureCollectionPanel::addFixture()
 {    
     QString loadPath;
     if(loadPath.isNull())
@@ -171,14 +138,31 @@ void FixtureCollectionPanel::addClicked()
         if(sameNameFixtures.length() > 0)
             fix->setName(fix->name() + " " + QString::number(sameNameFixtures.length() + 1));
 
-        photonApp->project()->fixtures()->addFixture(fix);
+        //photonApp->project()->fixtures()->addFixture(fix);
+        fix->setParentSceneObject(photonApp->project()->sceneRoot());
+
     }
+}
+
+void FixtureCollectionPanel::addGroup()
+{
+    auto group = new SceneGroup;
+    group->setName("Group");
+    group->setParentSceneObject(photonApp->project()->sceneRoot());
+}
+
+void FixtureCollectionPanel::addTruss()
+{
+    auto truss = new Truss;
+    truss->setName("Truss");
+    truss->setParentSceneObject(photonApp->project()->sceneRoot());
 }
 
 void FixtureCollectionPanel::removeClicked()
 {
-    auto indicies = m_impl->listView->selectionModel()->selectedRows();
+    auto indicies = m_impl->treeView->selectionModel()->selectedRows();
 
+    m_impl->treeView->clearSelection();
     QVector<Fixture*> toDelete;
     for(auto &index : indicies)
     {
@@ -187,43 +171,55 @@ void FixtureCollectionPanel::removeClicked()
 
     for(auto seq : toDelete)
     {
-        photonApp->project()->fixtures()->removeFixture(seq);
+        seq->setParentSceneObject(nullptr);
+        //seq->deleteLater();
     }
 
 }
 
 void FixtureCollectionPanel::selectionChanged(const QItemSelection &selected, const QItemSelection &deselected)
 {
-    m_impl->removeButton->setEnabled(m_impl->listView->selectionModel()->hasSelection());
+    m_impl->removeButton->setEnabled(m_impl->treeView->selectionModel()->hasSelection());
+    m_impl->duplicateButton->setEnabled(m_impl->treeView->selectionModel()->hasSelection());
 
-    auto selectedIndices = m_impl->listView->selectionModel()->selectedIndexes();
+    auto selectedIndices = m_impl->treeView->selectionModel()->selectedIndexes();
 
-    QVector<Fixture*> fixtures;
+    if(m_impl->editorWidget)
+        delete m_impl->editorWidget;
+    m_impl->editorWidget = nullptr;
 
     for(auto index : selectedIndices)
     {
-        fixtures.append(static_cast<Fixture*>(index.internalPointer()));
+        auto sceneObj = static_cast<SceneObject*>(index.internalPointer());
+        if(sceneObj)
+        {
+            m_impl->editorWidget = sceneObj->createEditor();
+            m_impl->vLayout->addWidget(m_impl->editorWidget);
+            return;
+        }
     }
-
-    m_impl->editorWidget->setFixtures(fixtures);
 }
 
 void FixtureCollectionPanel::projectDidOpen(photon::Project* project)
 {
-    FixtureCollectionModel *model = new FixtureCollectionModel(project->fixtures());
-    m_impl->listView->setModel(model);
-    connect(m_impl->listView->selectionModel(), &QItemSelectionModel::selectionChanged, this, &FixtureCollectionPanel::selectionChanged);
+    m_impl->sceneModel = new SceneModel(project->sceneRoot());
+    m_impl->treeView->setModel(m_impl->sceneModel);
+    connect(m_impl->treeView->selectionModel(), &QItemSelectionModel::selectionChanged, this, &FixtureCollectionPanel::selectionChanged);
+    connect(m_impl->sceneModel, &SceneModel::selectionMoved, this, &FixtureCollectionPanel::selectionMoved);
 
     m_impl->addButton->setEnabled(true);
 }
 
 void FixtureCollectionPanel::projectWillClose(photon::Project* project)
 {
-    disconnect(m_impl->listView->selectionModel(), &QItemSelectionModel::selectionChanged, this, &FixtureCollectionPanel::selectionChanged);
-    m_impl->listView->setModel(nullptr);
+    disconnect(m_impl->treeView->selectionModel(), &QItemSelectionModel::selectionChanged, this, &FixtureCollectionPanel::selectionChanged);
+    disconnect(m_impl->sceneModel, &SceneModel::selectionMoved, this, &FixtureCollectionPanel::selectionMoved);
+    m_impl->treeView->setModel(nullptr);
+    delete m_impl->sceneModel;
+    m_impl->sceneModel = nullptr;
     m_impl->addButton->setEnabled(false);
     m_impl->removeButton->setEnabled(false);
-    m_impl->editorWidget->setFixtures(QVector<Fixture*>{});
+    delete m_impl->editorWidget;
 }
 
 

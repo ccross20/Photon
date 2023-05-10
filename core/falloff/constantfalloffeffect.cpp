@@ -2,6 +2,7 @@
 #include <QLabel>
 #include <QDoubleSpinBox>
 #include "constantfalloffeffect.h"
+#include "sequence/clip.h"
 
 namespace photon {
 
@@ -46,17 +47,17 @@ ConstantFalloffEffect::ConstantFalloffEffect()
 
 double ConstantFalloffEffect::falloff(Fixture *t_fixture) const
 {
-    return m_value;
+    return clip()->defaultFalloff();
 }
 
 double ConstantFalloffEffect::value() const
 {
-    return m_value;
+    return clip()->defaultFalloff();
 }
 
 void ConstantFalloffEffect::setValue(double t_value)
 {
-    m_value = t_value;
+    clip()->setDefaultFalloff(t_value);
     updated();
 }
 
@@ -68,14 +69,11 @@ QWidget *ConstantFalloffEffect::createEditor()
 void ConstantFalloffEffect::readFromJson(const QJsonObject &t_json)
 {
     FalloffEffect::readFromJson(t_json);
-    if(t_json.contains("value"))
-        m_value = t_json.value("value").toDouble();
 }
 
 void ConstantFalloffEffect::writeToJson(QJsonObject &t_json) const
 {
     FalloffEffect::writeToJson(t_json);
-    t_json.insert("value", m_value);
 }
 
 } // namespace photon

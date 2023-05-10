@@ -1,33 +1,27 @@
 #include "fixturemodel.h"
 #include "entity.h"
-#include "fixture/fixture.h"
-#include "modelloader.h"
-#include "component/transformcomponent.h"
-#include "modifier/modelmodifier.h"
 #include "modifier/panmodelmodifier.h"
 #include "modifier/tiltmodelmodifier.h"
+#include "modifier/lampmodifier.h"
 #include "component/spotlight.h"
+#include "modelloader.h"
+#include "scene/sceneobject.h"
 
 namespace photon {
 
-
-
-
-FixtureModel::FixtureModel(Fixture *t_fixture, QObject *parent)
-    : QObject{parent},m_fixture(t_fixture)
+FixtureModel::FixtureModel(SceneObject *t_sceneObj, QObject *t_parent) : SceneObjectModel(t_sceneObj, t_parent)
 {
-    connect(m_fixture, &Fixture::transformChanged, this, &FixtureModel::transformUpdated);
-
     ModelLoader loader;
-    m_entity = loader.loadResource("C:\\Projects\\photon\\src\\plugin-visualizer\\resources\\model\\moving-head.fbx");
+    auto entity = loader.loadResource("C:\\Projects\\photon\\src\\plugin-visualizer\\resources\\model\\moving-head.fbx");
 
-    recursiveAddModifiers(m_entity);
 
-    TransformComponent *xform = m_entity->findComponent<TransformComponent*>();
+    TransformComponent *xform = entity->findComponent<TransformComponent*>();
 
     xform->setScale(QVector3D{.01,.01,.01});
 
-    transformUpdated();
+    setEntity(entity);
+
+    recursiveAddModifiers(entity);
 }
 
 void FixtureModel::recursiveAddModifiers(Entity *t_entity)
@@ -49,6 +43,7 @@ void FixtureModel::recursiveAddModifiers(Entity *t_entity)
         light->setAngle(25.0);
         light->setHardness(.8);
         t_entity->addComponent(light);
+        m_modifiers.append(new LampModifier(this, t_entity));
     }
 
     for(auto child : t_entity->children())
@@ -57,31 +52,24 @@ void FixtureModel::recursiveAddModifiers(Entity *t_entity)
     }
 }
 
-
-Entity *FixtureModel::entity() const
+void FixtureModel::preDraw(double t_elapsed)
 {
-    return m_entity;
+    SceneObjectModel::preDraw(t_elapsed);
+    for(auto modifier : m_modifiers)
+    {
+        modifier->preDraw(t_elapsed);
+    }
 }
 
-Fixture *FixtureModel::fixture() const
+void FixtureModel::updateFromDMX(const DMXMatrix &t_matrix, const double t_elapsed)
 {
-    return m_fixture;
-}
+    SceneObjectModel::updateFromDMX(t_matrix, t_elapsed);
 
-void FixtureModel::transformUpdated()
-{
-    TransformComponent *xform = m_entity->findComponent<TransformComponent*>();
-
-    xform->setPosition(m_fixture->position());
-    xform->setRotationEuler(m_fixture->rotation());
-}
-
-void FixtureModel::updateFromDMX(const DMXMatrix &t_matrix)
-{
+    //qDebug() << sceneObject()->name();
 
     for(auto modifier : m_modifiers)
     {
-        modifier->updateModel(t_matrix);
+        modifier->updateModel(t_matrix, t_elapsed);
     }
 }
 

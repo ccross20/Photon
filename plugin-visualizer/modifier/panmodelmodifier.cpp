@@ -5,7 +5,7 @@
 
 namespace photon {
 
-PanModelModifier::PanModelModifier(FixtureModel *t_model,  Entity *t_entity) : ModelModifier(t_model, t_entity)
+PanModelModifier::PanModelModifier(SceneObjectModel *t_model,  Entity *t_entity) : ModelModifier(t_model, t_entity)
 {
     auto pans = fixture()->findCapability(Capability_Pan);
 
@@ -23,7 +23,7 @@ PanModelModifier::PanModelModifier(FixtureModel *t_model,  Entity *t_entity) : M
         m_axis = Axis_Z;
 }
 
-void PanModelModifier::updateModel(const DMXMatrix &t_matrix)
+void PanModelModifier::updateModel(const DMXMatrix &t_matrix, const double t_elapsed)
 {
     float percent = m_capability->getAnglePercent(t_matrix);
     switch (m_axis) {

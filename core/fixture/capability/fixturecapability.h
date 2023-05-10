@@ -2,18 +2,48 @@
 #define PHOTON_FIXTURECAPABILITY_H
 #include "photon-global.h"
 
+#include "sequence/channel.h"
+
 namespace photon {
 
 struct DMXRange{
     DMXRange(uchar start = 0, uchar end = 255):start(start),end(end){}
     uchar start = 0;
     uchar end = 255;
+
+    bool contains(uchar t_value) const
+    {
+        return t_value >= start && t_value <= end;
+    }
+
+    uchar fromPercent(double t_value)
+    {
+        return start + std::round((end - start) * t_value);
+    }
+
+    double toPercent(uchar t_value)
+    {
+        double s = t_value - start;
+        double r = end - start;
+        return s / r;
+    }
 };
 
 enum CapabilityType{
     Capability_Unknown,
     Capability_Pan,
-    Capability_Tilt
+    Capability_Tilt,
+    Capability_TiltAngle,
+    Capability_TiltAngleCentered,
+    Capability_Focus,
+    Capability_Zoom,
+    Capability_Dimmer,
+    Capability_Strobe,
+    Capability_Cyan,
+    Capability_Magenta,
+    Capability_Yellow,
+    Capability_CTO,
+    Capability_Color
 };
 
 enum FixtureUnit{
@@ -70,6 +100,8 @@ public:
     Fixture *fixture() const;
     FixtureChannel *channel() const;
     void setChannel(FixtureChannel *);
+    FixtureChannel *fineChannel() const;
+    bool isValid(const DMXMatrix &t_matrix) const;
 
     CapabilityType type() const;
 
@@ -81,6 +113,8 @@ public:
     static FixtureUnit speed(const QString &value, double *valueWithoutUnits = nullptr);
     static FixtureUnit rotationSpeed(const QString &value, double *valueWithoutUnits = nullptr);
     static FixtureUnit rotationAngle(const QString &value, double *valueWithoutUnits = nullptr);
+    static FixtureUnit distance(const QString &value, double *valueWithoutUnits = nullptr);
+    static bool constantPercent(const QString &value, double *valueWithoutUnits = nullptr);
 
 private:
     class Impl;

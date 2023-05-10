@@ -13,6 +13,7 @@ public:
     const static QByteArray GlobalTime;
     const static QByteArray DelayTime;
     const static QByteArray Strength;
+    const static QByteArray Fixture;
 
 
     GlobalsNode();

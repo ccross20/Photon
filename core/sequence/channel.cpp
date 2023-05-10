@@ -1,4 +1,5 @@
 #include <QJsonArray>
+#include <QUuid>
 #include "channel_p.h"
 #include "channeleffect_p.h"
 #include "sequence.h"
@@ -9,13 +10,59 @@
 
 namespace photon {
 
+/*
+ *     QStringList options;
+    QString name;
+    QString description;
+    QVariant defaultValue;
+    QByteArray uniqueId;
+    ChannelType type;
+    */
 
+void ChannelInfo::readFromJson(const QJsonObject &t_json)
+{
+    name = t_json.value("name").toString();
+    description = t_json.value("description").toString();
+    uniqueId = t_json.value("uniqueId").toString().toLatin1();
+    type = static_cast<ChannelType>(t_json.value("type").toInt());
+    defaultValue = t_json.value("name").toVariant();
+    if(t_json.contains("options"))
+    {
+        auto optionArray = t_json.value("options").toArray();
+
+        for(auto option : optionArray)
+        {
+            options.append(option.toString());
+        }
+    }
+}
+
+void ChannelInfo::writeToJson(QJsonObject &t_json) const
+{
+    t_json.insert("name",name);
+    t_json.insert("description",description);
+    t_json.insert("uniqueId", QString(uniqueId));
+    t_json.insert("type",type);
+    t_json.insert("defaultValue",QJsonValue::fromVariant(defaultValue));
+
+    if(!options.isEmpty())
+    {
+        QJsonArray optionArray;
+        for(const auto &option : options)
+        {
+            optionArray.append(option);
+        }
+        t_json.insert("options", optionArray);
+    }
+
+}
 
 Channel::Channel(const ChannelInfo &t_info, double t_startTime, double t_duration, QObject *t_parent):QObject(t_parent), m_impl(new Impl)
 {
     m_impl->info = t_info;
     m_impl->startTime = t_startTime;
     m_impl->duration = t_duration;
+    m_impl->uniqueId = t_info.uniqueId;
 
     m_impl->effects.append(photonApp->plugins()->createChannelEffect(ConstantChannelEffect::info().effectId)); 
     m_impl->effects.back()->m_impl->channel = this;
@@ -80,7 +127,13 @@ double Channel::endTime() const
 void Channel::updateInfo(const ChannelInfo &t_info)
 {
     m_impl->info = t_info;
+    m_impl->uniqueId = t_info.uniqueId;
     emit channelUpdated(this);
+}
+
+QByteArray Channel::uniqueId() const
+{
+    return m_impl->uniqueId;
 }
 
 ChannelInfo Channel::info() const
@@ -126,6 +179,16 @@ double Channel::processDouble(double time)
     return val;
 }
 
+QColor Channel::processColor(double time)
+{
+    QColor val = m_impl->info.defaultValue.value<QColor>();
+
+    if(!m_impl->effects.isEmpty())
+        val = m_impl->effects.back()->processColor(val, time);
+
+    return val;
+}
+
 void Channel::effectUpdated(ChannelEffect *t_effect)
 {
     emit effectModified(t_effect);
@@ -154,6 +217,7 @@ void Channel::readFromJson(const QJsonObject &t_json, const LoadContext &)
     m_impl->info.description = t_json.value("description").toString();
     m_impl->info.type = static_cast<ChannelInfo::ChannelType>(t_json.value("type").toInt());
     m_impl->info.defaultValue = t_json.value("defaultValue");
+    m_impl->uniqueId = t_json.value("uniqueId").toString().toLatin1();
 
     for(auto effect : m_impl->effects)
         delete effect;
@@ -195,6 +259,7 @@ void Channel::writeToJson(QJsonObject &t_json) const
     }
     t_json.insert("effects", effectArray);
 
+    t_json.insert("uniqueId",QString::fromLatin1(m_impl->uniqueId));
     t_json.insert("name",m_impl->info.name);
     t_json.insert("description",m_impl->info.description);
     t_json.insert("type",m_impl->info.type);
@@ -202,6 +267,12 @@ void Channel::writeToJson(QJsonObject &t_json) const
 
     switch(m_impl->info.type)
     {
+    case photon::ChannelInfo::ChannelTypeInteger:
+        t_json.insert("defaultValue",m_impl->info.defaultValue.toInt());
+        break;
+    case photon::ChannelInfo::ChannelTypeBool:
+        t_json.insert("defaultValue",m_impl->info.defaultValue.toBool());
+        break;
     case photon::ChannelInfo::ChannelTypeNumber:
         t_json.insert("defaultValue",m_impl->info.defaultValue.toDouble());
         break;

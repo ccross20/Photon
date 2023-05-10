@@ -82,7 +82,7 @@ FixtureEditorWidget::FixtureEditorWidget(QWidget *parent)
     connect(m_impl->commentEdit, &QTextEdit::textChanged, this, &FixtureEditorWidget::updateComments);
     connect(m_impl->universeSpin, &QSpinBox::valueChanged, this, &FixtureEditorWidget::setUniverse);
     connect(m_impl->offsetSpin, &QSpinBox::valueChanged, this, &FixtureEditorWidget::setOffset);
-    connect(m_impl->modeCombo, &QComboBox::currentIndexChanged, this, &FixtureEditorWidget::setMode);
+    connect(m_impl->modeCombo, &QComboBox::activated, this, &FixtureEditorWidget::setMode);
     connect(m_impl->positionEdit, &Vector3Edit::valueChanged, this, &FixtureEditorWidget::setPosition);
     connect(m_impl->rotationEdit, &Vector3Edit::valueChanged, this, &FixtureEditorWidget::setRotation);
 }
@@ -152,6 +152,7 @@ void FixtureEditorWidget::setFixtures(QVector<Fixture*> t_fixtures)
     bool multiOffset = false;
 
     bool multiMode = false;
+    int mode = firstFixture->mode();
     auto modes = firstFixture->modes();
 
     QVector3D position = firstFixture->position();
@@ -240,8 +241,10 @@ void FixtureEditorWidget::setFixtures(QVector<Fixture*> t_fixtures)
 
     for(const auto &mode : modes)
     {
-        m_impl->modeCombo->addItem(mode.name);
+        m_impl->modeCombo->addItem(mode.name + " (" + QString::number(mode.channels.length()) + ")");
     }
+
+    m_impl->modeCombo->setCurrentIndex(mode);
 }
 
 void FixtureEditorWidget::setName(const QString &name)
@@ -284,7 +287,7 @@ void FixtureEditorWidget::setUniverse(uint t_universe)
     }
 }
 
-void FixtureEditorWidget::setOffset(uchar t_channel)
+void FixtureEditorWidget::setOffset(uint t_channel)
 {
     for(auto fixture : m_impl->fixtures)
     {

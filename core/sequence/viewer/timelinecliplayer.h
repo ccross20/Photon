@@ -8,6 +8,7 @@ namespace photon {
 
 class SequenceClip;
 class TimelineScene;
+class ClipItem;
 
 class TimelineClipLayer : public LayerItem
 {
@@ -19,6 +20,7 @@ public:
     void addClip(SequenceClip *t_clip);
     QRectF boundingRect() const override;
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *item, QWidget *widget) override;
+    SequenceClip *itemForClip(Clip *) const;
 
 public slots:
 
@@ -26,6 +28,7 @@ public slots:
     void clipRemoved(photon::Clip *);
     void clipModified(photon::Clip *);
     void addRoutine(photon::Routine *t_routine, double t_time);
+    void addState(double t_time);
     void removeLayer();
 
 protected:

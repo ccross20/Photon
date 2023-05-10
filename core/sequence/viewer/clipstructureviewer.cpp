@@ -6,9 +6,12 @@
 #include "sequence/channel.h"
 #include "sequence/clip.h"
 #include "falloff/falloffeffect.h"
+#include "fixture/maskeffect.h"
 #include "photoncore.h"
 #include "plugin/pluginfactory.h"
 #include "gui/menufactory.h"
+#include "state/state.h"
+#include "sequence/stateclip.h"
 
 namespace photon {
 
@@ -80,6 +83,35 @@ void ClipTreeView::mousePressEvent(QMouseEvent *event)
                     clip->addFalloffEffect(effect);
 
                     auto effectData = dynamic_cast<FalloffData*>(parentData)->findEffectData(effect);
+                    auto effectIndex = static_cast<ClipModel*>(model())->indexForData(effectData);
+
+                    if(effectIndex.isValid())
+                        selectionModel()->select(effectIndex, QItemSelectionModel::ClearAndSelect);
+                }
+            }
+        }
+        else if(dynamic_cast<MaskData*>(parentData))
+        {
+            MenuFactory<MaskEffectInformation> factory;
+            auto effects = photonApp->plugins()->maskEffects();
+            for(auto &info : effects)
+            {
+                factory.addItem(info.categories, info);
+            }
+
+            MaskEffectInformation selectedInfo;
+            if(factory.showMenu(event->globalPosition().toPoint(), selectedInfo))
+            {
+
+                Clip *clip = dynamic_cast<MaskData*>(parentData)->clip();
+
+                auto effect = photonApp->plugins()->createMaskEffect(selectedInfo.effectId);
+
+                if(effect)
+                {
+                    clip->addMaskEffect(effect);
+
+                    auto effectData = dynamic_cast<MaskData*>(parentData)->findEffectData(effect);
                     auto effectIndex = static_cast<ClipModel*>(model())->indexForData(effectData);
 
                     if(effectIndex.isValid())
@@ -159,11 +191,68 @@ void ClipStructureViewer::selectionChanged(const QItemSelection &selected, const
     ChannelEffectData *effectData = dynamic_cast<ChannelEffectData*>(itemData);
     if(effectData)
     {
+        m_states.insert(m_clip->uniqueId(),effectData->effect()->uniqueId());
         emit selectEffect(effectData->effect());
     }
     else if(dynamic_cast<FalloffEffectData*>(itemData))
     {
+        m_states.insert(m_clip->uniqueId(),dynamic_cast<FalloffEffectData*>(itemData)->effect()->uniqueId());
         emit selectFalloff(dynamic_cast<FalloffEffectData*>(itemData)->effect());
+    }
+    else if(dynamic_cast<StateData*>(itemData))
+    {
+        m_states.insert(m_clip->uniqueId(),dynamic_cast<StateData*>(itemData)->state()->uniqueId());
+        emit selectState(dynamic_cast<StateData*>(itemData)->state());
+    }
+    else
+    {
+        m_states.remove(m_clip->uniqueId());
+        emit clearSelection();
+    }
+
+}
+
+void ClipStructureViewer::viewId(const QByteArray &t_id)
+{
+    auto data = m_model->root()->findDataWithId(t_id);
+    if(data){
+        auto index = m_model->indexForData(data);
+        m_treeView->selectionModel()->select(index,QItemSelectionModel::ClearAndSelect);
+    }
+}
+
+void ClipStructureViewer::restoreState()
+{
+    if(!m_clip)
+        return;
+
+    if(m_states.contains(m_clip->uniqueId()))
+    {
+        viewId(m_states.value(m_clip->uniqueId()));
+        return;
+    }
+
+    StateClip *stateClip = dynamic_cast<StateClip*>(m_clip);
+    if(stateClip)
+    {
+        viewId(stateClip->state()->uniqueId());
+    }
+}
+
+void ClipStructureViewer::setClip(Clip *t_clip)
+{
+    if(t_clip == m_clip)
+        return;
+
+    if(m_clip)
+        m_model->removeClip(m_clip);
+
+    m_clip = t_clip;
+
+    if(m_clip)
+    {
+        m_model->addClip(m_clip);
+        m_treeView->expandAll();
     }
     else
     {
@@ -172,17 +261,6 @@ void ClipStructureViewer::selectionChanged(const QItemSelection &selected, const
 
 }
 
-void ClipStructureViewer::addClip(Clip *t_clip)
-{
-    m_model->addClip(t_clip);
-    m_treeView->expandAll();
-}
-
-void ClipStructureViewer::removeClip(Clip *t_clip)
-{
-    m_model->removeClip(t_clip);
-    emit clearSelection();
-}
 
 void ClipStructureViewer::addMasterLayer(MasterLayer *t_layer)
 {

@@ -19,6 +19,8 @@ public:
     void processPreview(ProcessContext &context);
     bool isPlaying() const;
 
+    DMXMatrix getDMX();
+
 public slots:
     void togglePlay(bool);
     void rewind();
@@ -36,6 +38,7 @@ private slots:
     void positionChanged(qint64);
     void selectEffect(photon::ChannelEffect *);
     void selectFalloff(photon::FalloffEffect *);
+    void selectState(photon::State *);
     void clearEditor();
 
 signals:

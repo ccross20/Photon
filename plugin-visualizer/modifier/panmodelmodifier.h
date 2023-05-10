@@ -12,10 +12,10 @@ class PanModelModifier : public ModelModifier
 
 
 public:
-    PanModelModifier(FixtureModel *model,  Entity *entity);
+    PanModelModifier(SceneObjectModel *model,  Entity *entity);
 
 
-    void updateModel(const DMXMatrix &t_matrix) override;
+    void updateModel(const DMXMatrix &t_matrix, const double t_elapsed) override;
 
 private:
 

@@ -64,10 +64,13 @@ class Resource;
 class ResourceManager;
 class Routine;
 class RoutineCollection;
+class SceneObject;
 class Sequence;
 class SequenceCollection;
 class Settings;
 class SettingsPage;
+class State;
+class StateCapability;
 class Timekeeper;
 class Timeline;
 

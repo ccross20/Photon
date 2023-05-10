@@ -1,6 +1,8 @@
 #include <QMouseEvent>
 #include <QPaintEvent>
 #include "openglviewport.h"
+#include "photoncore.h"
+#include "gui/panel/sequencepanel.h"
 #include "scene.h"
 #include "camera.h"
 
@@ -28,6 +30,7 @@ void OpenGLViewport::cleanup()
 {
 
 
+
     makeCurrent();
 
     //do stuff
@@ -45,6 +48,18 @@ void OpenGLViewport::timerEvent(QTimerEvent *)
     m_scene->destroy(context());
     m_scene->create(context());
     m_scene->rebuild(context());
+
+
+
+    auto seqPanel = photonApp->activeSequencePanel();
+    if(seqPanel && seqPanel->isPlaying())
+    {
+        m_scene->updateDMX(seqPanel->getDMX(),m_elapsedTimer.elapsed()/1000.0);
+    }
+
+
+
+
 
     doneCurrent();
     update();
@@ -126,6 +141,7 @@ void OpenGLViewport::paintGL()
     DrawContext *drawContext = new DrawContext(context(), m_scene->camera());
 
     m_scene->draw(drawContext);
+    m_elapsedTimer.restart();
 
 }
 

@@ -1,5 +1,8 @@
 #include "fixturecollection.h"
 #include "fixture.h"
+#include "photoncore.h"
+#include "scene/sceneiterator.h"
+#include "project/project.h"
 
 namespace photon {
 
@@ -21,74 +24,50 @@ FixtureCollection::~FixtureCollection(){
     delete m_impl;
 }
 
-void FixtureCollection::addFixture(Fixture *t_fixture)
+Fixture* FixtureCollection::fixtureById(const QByteArray &t_id)
 {
-    if(m_impl->fixtures.contains(t_fixture))
-        return;
-    emit fixtureWillBeAdded(t_fixture, m_impl->fixtures.length());
-    m_impl->fixtures.append(t_fixture);
-    emit fixtureWasAdded(t_fixture);
-
-}
-
-Fixture *FixtureCollection::fixtureAtIndex(uint t_index) const
-{
-    return m_impl->fixtures.at(t_index);
-}
-
-int FixtureCollection::fixtureCount() const
-{
-    return m_impl->fixtures.length();
+    return dynamic_cast<Fixture*>(SceneIterator::FindOne(photonApp->project()->sceneRoot(),[t_id](SceneObject *t_obj){return t_obj->uniqueId() == t_id;}));
 }
 
 QVector<Fixture*> FixtureCollection::fixturesWithName(const QString &t_text)
 {
     QVector<Fixture*> results;
 
-    for(auto it = m_impl->fixtures.crbegin(); it != m_impl->fixtures.crend(); ++it)
-    {
-        auto fix = *it;
-        if(fix->name() == t_text)
-            results.append(fix);
-    }
+    auto collection = SceneIterator::FindMany(photonApp->project()->sceneRoot(),[t_text](SceneObject *t_obj, bool *t_continue){
+                           *t_continue = true;
+                           return t_obj->name() == t_text;
+                       });
+
+    for(auto item : collection)
+        results.append(static_cast<Fixture*>(item));
 
     return results;
 
 }
 
-void FixtureCollection::removeAllFixtures()
+Fixture *FixtureCollection::fixtureWithId(const QByteArray &t_id) const
 {
-    int counter = fixtureCount()-1;
-    for(auto it = m_impl->fixtures.crbegin(); it != m_impl->fixtures.crend(); ++it)
-    {
-        auto fix = *it;
-        emit fixtureWillBeRemoved(fix,counter--);
-        m_impl->fixtures.removeOne(fix);
-        emit fixtureWasRemoved(fix);
-    }
+    return dynamic_cast<Fixture*>(SceneIterator::FindOne(photonApp->project()->sceneRoot(),[t_id](SceneObject *t_obj){
+                                      if(t_obj->typeId() == "fixture")
+                                        return static_cast<Fixture*>(t_obj)->uniqueId() == t_id;
+                                      return false;
+                                  }));
 }
 
-void FixtureCollection::removeFixture(Fixture *t_fixture)
+const QVector<Fixture*> FixtureCollection::fixtures() const
 {
-    if(!m_impl->fixtures.contains(t_fixture))
-        return;
+    auto items = SceneIterator::ToList(photonApp->project()->sceneRoot());
 
-    int index = 0;
-    for(auto fix : m_impl->fixtures)
+    QVector<Fixture*> toReturn;
+
+    for(auto item : items)
     {
-        if(fix == t_fixture)
-            break;
-        ++index;
+        if(item->typeId() == "fixture")
+            toReturn.append(static_cast<Fixture*>(item));
     }
 
-    emit fixtureWillBeRemoved(t_fixture, index);
-    m_impl->fixtures.removeOne(t_fixture);
-    emit fixtureWasRemoved(t_fixture);
-}
 
-const QVector<Fixture*> &FixtureCollection::fixtures() const
-{
-    return m_impl->fixtures;
+    return toReturn;
 }
 
 } // namespace photon

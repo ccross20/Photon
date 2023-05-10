@@ -10,6 +10,7 @@
 #include "library/nodelibrary.h"
 #include "sequence/channeleffect.h"
 #include "falloff/falloffeffect.h"
+#include "fixture/maskeffect.h"
 
 namespace photon {
 
@@ -45,6 +46,11 @@ public:
     void registerFalloffEffect(const FalloffEffectInformation &info);
     QVector<FalloffEffectInformation> falloffEffects() const;
     FalloffEffect *createFalloffEffect(const QByteArray &effectId) const;
+
+    void registerMaskEffect(const MaskEffectInformation &info);
+    QVector<MaskEffectInformation> maskEffects() const;
+    MaskEffect *createMaskEffect(const QByteArray &effectId) const;
+
     void registerNode(const keira::NodeInformation nodeInfo);
     keira::NodeLibrary *nodeLibrary() const;
     keira::Node *createNode(const QByteArray &nodeId);

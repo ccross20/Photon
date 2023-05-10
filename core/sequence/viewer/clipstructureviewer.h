@@ -26,14 +26,16 @@ public:
     explicit ClipStructureViewer(QWidget *parent = nullptr);
     ~ClipStructureViewer();
 
-    void addClip(Clip *);
-    void removeClip(Clip *);
+    void setClip(Clip *);
     void addMasterLayer(MasterLayer *);
     void removeMasterLayer(MasterLayer *);
+    void restoreState();
+    void viewId(const QByteArray &);
 
 signals:
     void selectEffect(photon::ChannelEffect *);
     void selectFalloff(photon::FalloffEffect *);
+    void selectState(photon::State *);
     void clearSelection();
 
 private slots:
@@ -42,6 +44,8 @@ private slots:
 private:
     ClipTreeView *m_treeView;
     ClipModel *m_model;
+    Clip *m_clip = nullptr;
+    QHash<QByteArray,QByteArray> m_states;
 
 };
 

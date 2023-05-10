@@ -10,9 +10,10 @@ struct RoutineEvaluationContext : keira::EvaluationContext
 {
     RoutineEvaluationContext(DMXMatrix &matrix):dmxMatrix(matrix){}
     DMXMatrix &dmxMatrix;
+    Project *project = nullptr;
     Fixture *fixture = nullptr;
     QImage *canvasImage = nullptr;
-    QVector<QVariant> channelValues;
+    QHash<QByteArray,QVariant> channelValues;
     double relativeTime = 0.0;
     double globalTime = 0.0;
     double delayTime = 0.0;

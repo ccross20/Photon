@@ -1,6 +1,7 @@
 #ifndef PHOTON_FIXTURECHANNEL_H
 #define PHOTON_FIXTURECHANNEL_H
 #include "photon-global.h"
+#include "capability/fixturecapability.h"
 
 namespace photon {
 
@@ -13,7 +14,12 @@ public:
     QString name() const;
     int channelNumber() const;
     int universalChannelNumber() const;
-    void setChannelNumber(uchar channelNum);
+    int universe() const;
+    void setChannelNumber(int channelNum);
+    bool isValid() const;
+    const QVector<FixtureChannel*> &fineChannels() const;
+
+    CapabilityType capabilityType() const;
 
     Fixture *fixture() const;
     void setFixture(Fixture *);
@@ -23,6 +29,7 @@ public:
     void readFromOpenFixtureJson(const QJsonObject &);
 
 private:
+    friend class Fixture;
     class Impl;
     Impl *m_impl;
 };

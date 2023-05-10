@@ -29,6 +29,14 @@ void DrawRectangle::createParameters()
     m_heightParam->setMaximum(1);
     addParameter(m_heightParam);
 
+    m_colorParam = new ColorParameter("colorInput","Color", Qt::red);
+    addParameter(m_colorParam);
+
+    m_alphaParam = new keira::DecimalParameter("alphaInput","Alpha", 1.0);
+    m_alphaParam->setMinimum(0);
+    m_alphaParam->setMaximum(1);
+    addParameter(m_alphaParam);
+
     m_canvasInputParam = new CanvasParameter("canvasInput","Canvas In", QImage{});
     addParameter(m_canvasInputParam);
 
@@ -42,7 +50,8 @@ void DrawRectangle::evaluate(keira::EvaluationContext *t_context) const
     QImage image = m_canvasInputParam->value().value<QImage>();
     QPainter painter{&image};
 
-    painter.fillRect(0,0, image.width() * m_widthParam->value().toDouble(), image.height() * m_heightParam->value().toDouble(), Qt::red);
+    painter.setOpacity(m_alphaParam->value().toDouble());
+    painter.fillRect(0,0, image.width() * m_widthParam->value().toDouble(), image.height() * m_heightParam->value().toDouble(), m_colorParam->value().value<QColor>());
 
     m_canvasOutputParam->setValue(image);
 }

@@ -11,7 +11,7 @@ class ClipLayer::Impl
 public:
     Impl(ClipLayer *);
     void addClip(Clip *);
-    void removeClip(Clip *);
+    bool removeClip(Clip *);
     void notifyClipWasModified(Clip *);
     QVector<Clip *> clips;
     ClipLayer *facade;

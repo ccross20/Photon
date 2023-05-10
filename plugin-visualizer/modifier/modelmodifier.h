@@ -1,24 +1,25 @@
 #ifndef PHOTON_MODELMODIFIER_H
 #define PHOTON_MODELMODIFIER_H
 #include "entity.h"
-#include "fixturemodel.h"
+#include "sceneobjectmodel.h"
 
 namespace photon {
 
 class ModelModifier
 {
 public:
-    ModelModifier(FixtureModel *model,  Entity *entity);
+    ModelModifier(SceneObjectModel *model,  Entity *entity);
     virtual ~ModelModifier();
 
     Entity* entity() const;
-    FixtureModel* model() const;
+    SceneObjectModel* model() const;
     Fixture *fixture() const;
 
-    virtual void updateModel(const DMXMatrix &t_matrix){}
+    virtual void preDraw(const double t_elapsed){}
+    virtual void updateModel(const DMXMatrix &t_matrix, const double t_elapsed){}
 
 private:
-    FixtureModel *m_model;
+    SceneObjectModel *m_model;
     Entity *m_entity;
 
 };

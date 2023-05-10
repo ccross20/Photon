@@ -5,15 +5,18 @@
 
 namespace photon {
 
-class PHOTONCORE_EXPORT FixtureFalloffMap : public QObject
+class PHOTONCORE_EXPORT SceneFalloffMap : public QObject
 {
     Q_OBJECT
 public:
-    explicit FixtureFalloffMap(QObject *parent = nullptr);
-    virtual ~FixtureFalloffMap();
+    explicit SceneFalloffMap(QObject *parent = nullptr);
+    virtual ~SceneFalloffMap();
 
-    void addFixture(Fixture *fixture, double delay);
-    virtual double falloff(Fixture *);
+    void addSceneObject(SceneObject *sceneObject, double delay);
+    virtual double falloff(SceneObject *) const;
+
+    virtual void readFromJson(const QJsonObject &);
+    virtual void writeToJson(QJsonObject &) const;
 
 signals:
 

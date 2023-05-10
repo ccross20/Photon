@@ -2,33 +2,43 @@
 
 namespace photon {
 
-class FixtureFalloffMap::Impl
+class SceneFalloffMap::Impl
 {
 public:
-    QHash<Fixture*,double> hash;
+    QHash<SceneObject*,double> hash;
 };
 
-FixtureFalloffMap::FixtureFalloffMap(QObject *parent)
+SceneFalloffMap::SceneFalloffMap(QObject *parent)
     : QObject{parent},m_impl(new Impl)
 {
 
 }
 
-FixtureFalloffMap::~FixtureFalloffMap()
+SceneFalloffMap::~SceneFalloffMap()
 {
     delete m_impl;
 }
 
-void FixtureFalloffMap::addFixture(Fixture *fixture, double delay)
+void SceneFalloffMap::addSceneObject(SceneObject *t_sceneObject, double delay)
 {
-    m_impl->hash.insert(fixture, delay);
+    m_impl->hash.insert(t_sceneObject, delay);
 
     emit Updated();
 }
 
-double FixtureFalloffMap::falloff(Fixture *t_fixture)
+double SceneFalloffMap::falloff(SceneObject *t_sceneObject) const
 {
-    return m_impl->hash.value(t_fixture, 0.0);
+    return m_impl->hash.value(t_sceneObject, 0.0);
+}
+
+void SceneFalloffMap::readFromJson(const QJsonObject &)
+{
+
+}
+
+void SceneFalloffMap::writeToJson(QJsonObject &) const
+{
+
 }
 
 } // namespace photon

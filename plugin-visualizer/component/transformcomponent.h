@@ -20,6 +20,8 @@ public:
     void setScale(const QVector3D &scale);
     void setLocalMatrix(const QMatrix4x4 &matrix);
 
+    QVector3D rotationEuler() const;
+
     QVector3D globalPosition() const;
     QMatrix4x4 globalMatrix() const;
     QMatrix4x4 localMatrix() const;

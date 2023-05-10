@@ -5,12 +5,13 @@
 #include "timelinecliplayer.h"
 #include "sequenceclip.h"
 #include "sequence/cliplayer.h"
-#include "sequence/clip.h"
+#include "sequence/routineclip.h"
 #include "sequence/sequence.h"
 #include "photoncore.h"
 #include "project/project.h"
 #include "routine/routinecollection.h"
 #include "routine/routine.h"
+#include "sequence/stateclip.h"
 
 namespace photon {
 
@@ -80,6 +81,11 @@ TimelineClipLayer::~TimelineClipLayer()
     delete m_impl;
 }
 
+SequenceClip *TimelineClipLayer::itemForClip(Clip *t_clip) const
+{
+    return m_impl->findClip(t_clip);
+}
+
 void TimelineClipLayer::addedToScene(TimelineScene *t_scene)
 {
     for(Clip *clip : static_cast<ClipLayer*>(layer())->clips())
@@ -138,8 +144,17 @@ void TimelineClipLayer::paint(QPainter *painter, const QStyleOptionGraphicsItem 
 
 void TimelineClipLayer::addRoutine(photon::Routine *t_routine, double t_time)
 {
-    Clip *clip = new Clip(t_time, 5.0);
+    RoutineClip *clip = new RoutineClip(t_time, 5.0);
     clip->setRoutine(t_routine);
+    static_cast<ClipLayer*>(layer())->addClip(clip);
+}
+
+void TimelineClipLayer::addState(double t_time)
+{
+    StateClip *clip = new StateClip(t_time, 5.0);
+    auto state = new State;
+    state->addDefaultCapabilities();
+    clip->setState(state);
     static_cast<ClipLayer*>(layer())->addClip(clip);
 }
 
@@ -159,6 +174,9 @@ void TimelineClipLayer::contextMenuEvent(QGraphicsSceneContextMenuEvent *event)
     {
         connect(routineMenu->addAction(routine->name()), &QAction::triggered, this, [routine, time, this](){addRoutine(routine,time);});
     }
+
+    menu.addSeparator();
+    menu.addAction("Add State",[this, time](){addState(time);});
 
     menu.addSeparator();
     QAction *removeLayer = menu.addAction("Remove Layer");

@@ -73,7 +73,7 @@ Entity *processNode(aiNode *node, const aiScene *scene)
 {
     // process all the node's meshes (if any)
 
-    qDebug() << "Name: " << node->mName.C_Str();
+    //qDebug() << "Name: " << node->mName.C_Str();
 
     QString nodeName = node->mName.C_Str();
 
@@ -142,7 +142,7 @@ Entity *ModelLoader::loadResource(QString path)
     Assimp::Importer importer;
     const aiScene *scene = importer.ReadFileFromMemory(fileContents.data(), fileContents.length(), aiProcess_Triangulate | aiProcess_FlipUVs);
 
-    qDebug() << "File length:" << fileContents.length();
+    //qDebug() << "File length:" << fileContents.length();
 
     if(!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
     {

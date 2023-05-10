@@ -9,8 +9,8 @@ class TiltCapability::Impl
 {
 public:
     double angle;
-    double startAngle;
-    double endAngle;
+    double startAngle =  0.0;
+    double endAngle = 360.0;
 };
 
 TiltCapability::TiltCapability(DMXRange range) : FixtureCapability(range, Capability_Tilt),m_impl(new Impl)
@@ -25,17 +25,26 @@ TiltCapability::~TiltCapability()
 
 void TiltCapability::setAngleDegrees(double value, DMXMatrix &t_matrix, double t_blend)
 {
+    value = std::max(std::min(value, m_impl->endAngle), m_impl->startAngle);
 
+    double percent = (value - m_impl->startAngle) / (m_impl->endAngle - m_impl->startAngle);
+    t_matrix.setValuePercent(channel(), percent, t_blend);
+}
+
+void TiltCapability::setAngleDegreesCentered(double value, DMXMatrix &t_matrix, double t_blend)
+{
+    double offset = (m_impl->endAngle - m_impl->startAngle) / 2.0;
+    setAngleDegrees(value + offset, t_matrix, t_blend);
 }
 
 void TiltCapability::setAnglePercent(double value, DMXMatrix &t_matrix, double t_blend)
 {
-    t_matrix.setValuePercent(fixture()->universe()-1,channel()->universalChannelNumber(), value, t_blend);
+    t_matrix.setValuePercent(channel(), value, t_blend);
 }
 
 double TiltCapability::getAnglePercent(const DMXMatrix &t_matrix)
 {
-    return t_matrix.valuePercent(fixture()->universe()-1,channel()->universalChannelNumber());
+    return t_matrix.valuePercent(channel());
 }
 
 double TiltCapability::angle() const

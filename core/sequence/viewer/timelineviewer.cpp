@@ -4,16 +4,26 @@
 #include "timelineviewer.h"
 #include "sequenceclip.h"
 #include "sequence/clip.h"
+#include "timelinescene.h"
+#include "layeritem.h"
+#include "sequence/cliplayer.h"
 
 namespace photon {
 
 class ClipMoveData
 {
 public:
-    ClipMoveData(SequenceClip *t_seqClip):startTime(t_seqClip->clip()->startTime()),startDuration(t_seqClip->clip()->duration()),sequenceClip(t_seqClip),clip(t_seqClip->clip()){}
+    ClipMoveData(Clip *t_clip):startTime(t_clip->startTime()),
+        startDuration(t_clip->duration()),
+        startEaseInDuration(t_clip->easeInDuration()),
+        startEaseOutDuration(t_clip->easeOutDuration()),
+        startStrength(t_clip->strength()),
+        clip(t_clip){}
     double startTime;
     double startDuration;
-    SequenceClip *sequenceClip;
+    double startEaseInDuration;
+    double startEaseOutDuration;
+    double startStrength;
     Clip *clip;
 };
 
@@ -26,7 +36,9 @@ public:
         InteractionSelect,
         InteractionMove,
         InteractionResizeStart,
-        InteractionResizeEnd
+        InteractionResizeEnd,
+        InteractionResizeEaseIn,
+        InteractionResizeEaseOut
     };
 
 
@@ -123,22 +135,28 @@ void TimelineViewer::mousePressEvent(QMouseEvent *event)
     if(clipItem)
     {
         clipItem->setZValue(100);
-        m_impl->moveDatas.append(clipItem);
+        m_impl->moveDatas.append(clipItem->clip());
 
         auto hitResult = clipItem->hitTest(clipItem->mapFromScene(mapToScene(event->pos())), m_impl->scale);
 
         switch(hitResult)
         {
+            default:
             case SequenceClip::HitNone:
             case SequenceClip::HitCenter:
                 m_impl->interactionMode = Impl::InteractionMove;
                 break;
-
             case SequenceClip::HitResizeStart:
                 m_impl->interactionMode = Impl::InteractionResizeStart;
                 break;
             case SequenceClip::HitResizeEnd:
                 m_impl->interactionMode = Impl::InteractionResizeEnd;
+                break;
+            case SequenceClip::HitTransitionInEnd:
+                m_impl->interactionMode = Impl::InteractionResizeEaseIn;
+                break;
+            case SequenceClip::HitTransitionOutStart:
+                m_impl->interactionMode = Impl::InteractionResizeEaseOut;
                 break;
         }
     }
@@ -175,8 +193,24 @@ void TimelineViewer::mouseMoveEvent(QMouseEvent *event)
             QPointF delta = mapToScene(event->pos()) - mapToScene(m_impl->startPoint.toPoint());
             for(const auto &data : m_impl->moveDatas)
             {
+                auto timelineScene = static_cast<TimelineScene*>(scene());
+                auto layer = timelineScene->layerAtY(mapToScene(event->pos()).y());
+                auto clipItem = timelineScene->itemForClip(data.clip);
+
                 if(m_impl->interactionMode == Impl::InteractionMove)
+                {
+
+
+
+                    if(layer && layer->layer() != data.clip->layer())
+                    {
+                        auto clipLayer = dynamic_cast<ClipLayer*>(layer->layer());
+                        clipLayer->addClip(data.clip);
+                    }
+
+
                     data.clip->setStartTime(data.startTime + delta.x());
+                }
                 else if(m_impl->interactionMode == Impl::InteractionResizeStart)
                 {
                     data.clip->setStartTime(data.startTime + delta.x());
@@ -186,10 +220,18 @@ void TimelineViewer::mouseMoveEvent(QMouseEvent *event)
                 {
                     data.clip->setDuration(data.startDuration + delta.x());
                 }
+                else if(m_impl->interactionMode == Impl::InteractionResizeEaseIn && clipItem)
+                {
+                    data.clip->setEaseInDuration(data.startEaseInDuration + delta.x());
+                    data.clip->setStrength(data.startStrength - delta.y()/clipItem->boundingRect().height());
+                }
+                else if(m_impl->interactionMode == Impl::InteractionResizeEaseOut && clipItem)
+                {
+                    data.clip->setEaseOutDuration(data.startEaseOutDuration - delta.x());
+                    data.clip->setStrength(data.startStrength - delta.y()/clipItem->boundingRect().height());
+                }
             }
         }
-
-
     }
     if((event->buttons() & Qt::MiddleButton))
     {
@@ -208,6 +250,7 @@ void TimelineViewer::mouseMoveEvent(QMouseEvent *event)
 
             switch(hitResult)
             {
+                default:
                 case SequenceClip::HitNone:
                 case SequenceClip::HitCenter:
                     setCursor(Qt::ArrowCursor);
@@ -216,6 +259,10 @@ void TimelineViewer::mouseMoveEvent(QMouseEvent *event)
                 case SequenceClip::HitResizeStart:
                 case SequenceClip::HitResizeEnd:
                     setCursor(Qt::SizeHorCursor);
+                    break;
+                case SequenceClip::HitTransitionInEnd:
+                case SequenceClip::HitTransitionOutStart:
+                    setCursor(Qt::SizeAllCursor);
                     break;
             }
         }
@@ -233,7 +280,10 @@ void TimelineViewer::mouseReleaseEvent(QMouseEvent *event)
 {
     for(const auto &data : m_impl->moveDatas)
     {
-        data.sequenceClip->setZValue(0);
+        auto timelineScene = static_cast<TimelineScene*>(scene());
+        auto clipItem = timelineScene->itemForClip(data.clip);
+        if(clipItem)
+            clipItem->setZValue(0);
     }
     m_impl->moveDatas.clear();
     m_impl->interactionMode = Impl::InteractionSelect;

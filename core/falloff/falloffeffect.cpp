@@ -6,6 +6,7 @@ namespace photon {
 FalloffEffect::FalloffEffect(const QByteArray &t_id):m_impl(new Impl)
 {
     m_impl->id = t_id;
+    m_impl->uniqueId = QUuid::createUuid().toByteArray();
 }
 
 FalloffEffect::~FalloffEffect()
@@ -33,6 +34,11 @@ QByteArray FalloffEffect::id() const
     return m_impl->id;
 }
 
+QByteArray FalloffEffect::uniqueId() const
+{
+    return m_impl->uniqueId;
+}
+
 void FalloffEffect::setName(const QString &t_name)
 {
     m_impl->name = t_name;
@@ -58,11 +64,14 @@ void FalloffEffect::readFromJson(const QJsonObject &t_json)
 {
     if(t_json.contains("name"))
         m_impl->name = t_json.value("name").toString();
+    m_impl->uniqueId = t_json.value("uniqueId").toString(QUuid::createUuid().toString()).toLatin1();
+
 }
 
 void FalloffEffect::writeToJson(QJsonObject &t_json) const
 {
     t_json.insert("name", m_impl->name);
+    t_json.insert("uniqueId", QString(m_impl->uniqueId));
 }
 
 } // namespace photon

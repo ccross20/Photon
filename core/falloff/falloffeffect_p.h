@@ -10,6 +10,7 @@ class FalloffEffect::Impl
 public:
     QString name;
     QByteArray id;
+    QByteArray uniqueId;
     Clip *clip = nullptr;
     FalloffEffect *previousEffect = nullptr;
 };

@@ -9,6 +9,8 @@
 namespace photon {
 
 class FalloffData;
+class MaskData;
+class StateClip;
 
 class AbstractTreeData : public QObject
 {
@@ -20,13 +22,16 @@ public:
         DataAny,
         DataChannel,
         DataFalloff,
-        DataSelection
+        DataSelection,
+        DataState
     };
 
-    AbstractTreeData(const QString &name);
+    AbstractTreeData(const QString &name, const QByteArray &id = QByteArray{});
     virtual ~AbstractTreeData();
     QString name();
     void setName(const QString &name);
+    QByteArray id() const{return m_id;}
+    void setId(const QByteArray &t_id){m_id = t_id;}
 
     void addChild(AbstractTreeData*);
     void insertChild(AbstractTreeData*, int index);
@@ -35,6 +40,7 @@ public:
     AbstractTreeData *childAtIndex(int i){return m_children.at(i);}
     int childCount() const{return m_children.length();}
     int index() const{return m_index;}
+    AbstractTreeData *findDataWithId(const QByteArray &) const;
 
 signals:
     void childWillBeAdded(photon::AbstractTreeData*, int);
@@ -46,6 +52,7 @@ signals:
 private:
     QVector<AbstractTreeData*> m_children;
     QString m_name;
+    QByteArray m_id;
     int m_index;
 };
 
@@ -80,7 +87,7 @@ private slots:
     void channelMoved(photon::Channel *);
 
 private:
-    FolderData *m_maskFolder;
+    MaskData *m_maskFolder;
     FalloffData *m_falloffData;
     FolderData *m_channelFolder;
     Clip *m_clip;
@@ -166,12 +173,48 @@ private:
     Clip *m_clip;
 };
 
-
-
-
-class MaskEffect : public AbstractTreeData
+class MaskEffectData : public AbstractTreeData
 {
+public:
+    MaskEffectData(MaskEffect*);
+    MaskEffect *effect() const{return m_effect;}
 
+private:
+    MaskEffect *m_effect;
+
+};
+
+class MaskData : public AbstractTreeData
+{
+    Q_OBJECT
+public:
+    MaskData(Clip*);
+    MaskEffectData *findEffectData(MaskEffect *);
+
+    Clip *clip() const{return m_clip;}
+
+private slots:
+    void effectAdded(photon::MaskEffect*);
+    void effectRemoved(photon::MaskEffect*);
+    void effectMoved(photon::MaskEffect*);
+
+private:
+    Clip *m_clip;
+};
+
+
+
+
+class StateData : public AbstractTreeData
+{
+public:
+    StateData(StateClip*);
+
+    State *state() const;
+    StateClip *clip() const{return m_clip;}
+
+private:
+    StateClip *m_clip;
 };
 
 class ClipModel : public QAbstractItemModel
@@ -182,7 +225,8 @@ public:
     ~ClipModel();
 
     AbstractTreeData *dataForIndex(const QModelIndex &) const;
-    QModelIndex indexForData(AbstractTreeData *);
+    QModelIndex indexForData(AbstractTreeData *) const;
+    QModelIndex indexForId(const QByteArray &) const;
 
     QVariant data(const QModelIndex &index, int role) const override;
     QVariant headerData(int section, Qt::Orientation orientation,
@@ -201,8 +245,10 @@ public:
 
     void addClip(Clip *);
     void removeClip(Clip *);
+    QVector<Clip*> clips() const;
     void addMasterLayer(MasterLayer *);
     void removeMasterLayer(MasterLayer *);
+    RootData *root() const{return m_root;}
 
 private slots:
     void childWillBeAdded(photon::AbstractTreeData*, int);

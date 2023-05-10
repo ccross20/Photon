@@ -5,12 +5,12 @@
 
 namespace photon {
 
-class FalloffMap2D : public FixtureFalloffMap
+class PHOTONCORE_EXPORT FalloffMap2D : public SceneFalloffMap
 {
 public:
 
     struct Falloff2DData{
-        Fixture *fixture;
+        QByteArray sceneObjectId;
         QPointF position;
     };
 
@@ -20,19 +20,23 @@ public:
 
     FalloffMap2D &operator=(const FalloffMap2D &other);
 
-    void addFixture(Fixture *fixture, const QPointF &);
-    void removeFixture(Fixture *);
-    void setFixturePosition(Fixture *fixture, const QPointF &);
-    QPointF fixturePosition(Fixture *) const;
-    double falloff(Fixture *) override;
+    void addSceneObject(SceneObject *, const QPointF &);
+    void removeSceneObject(SceneObject *);
+    void setSceneObjectPosition(SceneObject *, const QPointF &);
+    QPointF sceneObjectPosition(SceneObject *) const;
+    double falloff(SceneObject *) const override;
 
-    QVector<Falloff2DData> fixtureData() const;
-    void setFixtureData(const QVector<Falloff2DData> &);
+    QVector<Falloff2DData> sceneObjectData() const;
+    void setSceneObjectData(const QVector<Falloff2DData> &);
 
     QPointF startPosition() const;
     QPointF endPosition() const;
     void setStartPosition(const QPointF &);
     void setEndPosition(const QPointF &);
+
+
+    void readFromJson(const QJsonObject &) override;
+    void writeToJson(QJsonObject &) const override;
 
 private:
     class Impl;

@@ -15,6 +15,7 @@ class Entity : public QObject
 
 public:
     Entity(Entity *parent = nullptr);
+    ~Entity();
 
     Entity *parent() const;
     void setParent(Entity *parent);
@@ -55,6 +56,7 @@ public:
     QString name() const;
     void setName(const QString &);
     TransformComponent *transform() const{return m_transform;}
+    void destroy();
 
     QVector<Entity*> &children(){return m_children;}
     void addChild(Entity *);

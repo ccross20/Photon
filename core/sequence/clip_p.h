@@ -12,16 +12,21 @@ namespace photon
         void setLayer(ClipLayer *);
         void setSequence(Sequence *);
         void markChanged();
-        void rebuildFalloffCache();
         double falloff(Fixture *);
 
         ClipLayer *layer = nullptr;
         Sequence *sequence = nullptr;
-        FixtureMask *mask = nullptr;
-        QHash<Fixture*, double> cachedFalloffs;
+        QVector<MaskEffect*> maskEffects;
         QVector<FalloffEffect*> falloffEffects;
         QVector<Channel*> channels;
-        Routine *routine;
+        QByteArray type;
+        QByteArray uniqueId;
+        QEasingCurve easeInCurve;
+        QEasingCurve easeOutCurve;
+        double easeInDuration = 0;
+        double easeOutDuration = 0;
+        double strength = 1.0;
+        double defaultFalloff = 0;
         double startTime = 0;
         double duration = 0;
         Clip *facade;

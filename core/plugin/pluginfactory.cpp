@@ -22,6 +22,7 @@
 #include "routine/node/globalsnode.h"
 #include "routine/node/numberinputnode.h"
 #include "routine/node/colorinputnode.h"
+#include "routine/node/fixtureinfonode.h"
 #include "graph/node/math/trigonometrynode.h"
 #include "graph/node/math/arithmeticnode.h"
 
@@ -36,6 +37,8 @@
 #include "graph/parameter/dmxmatrixparameter.h"
 #include "graph/parameter/colorparameter.h"
 #include "graph/parameter/canvasparameter.h"
+#include "graph/parameter/fixtureparameter.h"
+#include "graph/parameter/vector3dparameter.h"
 
 namespace photon {
 
@@ -64,6 +67,7 @@ public:
     QVector<IPlugin*> plugins;
     QHash<QByteArray, EffectInformation> effects;
     QHash<QByteArray, FalloffEffectInformation> falloffEffects;
+    QHash<QByteArray, MaskEffectInformation> maskEffects;
     QHash<PanelId, std::function<Panel*()>> panels;
     keira::NodeLibrary nodeLibrary;
 
@@ -149,6 +153,7 @@ void PluginFactory::init()
     registerNode(SequenceNode::info());
     registerNode(NumberInputNode::info());
     registerNode(ColorInputNode::info());
+    registerNode(FixtureInfoNode::info());
 
     registerFalloffEffect(ConstantFalloffEffect::info());
 
@@ -162,6 +167,8 @@ void PluginFactory::init()
     m_impl->nodeLibrary.registerParameter(DMXMatrixParameter::ParameterId,[](){return new DMXMatrixParameter();});
     m_impl->nodeLibrary.registerParameter(ColorParameter::ParameterId,[](){return new ColorParameter();});
     m_impl->nodeLibrary.registerParameter(CanvasParameter::ParameterId,[](){return new CanvasParameter();});
+    m_impl->nodeLibrary.registerParameter(FixtureParameter::ParameterId,[](){return new FixtureParameter();});
+    m_impl->nodeLibrary.registerParameter(Vector3DParameter::ParameterId,[](){return new Vector3DParameter();});
 
     //qDebug() << "Node Count:" << m_impl->nodeHash.size();
 }
@@ -264,6 +271,29 @@ QVector<FalloffEffectInformation> PluginFactory::falloffEffects() const
 FalloffEffect *PluginFactory::createFalloffEffect(const QByteArray &effectId) const
 {
     auto info = m_impl->falloffEffects[effectId];
+    if(info.effectId == effectId)
+    {
+        auto effect = info.callback();
+        effect->setName(info.name);
+        effect->setId(info.effectId);
+        return effect;
+    }
+    return nullptr;
+}
+
+void PluginFactory::registerMaskEffect(const MaskEffectInformation &info)
+{
+    m_impl->maskEffects.insert(info.effectId, info);
+}
+
+QVector<MaskEffectInformation> PluginFactory::maskEffects() const
+{
+    return m_impl->maskEffects.values();
+}
+
+MaskEffect *PluginFactory::createMaskEffect(const QByteArray &effectId) const
+{
+    auto info = m_impl->maskEffects[effectId];
     if(info.effectId == effectId)
     {
         auto effect = info.callback();
