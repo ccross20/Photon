@@ -21,11 +21,11 @@ struct MaskEffectInformation
     CategoryList categories;
 };
 
-class MaskEffect
+class PHOTONCORE_EXPORT MaskEffect
 {
 public:
     MaskEffect(const QByteArray &id = QByteArray{});
-    ~MaskEffect();
+    virtual ~MaskEffect();
 
     QByteArray id() const;
     QByteArray uniqueId() const;
@@ -35,7 +35,7 @@ public:
     Clip *clip() const;
 
     int index() const;
-    virtual const QVector<Fixture*> &process(const QVector<Fixture*> fixtures) const;
+    virtual QVector<Fixture*> process(const QVector<Fixture*> fixtures) const;
     virtual QWidget *createEditor() {return new QWidget();}
     void updated();
 

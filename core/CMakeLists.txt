@@ -153,6 +153,9 @@ set(PROJECT_SOURCES
         gui/panel/sequencecollectionpanel.cpp
         gui/panel/sequencepanel.h
         gui/panel/sequencepanel.cpp
+        gui/sceneobjectselector.h
+        gui/sceneobjectselector_p.h
+        gui/sceneobjectselector.cpp
         gui/vector3edit.h
         gui/vector3edit.cpp
         gui/waveformwidget.h

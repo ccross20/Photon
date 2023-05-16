@@ -2,23 +2,25 @@
 #define PHOTON_SCENEMODEL_H
 
 #include <QAbstractItemModel>
+#include "photon-global.h"
 
 namespace photon {
 
 class SceneObject;
 
-class SceneModel : public QAbstractItemModel
+class PHOTONCORE_EXPORT SceneModel : public QAbstractItemModel
 {
     Q_OBJECT
 public:
     explicit SceneModel(SceneObject *root, QObject *parent = nullptr);
-    ~SceneModel() override;
+    virtual ~SceneModel() override;
 
+    SceneObject *rootObject() const;
     QModelIndex indexForObject(SceneObject *object);
     SceneObject *objectForIndex(const QModelIndex &index) const;
 
-    QVariant data(const QModelIndex &index, int role) const override;
-    QVariant headerData(int section, Qt::Orientation orientation,
+    virtual QVariant data(const QModelIndex &index, int role) const override;
+    virtual QVariant headerData(int section, Qt::Orientation orientation,
                         int role = Qt::DisplayRole) const override;
 
     QModelIndex index(int row, int column,
@@ -26,10 +28,10 @@ public:
     QModelIndex parent(const QModelIndex &index) const override;
 
     int rowCount(const QModelIndex &parent = QModelIndex()) const override;
-    int columnCount(const QModelIndex &parent = QModelIndex()) const override;
+    virtual int columnCount(const QModelIndex &parent = QModelIndex()) const override;
 
     Qt::ItemFlags flags(const QModelIndex &index) const override;
-    bool setData(const QModelIndex &index, const QVariant &value,
+    virtual bool setData(const QModelIndex &index, const QVariant &value,
                  int role = Qt::EditRole) override;
 
     bool objectIsExpanded(SceneObject *);

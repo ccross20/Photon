@@ -7,5 +7,7 @@
         <file>resources/shader/example.frag</file>
         <file>resources/shader/example.vert</file>
         <file>resources/styles.css</file>
+        <file>resources/icons/green-check.png</file>
+        <file>resources/icons/white-check.png</file>
     </qresource>
 </RCC>

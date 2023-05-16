@@ -204,6 +204,11 @@ void ClipStructureViewer::selectionChanged(const QItemSelection &selected, const
         m_states.insert(m_clip->uniqueId(),dynamic_cast<StateData*>(itemData)->state()->uniqueId());
         emit selectState(dynamic_cast<StateData*>(itemData)->state());
     }
+    else if(dynamic_cast<MaskEffectData*>(itemData))
+    {
+        m_states.insert(m_clip->uniqueId(),dynamic_cast<MaskEffectData*>(itemData)->effect()->uniqueId());
+        emit selectMask(dynamic_cast<MaskEffectData*>(itemData)->effect());
+    }
     else
     {
         m_states.remove(m_clip->uniqueId());

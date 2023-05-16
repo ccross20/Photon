@@ -35,6 +35,7 @@ public:
 signals:
     void selectEffect(photon::ChannelEffect *);
     void selectFalloff(photon::FalloffEffect *);
+    void selectMask(photon::MaskEffect *);
     void selectState(photon::State *);
     void clearSelection();
 

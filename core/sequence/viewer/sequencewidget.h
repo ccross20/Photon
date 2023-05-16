@@ -37,6 +37,7 @@ private slots:
     void xOffsetChanged(int);
     void positionChanged(qint64);
     void selectEffect(photon::ChannelEffect *);
+    void selectMask(photon::MaskEffect *);
     void selectFalloff(photon::FalloffEffect *);
     void selectState(photon::State *);
     void clearEditor();

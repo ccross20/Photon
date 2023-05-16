@@ -19,6 +19,10 @@ set(SOURCES
     generator/sawtootheffect.cpp
     generator/sineeffect.h
     generator/sineeffect.cpp
+    mask/randommaskeffect.h
+    mask/randommaskeffect.cpp
+    mask/treemaskeffect.h
+    mask/treemaskeffect.cpp
     modifier/easeeffect.h
     modifier/easeeffect.cpp
     modifier/smootheffect.h

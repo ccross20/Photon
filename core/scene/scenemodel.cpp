@@ -188,6 +188,11 @@ bool SceneModel::dropMimeData(const QMimeData *mimeData, Qt::DropAction action, 
     return true;
 }
 
+SceneObject *SceneModel::rootObject() const
+{
+    return m_impl->rootObject;
+}
+
 Qt::DropActions SceneModel::supportedDropActions() const
 {
     return Qt::MoveAction | Qt::CopyAction | Qt::LinkAction;

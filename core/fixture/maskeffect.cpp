@@ -62,7 +62,7 @@ MaskEffect *MaskEffect::previousEffect() const
     return m_impl->previousEffect;
 }
 
-const QVector<Fixture*> &MaskEffect::process(const QVector<Fixture*> fixtures) const
+QVector<Fixture*> MaskEffect::process(const QVector<Fixture*> fixtures) const
 {
     return m_impl->fixtures;
 }

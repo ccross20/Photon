@@ -452,6 +452,28 @@ void Clip::readFromJson(const QJsonObject &t_json, const LoadContext &t_context)
         }
     }
 
+    if(t_json.contains("maskEffects"))
+    {
+        auto effectArray = t_json.value("maskEffects").toArray();
+
+        for(auto item : effectArray)
+        {
+            auto effectObj = item.toObject();
+            auto id = effectObj.value("id").toString();
+
+            auto effect = photonApp->plugins()->createMaskEffect(id.toLatin1());
+
+            if(effect){
+                effect->readFromJson(effectObj);
+                if(!m_impl->maskEffects.isEmpty())
+                    effect->m_impl->previousEffect = m_impl->maskEffects.back();
+                m_impl->maskEffects.append(effect);
+
+                effect->m_impl->clip = this;
+            }
+        }
+    }
+
     for(auto channel : m_impl->channels)
         delete channel;
 
@@ -490,6 +512,17 @@ void Clip::writeToJson(QJsonObject &t_json) const
         falloffArray.append(effectObj);
     }
     t_json.insert("falloffEffects", falloffArray);
+
+
+    QJsonArray maskArray;
+    for(auto effect : m_impl->maskEffects)
+    {
+        QJsonObject effectObj;
+        effectObj.insert("id", QString(effect->id()));
+        effect->writeToJson(effectObj);
+        maskArray.append(effectObj);
+    }
+    t_json.insert("maskEffects", maskArray);
 
     QJsonArray array;
     for(auto channel : m_impl->channels)

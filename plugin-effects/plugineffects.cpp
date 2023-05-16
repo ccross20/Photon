@@ -7,6 +7,8 @@
 #include "time/loopeffect.h"
 #include "modifier/smootheffect.h"
 #include "modifier/easeeffect.h"
+#include "mask/treemaskeffect.h"
+#include "mask/randommaskeffect.h"
 
 //inline void initPluginResource() { Q_INIT_RESOURCE(resources); }
 
@@ -24,6 +26,9 @@ bool PluginEffects::initialize(const PluginContext &context)
     photonApp->plugins()->registerChannelEffect(LoopEffect::info());
     photonApp->plugins()->registerChannelEffect(SmoothEffect::info());
     photonApp->plugins()->registerChannelEffect(EaseEffect::info());
+
+    photonApp->plugins()->registerMaskEffect(TreeMaskEffect::info());
+    photonApp->plugins()->registerMaskEffect(RandomMaskEffect::info());
 
     return true;
 }
