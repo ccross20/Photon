@@ -10,6 +10,8 @@
 #include "canvas/canvasreader.h"
 #include "canvas/canvaswriter.h"
 #include "canvas/drawrectangle.h"
+#include "math/circlenode.h"
+#include "math/noisenode.h"
 
 //inline void initPluginResource() { Q_INIT_RESOURCE(resources); }
 
@@ -31,6 +33,8 @@ bool PluginNodes::initialize(const PluginContext &context)
     photonApp->plugins()->registerNode(CanvasWriter::info());
     photonApp->plugins()->registerNode(DrawRectangle::info());
     photonApp->plugins()->registerNode(LookAtTarget::info());
+    photonApp->plugins()->registerNode(CircleNode::info());
+    photonApp->plugins()->registerNode(NoiseNode::info());
 
     return true;
 }

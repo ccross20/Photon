@@ -47,6 +47,7 @@ public:
 
     QByteArray uniqueId() const;
     ChannelInfo info() const;
+    ChannelInfo::ChannelType type() const;
     void updateInfo(const ChannelInfo &);
     void addEffect(ChannelEffect *);
     void removeEffect(ChannelEffect *);

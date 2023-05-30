@@ -52,7 +52,7 @@ void SetFixtureTilt::evaluate(keira::EvaluationContext *t_context) const
         int index = m_capabilityParam->value().toInt();
         if(index < pans.length())
         {
-            if(m_capabilityParam->value().toInt() == 0)
+            if(m_modeParam->value().toInt() == 0)
                 static_cast<AngleCapability*>(pans[index])->setAnglePercent(m_angleParam->value().toDouble(), context->dmxMatrix, m_blendParam->value().toDouble());
             else
                 static_cast<AngleCapability*>(pans[index])->setAngleDegreesCentered(m_angleParam->value().toDouble(), context->dmxMatrix, m_blendParam->value().toDouble());

@@ -10,6 +10,7 @@ class PHOTONCORE_EXPORT TrigonometryNode : public keira::Node
 {
 public:
     const static QByteArray InputA;
+    const static QByteArray Mode;
     const static QByteArray Output;
 
     TrigonometryNode();

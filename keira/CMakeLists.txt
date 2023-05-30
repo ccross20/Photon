@@ -22,6 +22,8 @@ set(PROJECT_SOURCES
         model/parameter/decimalparameter.cpp
         model/parameter/integerparameter.h
         model/parameter/integerparameter.cpp
+        model/parameter/optionparameter.h
+        model/parameter/optionparameter.cpp
         model/parameter/parameter.h
         model/parameter/parameter_p.h
         model/parameter/parameter.cpp

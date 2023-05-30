@@ -27,6 +27,7 @@ public:
 
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) override;
 
+    QWidget *widget() const{return m_widget;}
     void addedToScene(QGraphicsScene *);
     bool isCustomLayout() const{return m_customLayout;}
 
@@ -90,8 +91,12 @@ protected:
 
 private:
     void rebuildPaths();
+    void rebuildColors();
+    void drawBackgroundColor(QPainter *painter, const QRectF &rect);
+    void drawBackgroundNumber(QPainter *painter, const QRectF &rect);
 
     QHash<QByteArray, EffectViewerState> m_states;
+    QVector<QRgb> m_colors;
     QPainterPath m_path;
     QPainterPath m_channelPath;
     QRectF m_sceneBounds;
@@ -105,6 +110,7 @@ private:
     double m_yOffset = 200;
     double m_startXPos;
     bool m_pathsDirty = true;
+    bool m_colorsDirty = true;
 };
 
 

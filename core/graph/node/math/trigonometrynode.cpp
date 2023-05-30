@@ -1,15 +1,18 @@
 #include "trigonometrynode.h"
 #include "model/parameter/decimalparameter.h"
+#include "model/parameter/optionparameter.h"
 
 namespace photon {
 
 const QByteArray TrigonometryNode::InputA = "inputA";
+const QByteArray TrigonometryNode::Mode = "mode";
 const QByteArray TrigonometryNode::Output = "output";
 
 class TrigonometryNode::Impl
 {
 public:
     keira::DecimalParameter *inputAParam;
+    keira::OptionParameter *modeParam;
     keira::DecimalParameter *outputParam;
 };
 
@@ -37,13 +40,31 @@ void TrigonometryNode::createParameters()
     m_impl->inputAParam = new keira::DecimalParameter(InputA,"Input A", 0.0);
     addParameter(m_impl->inputAParam);
 
+    m_impl->modeParam = new keira::OptionParameter(Mode,"Mode",{"Sine","Cosine","Tangent"}, 0);
+    addParameter(m_impl->modeParam);
+
     m_impl->outputParam = new keira::DecimalParameter(Output,"Output", 0.0, keira::AllowMultipleOutput);
     addParameter(m_impl->outputParam);
 }
 
 void TrigonometryNode::evaluate(keira::EvaluationContext *t_context) const
 {
-    m_impl->outputParam->setValue((std::cos(m_impl->inputAParam->value().toDouble())+1.0)/2.0);
+    switch(m_impl->modeParam->value().toInt())
+    {
+        case 0:
+            m_impl->outputParam->setValue(std::sin(m_impl->inputAParam->value().toDouble()));
+        break;
+        case 1:
+            m_impl->outputParam->setValue(std::cos(m_impl->inputAParam->value().toDouble()));
+        break;
+        case 2:
+            m_impl->outputParam->setValue(std::tan(m_impl->inputAParam->value().toDouble()));
+        break;
+    }
+
+
+
+
 
 }
 

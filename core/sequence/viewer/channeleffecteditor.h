@@ -4,8 +4,9 @@
 #include "photon-global.h"
 #include <QWidget>
 #include <QToolBar>
-
 class QGraphicsItem;
+class QGraphicsScene;
+class QGraphicsView;
 
 namespace photon {
 class ChannelEffect;
@@ -23,9 +24,12 @@ public:
     QPointF offset() const;
 
     QTransform transform() const;
+    QGraphicsScene *scene() const;
+    QGraphicsView *view() const;
 
     void addItem(QGraphicsItem *);
     void addWidget(QWidget *, const QString &name);
+    void removeWidget(QWidget *);
 
 signals:
     void scaleChanged(QPointF);

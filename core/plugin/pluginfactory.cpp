@@ -28,12 +28,14 @@
 
 #include "falloff/constantfalloffeffect.h"
 #include "sequence/constantchanneleffect.h"
+#include "sequence/gradientchanneleffect.h"
 #include "sequence/masterlayerchanneleffect.h"
 
 #include "model/parameter/decimalparameter.h"
 #include "model/parameter/integerparameter.h"
 #include "model/parameter/buttonparameter.h"
 #include "model/parameter/stringparameter.h"
+#include "model/parameter/optionparameter.h"
 #include "graph/parameter/dmxmatrixparameter.h"
 #include "graph/parameter/colorparameter.h"
 #include "graph/parameter/canvasparameter.h"
@@ -158,12 +160,14 @@ void PluginFactory::init()
     registerFalloffEffect(ConstantFalloffEffect::info());
 
     registerChannelEffect(ConstantChannelEffect::info());
+    registerChannelEffect(GradientChannelEffect::info());
     registerChannelEffect(MasterLayerChannelEffect::info());
 
     m_impl->nodeLibrary.registerParameter(keira::DecimalParameter::ParameterId,[](){return new keira::DecimalParameter();});
     m_impl->nodeLibrary.registerParameter(keira::IntegerParameter::ParameterId,[](){return new keira::IntegerParameter();});
     m_impl->nodeLibrary.registerParameter(keira::ButtonParameter::ParameterId,[](){return new keira::ButtonParameter();});
     m_impl->nodeLibrary.registerParameter(keira::StringParameter::ParameterId,[](){return new keira::StringParameter();});
+    m_impl->nodeLibrary.registerParameter(keira::OptionParameter::ParameterId,[](){return new keira::OptionParameter();});
     m_impl->nodeLibrary.registerParameter(DMXMatrixParameter::ParameterId,[](){return new DMXMatrixParameter();});
     m_impl->nodeLibrary.registerParameter(ColorParameter::ParameterId,[](){return new ColorParameter();});
     m_impl->nodeLibrary.registerParameter(CanvasParameter::ParameterId,[](){return new CanvasParameter();});

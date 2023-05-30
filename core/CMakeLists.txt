@@ -218,6 +218,8 @@ set(PROJECT_SOURCES
         sequence/cliplayer.cpp
         sequence/constantchanneleffect.h
         sequence/constantchanneleffect.cpp
+        sequence/gradientchanneleffect.h
+        sequence/gradientchanneleffect.cpp
         sequence/layer.h
         sequence/layer_p.h
         sequence/layer.cpp
@@ -321,8 +323,12 @@ set(PROJECT_SOURCES
         third-party/advanced-docking/FloatingDragPreview.cpp
         third-party/advanced-docking/IconProvider.cpp
         third-party/advanced-docking/linux/FloatingWidgetTitleBar.cpp
+        third-party/fastnoise.h
+        third-party/fastnoise.cpp
         timekeeper.h
         timekeeper.cpp
+        util/noisegenerator.h
+        util/noisegenerator.cpp
         resources.qrc
 )
 

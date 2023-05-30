@@ -1,5 +1,6 @@
 #include "plugineffects.h"
 #include "plugin/pluginfactory.h"
+#include "generator/noiseeffect.h"
 #include "generator/sineeffect.h"
 #include "generator/pulseeffect.h"
 #include "generator/sawtootheffect.h"
@@ -26,6 +27,7 @@ bool PluginEffects::initialize(const PluginContext &context)
     photonApp->plugins()->registerChannelEffect(LoopEffect::info());
     photonApp->plugins()->registerChannelEffect(SmoothEffect::info());
     photonApp->plugins()->registerChannelEffect(EaseEffect::info());
+    photonApp->plugins()->registerChannelEffect(NoiseEffect::info());
 
     photonApp->plugins()->registerMaskEffect(TreeMaskEffect::info());
     photonApp->plugins()->registerMaskEffect(RandomMaskEffect::info());

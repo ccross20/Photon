@@ -36,6 +36,10 @@ set(SOURCES
     fixture/setfixturetilt.cpp
     fixture/setfixturezoom.h
     fixture/setfixturezoom.cpp
+    math/circlenode.h
+    math/circlenode.cpp
+    math/noisenode.h
+    math/noisenode.cpp
 )
 
 add_library(plugin-nodes SHARED ${SOURCES})

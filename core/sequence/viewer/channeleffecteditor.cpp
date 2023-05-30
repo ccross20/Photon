@@ -18,6 +18,7 @@ WidgetContainer::WidgetContainer(QWidget *t_widget, const QString &t_title):QGra
     //setFlag(QGraphicsItem::ItemIsSelectable);
     setFlag(QGraphicsItem::ItemIsMovable);
     m_widget->setStyleSheet("QLabel{color:white;}");
+    setMinimumWidth(m_widget->minimumWidth());
 
     auto stacked = dynamic_cast<StackedParameterWidget*>(t_widget);
     if(stacked)
@@ -83,10 +84,56 @@ EffectEditorViewer::EffectEditorViewer(ChannelEffect *t_effect):QGraphicsView(),
 void EffectEditorViewer::drawBackground(QPainter *painter, const QRectF &rect)
 {
     QGraphicsView::drawBackground(painter, rect);
+
+    if(m_effect->channel()->type()  == ChannelInfo::ChannelTypeColor)
+    {
+        drawBackgroundColor(painter, rect);
+    }
+    else
+    {
+        drawBackgroundNumber(painter, rect);
+    }
+
+}
+
+void EffectEditorViewer::drawBackgroundColor(QPainter *painter, const QRectF &rect)
+{
+    painter->fillRect(rect, QColor(50,50,50));
+    if(m_pathsDirty)
+        rebuildColors();
+
+    m_colorsDirty = false;
+    painter->resetTransform();
+
+    double startTime = m_effect->channel()->startTime();
+    double endTime = m_effect->channel()->endTime();
+
+    double startX = m_transform.map(QPointF(std::max(startTime, m_sceneBounds.left()),0.0)).x();
+    double endX = m_transform.map(QPointF(std::min(endTime, m_sceneBounds.right()),0.0)).x();
+    auto invTrans = m_transform.inverted();
+
+    for(int x = startX; x < endX; ++x)
+    {
+        auto c = m_effect->processColor(Qt::red, invTrans.map(QPointF(x,0)).x() - startTime).rgba();
+        painter->fillRect(x,0,1,50, c);
+    }
+    /*
+
+    int x = 0;
+    for(auto it = m_colors.cbegin(); it != m_colors.cend(); ++it)
+    {
+        painter->fillRect(x++,0,1,50, *it);
+        if(x > m_xScale)
+            return;
+    }
+    */
+}
+
+void EffectEditorViewer::drawBackgroundNumber(QPainter *painter, const QRectF &rect)
+{
     painter->fillRect(rect, QColor(50,50,50));
     if(m_pathsDirty)
         rebuildPaths();
-
 
     painter->setPen(QPen(QColor(80,80,80), 0));
 
@@ -189,6 +236,7 @@ void EffectEditorViewer::remakeTransform()
     m_sceneBounds = m_transform.inverted().mapRect(rect().toRectF());
 
     m_pathsDirty = true;
+    m_colorsDirty = true;
     scene()->invalidate();
     emit relayout();
 }
@@ -300,7 +348,41 @@ void EffectEditorViewer::wheelEvent(QWheelEvent *event)
     }
 }
 
+void EffectEditorViewer::rebuildColors()
+{
+    m_colors.clear();
 
+    if(m_effect)
+    {
+        QColor initialValue = m_effect->channel()->info().defaultValue.value<QColor>();
+
+        double startTime = m_effect->channel()->startTime();
+        double endTime = m_effect->channel()->endTime();
+
+        if(startTime > m_sceneBounds.right() || endTime < m_sceneBounds.left() + (1 / m_xScale))
+            return;
+
+        double left = std::max(m_sceneBounds.left(), startTime);
+        double right = std::min(m_sceneBounds.right(), m_effect->channel()->endTime());
+
+        double interval = (right - left)/width();
+
+
+        m_colors << m_effect->processColor(initialValue, left - startTime).rgba();
+
+        //qDebug() << left << right << (right - left) / interval;
+
+        double d = left;
+        while( d < right )
+        {
+            d += interval;
+            m_colors << m_effect->processColor(initialValue, d - startTime).rgba();
+        }
+
+
+
+    }
+}
 
 void EffectEditorViewer::rebuildPaths()
 {
@@ -429,6 +511,19 @@ void ChannelEffectEditor::addWidget(QWidget *t_widget, const QString &t_name)
     container->setPos(QPointF(width() -(r.width() + 10), 10));
 }
 
+void ChannelEffectEditor::removeWidget(QWidget *t_widget)
+{
+    for(auto container : m_impl->containers)
+    {
+        if(container->widget() == t_widget)
+        {
+            m_impl->containers.removeOne(container);
+            delete container;
+            return;
+        }
+    }
+}
+
 QTransform ChannelEffectEditor::transform() const
 {
     return m_impl->viewer->transform();
@@ -452,6 +547,16 @@ ChannelEffect *ChannelEffectEditor::effect() const
 QToolBar *ChannelEffectEditor::toolbar() const
 {
     return m_impl->toolbar;
+}
+
+QGraphicsScene *ChannelEffectEditor::scene() const
+{
+    return m_impl->scene;
+}
+
+QGraphicsView *ChannelEffectEditor::view() const
+{
+    return m_impl->viewer;
 }
 
 void ChannelEffectEditor::effectUpdated(photon::ChannelEffect *t_effect)

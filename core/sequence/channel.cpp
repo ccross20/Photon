@@ -7,6 +7,7 @@
 #include "photoncore.h"
 #include "plugin/pluginfactory.h"
 #include "sequence/constantchanneleffect.h"
+#include "sequence/gradientchanneleffect.h"
 
 namespace photon {
 
@@ -64,7 +65,10 @@ Channel::Channel(const ChannelInfo &t_info, double t_startTime, double t_duratio
     m_impl->duration = t_duration;
     m_impl->uniqueId = t_info.uniqueId;
 
-    m_impl->effects.append(photonApp->plugins()->createChannelEffect(ConstantChannelEffect::info().effectId)); 
+    if(t_info.type == ChannelInfo::ChannelTypeColor)
+        m_impl->effects.append(photonApp->plugins()->createChannelEffect(GradientChannelEffect::info().effectId));
+    else
+        m_impl->effects.append(photonApp->plugins()->createChannelEffect(ConstantChannelEffect::info().effectId));
     m_impl->effects.back()->m_impl->channel = this;
 }
 
@@ -139,6 +143,11 @@ QByteArray Channel::uniqueId() const
 ChannelInfo Channel::info() const
 {
     return m_impl->info;
+}
+
+ChannelInfo::ChannelType Channel::type() const
+{
+    return m_impl->info.type;
 }
 
 void Channel::addEffect(ChannelEffect *t_effect)

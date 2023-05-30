@@ -13,6 +13,8 @@ find_package(QT NAMES Qt6 REQUIRED COMPONENTS Core Widgets)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Widgets)
 
 set(SOURCES
+    generator/noiseeffect.h
+    generator/noiseeffect.cpp
     generator/pulseeffect.h
     generator/pulseeffect.cpp
     generator/sawtootheffect.h
