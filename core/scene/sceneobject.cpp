@@ -39,7 +39,11 @@ void SceneObject::Impl::addChild(SceneObject *object, int index)
         children[i]->m_impl->index = i;
     object->setParent(facade);
 
+
+    connect(object, &SceneObject::descendantAdded, facade, &SceneObject::descendantAdded);
+    connect(object, &SceneObject::descendantRemoved, facade, &SceneObject::descendantRemoved);
     emit facade->childWasAdded(object);
+    emit facade->descendantAdded(object);
 }
 
 void SceneObject::Impl::moveChild(SceneObject *object, int index)
@@ -85,7 +89,11 @@ void SceneObject::Impl::removeChild(SceneObject *object)
     children.removeOne(object);
     for(int i = object->index(); i >= 0 && i < children.length(); ++i)
         children[i]->m_impl->index = i;
+
+    disconnect(object, &SceneObject::descendantAdded, facade, &SceneObject::descendantAdded);
+    disconnect(object, &SceneObject::descendantRemoved, facade, &SceneObject::descendantRemoved);
     emit facade->childWasRemoved(object);
+    emit facade->descendantRemoved(object);
 }
 
 void SceneObject::Impl::reindexChildren()

@@ -1,5 +1,6 @@
 #include "globalsnode.h"
 #include "model/parameter/decimalparameter.h"
+#include "model/parameter/integerparameter.h"
 #include "graph/parameter/fixtureparameter.h"
 #include "routine/routineevaluationcontext.h"
 #include "fixture/fixture.h"
@@ -11,6 +12,8 @@ const QByteArray GlobalsNode::GlobalTime = "globalTime";
 const QByteArray GlobalsNode::DelayTime = "delayTime";
 const QByteArray GlobalsNode::Strength = "strength";
 const QByteArray GlobalsNode::Fixture = "fixture";
+const QByteArray GlobalsNode::Index = "index";
+
 
 class GlobalsNode::Impl
 {
@@ -19,6 +22,7 @@ public:
     keira::DecimalParameter *globalParam;
     keira::DecimalParameter *delayParam;
     keira::DecimalParameter *strengthParam;
+    keira::IntegerParameter *indexParam;
     FixtureParameter *fixtureParam;
 };
 
@@ -54,6 +58,8 @@ void GlobalsNode::createParameters()
     addParameter(m_impl->strengthParam);
     m_impl->fixtureParam = new FixtureParameter(Fixture,"Fixture", "", keira::AllowMultipleOutput);
     addParameter(m_impl->fixtureParam);
+    m_impl->indexParam = new keira::IntegerParameter(Index,"Index", 0, keira::AllowMultipleOutput);
+    addParameter(m_impl->indexParam);
 }
 
 void GlobalsNode::evaluate(keira::EvaluationContext *t_context) const
@@ -65,7 +71,10 @@ void GlobalsNode::evaluate(keira::EvaluationContext *t_context) const
     m_impl->strengthParam->setValue(context->strength);
 
     if(context->fixture)
+    {
         m_impl->fixtureParam->setValue(context->fixture->uniqueId());
+        m_impl->indexParam->setValue(context->fixture->uniqueIndex());
+    }
 
     //qDebug() << context->strength << context->relativeTime;
 }

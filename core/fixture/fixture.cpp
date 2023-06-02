@@ -24,6 +24,7 @@ public:
     int dmxSize = 0;
     int universe = 1;
     int selectedMode = -1;
+    int uniqueIndex = 0;
 };
 
 const QByteArray Fixture::FixtureMime = "application/x-photonfixture";
@@ -138,6 +139,16 @@ int Fixture::dmxSize() const
 int Fixture::universe() const
 {
     return m_impl->universe;
+}
+
+int Fixture::uniqueIndex() const
+{
+    return m_impl->uniqueIndex;
+}
+
+void Fixture::setUniqueIndex(int t_value)
+{
+    m_impl->uniqueIndex = t_value;
 }
 
 void Fixture::setUniverse(int t_universe)
@@ -404,6 +415,7 @@ void Fixture::readFromJson(const QJsonObject &json)
     m_impl->comments = json.value("comments").toString();
     m_impl->identifier = json.value("identifier").toString();
     m_impl->definitionPath = json.value("definitionPath").toString();
+    m_impl->uniqueIndex = json.value("uniqueIndex").toInt(0);
     loadFixtureDefinition(m_impl->definitionPath);
     setMode(json.value("selectedMode").toInt(-1));
 
@@ -422,6 +434,8 @@ void Fixture::writeToJson(QJsonObject &json) const
     json.insert("identifier", m_impl->identifier);
     json.insert("selectedMode", m_impl->selectedMode);
     json.insert("definitionPath", m_impl->definitionPath);
+    json.insert("uniqueIndex", m_impl->uniqueIndex);
+
 
 }
 

@@ -88,6 +88,8 @@ public:
     int dmxOffset() const;
     int dmxSize() const;
     int universe() const;
+    int uniqueIndex() const;
+    void setUniqueIndex(int);
     void setUniverse(int universe);
 
     const QVector<FixtureChannel*> &channels() const;

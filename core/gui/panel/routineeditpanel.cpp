@@ -35,6 +35,7 @@ RoutineEditPanel::RoutineEditPanel() : Panel("photon.routine"),m_impl(new Impl)
 
 RoutineEditPanel::~RoutineEditPanel()
 {
+    delete m_impl->scene;
     delete m_impl;
 }
 

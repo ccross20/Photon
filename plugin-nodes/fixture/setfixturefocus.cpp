@@ -47,7 +47,7 @@ void SetFixtureFocus::evaluate(keira::EvaluationContext *t_context) const
         int index = m_capabilityParam->value().toInt();
         if(index < pans.length())
         {
-            static_cast<AngleCapability*>(pans[index])->setAnglePercent(m_angleParam->value().toDouble() * m_blendParam->value().toDouble(), context->dmxMatrix);
+            static_cast<AngleCapability*>(pans[index])->setAnglePercent(m_angleParam->value().toDouble() * m_blendParam->value().toDouble(), context->dmxMatrix, context->strength);
         }
     }
 

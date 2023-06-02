@@ -1,6 +1,7 @@
 #include "scenemanager.h"
 #include "sceneobject.h"
 #include "sceneiterator.h"
+#include "fixture/fixture.h"
 
 namespace photon {
 
@@ -8,11 +9,15 @@ class SceneManager::Impl
 {
 public:
     SceneObject *root;
+    int nextFixtureIndex = 0;
 };
 
 SceneManager::SceneManager():m_impl(new Impl)
 {
     m_impl->root = new SceneObject("root");
+
+    connect(m_impl->root, &SceneObject::descendantAdded, this, &SceneManager::descendantAdded);
+    connect(m_impl->root, &SceneObject::descendantRemoved, this, &SceneManager::descendantRemoved);
 }
 
 SceneManager::~SceneManager()
@@ -30,6 +35,20 @@ SceneObject *SceneManager::rootObject() const
     return m_impl->root;
 }
 
+void SceneManager::descendantAdded(photon::SceneObject *t_object)
+{
+    auto fixture = dynamic_cast<Fixture*>(t_object);
+    if(fixture)
+    {
+        fixture->setUniqueIndex(m_impl->nextFixtureIndex++);
+        qDebug() << "Fixture added";
+    }
+}
+
+void SceneManager::descendantRemoved(photon::SceneObject *t_object)
+{
+
+}
 
 void SceneManager::readFromJson(const QJsonObject &json)
 {
@@ -37,6 +56,8 @@ void SceneManager::readFromJson(const QJsonObject &json)
     {
         m_impl->root->readFromJson(json.value("root").toObject());
     }
+
+    m_impl->nextFixtureIndex = json.value("nextFixtureIndex").toInt();
 
 }
 
@@ -47,6 +68,7 @@ void SceneManager::writeToJson(QJsonObject &json) const
     QJsonObject rootObj;
     m_impl->root->writeToJson(rootObj);
     json.insert("root", rootObj);
+    json.insert("nextFixtureIndex", m_impl->nextFixtureIndex);
 }
 
 } // namespace photon

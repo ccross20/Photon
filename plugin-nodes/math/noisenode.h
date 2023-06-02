@@ -22,11 +22,12 @@ public:
     static keira::NodeInformation info();
 
 private:
-    keira::DecimalParameter *strengthParam;
     keira::DecimalParameter *scaleParam;
     keira::DecimalParameter *inputParam;
     keira::IntegerParameter *seedParam;
     keira::OptionParameter *noiseModeParam;
+    keira::DecimalParameter *minParam;
+    keira::DecimalParameter *maxParam;
     keira::DecimalParameter *outputParam;
     NoiseGenerator *m_noise;
 };

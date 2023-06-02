@@ -32,14 +32,17 @@ void NoiseNode::createParameters()
     scaleParam = new keira::DecimalParameter("scale","Scale", 10.0);
     addParameter(scaleParam);
 
-    strengthParam = new keira::DecimalParameter("strength","Amount", 0.0);
-    addParameter(strengthParam);
-
     seedParam = new keira::IntegerParameter("seed","Seed", 0.0);
     addParameter(seedParam);
 
     noiseModeParam = new keira::OptionParameter("mode","Mode",{"Value","Value Fractal","Perlin","Perlin Fractal","Simplex","Simplex Fractal","Cellular","White Noise","Cubic","Cubic Fractal"},0);
     addParameter(noiseModeParam);
+
+    minParam = new keira::DecimalParameter("min","Minimum", 0.0);
+    addParameter(minParam);
+
+    maxParam = new keira::DecimalParameter("max","Maximum", 1.0);
+    addParameter(maxParam);
 
     outputParam = new keira::DecimalParameter("output","Output", 0.0, keira::AllowMultipleOutput);
     addParameter(outputParam);
@@ -48,9 +51,13 @@ void NoiseNode::createParameters()
 void NoiseNode::evaluate(keira::EvaluationContext *t_context) const
 {
     m_noise->setSeed(seedParam->value().toInt());
+
+    m_noise->setMin(minParam->value().toInt());
+    m_noise->setMax(maxParam->value().toInt());
+
     m_noise->setNoiseType(static_cast<NoiseGenerator::NoiseType>(noiseModeParam->value().toInt()));
 
-    outputParam->setValue(m_noise->noise1D(inputParam->value().toDouble() * scaleParam->value().toDouble(),0,strengthParam->value().toDouble()));
+    outputParam->setValue(m_noise->noise1D(inputParam->value().toDouble() * scaleParam->value().toDouble(),0,1.0));
 }
 
 } // namespace photon

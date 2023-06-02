@@ -5,7 +5,7 @@
 
 namespace photon {
 
-class SceneManager
+class SceneManager : public QObject
 {
 public:
     SceneManager();
@@ -16,6 +16,10 @@ public:
 
     void readFromJson(const QJsonObject &json);
     void writeToJson(QJsonObject &json) const;
+
+private slots:
+    void descendantAdded(photon::SceneObject *);
+    void descendantRemoved(photon::SceneObject *);
 
 private:
     class Impl;

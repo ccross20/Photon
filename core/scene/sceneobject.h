@@ -60,6 +60,8 @@ signals:
     void childWasRemoved(photon::SceneObject *child);
     void childWillBeMoved(photon::SceneObject *child, int newIndex);
     void childWasMoved(photon::SceneObject *child);
+    void descendantAdded(photon::SceneObject *);
+    void descendantRemoved(photon::SceneObject *);
 
 
 private:
