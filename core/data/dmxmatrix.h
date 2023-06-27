@@ -1,6 +1,5 @@
 #ifndef PHOTON_DMXMATRIX_H
 #define PHOTON_DMXMATRIX_H
-#include "photon-global.h"
 #include "fixture/fixturechannel.h"
 
 namespace photon {

@@ -11,7 +11,7 @@
 #include "state/state.h"
 #include "state/statecapability.h"
 #include "gui/guimanager.h"
-#include "sequence/stateclip.h"
+#include "sequence/fixtureclip.h"
 #include "gui/color/colorwheelswatch.h"
 
 namespace photon {
@@ -23,7 +23,7 @@ StateEditor::StateEditor(QWidget *parent)
     setLayout(m_layout);
 }
 
-void StateEditor::setClip(photon::StateClip* t_clip)
+void StateEditor::setClip(photon::FixtureClip* t_clip)
 {
     m_clip = t_clip;
     selectState(m_clip->state());
@@ -76,6 +76,17 @@ void StateEditor::selectState(State *t_state)
                 spin->setMinimum(-2000.0);
                 spin->setMaximum(2000.0);
                 connect(spin, &QDoubleSpinBox::valueChanged, this, [stateCapability, index](double value){
+                    stateCapability->setChannelValue(index, value);
+                });
+                gridLayout->addWidget(spin,row,3,Qt::AlignLeft | Qt::AlignTop);
+            }
+            else if(channelInfo.type == ChannelInfo::ChannelTypeInteger)
+            {
+                QSpinBox *spin = new QSpinBox;
+                spin->setValue(stateCapability->getChannelValue(index).toDouble());
+                spin->setMinimum(0);
+                spin->setMaximum(99);
+                connect(spin, &QSpinBox::valueChanged, this, [stateCapability, index](int value){
                     stateCapability->setChannelValue(index, value);
                 });
                 gridLayout->addWidget(spin,row,3,Qt::AlignLeft | Qt::AlignTop);
@@ -159,6 +170,7 @@ void StateEditor::openAddMenu()
     menu.addAction("Zoom",[state](){state->addCapability(Capability_Zoom);});
     menu.addAction("Pan",[state](){state->addCapability(Capability_Pan);});
     menu.addAction("Color",[state](){state->addCapability(Capability_Color);});
+    menu.addAction("Color Wheel",[state](){state->addCapability(Capability_WheelSlot);});
 
     menu.exec(m_addButton->mapToGlobal(QPoint(0,0)));
 }

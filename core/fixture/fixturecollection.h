@@ -14,7 +14,8 @@ public:
     ~FixtureCollection();
 
     QVector<Fixture*> fixturesWithName(const QString &);
-    Fixture* fixtureById(const QByteArray &);
+    static Fixture* fixtureById(const QByteArray &);
+    static Fixture* fixtureById(Project *, const QByteArray &);
     Fixture *fixtureWithId(const QByteArray &) const;
 
     const QVector<Fixture*> fixtures() const;

@@ -10,6 +10,7 @@ keira::NodeInformation SetFixtureTilt::info()
     keira::NodeInformation toReturn([](){return new SetFixtureTilt;});
     toReturn.name = "Set Fixture Tilt";
     toReturn.nodeId = "photon.plugin.node.set-fixture-tilt";
+    toReturn.categories = {"Fixture"};
 
     return toReturn;
 }

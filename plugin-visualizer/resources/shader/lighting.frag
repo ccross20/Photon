@@ -36,6 +36,10 @@ struct SpotLight {
     float constant;         // 4
     float linear;           // 4
     float quadratic;        // 4
+    float cookieIndex;         // 4
+    int dummy1;
+    int dummy2;
+    int dummy3;
 
     vec3 diffuse;           // 16
     mat4 lightMatrix;       // = 64
@@ -169,7 +173,11 @@ vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir)
     vec3 lightPos = vec3(light.lightMatrix * vec4(fragPos, 1.0));
     // combine results
 
-    vec3 diffuse = (light.diffuse * texture(cookieTex, (lightPos.xy/(distance*4.0) ) + vec2(0.5, 0.5)).r) * material.diffuse;
+    vec3 diffuse = light.diffuse * material.diffuse;
+
+    if(light.cookieIndex > 0)
+        diffuse = (light.diffuse * texture(cookieTex, (lightPos.xy/(distance*4.0) ) + vec2(0.5, 0.5)).r) * material.diffuse;
+
     //vec3 diffuse = (light.diffuse * texture(cookieTex, (lightPos.xy/(60.f) ) + vec2(0.5, 0.5)).r) * material.diffuse;
 
     //diffuse = light.diffuse * material.diffuse;

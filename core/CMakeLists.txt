@@ -27,6 +27,8 @@ set(PROJECT_SOURCES
         photon-global.h
         parametereditor.h
         parametereditor.cpp
+        canvas/canvaseffect.h
+        canvas/canvaseffect.cpp
         data/dmxmatrix.h
         data/dmxmatrix.cpp
         falloff/constantfalloffeffect.h
@@ -51,6 +53,8 @@ set(PROJECT_SOURCES
         fixture/fixturemask.cpp
         fixture/fixturevirtualchannel.h
         fixture/fixturevirtualchannel.cpp
+        fixture/fixturewheel.h
+        fixture/fixturewheel.cpp
         fixture/maskeffect.h
         fixture/maskeffect_p.h
         fixture/maskeffect.cpp
@@ -76,6 +80,8 @@ set(PROJECT_SOURCES
         fixture/capability/shutterstrobecapability.cpp
         fixture/capability/tiltcapability.h
         fixture/capability/tiltcapability.cpp
+        fixture/capability/wheelslotcapability.h
+        fixture/capability/wheelslotcapability.cpp
         fixture/capability/zoomcapability.h
         fixture/capability/zoomcapability.cpp
         graph/bus/busevaluator.h
@@ -100,6 +106,8 @@ set(PROJECT_SOURCES
         graph/parameter/dmxmatrixparameter.cpp
         graph/parameter/fixtureparameter.h
         graph/parameter/fixtureparameter.cpp
+        graph/parameter/pathparameter.h
+        graph/parameter/pathparameter.cpp
         graph/parameter/vector3dparameter.h
         graph/parameter/vector3dparameter.cpp
         gui/color/colorslider.h
@@ -202,6 +210,8 @@ set(PROJECT_SOURCES
         scene/sceneobject.cpp
         scene/truss.h
         scene/truss.cpp
+        sequence/canvasclip.h
+        sequence/canvasclip.cpp
         sequence/canvaslayergroup.h
         sequence/canvaslayergroup.cpp
         sequence/channel.h
@@ -213,11 +223,16 @@ set(PROJECT_SOURCES
         sequence/clip.h
         sequence/clip_p.h
         sequence/clip.cpp
+        sequence/clipeffect.h
+        sequence/clipeffect_p.h
+        sequence/clipeffect.cpp
         sequence/cliplayer.h
         sequence/cliplayer_p.h
         sequence/cliplayer.cpp
         sequence/constantchanneleffect.h
         sequence/constantchanneleffect.cpp
+        sequence/fixtureclip.h
+        sequence/fixtureclip.cpp
         sequence/gradientchanneleffect.h
         sequence/gradientchanneleffect.cpp
         sequence/layer.h
@@ -284,6 +299,8 @@ set(PROJECT_SOURCES
         settings/settingspage.cpp
         state/colorstate.h
         state/colorstate.cpp
+        state/colorwheelstate.h
+        state/colorwheelstate.cpp
         state/dimmerstate.h
         state/dimmerstate.cpp
         state/focusstate.h
@@ -329,6 +346,8 @@ set(PROJECT_SOURCES
         timekeeper.cpp
         util/noisegenerator.h
         util/noisegenerator.cpp
+        util/utils.h
+        util/utils.cpp
         resources.qrc
 )
 

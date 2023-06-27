@@ -16,6 +16,11 @@ struct DMXRange{
         return t_value >= start && t_value <= end;
     }
 
+    uchar middle() const
+    {
+        return start + ((end - start) / 2);
+    }
+
     uchar fromPercent(double t_value)
     {
         return start + std::round((end - start) * t_value);
@@ -43,7 +48,12 @@ enum CapabilityType{
     Capability_Magenta,
     Capability_Yellow,
     Capability_CTO,
-    Capability_Color
+    Capability_Color,
+    Capability_NoFunction,
+    Capability_WheelSlot,
+    Capability_WheelShake,
+    Capability_WheelSlotRotation,
+    Capability_WheelRotation
 };
 
 enum FixtureUnit{

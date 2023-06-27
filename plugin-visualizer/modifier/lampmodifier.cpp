@@ -2,10 +2,13 @@
 #include "lampmodifier.h"
 #include "component/spotlight.h"
 #include "fixture/fixture.h"
+#include "fixture/fixturewheel.h"
 #include "fixture/capability/anglecapability.h"
 #include "fixture/capability/dimmercapability.h"
 #include "fixture/capability/colorcapability.h"
 #include "fixture/capability/shutterstrobecapability.h"
+#include "fixture/capability/wheelslotcapability.h"
+#include "util/utils.h"
 
 namespace photon {
 
@@ -81,6 +84,7 @@ LampModifier::LampModifier(SceneObjectModel *t_model,  Entity *t_entity) : Model
     auto dimmers = fixture()->findCapability(Capability_Dimmer);
     auto colors = fixture()->findCapability(Capability_Color);
     m_strobes = fixture()->findCapability<ShutterStrobeCapability*>();
+    m_slots = fixture()->findCapability<WheelSlotCapability*>();
 
     if(focuses.length() > 0)
     {
@@ -136,10 +140,14 @@ void LampModifier::updateModel(const DMXMatrix &t_matrix, const double t_elapsed
         m_light->setBrightness(dimmerPercent);
     }
 
+    QColor color = Qt::white;
+    bool setColor = false;
+
     if(m_colorCapability)
     {
-        QColor colorVal = m_colorCapability->getColor(t_matrix);
-        m_light->setColor(colorVal.toRgb());
+        color = m_colorCapability->getColor(t_matrix);
+        m_light->setColor(color.toRgb());
+        setColor = true;
     }
 
     if(!m_strobes.isEmpty())
@@ -155,6 +163,34 @@ void LampModifier::updateModel(const DMXMatrix &t_matrix, const double t_elapsed
             }
         }
     }
+
+
+    if(!m_slots.isEmpty())
+    {
+        for(auto slotCapability : m_slots)
+        {
+            if(slotCapability->isValid(t_matrix))
+            {
+                auto wheelSlot = slotCapability->wheelSlot();
+
+                if(!wheelSlot)
+                    continue;
+
+                switch (wheelSlot->type()) {
+                case FixtureWheelSlot::Slot_Color:
+                    color = static_cast<ColorSlot*>(wheelSlot)->color();
+                    setColor = true;
+                    break;
+                case FixtureWheelSlot::Slot_Open:
+                default:
+                    break;
+                }
+            }
+        }
+    }
+
+    if(setColor)
+        m_light->setColor(color.toRgb());
 
 
 }

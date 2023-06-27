@@ -3,6 +3,8 @@
 #include "routineclip.h"
 #include "stateclip.h"
 #include "sequence.h"
+#include "plugin/pluginfactory.h"
+#include "photoncore.h"
 
 namespace photon {
 
@@ -99,17 +101,15 @@ void ClipLayer::readFromJson(const QJsonObject &t_json, const LoadContext &t_con
     {
         auto clipObj = clipJson.toObject();
         Clip *clip = nullptr;
-        if(clipObj.value("type").toString() == "routine")
+
+        clip = photonApp->plugins()->createClip(clipObj.value("id").toString().toLatin1());
+
+        if(clip)
         {
-            clip = new RoutineClip;
-        }
-        else if(clipObj.value("type").toString() == "state")
-        {
-            clip = new StateClip;
+            m_impl->addClip(clip);
+            clip->readFromJson(clipObj, t_context);
         }
 
-        m_impl->addClip(clip);
-        clip->readFromJson(clipObj, t_context);
     }
 }
 

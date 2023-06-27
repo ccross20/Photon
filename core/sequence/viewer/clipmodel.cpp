@@ -6,7 +6,8 @@
 #include "falloff/falloffeffect.h"
 #include "fixture/maskeffect.h"
 #include "sequence/routineclip.h"
-#include "sequence/stateclip.h"
+#include "sequence/fixtureclip.h"
+#include "sequence/clipeffect.h"
 
 namespace photon {
 
@@ -175,30 +176,30 @@ ClipData::ClipData(Clip *t_clip) : AbstractTreeData(t_clip->name(), t_clip->uniq
 {
     m_maskFolder = new MaskData(m_clip);
     m_falloffData = new FalloffData(m_clip);
+    m_clipEffectData = new ClipEffectFolderData(m_clip);
 
-    auto routineClip = dynamic_cast<RoutineClip*>(t_clip);
-    auto stateClip = dynamic_cast<StateClip*>(t_clip);
 
-    Clip *channelClip = routineClip;
+    auto fixtureClip = dynamic_cast<FixtureClip*>(t_clip);
 
-    if(stateClip)
+
+    if(fixtureClip)
     {
-        addChild(new StateData(stateClip));
-        channelClip = stateClip;
+        addChild(new StateData(fixtureClip));
+        addChild(m_clipEffectData);
     }
 
     addChild(m_maskFolder);
     addChild(m_falloffData);
 
-    if(channelClip)
+    if(t_clip)
     {
         m_channelFolder = new FolderData("Channels", DataChannel, false);
-        connect(channelClip, &Clip::channelAdded, this, &ClipData::channelAdded);
-        connect(channelClip, &Clip::channelRemoved, this, &ClipData::channelRemoved);
+        connect(t_clip, &Clip::channelAdded, this, &ClipData::channelAdded);
+        connect(t_clip, &Clip::channelRemoved, this, &ClipData::channelRemoved);
         addChild(m_channelFolder);
-        for(int i = 0; i < channelClip->channelCount(); ++i)
+        for(int i = 0; i < t_clip->channelCount(); ++i)
         {
-            auto channelData = new ChannelData(channelClip->channelAtIndex(i));
+            auto channelData = new ChannelData(t_clip->channelAtIndex(i));
             m_channelFolder->addChild(channelData);
         }
     }
@@ -251,7 +252,92 @@ FalloffEffectData::FalloffEffectData(FalloffEffect *t_effect):AbstractTreeData(t
 
 }
 
-StateData::StateData(StateClip *t_clip):AbstractTreeData("State", t_clip->state()->uniqueId()),m_clip(t_clip)
+
+ClipEffectFolderData::ClipEffectFolderData(Clip *t_clip): AbstractTreeData("Effects","effects"),m_clip(t_clip)
+{
+    connect(m_clip, &Clip::clipEffectAdded, this, &ClipEffectFolderData::effectAdded);
+    connect(m_clip, &Clip::clipEffectRemoved, this, &ClipEffectFolderData::effectRemoved);
+
+    qDebug() << "Effect count" << t_clip->clipEffectCount();
+    for(int i = 0; i < t_clip->clipEffectCount(); ++i)
+    {
+        auto effectData = new ClipEffectData(m_clip->clipEffectAtIndex(i));
+        addChild(effectData);
+    }
+    addChild(new CreateData("Add Effect..."));
+}
+
+ClipEffectData *ClipEffectFolderData::findEffectData(ClipEffect *t_effect)
+{
+    for(auto child : children())
+    {
+        ClipEffectData *childData = dynamic_cast<ClipEffectData*>(child);
+        if(childData && childData->effect() == t_effect)
+        {
+            return childData;
+        }
+    }
+    return nullptr;
+}
+
+void ClipEffectFolderData::effectAdded(photon::ClipEffect *t_effect)
+{
+    auto effectData = new ClipEffectData(t_effect);
+    insertChild(effectData, childCount() - 1);
+}
+
+void ClipEffectFolderData::effectRemoved(photon::ClipEffect *t_effect)
+{
+    auto effect = findEffectData(t_effect);
+
+    if(effect)
+        removeChild(effect);
+}
+
+void ClipEffectFolderData::effectMoved(photon::ClipEffect *t_effect)
+{
+
+}
+
+ClipEffectData::ClipEffectData(ClipEffect *t_effect):AbstractTreeData(t_effect->name(), t_effect->uniqueId()),m_effect(t_effect)
+{
+    connect(t_effect, &ClipEffect::channelAdded, this, &ClipEffectData::channelAdded);
+    connect(t_effect, &ClipEffect::channelRemoved, this, &ClipEffectData::channelRemoved);
+
+    for(int i = 0; i < t_effect->channelCount(); ++i)
+    {
+        auto channelData = new ChannelData(t_effect->channelAtIndex(i));
+        addChild(channelData);
+    }
+}
+
+void ClipEffectData::channelAdded(photon::Channel *t_channel)
+{
+    qDebug() << "Added";
+    auto channelData = new ChannelData(t_channel);
+    addChild(channelData);
+}
+
+void ClipEffectData::channelRemoved(photon::Channel *t_channel)
+{
+    for(auto child : children())
+    {
+        auto channelChild = dynamic_cast<ChannelData*>(child);
+        if(channelChild && channelChild->channel() == t_channel)
+        {
+            removeChild(child);
+            return;
+        }
+    }
+}
+
+void ClipEffectData::channelMoved(photon::Channel *)
+{
+
+}
+
+
+StateData::StateData(FixtureClip *t_clip):AbstractTreeData("State", t_clip->state()->uniqueId()),m_clip(t_clip)
 {
 
 }

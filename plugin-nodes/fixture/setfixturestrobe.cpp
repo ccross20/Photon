@@ -10,6 +10,7 @@ keira::NodeInformation SetFixtureStrobe::info()
     keira::NodeInformation toReturn([](){return new SetFixtureStrobe;});
     toReturn.name = "Set Fixture Strobe";
     toReturn.nodeId = "photon.plugin.node.set-fixture-strobe";
+    toReturn.categories = {"Fixture"};
 
     return toReturn;
 }

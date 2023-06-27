@@ -10,6 +10,7 @@ keira::NodeInformation SetFixtureZoom::info()
     keira::NodeInformation toReturn([](){return new SetFixtureZoom;});
     toReturn.name = "Set Fixture Zoom";
     toReturn.nodeId = "photon.plugin.node.set-fixture-zoom";
+    toReturn.categories = {"Fixture"};
 
     return toReturn;
 }
@@ -47,7 +48,7 @@ void SetFixtureZoom::evaluate(keira::EvaluationContext *t_context) const
         int index = m_capabilityParam->value().toInt();
         if(index < pans.length())
         {
-            static_cast<AngleCapability*>(pans[index])->setAnglePercent(m_angleParam->value().toDouble() * m_blendParam->value().toDouble(), context->dmxMatrix, context->strength);
+            static_cast<AngleCapability*>(pans[index])->setAnglePercent(m_angleParam->value().toDouble(), context->dmxMatrix, context->strength * m_blendParam->value().toDouble());
         }
     }
 

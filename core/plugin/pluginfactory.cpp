@@ -40,7 +40,11 @@
 #include "graph/parameter/colorparameter.h"
 #include "graph/parameter/canvasparameter.h"
 #include "graph/parameter/fixtureparameter.h"
+#include "graph/parameter/pathparameter.h"
 #include "graph/parameter/vector3dparameter.h"
+
+#include "sequence/stateclip.h"
+#include "sequence/fixtureclip.h"
 
 namespace photon {
 
@@ -70,6 +74,8 @@ public:
     QHash<QByteArray, EffectInformation> effects;
     QHash<QByteArray, FalloffEffectInformation> falloffEffects;
     QHash<QByteArray, MaskEffectInformation> maskEffects;
+    QHash<QByteArray, ClipInformation> clips;
+    QHash<QByteArray, ClipEffectInformation> clipEffects;
     QHash<PanelId, std::function<Panel*()>> panels;
     keira::NodeLibrary nodeLibrary;
 
@@ -163,6 +169,9 @@ void PluginFactory::init()
     registerChannelEffect(GradientChannelEffect::info());
     registerChannelEffect(MasterLayerChannelEffect::info());
 
+    registerClip(StateClip::info());
+    registerClip(FixtureClip::info());
+
     m_impl->nodeLibrary.registerParameter(keira::DecimalParameter::ParameterId,[](){return new keira::DecimalParameter();});
     m_impl->nodeLibrary.registerParameter(keira::IntegerParameter::ParameterId,[](){return new keira::IntegerParameter();});
     m_impl->nodeLibrary.registerParameter(keira::ButtonParameter::ParameterId,[](){return new keira::ButtonParameter();});
@@ -172,6 +181,7 @@ void PluginFactory::init()
     m_impl->nodeLibrary.registerParameter(ColorParameter::ParameterId,[](){return new ColorParameter();});
     m_impl->nodeLibrary.registerParameter(CanvasParameter::ParameterId,[](){return new CanvasParameter();});
     m_impl->nodeLibrary.registerParameter(FixtureParameter::ParameterId,[](){return new FixtureParameter();});
+    m_impl->nodeLibrary.registerParameter(PathParameter::ParameterId,[](){return new PathParameter();});
     m_impl->nodeLibrary.registerParameter(Vector3DParameter::ParameterId,[](){return new Vector3DParameter();});
 
     //qDebug() << "Node Count:" << m_impl->nodeHash.size();
@@ -280,6 +290,55 @@ FalloffEffect *PluginFactory::createFalloffEffect(const QByteArray &effectId) co
         auto effect = info.callback();
         effect->setName(info.name);
         effect->setId(info.effectId);
+        return effect;
+    }
+    return nullptr;
+}
+
+
+
+void PluginFactory::registerClip(const ClipInformation &info)
+{
+    m_impl->clips.insert(info.id, info);
+}
+
+QVector<ClipInformation> PluginFactory::clips() const
+{
+    return m_impl->clips.values();
+}
+
+Clip *PluginFactory::createClip(const QByteArray &effectId) const
+{
+    auto info = m_impl->clips[effectId];
+    if(info.id == effectId)
+    {
+        auto effect = info.callback();
+        effect->setName(info.name);
+        effect->setId(info.id);
+        return effect;
+    }
+    return nullptr;
+}
+
+void PluginFactory::registerClipEffect(const ClipEffectInformation &info)
+{
+    m_impl->clipEffects.insert(info.id, info);
+}
+
+QVector<ClipEffectInformation> PluginFactory::clipEffects() const
+{
+    return m_impl->clipEffects.values();
+}
+
+ClipEffect *PluginFactory::createClipEffect(const QByteArray &effectId) const
+{
+    auto info = m_impl->clipEffects[effectId];
+    if(info.id == effectId)
+    {
+        auto effect = info.callback();
+        effect->init();
+        effect->setName(info.name);
+        effect->setId(info.id);
         return effect;
     }
     return nullptr;

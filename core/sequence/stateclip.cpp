@@ -53,23 +53,20 @@ void StateClip::Impl::processFixture(Fixture *t_fixture, StateEvaluationContext 
 StateClip::StateClip() : Clip(),m_impl(new Impl)
 {
     m_impl->facade = this;
+    m_impl->state = new State;
     setType("state");
 }
 
 StateClip::StateClip(double t_start, double t_duration, QObject *t_parent) : Clip(t_start, t_duration, t_parent),m_impl(new Impl)
 {
     m_impl->facade = this;
+    m_impl->state = new State;
     setType("state");
 }
 
 StateClip::~StateClip()
 {
     delete m_impl;
-}
-
-QString StateClip::name() const
-{
-    return "State";
 }
 
 void StateClip::processChannels(ProcessContext &t_context)
@@ -131,6 +128,18 @@ void StateClip::writeToJson(QJsonObject &t_json) const
         t_json.insert("state", stateObj);
     }
 }
+
+
+ClipInformation StateClip::info()
+{
+    ClipInformation toReturn([](){return new StateClip;});
+    toReturn.name = "State";
+    toReturn.id = "photon.clip.state";
+    //toReturn.categories.append("Generator");
+
+    return toReturn;
+}
+
 
 
 } // namespace photon

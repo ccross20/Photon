@@ -19,10 +19,13 @@ namespace photon
         QVector<MaskEffect*> maskEffects;
         QVector<FalloffEffect*> falloffEffects;
         QVector<Channel*> channels;
+        QVector<ClipEffect*> clipEffects;
         QByteArray type;
         QByteArray uniqueId;
         QEasingCurve easeInCurve;
         QEasingCurve easeOutCurve;
+        QString name;
+        QByteArray id;
         double easeInDuration = 0;
         double easeOutDuration = 0;
         double strength = 1.0;

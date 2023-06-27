@@ -7,6 +7,7 @@ keira::NodeInformation NoiseNode::info()
     keira::NodeInformation toReturn([](){return new NoiseNode;});
     toReturn.name = "Noise";
     toReturn.nodeId = "photon.math.noise";
+    toReturn.categories = {"Math"};
 
     return toReturn;
 }

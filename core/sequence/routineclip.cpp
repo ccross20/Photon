@@ -59,14 +59,6 @@ RoutineClip::~RoutineClip()
     delete m_impl;
 }
 
-QString RoutineClip::name() const
-{
-    if(m_impl->routine)
-        return m_impl->routine->name();
-    else
-        return Clip::name();
-}
-
 void RoutineClip::processChannels(ProcessContext &t_context)
 {
     if(!m_impl->routine)
@@ -79,6 +71,7 @@ void RoutineClip::processChannels(ProcessContext &t_context)
     localContext.relativeTime = initialRelativeTime;
     localContext.fixture = t_context.fixture;
     localContext.canvasImage = t_context.canvasImage;
+    localContext.previousCanvasImage = t_context.previousCanvasImage;
     localContext.project = t_context.project;
 
     for(auto fixture : maskedFixtures())
@@ -99,6 +92,8 @@ void RoutineClip::setRoutine(Routine *t_routine)
     {
         addChannel(info);
     }
+
+    setName(t_routine->name());
 
     connect(t_routine, &Routine::channelAdded, this, &RoutineClip::channelAddedSlot);
     connect(t_routine, &Routine::channelRemoved, this, &RoutineClip::channelRemovedSlot);

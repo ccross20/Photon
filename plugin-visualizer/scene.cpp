@@ -145,9 +145,9 @@ void Scene::create(QOpenGLContext *t_context)
     {
         t_context->functions()->glGenBuffers(1, &m_lightBlock);
         t_context->functions()->glBindBuffer(GL_UNIFORM_BUFFER, m_lightBlock);
-        t_context->functions()->glBufferData(GL_UNIFORM_BUFFER, 1416, NULL, GL_STATIC_DRAW);
+        t_context->functions()->glBufferData(GL_UNIFORM_BUFFER, 1576, NULL, GL_STATIC_DRAW);
         t_context->functions()->glBindBuffer(GL_UNIFORM_BUFFER, 0);
-        t_context->extraFunctions()->glBindBufferRange(GL_UNIFORM_BUFFER, 0, m_lightBlock, 0, 1416);
+        t_context->extraFunctions()->glBindBufferRange(GL_UNIFORM_BUFFER, 0, m_lightBlock, 0, 1576);
     }
 
     m_rootEntity->create(t_context);
@@ -159,7 +159,7 @@ void Scene::rebuild(QOpenGLContext *t_context)
         return;
 
     if(!m_buffer)
-        m_buffer = static_cast<byte*>(malloc(1416 * sizeof(byte)));
+        m_buffer = static_cast<byte*>(malloc(1576 * sizeof(byte)));
 
     auto bufferStart = m_buffer;
     uint chunkSize = 4;
@@ -187,11 +187,17 @@ void Scene::rebuild(QOpenGLContext *t_context)
             GLfloat constant = spot->constant();
             GLfloat linear = spot->linear();
             GLfloat quadratic = spot->quadratic();
+            int cookieIndex = 0;
             std::memcpy(m_buffer, &constant, sizeof(GLfloat));
             m_buffer += chunkSize;
             std::memcpy(m_buffer, &linear, sizeof(GLfloat));
             m_buffer += chunkSize;
             std::memcpy(m_buffer, &quadratic, sizeof(GLfloat));
+            m_buffer += chunkSize;
+            std::memcpy(m_buffer, &cookieIndex, sizeof(int));
+            m_buffer += chunkSize;
+            m_buffer += chunkSize;
+            m_buffer += chunkSize;
             m_buffer += chunkSize;
 
             float brightness = spot->brightness();
@@ -206,7 +212,7 @@ void Scene::rebuild(QOpenGLContext *t_context)
         }
         else
         {
-            m_buffer += 128;
+            m_buffer += 144;
         }
     }
 
@@ -245,7 +251,7 @@ void Scene::rebuild(QOpenGLContext *t_context)
     m_buffer = bufferStart;
 
     t_context->functions()->glBindBuffer(GL_UNIFORM_BUFFER, m_lightBlock);
-    t_context->functions()->glBufferSubData(GL_UNIFORM_BUFFER,0, 1416, m_buffer);
+    t_context->functions()->glBufferSubData(GL_UNIFORM_BUFFER,0, 1576, m_buffer);
     //t_context->functions()->glBufferData(GL_UNIFORM_BUFFER, 16, m_buffer, GL_STATIC_DRAW);
     t_context->functions()->glBindBuffer(GL_UNIFORM_BUFFER, 0);
 

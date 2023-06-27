@@ -10,6 +10,7 @@ keira::NodeInformation SetFixtureDimmer::info()
     keira::NodeInformation toReturn([](){return new SetFixtureDimmer;});
     toReturn.name = "Set Fixture Dimmer";
     toReturn.nodeId = "photon.plugin.node.set-fixture-dimmer";
+    toReturn.categories = {"Fixture"};
 
     return toReturn;
 }
@@ -47,7 +48,7 @@ void SetFixtureDimmer::evaluate(keira::EvaluationContext *t_context) const
         int index = m_capabilityParam->value().toInt();
         if(index < dimmers.length())
         {
-            static_cast<DimmerCapability*>(dimmers[index])->setPercent(m_intensityParam->value().toDouble() * m_blendParam->value().toDouble(), context->dmxMatrix, context->strength);
+            static_cast<DimmerCapability*>(dimmers[index])->setPercent(m_intensityParam->value().toDouble(), context->dmxMatrix, context->strength * m_blendParam->value().toDouble());
         }
     }
 

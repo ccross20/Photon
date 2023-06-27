@@ -8,6 +8,22 @@
 
 namespace photon {
 
+struct ClipInformation
+{
+
+    ClipInformation(){}
+    ClipInformation(std::function<Clip*()> _callback):callback(_callback){}
+
+    QByteArray id;
+    QByteArray translateId;
+    QByteArray iconId;
+    QString name;
+    bool isCanvas = false;
+    std::function<Clip*()> callback;
+
+    CategoryList categories;
+};
+
 class PHOTONCORE_EXPORT Clip : public QObject
 {
     Q_OBJECT
@@ -16,7 +32,10 @@ public:
     Clip(double t_start, double t_duration, QObject *parent = nullptr);
     virtual ~Clip();
 
-    virtual QString name() const;
+    QString name() const;
+    void setName(const QString &);
+    void setId(const QByteArray&);
+    QByteArray id() const;
     QByteArray uniqueId() const;
     Sequence *sequence() const;
     ClipLayer *layer() const;
@@ -29,6 +48,7 @@ public:
     MaskEffect *maskEffectAtIndex(int index) const;
     int maskEffectCount() const;
     const QVector<Fixture*> maskedFixtures() const;
+    virtual QWidget *widget() const;
 
     void addFalloffEffect(FalloffEffect *);
     void removeFalloffEffect(FalloffEffect *);
@@ -37,6 +57,11 @@ public:
     void setDefaultFalloff(double);
     double defaultFalloff() const;
     double falloff(Fixture *t_fixture) const;
+
+    void addClipEffect(ClipEffect *);
+    void removeClipEffect(ClipEffect *);
+    ClipEffect *clipEffectAtIndex(int index) const;
+    int clipEffectCount() const;
 
     void setStartTime(double);
     void setEndTime(double);
@@ -80,6 +105,7 @@ public slots:
     void falloffUpdatedSlot(photon::FalloffEffect *);
     void channelUpdatedSlot(photon::Channel *);
     void maskUpdatedSlot(photon::MaskEffect *);
+    void clipEffectUpdatedSlot(photon::ClipEffect *);
     photon::Channel *addChannel(const photon::ChannelInfo &info = ChannelInfo{}, int index = -1);
     void removeChannel(int index);
 
@@ -91,6 +117,10 @@ signals:
     void maskRemoved(photon::MaskEffect *);
     void maskUpdated(photon::MaskEffect *);
     void maskMoved(photon::MaskEffect *);
+    void clipEffectAdded(photon::ClipEffect *);
+    void clipEffectRemoved(photon::ClipEffect *);
+    void clipEffectUpdated(photon::ClipEffect *);
+    void clipEffectMoved(photon::ClipEffect *);
     void falloffMapChanged(photon::FixtureFalloffMap *);
     void clipUpdated(photon::Clip *);
     void falloffUpdated(photon::FalloffEffect *);

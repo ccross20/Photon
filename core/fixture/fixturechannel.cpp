@@ -3,6 +3,7 @@
 #include "capability/shutterstrobecapability.h"
 #include "capability/anglecapability.h"
 #include "capability/dimmercapability.h"
+#include "capability/wheelslotcapability.h"
 #include "capability/colorintensitycapability.h"
 
 namespace photon {
@@ -24,6 +25,8 @@ void FixtureChannel::Impl::addCapability(const QJsonObject &t_json)
         capability = new AngleCapability(Capability_Focus);
     else if(typeString == "intensity")
         capability = new DimmerCapability(Capability_Dimmer);
+    else if(typeString == "wheelslot")
+        capability = new WheelSlotCapability();
     else if(typeString == "colorintensity")
     {
         auto colorString = t_json.value("color").toString().toLower();

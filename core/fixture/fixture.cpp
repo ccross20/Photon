@@ -5,6 +5,7 @@
 #include "fixturechannel_p.h"
 #include "fixturevirtualchannel.h"
 #include "fixtureeditorwidget.h"
+#include "fixturewheel.h"
 
 namespace photon {
 
@@ -15,6 +16,7 @@ public:
     QVector<FixtureChannel*> channels;
     QVector<FixtureVirtualChannel*> virtualChannels;
     QVector<FixtureMode> modes;
+    QVector<FixtureWheel*> wheels;
     QString definitionPath;
     QString description;
     QString manufacturer;
@@ -45,6 +47,11 @@ QWidget *Fixture::createEditor()
     auto editor = new FixtureEditorWidget;
     editor->setFixtures(QVector<Fixture*>{this});
     return editor;
+}
+
+const QVector<FixtureWheel*> &Fixture::wheels() const
+{
+    return m_impl->wheels;
 }
 
 QVector<FixtureCapability*> Fixture::findCapability(CapabilityType t_type, int t_index) const
@@ -278,6 +285,19 @@ void Fixture::readFromOpenFixtureJson(const QJsonObject &t_json)
                     m_impl->physical.matrixPixelSpacing = QVector3D{static_cast<float>(spacing[0].toDouble()), static_cast<float>(spacing[1].toDouble()), static_cast<float>(spacing[2].toDouble())};
                 }
             }
+        }
+    }
+
+    if(t_json.contains("wheels"))
+    {
+        auto wheelObj = t_json.value("wheels").toObject();
+
+        for(auto it = wheelObj.constBegin(); it != wheelObj.constEnd(); ++it)
+        {
+            qDebug() << "add wheel" << it.key();
+            auto wheel = new FixtureWheel(it.key());
+            wheel->readFromOpenFixtureJson(it.value().toObject());
+            m_impl->wheels << wheel;
         }
     }
 

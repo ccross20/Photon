@@ -8,10 +8,12 @@
 #include "sequence/routineclip.h"
 #include "sequence/sequence.h"
 #include "photoncore.h"
+#include "plugin/pluginfactory.h"
 #include "project/project.h"
 #include "routine/routinecollection.h"
 #include "routine/routine.h"
-#include "sequence/stateclip.h"
+#include "gui/menufactory.h"
+#include "sequence/fixtureclip.h"
 
 namespace photon {
 
@@ -149,15 +151,11 @@ void TimelineClipLayer::addRoutine(photon::Routine *t_routine, double t_time)
     static_cast<ClipLayer*>(layer())->addClip(clip);
 }
 
-void TimelineClipLayer::addState(double t_time)
+void TimelineClipLayer::addClip(photon::Clip *t_clip, double t_time)
 {
-    StateClip *clip = new StateClip(t_time, 5.0);
-    auto state = new State;
-    state->addDefaultCapabilities();
-    clip->setState(state);
-    static_cast<ClipLayer*>(layer())->addClip(clip);
+    t_clip->setStartTime(t_time);
+    static_cast<ClipLayer*>(layer())->addClip(t_clip);
 }
-
 void TimelineClipLayer::contextMenuEvent(QGraphicsSceneContextMenuEvent *event)
 {
     QGraphicsObject::contextMenuEvent(event);
@@ -166,23 +164,39 @@ void TimelineClipLayer::contextMenuEvent(QGraphicsSceneContextMenuEvent *event)
 
     event->accept();
 
-    QMenu menu;
-    QMenu *routineMenu = menu.addMenu("Add Routine");
+
     double time = event->scenePos().x();
 
-    for(auto routine : photonApp->project()->routines()->routines())
-    {
-        connect(routineMenu->addAction(routine->name()), &QAction::triggered, this, [routine, time, this](){addRoutine(routine,time);});
-    }
+    QMenu menu;
 
-    menu.addSeparator();
-    menu.addAction("Add State",[this, time](){addState(time);});
+    menu.addAction("Create Clip",this,[time, this](){
+
+        auto clip = new FixtureClip;
+        clip->setName("Clip");
+        clip->setStartTime(time);
+        clip->setDuration(5);
+        static_cast<ClipLayer*>(layer())->addClip(clip);
+    });
 
     menu.addSeparator();
     QAction *removeLayer = menu.addAction("Remove Layer");
     connect(removeLayer, &QAction::triggered, this, &TimelineClipLayer::removeLayer);
 
-    menu.exec(event->screenPos());
+    QAction *action = menu.exec(event->screenPos());
+
+    if(action && !action->data().isNull())
+    {
+        auto clipId = action->data().toByteArray();
+
+        auto clip = photonApp->plugins()->createClip(clipId);
+
+        if(clip)
+        {
+            clip->setStartTime(time);
+            clip->setDuration(2.0);
+            static_cast<ClipLayer*>(layer())->addClip(clip);
+        }
+    }
 }
 
 } // namespace photon

@@ -5,6 +5,7 @@
 #include "channel.h"
 #include "gui/color/colorselectorwidget.h"
 #include "sequence/viewer/stackedparameterwidget.h"
+#include "util/utils.h"
 
 namespace photon {
 
@@ -211,16 +212,6 @@ GradientChannelEffect::GradientChannelEffect()
 
 }
 
-QColor blendColors(const QColor &t_a, const QColor &t_b, double t_t){
-    QColor a = t_a.convertTo(QColor::Rgb);
-    QColor b = t_b.convertTo(QColor::Rgb);
-
-    return QColor::fromRgbF(a.redF() + (b.redF() - a.redF()) * t_t,
-                            a.greenF() + (b.greenF() - a.greenF()) * t_t,
-                            a.blueF() + (b.blueF() - a.blueF()) * t_t,
-                            a.alphaF() + (b.alphaF() - a.alphaF()) * t_t
-                            );
-}
 
 QColor GradientChannelEffect::processColor(QColor value, double time) const
 {

@@ -13,6 +13,7 @@ struct RoutineEvaluationContext : keira::EvaluationContext
     Project *project = nullptr;
     Fixture *fixture = nullptr;
     QImage *canvasImage = nullptr;
+    QImage *previousCanvasImage = nullptr;
     QHash<QByteArray,QVariant> channelValues;
     double relativeTime = 0.0;
     double globalTime = 0.0;

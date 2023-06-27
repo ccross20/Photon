@@ -13,6 +13,7 @@ public:
     Fixture *fixture = nullptr;
     Project *project = nullptr;
     QImage *canvasImage = nullptr;
+    QImage *previousCanvasImage = nullptr;
     DMXMatrix &dmxMatrix;
     double globalTime;
     double relativeTime;

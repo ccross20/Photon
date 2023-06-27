@@ -11,6 +11,8 @@
 #include "sequence/channeleffect.h"
 #include "falloff/falloffeffect.h"
 #include "fixture/maskeffect.h"
+#include "sequence/clip.h"
+#include "sequence/clipeffect.h"
 
 namespace photon {
 
@@ -42,6 +44,15 @@ public:
     void registerChannelEffect(const EffectInformation &info);
     QVector<EffectInformation> channelEffects() const;
     ChannelEffect *createChannelEffect(const QByteArray &effectId) const;
+
+
+    void registerClip(const ClipInformation &info);
+    QVector<ClipInformation> clips() const;
+    Clip *createClip(const QByteArray &effectId) const;
+
+    void registerClipEffect(const ClipEffectInformation &info);
+    QVector<ClipEffectInformation> clipEffects() const;
+    ClipEffect *createClipEffect(const QByteArray &effectId) const;
 
     void registerFalloffEffect(const FalloffEffectInformation &info);
     QVector<FalloffEffectInformation> falloffEffects() const;

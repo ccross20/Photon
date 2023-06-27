@@ -9,6 +9,7 @@
 #include "focusstate.h"
 #include "panstate.h"
 #include "colorstate.h"
+#include "colorwheelstate.h"
 
 namespace photon {
 
@@ -52,6 +53,9 @@ StateCapability *State::Impl::addCapability(CapabilityType t_type)
         case Capability_Color:
             toAdd = new ColorState;
             break;
+        case Capability_WheelSlot:
+            toAdd = new ColorWheelState;
+            break;
         default:
             break;
     }
@@ -78,6 +82,7 @@ QByteArray State::uniqueId() const
 
 void State::addDefaultCapabilities()
 {
+    /*
     addCapability(Capability_Strobe);
     addCapability(Capability_Dimmer);
     addCapability(Capability_Tilt);
@@ -85,6 +90,7 @@ void State::addDefaultCapabilities()
     addCapability(Capability_Focus);
     addCapability(Capability_Zoom);
     addCapability(Capability_Color);
+    */
 }
 
 const QVector<StateCapability*> &State::capabilities() const

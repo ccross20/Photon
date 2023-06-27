@@ -30,7 +30,8 @@
 #include "graph/bus/busevaluator.h"
 #include "gui/waveformwidget.h"
 #include "sequence/viewer/stateeditor.h"
-#include "sequence/stateclip.h"
+#include "sequence/fixtureclip.h"
+#include "sequence/clipeffect.h"
 #include "fixture/maskeffect.h"
 
 namespace photon {
@@ -153,6 +154,7 @@ SequenceWidget::SequenceWidget(QWidget *parent)
     connect(m_impl->curvePropertyEditor, &ClipStructureViewer::selectState, this, &SequenceWidget::selectState);
     connect(m_impl->curvePropertyEditor, &ClipStructureViewer::selectEffect, this, &SequenceWidget::selectEffect);
     connect(m_impl->curvePropertyEditor, &ClipStructureViewer::selectMask, this, &SequenceWidget::selectMask);
+    connect(m_impl->curvePropertyEditor, &ClipStructureViewer::selectClipEffect, this, &SequenceWidget::selectClipEffect);
     connect(m_impl->curvePropertyEditor, &ClipStructureViewer::clearSelection, this, &SequenceWidget::clearEditor);
     connect(m_impl->timebar, &TimeBar::changeTime, this, &SequenceWidget::gotoTime);
     connect(m_impl->viewer->horizontalScrollBar(), &QAbstractSlider::valueChanged, m_impl->timebar, &TimeBar::setOffset);
@@ -238,6 +240,24 @@ void SequenceWidget::selectFalloff(photon::FalloffEffect *t_effect)
 
 }
 
+void SequenceWidget::selectClipEffect(photon::ClipEffect *t_effect)
+{
+    clearEditor();
+    QHBoxLayout *layout = new QHBoxLayout;
+    layout->setContentsMargins(0,0,0,0);
+
+    auto editor = t_effect->createEditor();
+
+    if(editor)
+    {
+        layout->addWidget(editor);
+        m_impl->effectEditor = editor;
+        m_impl->effectEditorContainer->setLayout(layout);
+    }
+
+
+}
+
 void SequenceWidget::selectState(photon::State *t_state)
 {
     clearEditor();
@@ -248,7 +268,7 @@ void SequenceWidget::selectState(photon::State *t_state)
 
     if(m_impl->selectedClips.length() > 0)
     {
-        auto clip = dynamic_cast<StateClip *>(m_impl->selectedClips[0]->clip());
+        auto clip = dynamic_cast<FixtureClip *>(m_impl->selectedClips[0]->clip());
         if(clip)
             editor->setClip(clip);
     }

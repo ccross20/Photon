@@ -13,6 +13,7 @@ keira::NodeInformation CircleNode::info()
     keira::NodeInformation toReturn([](){return new CircleNode;});
     toReturn.name = "Circle";
     toReturn.nodeId = "photon.math.circle";
+    toReturn.categories = {"Math"};
 
     return toReturn;
 }

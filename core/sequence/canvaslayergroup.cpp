@@ -11,6 +11,7 @@ class CanvasLayerGroup::Impl
 {
 public:
     Canvas *canvas;
+    QImage tempImage;
     int canvasIndex = -1;
 };
 
@@ -43,10 +44,12 @@ void CanvasLayerGroup::processChannels(ProcessContext &t_context)
 {
     QImage image(m_impl->canvas->size(), QImage::Format_ARGB32_Premultiplied);
     image.fill(Qt::black);
+    t_context.previousCanvasImage = &m_impl->tempImage;
     t_context.canvasImage = &image;
     LayerGroup::processChannels(t_context);
 
     m_impl->canvas->paint(image);
+    m_impl->tempImage = image;
 }
 
 void CanvasLayerGroup::restore(Project &t_project)

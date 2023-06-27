@@ -90,6 +90,36 @@ void ClipTreeView::mousePressEvent(QMouseEvent *event)
                 }
             }
         }
+        else if(dynamic_cast<ClipEffectFolderData*>(parentData))
+        {
+            MenuFactory<ClipEffectInformation> factory;
+
+            auto effects = photonApp->plugins()->clipEffects();
+            for(auto &info : effects)
+            {
+                factory.addItem(info.categories, info);
+            }
+
+            ClipEffectInformation selectedInfo;
+            if(factory.showMenu(event->globalPosition().toPoint(), selectedInfo))
+            {
+
+                Clip *clip = dynamic_cast<ClipEffectFolderData*>(parentData)->clip();
+
+                auto effect = photonApp->plugins()->createClipEffect(selectedInfo.id);
+
+                if(effect)
+                {
+                    clip->addClipEffect(effect);
+
+                    auto effectData = dynamic_cast<ClipEffectFolderData*>(parentData)->findEffectData(effect);
+                    auto effectIndex = static_cast<ClipModel*>(model())->indexForData(effectData);
+
+                    if(effectIndex.isValid())
+                        selectionModel()->select(effectIndex, QItemSelectionModel::ClearAndSelect);
+                }
+            }
+        }
         else if(dynamic_cast<MaskData*>(parentData))
         {
             MenuFactory<MaskEffectInformation> factory;
@@ -208,6 +238,11 @@ void ClipStructureViewer::selectionChanged(const QItemSelection &selected, const
     {
         m_states.insert(m_clip->uniqueId(),dynamic_cast<MaskEffectData*>(itemData)->effect()->uniqueId());
         emit selectMask(dynamic_cast<MaskEffectData*>(itemData)->effect());
+    }
+    else if(dynamic_cast<ClipEffectData*>(itemData))
+    {
+        m_states.insert(m_clip->uniqueId(),dynamic_cast<ClipEffectData*>(itemData)->effect()->uniqueId());
+        emit selectClipEffect(dynamic_cast<ClipEffectData*>(itemData)->effect());
     }
     else
     {

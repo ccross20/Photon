@@ -10,6 +10,7 @@ keira::NodeInformation SetFixturePan::info()
     keira::NodeInformation toReturn([](){return new SetFixturePan;});
     toReturn.name = "Set Fixture Pan";
     toReturn.nodeId = "photon.plugin.node.set-fixture-pan";
+    toReturn.categories = {"Fixture"};
 
     return toReturn;
 }
@@ -55,7 +56,9 @@ void SetFixturePan::evaluate(keira::EvaluationContext *t_context) const
             if(m_modeParam->value().toInt() == 0)
                 static_cast<AngleCapability*>(pans[index])->setAnglePercent(m_angleParam->value().toDouble(), context->dmxMatrix, m_blendParam->value().toDouble() * context->strength);
             else
+            {
                 static_cast<AngleCapability*>(pans[index])->setAngleDegreesCentered(m_angleParam->value().toDouble(), context->dmxMatrix, m_blendParam->value().toDouble() * context->strength);
+            }
         }
     }
 

@@ -9,6 +9,7 @@
 #include "fixture/fixturecollection.h"
 #include "photoncore.h"
 #include "plugin/pluginfactory.h"
+#include "clipeffect_p.h"
 
 namespace photon {
 
@@ -77,6 +78,21 @@ QByteArray Clip::uniqueId() const
     return m_impl->uniqueId;
 }
 
+void Clip::setName(const QString &t_value)
+{
+    m_impl->name = t_value;
+}
+
+void Clip::setId(const QByteArray &t_value)
+{
+    m_impl->id = t_value;
+}
+
+QByteArray Clip::id() const
+{
+    return m_impl->id;
+}
+
 void Clip::setType(const QByteArray t_type)
 {
     m_impl->type = t_type;
@@ -84,7 +100,7 @@ void Clip::setType(const QByteArray t_type)
 
 QString Clip::name() const
 {
-    return "[Empty]";
+    return m_impl->name;
 }
 
 Sequence *Clip::sequence() const
@@ -144,9 +160,9 @@ void Clip::removeFalloffEffect(FalloffEffect *t_effect)
     }
 }
 
-FalloffEffect *Clip::falloffEffectAtIndex(int index) const
+FalloffEffect *Clip::falloffEffectAtIndex(int t_index) const
 {
-    return m_impl->falloffEffects[index];
+    return m_impl->falloffEffects[t_index];
 }
 
 void Clip::addMaskEffect(MaskEffect *t_effect)
@@ -203,7 +219,10 @@ bool Clip::timeIsValid(double t_time) const
 
 void Clip::processChannels(ProcessContext &t_context)
 {
-
+    for(auto effect : m_impl->clipEffects)
+    {
+        effect->processChannels(t_context);
+    }
 }
 
 double Clip::strengthAtTime(double t_value) const
@@ -278,6 +297,9 @@ void Clip::startTimeUpdated(double t_value)
     {
         channel->setStartTime(t_value);
     }
+
+    for(auto effect : m_impl->clipEffects)
+        effect->startTimeUpdated(t_value);
 }
 
 void Clip::durationUpdated(double t_value)
@@ -286,6 +308,8 @@ void Clip::durationUpdated(double t_value)
     {
         channel->setDuration(t_value);
     }
+    for(auto effect : m_impl->clipEffects)
+        effect->durationUpdated(t_value);
 }
 
 void Clip::falloffUpdatedSlot(photon::FalloffEffect *t_falloff)
@@ -390,6 +414,11 @@ void Clip::setEaseOutType(QEasingCurve::Type t_value)
     emit clipUpdated(this);
 }
 
+QWidget *Clip::widget() const
+{
+    return nullptr;
+}
+
 photon::Channel *Clip::addChannel(const photon::ChannelInfo &t_info, int t_index)
 {
     auto channel = new Channel(t_info, startTime(), duration(), this);
@@ -413,6 +442,41 @@ void Clip::channelUpdatedSlot(Channel *t_channel)
     markChanged();
 }
 
+void Clip::clipEffectUpdatedSlot(photon::ClipEffect *t_effect)
+{
+    emit clipEffectUpdated(t_effect);
+    markChanged();
+}
+
+void Clip::addClipEffect(ClipEffect *t_effect)
+{
+    m_impl->clipEffects.append(t_effect);
+    t_effect->m_impl->clip = this;
+
+    emit clipEffectAdded(t_effect);
+    m_impl->markChanged();
+}
+
+void Clip::removeClipEffect(ClipEffect *t_effect)
+{
+    if(m_impl->clipEffects.removeOne(t_effect))
+    {
+        t_effect->m_impl->clip = nullptr;
+
+        emit clipEffectRemoved(t_effect);
+    }
+}
+
+ClipEffect *Clip::clipEffectAtIndex(int t_index) const
+{
+    return m_impl->clipEffects[t_index];
+}
+
+int Clip::clipEffectCount() const
+{
+    return m_impl->clipEffects.length();
+}
+
 void Clip::readFromJson(const QJsonObject &t_json, const LoadContext &t_context)
 {
     for(auto effect : m_impl->falloffEffects)
@@ -429,6 +493,32 @@ void Clip::readFromJson(const QJsonObject &t_json, const LoadContext &t_context)
     m_impl->easeOutDuration = t_json.value("easeOutDuration").toDouble();
     m_impl->strength = t_json.value("strength").toDouble(1.0);
     m_impl->uniqueId = t_json.value("uniqueId").toString(QUuid::createUuid().toString()).toLatin1();
+    m_impl->name = t_json.value("name").toString();
+    m_impl->id = t_json.value("id").toString().toLatin1();
+
+    if(t_json.contains("clipEffects"))
+    {
+        auto effectArray = t_json.value("clipEffects").toArray();
+
+        for(auto item : effectArray)
+        {
+            auto effectObj = item.toObject();
+            auto id = effectObj.value("id").toString();
+
+            auto effect = photonApp->plugins()->createClipEffect(id.toLatin1());
+
+            if(effect){
+                effect->m_impl->clip = this;
+                effect->readFromJson(effectObj, t_context);
+                m_impl->clipEffects.append(effect);
+
+            }
+            else
+            {
+                qWarning() << "Could not find clip effect:" << id;
+            }
+        }
+    }
 
     if(t_json.contains("falloffEffects"))
     {
@@ -502,6 +592,18 @@ void Clip::writeToJson(QJsonObject &t_json) const
     t_json.insert("easeOutDuration", m_impl->easeOutDuration);
     t_json.insert("strength", m_impl->strength);
     t_json.insert("uniqueId", QString(m_impl->uniqueId));
+    t_json.insert("id", QString(m_impl->id));
+    t_json.insert("name", QString(m_impl->name));
+
+    QJsonArray clipEffectArray;
+    for(auto effect : m_impl->clipEffects)
+    {
+        QJsonObject effectObj;
+        effectObj.insert("id", QString(effect->id()));
+        effect->writeToJson(effectObj);
+        clipEffectArray.append(effectObj);
+    }
+    t_json.insert("clipEffects", clipEffectArray);
 
     QJsonArray falloffArray;
     for(auto effect : m_impl->falloffEffects)

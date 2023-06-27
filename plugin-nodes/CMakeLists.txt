@@ -20,16 +20,30 @@ set(SOURCES
     canvas/canvasreader.cpp
     canvas/canvaswriter.h
     canvas/canvaswriter.cpp
+    canvas/drawellipse.h
+    canvas/drawellipse.cpp
     canvas/drawrectangle.h
     canvas/drawrectangle.cpp
+    canvas/fadecanvas.h
+    canvas/fadecanvas.cpp
+    canvas/renderpath.h
+    canvas/renderpath.cpp
+    canvas/renderstroke.h
+    canvas/renderstroke.cpp
+    color/colorfromhsv.h
+    color/colorfromhsv.cpp
     fixture/lookattarget.h
     fixture/lookattarget.cpp
+    fixture/setfixturecolor.h
+    fixture/setfixturecolor.cpp
     fixture/setfixturedimmer.h
     fixture/setfixturedimmer.cpp
     fixture/setfixturefocus.h
     fixture/setfixturefocus.cpp
     fixture/setfixturepan.h
     fixture/setfixturepan.cpp
+    fixture/setfixtureslot.h
+    fixture/setfixtureslot.cpp
     fixture/setfixturestrobe.h
     fixture/setfixturestrobe.cpp
     fixture/setfixturetilt.h

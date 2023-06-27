@@ -9,8 +9,11 @@
 namespace photon {
 
 class FalloffData;
+class ClipEffectData;
+class ClipEffectFolderData;
 class MaskData;
-class StateClip;
+class FixtureClip;
+class StateData;
 
 class AbstractTreeData : public QObject
 {
@@ -90,6 +93,8 @@ private:
     MaskData *m_maskFolder;
     FalloffData *m_falloffData;
     FolderData *m_channelFolder;
+    StateData *m_stateData;
+    ClipEffectFolderData *m_clipEffectData;
     Clip *m_clip;
 
 };
@@ -184,6 +189,42 @@ private:
 
 };
 
+class ClipEffectFolderData : public AbstractTreeData
+{
+    Q_OBJECT
+public:
+    ClipEffectFolderData(Clip*);
+    ClipEffectData *findEffectData(ClipEffect *);
+
+    Clip *clip() const{return m_clip;}
+
+private slots:
+    void effectAdded(photon::ClipEffect*);
+    void effectRemoved(photon::ClipEffect*);
+    void effectMoved(photon::ClipEffect*);
+
+private:
+    Clip *m_clip;
+};
+
+class ClipEffectData : public AbstractTreeData
+{
+    Q_OBJECT
+public:
+    ClipEffectData(ClipEffect*);
+    ClipEffect *effect() const{return m_effect;}
+
+private slots:
+    void channelAdded(photon::Channel *);
+    void channelRemoved(photon::Channel *);
+    void channelMoved(photon::Channel *);
+
+private:
+    ClipEffect *m_effect;
+
+};
+
+
 class MaskData : public AbstractTreeData
 {
     Q_OBJECT
@@ -208,13 +249,13 @@ private:
 class StateData : public AbstractTreeData
 {
 public:
-    StateData(StateClip*);
+    StateData(FixtureClip*);
 
     State *state() const;
-    StateClip *clip() const{return m_clip;}
+    FixtureClip *clip() const{return m_clip;}
 
 private:
-    StateClip *m_clip;
+    FixtureClip *m_clip;
 };
 
 class ClipModel : public QAbstractItemModel

@@ -20,6 +20,8 @@ enum Axis {
     Axis_Z = 0x4
 };
 
+
+
 #if defined(PHOTONCORE_LIBRARY)
 #  define PHOTONCORE_EXPORT Q_DECL_EXPORT
 #else
@@ -41,14 +43,18 @@ class Channel;
 class ChannelEffect;
 class ChannelEffectEditor;
 class Clip;
+class ClipEffect;
 class ClipLayer;
 class FalloffEffect;
 class Fixture;
 class FixtureChannel;
 class FixtureCapability;
+class FixtureClip;
 class FixtureCollection;
 class FixtureFalloffMap;
 class FixtureMask;
+class FixtureWheel;
+class FixtureWheelSlot;
 class GuiManager;
 class Layer;
 class LayerGroup;

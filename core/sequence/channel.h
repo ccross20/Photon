@@ -26,6 +26,16 @@ struct PHOTONCORE_EXPORT ChannelInfo
         uniqueId = QUuid::createUuid().toByteArray();
     }
 
+    ChannelInfo(const QByteArray &id, ChannelType type = ChannelTypeNumber, const QString &name = QString{}, const QString &description = QString{}, const QVariant &defaultValue = QVariant{}):
+    name(name),
+      description(description),
+      defaultValue(defaultValue),
+      uniqueId(id),
+      type(type)
+    {
+
+    }
+
 
     void readFromJson(const QJsonObject &);
     void writeToJson(QJsonObject &) const;

@@ -28,7 +28,7 @@ public slots:
     void clipRemoved(photon::Clip *);
     void clipModified(photon::Clip *);
     void addRoutine(photon::Routine *t_routine, double t_time);
-    void addState(double t_time);
+    void addClip(photon::Clip *t_clip, double t_time);
     void removeLayer();
 
 protected:

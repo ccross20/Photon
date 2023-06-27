@@ -38,71 +38,35 @@ void LookAtTarget::createParameters()
 
 }
 
-double qCopysign(const double& x, const double y){
-  if (y>=0.0) return fabs(x); else return -fabs(x); }
-
-QQuaternion extractQuaternion(const QMatrix4x4& matrix)
-{
-    // Extract scale, shear and translation from matrix
-    QMatrix4x4 transform = matrix.toTransform();
-    qreal scaleX = transform.row(0).toVector3D().length();
-    qreal scaleY = transform.row(1).toVector3D().length();
-    qreal scaleZ = transform.row(2).toVector3D().length();
-    QMatrix4x4 normalizeScale;
-    normalizeScale.scale(1.0/scaleX, 1.0/scaleY, 1.0/scaleZ);
-    QMatrix4x4 scaleShear = transform * normalizeScale;
-    //QMatrix4x4 shear = normalizeScale.inverted() * scaleShear;
-
-    // Extract rotation matrix from scale, shear and translation
-    QMatrix4x4 rotation = scaleShear;
-    rotation.setColumn(3, QVector4D(0, 0, 0, 1));
-    //QVector3D translation = matrix.column(3).toVector3D();
-
-    // Convert rotation matrix to quaternion
-    qreal w = qSqrt(qMax(0.0, 1.0 + rotation.row(0).x() + rotation.row(1).y() + rotation.row(2).z())) / 2.0;
-    qreal x = qSqrt(qMax(0.0, 1.0 + rotation.row(0).x() - rotation.row(1).y() - rotation.row(2).z())) / 2.0;
-    qreal y = qSqrt(qMax(0.0, 1.0 - rotation.row(0).x() + rotation.row(1).y() - rotation.row(2).z())) / 2.0;
-    qreal z = qSqrt(qMax(0.0, 1.0 - rotation.row(0).x() - rotation.row(1).y() + rotation.row(2).z())) / 2.0;
-    x *= qCopysign(1.0, rotation.row(2).y() - rotation.row(1).z());
-    y *= qCopysign(1.0, rotation.row(0).z() - rotation.row(2).x());
-    z *= qCopysign(1.0, rotation.row(1).x() - rotation.row(0).y());
-
-    return QQuaternion(w, x, y, z);
-}
-
 void LookAtTarget::evaluate(keira::EvaluationContext *t_context) const
 {
     QMatrix4x4 matrix;
     matrix.translate(m_positionParam->value().value<QVector3D>());
-    //matrix.rotate(QQuaternion::fromEulerAngles(m_rotationParam->value().value<QVector3D>()));
+    matrix.rotate(QQuaternion::fromEulerAngles(m_rotationParam->value().value<QVector3D>()));
 
-    //matrix = matrix.inverted();
-    /*
-    qDebug() << "Position" << m_positionParam->value().value<QVector3D>();
-    qDebug() << "Target" << m_targetParam->value().value<QVector3D>();
-    qDebug() << "Mapped Target" << matrix.map(m_targetParam->value().value<QVector3D>());
-    */
 
-    QMatrix4x4 basicMatrix;
-    basicMatrix.lookAt(QVector3D{}, matrix.map(m_targetParam->value().value<QVector3D>()),matrix.mapVector(QVector3D{0,1,0}));
+    auto panRad = matrix.inverted().map(m_targetParam->value().value<QVector3D>());
+    float panDeg = qRadiansToDegrees(atan2(panRad.x(),panRad.z()));
 
-    //basicMatrix = basicMatrix.transposed();
+    //qDebug() << panDeg;
 
-    auto quat = extractQuaternion(basicMatrix);
+    if(panDeg > 90)
+        panDeg -= 180;
+    else if(panDeg < -90)
+        panDeg += 180;
 
-    QVector3D rot = quat.toEulerAngles();
-    /*
-    rot.setX(qRadiansToDegrees(rot.x()));
-    rot.setY(qRadiansToDegrees(rot.y()));
-    rot.setZ(qRadiansToDegrees(rot.z()));
-    */
+    m_panParam->setValue(panDeg);
 
-    m_tiltParam->setValue(rot.x());
+    QMatrix4x4 tiltMat;
+    tiltMat.translate(0,.4,0);
+    tiltMat.rotate(QQuaternion::fromEulerAngles(QVector3D{0,panDeg,90}));
 
-    qDebug() << "Look at pan" << rot.x();
-    //m_panParam->setValue(rot.x());
+    matrix = matrix * tiltMat;
 
-    qDebug() << rot;
+    auto tiltRad = matrix.inverted().map(m_targetParam->value().value<QVector3D>());
+    float tiltDeg = qRadiansToDegrees(atan2(tiltRad.z(),tiltRad.x()));
+    m_tiltParam->setValue(tiltDeg);
+
 }
 
 } // namespace photon

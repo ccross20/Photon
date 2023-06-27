@@ -95,6 +95,7 @@ public:
     const QVector<FixtureChannel*> &channels() const;
     FixtureChannel* findChannelWithName(const QString &name) const;
 
+    const QVector<FixtureWheel*> &wheels() const;
     QVector<FixtureCapability*> findCapability(CapabilityType type, int index = 0) const;
 
     template<class V>

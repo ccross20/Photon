@@ -1,6 +1,5 @@
 #include "anglecapability.h"
 #include "data/dmxmatrix.h"
-#include "fixture/fixture.h"
 #include "fixture/fixturechannel.h"
 
 namespace photon {

@@ -142,6 +142,39 @@ public:
         return false;
     }
 
+    QMenu *createMenu()
+    {
+        QMenu *menu = new QMenu();
+
+        //QMenu *rootMenu = menu.addMenu("Add Effect");
+
+
+        rootFolder->sortAlphabetically(true);
+
+        std::function<void(QMenu &menu, NodeTreeElement *)> treeLoop;
+        treeLoop = [&treeLoop](QMenu &menu, NodeTreeElement *rootElement){
+            for(uint i = 0; i < rootElement->childCount(); ++i)
+            {
+                auto element = rootElement->elementAt(i);
+
+                if(element->isFolder())
+                {
+
+                    treeLoop(*menu.addMenu(element->name()), element);
+                }
+                else
+                {
+                    auto action = menu.addAction(element->name());
+                    action->setData(static_cast<NodeElement*>(element)->info().id);
+                }
+            }
+        };
+
+        treeLoop(*menu, rootFolder);
+
+        return menu;
+    }
+
 private:
     FolderElement *rootFolder;
     QVector<DataType> dataList;

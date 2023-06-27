@@ -1,5 +1,6 @@
 #include <QPainter>
 #include "drawrectangle.h"
+#include "routine/routineevaluationcontext.h"
 
 namespace photon {
 
@@ -29,31 +30,29 @@ void DrawRectangle::createParameters()
     m_heightParam->setMaximum(1);
     addParameter(m_heightParam);
 
-    m_colorParam = new ColorParameter("colorInput","Color", Qt::red);
-    addParameter(m_colorParam);
-
-    m_alphaParam = new keira::DecimalParameter("alphaInput","Alpha", 1.0);
-    m_alphaParam->setMinimum(0);
-    m_alphaParam->setMaximum(1);
-    addParameter(m_alphaParam);
-
-    m_canvasInputParam = new CanvasParameter("canvasInput","Canvas In", QImage{});
-    addParameter(m_canvasInputParam);
-
-    m_canvasOutputParam = new CanvasParameter("canvasOutput","Canvas Out", QImage{});
-    addParameter(m_canvasOutputParam);
+    m_pathOutputParam = new PathParameter("pathOutput","Path Out", QPainterPath{});
+    addParameter(m_pathOutputParam);
 
 }
 
 void DrawRectangle::evaluate(keira::EvaluationContext *t_context) const
 {
+    /*
     QImage image = m_canvasInputParam->value().value<QImage>();
     QPainter painter{&image};
 
     painter.setOpacity(m_alphaParam->value().toDouble());
     painter.fillRect(0,0, image.width() * m_widthParam->value().toDouble(), image.height() * m_heightParam->value().toDouble(), m_colorParam->value().value<QColor>());
+    */
 
-    m_canvasOutputParam->setValue(image);
+    RoutineEvaluationContext *context = static_cast<RoutineEvaluationContext*>(t_context);
+
+    QPainterPath path;
+
+    if(context->canvasImage)
+        path.addRect(0,0, context->canvasImage->width() * m_widthParam->value().toDouble(), context->canvasImage->height() * m_heightParam->value().toDouble());
+
+    m_pathOutputParam->setValue(QVariant::fromValue(path));
 }
 
 } // namespace photon

@@ -19,11 +19,12 @@ public:
     void setState(State *);
     State *state() const;
 
-    QString name() const override;
-
     void restore(Project &) override;
     void readFromJson(const QJsonObject &, const LoadContext &) override;
     void writeToJson(QJsonObject &) const override;
+
+
+    static ClipInformation info();
 
 private:
     class Impl;

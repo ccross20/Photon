@@ -29,6 +29,11 @@ Fixture* FixtureCollection::fixtureById(const QByteArray &t_id)
     return dynamic_cast<Fixture*>(SceneIterator::FindOne(photonApp->project()->sceneRoot(),[t_id](SceneObject *t_obj){return t_obj->uniqueId() == t_id;}));
 }
 
+Fixture* FixtureCollection::fixtureById(Project *t_proj, const QByteArray &t_id)
+{
+    return dynamic_cast<Fixture*>(SceneIterator::FindOne(t_proj->sceneRoot(),[t_id](SceneObject *t_obj){return t_obj->uniqueId() == t_id;}));
+}
+
 QVector<Fixture*> FixtureCollection::fixturesWithName(const QString &t_text)
 {
     QVector<Fixture*> results;

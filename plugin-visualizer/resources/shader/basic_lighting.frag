@@ -42,6 +42,10 @@ struct SpotLight {
     float constant;         // 4
     float linear;           // 4
     float quadratic;        // 4
+    int cookieIndex;         // 4
+    int dummy1;
+    int dummy2;
+    int dummy3;
 
     vec3 diffuse;           // 16
     mat4 lightMatrix;       // = 64

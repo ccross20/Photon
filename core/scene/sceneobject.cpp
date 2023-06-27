@@ -264,6 +264,7 @@ void SceneObject::readFromJson(const QJsonObject &t_json)
                                     static_cast<float>(rotationObj.value("y").toDouble()),
                                     static_cast<float>(rotationObj.value("z").toDouble())};
 
+    m_impl->rebuildMatrix();
     if(t_json.contains("children"))
     {
         auto childrenArray = t_json.value("children").toArray();

@@ -57,12 +57,12 @@ void FixtureInfoNode::evaluate(keira::EvaluationContext *t_context) const
 
     QByteArray fixtureId = m_impl->fixtureParam->value().toByteArray();
     if(!fixtureId.isEmpty())
-        fixture = static_cast<RoutineEvaluationContext*>(t_context)->project->fixtures()->fixtureById(fixtureId);
+        fixture = FixtureCollection::fixtureById(fixtureId);
 
     if(!fixture)
         return;
 
-    m_impl->positionParam->setValue(fixture->position());
+    m_impl->positionParam->setValue(fixture->globalPosition());
     m_impl->rotationParam->setValue(fixture->rotation());
 }
 

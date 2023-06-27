@@ -12,8 +12,6 @@ public:
     RoutineClip(double start, double duration, QObject *parent = nullptr);
     ~RoutineClip();
 
-    QString name() const override;
-
     void processChannels(ProcessContext &) override;
     void setRoutine(Routine *);
     Routine *routine() const;

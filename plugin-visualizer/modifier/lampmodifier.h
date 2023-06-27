@@ -10,6 +10,7 @@ class DimmerCapability;
 class ShutterStrobeCapability;
 class ColorCapability;
 class Strober;
+class WheelSlotCapability;
 
 class LampModifier : public ModelModifier
 {
@@ -30,6 +31,7 @@ private:
     DimmerCapability *m_dimmerCapability = nullptr;
     ColorCapability *m_colorCapability = nullptr;
     QVector<ShutterStrobeCapability*> m_strobes;
+    QVector<WheelSlotCapability*> m_slots;
 };
 
 } // namespace photon
