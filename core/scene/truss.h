@@ -16,8 +16,6 @@ public:
     explicit TrussEditorWidget(Truss *,QWidget *parent = nullptr);
     ~TrussEditorWidget();
 
-    void setFixtures(QVector<Fixture*> fixtures);
-
 signals:
 
 private slots:

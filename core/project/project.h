@@ -19,6 +19,7 @@ public:
     RoutineCollection *routines() const;
     SequenceCollection *sequences() const;
     CanvasCollection *canvases() const;
+    PixelLayoutCollection *pixelLayouts() const;
     BusGraph *bus() const;
     SceneObject *sceneRoot() const;
     SceneManager *scene() const;

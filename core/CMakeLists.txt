@@ -40,6 +40,7 @@ set(PROJECT_SOURCES
         falloff/falloffmap2d.cpp
         falloff/fixturefalloffmap.h
         falloff/fixturefalloffmap.cpp
+        fixture/dmxreceiver.h
         fixture/fixture.h
         fixture/fixture.cpp
         fixture/fixturechannel.h
@@ -122,6 +123,8 @@ set(PROJECT_SOURCES
         gui/color/huebox.cpp
         gui/color/simpleswatch.h
         gui/color/simpleswatch.cpp
+        gui/dialog/canvasdialog.h
+        gui/dialog/canvasdialog.cpp
         gui/dmxviewer/dmxviewer.h
         gui/dmxviewer/dmxviewer.cpp
         gui/dmxviewer/dmxviewercells.h
@@ -156,11 +159,17 @@ set(PROJECT_SOURCES
         gui/panel/routinecollectionpanel.cpp
         gui/panel/routineeditpanel.h
         gui/panel/routineeditpanel.cpp
+        gui/panel/pixellayoutcollectionpanel.h
+        gui/panel/pixellayoutcollectionpanel_p.h
+        gui/panel/pixellayoutcollectionpanel.cpp
         gui/panel/sequencecollectionpanel.h
         gui/panel/sequencecollectionpanel_p.h
         gui/panel/sequencecollectionpanel.cpp
         gui/panel/sequencepanel.h
         gui/panel/sequencepanel.cpp
+        gui/pixellayouteditor.h
+        gui/pixellayouteditor_p.h
+        gui/pixellayouteditor.cpp
         gui/sceneobjectselector.h
         gui/sceneobjectselector_p.h
         gui/sceneobjectselector.cpp
@@ -194,6 +203,16 @@ set(PROJECT_SOURCES
         pixel/canvas.cpp
         pixel/canvascollection.h
         pixel/canvascollection.cpp
+        pixel/pixellayout.h
+        pixel/pixellayout.cpp
+        pixel/pixellayoutcollection.h
+        pixel/pixellayoutcollection.cpp
+        pixel/pixelsource.h
+        pixel/pixelsource.cpp
+        pixel/pixelsourcelayout.h
+        pixel/pixelsourcelayout.cpp
+        pixel/pixelstrip.h
+        pixel/pixelstrip.cpp
         plugin/pluginfactory.h
         plugin/pluginfactory.cpp
         scene/sceneiterator.h

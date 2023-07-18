@@ -578,6 +578,8 @@ void Clip::readFromJson(const QJsonObject &t_json, const LoadContext &t_context)
         m_impl->channels.append(channel);
     }
 
+    qDebug() << "Load clip" << name();
+
 }
 
 void Clip::writeToJson(QJsonObject &t_json) const

@@ -177,13 +177,14 @@ void TracePathClip::evaluateFixture(ClipEffectEvaluationContext &t_context) cons
         currentLength = 1.0 - currentLength;
 
     initialRelativeTime -= clip()->falloff(fixture);
-    auto pt = path.pointAtPercent(currentLength);
+    auto pt = path.pointAtPercent(std::max(std::min(currentLength,1.0),0.0));
     QVector3D pt3D{static_cast<float>(pt.x()),0.0f, static_cast<float>(pt.y())};
 
     QMatrix4x4 matrix;
-    matrix.translate(fixture->globalPosition());
-    matrix.rotate(QQuaternion::fromEulerAngles(fixture->rotation()));
+    //matrix.translate(fixture->globalPosition());
+    //matrix.rotate(QQuaternion::fromEulerAngles(fixture->rotation()));
 
+    matrix = fixture->globalMatrix();
 
     auto panRad = matrix.inverted().map(pt3D);
     float panDeg = qRadiansToDegrees(atan2(panRad.x(),panRad.z()));

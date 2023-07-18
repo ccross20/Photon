@@ -4,6 +4,7 @@
 #include <QCoreApplication>
 #include "scenemodel.h"
 #include "sceneobject.h"
+#include "fixture/fixture.h"
 
 namespace photon {
 
@@ -25,6 +26,7 @@ SceneModel::SceneModel(SceneObject *root, QObject *parent)
     connect(root, &SceneObject::childWasRemoved, this, &SceneModel::childWasRemoved);
     connect(root, &SceneObject::childWillBeMoved, this, &SceneModel::childWillBeMoved);
     connect(root, &SceneObject::childWasMoved, this, &SceneModel::childWasMoved);
+    connect(root, &SceneObject::descendantModified, this, &SceneModel::objectWasUpdated);
 }
 
 SceneModel::~SceneModel()
@@ -217,7 +219,7 @@ Qt::ItemFlags SceneModel::flags(const QModelIndex &index) const
 //! [2]
 int SceneModel::columnCount(const QModelIndex & /* parent */) const
 {
-    return 1;
+    return 4;
 }
 //! [2]
 
@@ -244,7 +246,31 @@ QVariant SceneModel::data(const QModelIndex &index, int role) const
             SceneObject *layer = objectForIndex(index);
             if(layer)
             {
-                return layer->name();
+                auto fixture = dynamic_cast<DMXReceiver*>(layer);
+                if(fixture)
+                {
+                    switch(index.column())
+                    {
+                        default:
+                            return "";
+                        case 0:
+                            return layer->name();
+                        case 1:
+                            return fixture->universe();
+                        case 2:
+                            return QString::number(fixture->dmxOffset()) + "-" + QString::number(fixture->dmxOffset() + fixture->dmxSize());
+                        case 3:
+                            return fixture->dmxSize();
+                    }
+                }
+                else
+                {
+                    if(index.column() == 0)
+                        return layer->name();
+                    return "";
+                }
+
+
             }
         }
             break;
@@ -263,10 +289,20 @@ QVariant SceneModel::headerData(int section, Qt::Orientation orientation,
 {
     if (orientation == Qt::Horizontal && role == Qt::DisplayRole)
     {
-        if(section == 0)
-            return "Name";
+        switch(section)
+        {
+            default:
+                return "";
+            case 0:
+                return "Name";
+            case 1:
+                return "Uni";
+            case 2:
+                return "Range";
+            case 3:
+                return "Channels";
+        }
 
-        return "";
     }
 
     if(role == Qt::ToolTipRole)
@@ -354,6 +390,12 @@ bool SceneModel::setData(const QModelIndex &index, const QVariant &value, int ro
     return false;
 }
 
+void SceneModel::objectWasUpdated(photon::SceneObject *t_object)
+{
+    QModelIndex index = indexForObject(t_object);
+    dataChanged(createIndex(index.row(),0,t_object),createIndex(index.row(),3,t_object));
+}
+
 void SceneModel::childWillBeAdded(photon::SceneObject *t_parent, photon::SceneObject *t_child)
 {
     beginInsertRows(indexForObject(t_parent), t_child->index(), t_child->index());
@@ -364,6 +406,7 @@ void SceneModel::childWillBeAdded(photon::SceneObject *t_parent, photon::SceneOb
     connect(t_child, &SceneObject::childWasRemoved, this, &SceneModel::childWasRemoved);
     connect(t_child, &SceneObject::childWillBeMoved, this, &SceneModel::childWillBeMoved);
     connect(t_child, &SceneObject::childWasMoved, this, &SceneModel::childWasMoved);
+    connect(t_child, &SceneObject::metadataChanged, this, &SceneModel::objectWasUpdated);
 }
 
 void SceneModel::childWasAdded(photon::SceneObject *)
@@ -373,20 +416,19 @@ void SceneModel::childWasAdded(photon::SceneObject *)
 
 void SceneModel::childWillBeRemoved(photon::SceneObject *t_parent, photon::SceneObject *t_child)
 {
-    qDebug() << "Begin remove";
     disconnect(t_child, &SceneObject::childWillBeAdded, this, &SceneModel::childWillBeAdded);
     disconnect(t_child, &SceneObject::childWasAdded, this, &SceneModel::childWasAdded);
     disconnect(t_child, &SceneObject::childWillBeRemoved, this, &SceneModel::childWillBeRemoved);
     disconnect(t_child, &SceneObject::childWasRemoved, this, &SceneModel::childWasRemoved);
     disconnect(t_child, &SceneObject::childWillBeMoved, this, &SceneModel::childWillBeMoved);
     disconnect(t_child, &SceneObject::childWasMoved, this, &SceneModel::childWasMoved);
+    disconnect(t_child, &SceneObject::metadataChanged, this, &SceneModel::objectWasUpdated);
     beginRemoveRows(indexForObject(t_parent), t_child->index(), t_child->index());
 }
 
 void SceneModel::childWasRemoved(photon::SceneObject *)
 {
     endRemoveRows();
-    qDebug() << "End remove";
 }
 
 void SceneModel::childWillBeMoved(photon::SceneObject *t_child, int t_newIndex)

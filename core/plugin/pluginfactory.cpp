@@ -14,6 +14,7 @@
 #include "gui/panel/routineeditpanel.h"
 #include "gui/panel/dmxviewerpanel.h"
 #include "gui/panel/canvasviewerpanel.h"
+#include "gui/panel/pixellayoutcollectionpanel.h"
 
 #include "graph/bus/dmxgeneratematrixnode.h"
 #include "graph/bus/dmxwriternode.h"
@@ -151,6 +152,7 @@ void PluginFactory::init()
     registerPluginPanel("photon.routine",[](){return new RoutineEditPanel;});
     registerPluginPanel("photon.dmx-viewer",[](){return new DMXViewerPanel;});
     registerPluginPanel("photon.canvas-viewer",[](){return new CanvasViewerPanel;});
+    registerPluginPanel("photon.pixellayout-collection",[](){return new PixelLayoutCollectionPanel;});
 
     registerNode(FixtureWriterNode::info());
     registerNode(GlobalsNode::info());

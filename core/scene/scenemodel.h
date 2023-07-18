@@ -54,6 +54,7 @@ private slots:
     void childWasRemoved(photon::SceneObject *child);
     void childWillBeMoved(photon::SceneObject *child, int newIndex);
     void childWasMoved(photon::SceneObject *child);
+    void objectWasUpdated(photon::SceneObject *);
 
 private:
     class Impl;

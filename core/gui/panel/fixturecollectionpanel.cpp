@@ -10,6 +10,8 @@
 #include "fixture/fixturecollection.h"
 #include "scene/scenegroup.h"
 #include "scene/truss.h"
+#include "pixel/pixelstrip.h"
+#include "scene/sceneiterator.h"
 
 namespace photon {
 
@@ -81,12 +83,27 @@ void FixtureCollectionPanel::addClicked()
     menu.addAction("Fixture",[this](){addFixture();});
     menu.addAction("Group",[this](){addGroup();});
     menu.addAction("Truss",[this](){addTruss();});
+    menu.addAction("Light Strip",[this](){addLightStrip();});
 
     menu.exec(m_impl->addButton->mapToGlobal(m_impl->addButton->rect().bottomLeft()));
 }
 
 void FixtureCollectionPanel::duplicateClicked()
 {
+    auto fixtures = SceneIterator::FindMany(photonApp->project()->sceneRoot(),[](SceneObject *t_object, bool *t_continue){
+       return dynamic_cast<Fixture*>(t_object);
+    });
+
+    int nextDMX = 0;
+    for(auto fix : fixtures)
+    {
+        int end = static_cast<Fixture*>(fix)->dmxOffset() + static_cast<Fixture*>(fix)->dmxSize();
+
+        if(end > nextDMX)
+            nextDMX = end;
+    }
+
+
     auto indicies = m_impl->treeView->selectionModel()->selectedRows();
 
     QVector<Fixture*> toClone;
@@ -100,12 +117,17 @@ void FixtureCollectionPanel::duplicateClicked()
         auto newObj = c->clone();
         if(newObj)
         {
-            if(c->typeId() == "fixture")
-            {
-                auto fix = static_cast<Fixture*>(c);
-                fix->setDMXOffset(fix->dmxOffset() + fix->dmxSize());
-            }
-            newObj->setParentSceneObject(c->parentSceneObject(),c->index() + 1);
+            newObj->setParentSceneObject(c->parentSceneObject(),c->index());
+        }
+
+        auto fixtures = SceneIterator::FindMany(newObj,[](SceneObject *t_object, bool *t_continue){
+           return dynamic_cast<Fixture*>(t_object);
+        });
+        for(auto sceneObj : fixtures)
+        {
+            auto fix = static_cast<Fixture*>(sceneObj);
+            fix->setDMXOffset(nextDMX);
+            nextDMX += fix->dmxSize();
         }
     }
 }
@@ -156,6 +178,13 @@ void FixtureCollectionPanel::addTruss()
     auto truss = new Truss;
     truss->setName("Truss");
     truss->setParentSceneObject(photonApp->project()->sceneRoot());
+}
+
+void FixtureCollectionPanel::addLightStrip()
+{
+    auto strip = new PixelStrip;
+    strip->setName("Pixel Strip");
+    strip->setParentSceneObject(photonApp->project()->sceneRoot());
 }
 
 void FixtureCollectionPanel::removeClicked()

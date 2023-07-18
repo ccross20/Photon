@@ -60,6 +60,7 @@ void GuiManager::Impl::createAppWindow()
 
     QMenu *windowMenu = new QMenu("Window");
     windowMenu->addAction("Canvas", [](){photonApp->gui()->createFloatingPanel("photon.canvas-collection");});
+    windowMenu->addAction("Pixel Layouts", [](){photonApp->gui()->createFloatingPanel("photon.pixellayout-collection");});
     windowMenu->addAction("Fixture", [](){photonApp->gui()->createFloatingPanel("photon.fixture-collection");});
     windowMenu->addAction("Routine", [](){photonApp->gui()->createFloatingPanel("photon.routine-collection");});
     windowMenu->addAction("Sequence", [](){photonApp->gui()->createFloatingPanel("photon.sequence-collection");});

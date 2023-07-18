@@ -20,6 +20,7 @@ public:
     QVector3D position() const;
     QVector3D rotation() const;
     QVector3D globalPosition() const;
+    QVector3D globalRotation() const;
     const QMatrix4x4 &localMatrix() const;
     QMatrix4x4 globalMatrix() const;
 
@@ -41,6 +42,8 @@ public:
     virtual void readFromJson(const QJsonObject &);
     virtual void writeToJson(QJsonObject &) const;
 
+    void triggerUpdate();
+
 public slots:
     void setParentSceneObject(photon::SceneObject *, int index = -1);
 
@@ -52,7 +55,7 @@ signals:
     void positionChanged();
     void rotationChanged();
     void matrixChanged();
-    void metadataChanged();
+    void metadataChanged(photon::SceneObject *);
 
     void childWillBeAdded(photon::SceneObject *parent, photon::SceneObject *child);
     void childWasAdded(photon::SceneObject *child);
@@ -62,6 +65,7 @@ signals:
     void childWasMoved(photon::SceneObject *child);
     void descendantAdded(photon::SceneObject *);
     void descendantRemoved(photon::SceneObject *);
+    void descendantModified(photon::SceneObject *);
 
 
 private:

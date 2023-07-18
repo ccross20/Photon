@@ -6,6 +6,7 @@
 #include "photoncore.h"
 #include "project/project.h"
 #include "pixel/canvascollection.h"
+#include "gui/dialog/canvasdialog.h"
 
 
 
@@ -95,7 +96,7 @@ CanvasCollectionPanel::CanvasCollectionPanel() : Panel("photon.canvas-collection
 {
     QVBoxLayout *vLayout = new QVBoxLayout;
 
-    setName("Canvass");
+    setName("Canvas");
     m_impl->listView = new QListView;
     m_impl->listView->setSizePolicy(QSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::MinimumExpanding));
 
@@ -131,20 +132,23 @@ void CanvasCollectionPanel::doubleClicked(const QModelIndex &t_index)
 
     if(canvas)
     {
-        //photonApp->editCanvas(canvas);
+        CanvasDialog dialog(canvas);
+
+        dialog.exec();
     }
 }
 
 void CanvasCollectionPanel::addClicked()
 {
-    bool ok;
-    QString text = QInputDialog::getText(this, "Canvas Name",
-                                         "Name", QLineEdit::Normal,
-                                         "Untitled", &ok);
-    if (ok && !text.isEmpty())
+    CanvasDialog dialog;
+
+    int result = dialog.exec();
+
+    if (result == CanvasDialog::DialogCode::Accepted)
     {
-        photonApp->project()->canvases()->addCanvas(new Canvas(text, QSize{800,200}));
+        photonApp->project()->canvases()->addCanvas(dialog.canvas());
     }
+
 
 }
 

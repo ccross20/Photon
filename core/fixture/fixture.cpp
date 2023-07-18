@@ -109,13 +109,13 @@ QVector<FixtureCapability*> Fixture::findCapability(CapabilityType t_type, int t
 void Fixture::setComments(const QString &t_value)
 {
     m_impl->comments = t_value;
-    emit metadataChanged();
+    emit metadataChanged(this);
 }
 
 void Fixture::setIdentifier(const QString &t_value)
 {
     m_impl->identifier = t_value;
-    emit metadataChanged();
+    emit metadataChanged(this);
 }
 
 QString Fixture::description() const
@@ -161,13 +161,13 @@ void Fixture::setUniqueIndex(int t_value)
 void Fixture::setUniverse(int t_universe)
 {
     m_impl->universe = t_universe;
-    emit metadataChanged();
+    emit metadataChanged(this);
 }
 
 void Fixture::setDMXOffset(int t_offset)
 {
     m_impl->dmxOffset = t_offset;
-    emit metadataChanged();
+    emit metadataChanged(this);
 }
 
 int Fixture::dmxOffset() const
@@ -294,7 +294,7 @@ void Fixture::readFromOpenFixtureJson(const QJsonObject &t_json)
 
         for(auto it = wheelObj.constBegin(); it != wheelObj.constEnd(); ++it)
         {
-            qDebug() << "add wheel" << it.key();
+            //qDebug() << "add wheel" << it.key();
             auto wheel = new FixtureWheel(it.key());
             wheel->readFromOpenFixtureJson(it.value().toObject());
             m_impl->wheels << wheel;
@@ -415,7 +415,7 @@ void Fixture::setMode(uchar t_mode)
             qDebug() << "Could not find:" << channelName;
         }
     }
-    emit metadataChanged();
+    emit metadataChanged(this);
 }
 
 int Fixture::mode() const

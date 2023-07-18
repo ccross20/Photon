@@ -102,6 +102,7 @@ void ClipLayer::readFromJson(const QJsonObject &t_json, const LoadContext &t_con
         auto clipObj = clipJson.toObject();
         Clip *clip = nullptr;
 
+        qDebug() << "Create clip " << clipObj.value("id");
         clip = photonApp->plugins()->createClip(clipObj.value("id").toString().toLatin1());
 
         if(clip)

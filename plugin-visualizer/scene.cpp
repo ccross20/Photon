@@ -16,6 +16,7 @@ Scene::Scene(QObject *parent)
 {
     m_camera = new FreeCamera;
     m_rootEntity = new Entity;
+    m_bufferSize = (144 * 40) + (64 * 2) + 8;
 
 
     connect(m_rootEntity, &Entity::componentAddedToDescendant, this, &Scene::componentAdded);
@@ -145,9 +146,9 @@ void Scene::create(QOpenGLContext *t_context)
     {
         t_context->functions()->glGenBuffers(1, &m_lightBlock);
         t_context->functions()->glBindBuffer(GL_UNIFORM_BUFFER, m_lightBlock);
-        t_context->functions()->glBufferData(GL_UNIFORM_BUFFER, 1576, NULL, GL_STATIC_DRAW);
+        t_context->functions()->glBufferData(GL_UNIFORM_BUFFER, m_bufferSize, NULL, GL_STATIC_DRAW);
         t_context->functions()->glBindBuffer(GL_UNIFORM_BUFFER, 0);
-        t_context->extraFunctions()->glBindBufferRange(GL_UNIFORM_BUFFER, 0, m_lightBlock, 0, 1576);
+        t_context->extraFunctions()->glBindBufferRange(GL_UNIFORM_BUFFER, 0, m_lightBlock, 0, m_bufferSize);
     }
 
     m_rootEntity->create(t_context);
@@ -159,12 +160,12 @@ void Scene::rebuild(QOpenGLContext *t_context)
         return;
 
     if(!m_buffer)
-        m_buffer = static_cast<byte*>(malloc(1576 * sizeof(byte)));
+        m_buffer = static_cast<byte*>(malloc(m_bufferSize * sizeof(byte)));
 
     auto bufferStart = m_buffer;
     uint chunkSize = 4;
 
-    for(int i = 0; i < 10; i++)
+    for(int i = 0; i < 40; i++)
     {
         if(i < m_spotLights.length())
         {
@@ -251,7 +252,7 @@ void Scene::rebuild(QOpenGLContext *t_context)
     m_buffer = bufferStart;
 
     t_context->functions()->glBindBuffer(GL_UNIFORM_BUFFER, m_lightBlock);
-    t_context->functions()->glBufferSubData(GL_UNIFORM_BUFFER,0, 1576, m_buffer);
+    t_context->functions()->glBufferSubData(GL_UNIFORM_BUFFER,0, m_bufferSize, m_buffer);
     //t_context->functions()->glBufferData(GL_UNIFORM_BUFFER, 16, m_buffer, GL_STATIC_DRAW);
     t_context->functions()->glBindBuffer(GL_UNIFORM_BUFFER, 0);
 

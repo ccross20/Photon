@@ -2,6 +2,7 @@
 #include "fixture/fixture.h"
 #include "scenegroup.h"
 #include "truss.h"
+#include "pixel/pixelstrip.h"
 
 namespace photon {
 
@@ -19,6 +20,8 @@ SceneObject *SceneFactory::createObject(const QByteArray &id)
         return new SceneGroup();
     if(id == "truss")
         return new Truss();
+    if(id == "pixelstrip")
+        return new PixelStrip();
 
     return nullptr;
 }

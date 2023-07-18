@@ -2,9 +2,17 @@
 #define PHOTON_CANVAS_H
 
 #include <QObject>
+#include <QImage>
+#include "data/dmxmatrix.h"
 #include "photon-global.h"
 
 namespace photon {
+
+struct CanvasContext
+{
+    QImage pixelData;
+    DMXMatrix dmxMatrix;
+};
 
 class PHOTONCORE_EXPORT Canvas : public QObject
 {

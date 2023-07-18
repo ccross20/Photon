@@ -18,6 +18,7 @@ private slots:
     void addFixture();
     void addGroup();
     void addTruss();
+    void addLightStrip();
     void removeClicked();
     void duplicateClicked();
     void doubleClicked(const QModelIndex &);

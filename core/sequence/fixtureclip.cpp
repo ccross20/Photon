@@ -134,7 +134,7 @@ ClipInformation FixtureClip::info()
 {
     ClipInformation toReturn([](){return new FixtureClip;});
     toReturn.name = "FixtureClip";
-    toReturn.id = "photon.clip.fixture-clip";
+    toReturn.id = "fixtureclip";
     //toReturn.categories.append("Generator");
 
     return toReturn;

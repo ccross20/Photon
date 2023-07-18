@@ -42,6 +42,8 @@ void SceneObject::Impl::addChild(SceneObject *object, int index)
 
     connect(object, &SceneObject::descendantAdded, facade, &SceneObject::descendantAdded);
     connect(object, &SceneObject::descendantRemoved, facade, &SceneObject::descendantRemoved);
+    connect(object, &SceneObject::descendantModified, facade, &SceneObject::descendantModified);
+    connect(object, &SceneObject::metadataChanged, facade, &SceneObject::descendantModified);
     emit facade->childWasAdded(object);
     emit facade->descendantAdded(object);
 }
@@ -92,6 +94,7 @@ void SceneObject::Impl::removeChild(SceneObject *object)
 
     disconnect(object, &SceneObject::descendantAdded, facade, &SceneObject::descendantAdded);
     disconnect(object, &SceneObject::descendantRemoved, facade, &SceneObject::descendantRemoved);
+    disconnect(object, &SceneObject::metadataChanged, facade, &SceneObject::descendantModified);
     emit facade->childWasRemoved(object);
     emit facade->descendantRemoved(object);
 }
@@ -173,7 +176,12 @@ void SceneObject::setName(const QString &t_value)
     if(m_impl->name == t_value)
         return;
     m_impl->name = t_value;
-    emit metadataChanged();
+    emit metadataChanged(this);
+}
+
+void SceneObject::triggerUpdate()
+{
+    emit metadataChanged(this);
 }
 
 QVector3D SceneObject::position() const
@@ -184,6 +192,11 @@ QVector3D SceneObject::position() const
 QVector3D SceneObject::rotation() const
 {
     return m_impl->rotation;
+}
+
+QVector3D SceneObject::globalRotation() const
+{
+    return globalMatrix().map(m_impl->rotation);
 }
 
 QVector3D SceneObject::globalPosition() const

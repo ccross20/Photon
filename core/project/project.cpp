@@ -12,6 +12,8 @@
 #include "sequence/sequencecollection.h"
 #include "routine/routinecollection.h"
 #include "routine/routine.h"
+#include "pixel/pixellayoutcollection.h"
+#include "pixel/pixellayout.h"
 #include "sequence/sequence.h"
 #include "graph/bus/busgraph.h"
 #include "graph/bus/dmxgeneratematrixnode.h"
@@ -28,6 +30,7 @@ public:
     Impl();
     ~Impl();
     CanvasCollection canvases;
+    PixelLayoutCollection pixelLayouts;
     FixtureCollection fixtures;
     SequenceCollection sequences;
     RoutineCollection routines;
@@ -121,6 +124,10 @@ CanvasCollection *Project::canvases() const
     return &m_impl->canvases;
 }
 
+PixelLayoutCollection *Project::pixelLayouts() const
+{
+    return &m_impl->pixelLayouts;
+}
 
 void Project::save(const QString &path) const
 {
@@ -212,6 +219,12 @@ void Project::readFromJson(const QJsonObject &json)
     LoadContext context;
     context.project = this;
 
+    //m_impl->sceneManager = new SceneManager;
+    if(json.contains("sceneManager"))
+    {
+        QJsonObject sceneObj = json.value("sceneManager").toObject();
+        m_impl->sceneManager->readFromJson(sceneObj);
+    }
 
     m_impl->bus = new BusGraph;
     if(json.contains("bus"))
@@ -259,12 +272,21 @@ void Project::readFromJson(const QJsonObject &json)
         }
     }
 
-    //m_impl->sceneManager = new SceneManager;
-    if(json.contains("sceneManager"))
+    if(json.contains("pixelLayouts"))
     {
-        QJsonObject sceneObj = json.value("sceneManager").toObject();
-        m_impl->sceneManager->readFromJson(sceneObj);
+        QJsonArray layoutArray = json.value("pixelLayouts").toArray();
+        for(const auto &layout : layoutArray)
+        {
+            const QJsonObject &layoutObj = layout.toObject();
+
+            PixelLayout *c = new PixelLayout;
+            c->readFromJson(layoutObj, context);
+            m_impl->pixelLayouts.addLayout(c);
+        }
     }
+
+
+
 
 
 }
@@ -302,6 +324,15 @@ void Project::writeToJson(QJsonObject &json) const
         canvasArray.append(canvasObj);
     }
     json.insert("canvases", canvasArray);
+
+    QJsonArray layoutArray;
+    for(auto layout : m_impl->pixelLayouts.layouts())
+    {
+        QJsonObject layoutObj;
+        layout->writeToJson(layoutObj);
+        layoutArray.append(layoutObj);
+    }
+    json.insert("pixelLayouts", layoutArray);
 
     QJsonObject sceneObj;
     m_impl->sceneManager->writeToJson(sceneObj);

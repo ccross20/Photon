@@ -60,7 +60,7 @@ layout (std140) uniform TestBlock
 
 layout (std140) uniform LightBlock
 {
-    SpotLight spotlights[10];       // 1440
+    SpotLight spotlights[40];       // 1440
     DirLight infiniteLights[2];     // 128
     int spotlightCount;             // 4
     int infiniteCount;              // 4

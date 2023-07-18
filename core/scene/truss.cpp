@@ -190,37 +190,37 @@ QWidget *Truss::createEditor()
 void Truss::setSegmentLength(float t_value)
 {
     m_impl->segmentLength = t_value;
-    emit metadataChanged();
+    emit metadataChanged(this);
 }
 
 void Truss::setRadius(float t_value)
 {
     m_impl->radius = t_value;
-    emit metadataChanged();
+    emit metadataChanged(this);
 }
 
 void Truss::setBeams(uint t_beams)
 {
     m_impl->beams = t_beams;
-    emit metadataChanged();
+    emit metadataChanged(this);
 }
 
 void Truss::setOffset(float t_offset)
 {
     m_impl->offset = t_offset;
-    emit metadataChanged();
+    emit metadataChanged(this);
 }
 
 void Truss::setLength(float t_length)
 {
     m_impl->length = t_length;
-    emit metadataChanged();
+    emit metadataChanged(this);
 }
 
 void Truss::setAngle(float t_angle)
 {
     m_impl->angle = t_angle;
-    emit metadataChanged();
+    emit metadataChanged(this);
 }
 
 float Truss::radius() const

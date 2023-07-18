@@ -4,6 +4,7 @@
 #include "capability/fixturecapability.h"
 #include "fixturechannel.h"
 #include "scene/sceneobject.h"
+#include "dmxreceiver.h"
 
 namespace photon {
 
@@ -17,7 +18,7 @@ struct FixtureMode
 };
 
 
-class PHOTONCORE_EXPORT Fixture : public SceneObject
+class PHOTONCORE_EXPORT Fixture : public SceneObject, public DMXReceiver
 {
     Q_OBJECT
 public:
@@ -85,9 +86,9 @@ public:
     void setIdentifier(const QString &);
 
     void setDMXOffset(int offset);
-    int dmxOffset() const;
-    int dmxSize() const;
-    int universe() const;
+    int dmxOffset() const override;
+    int dmxSize() const override;
+    int universe() const override;
     int uniqueIndex() const;
     void setUniqueIndex(int);
     void setUniverse(int universe);
