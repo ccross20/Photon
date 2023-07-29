@@ -33,7 +33,7 @@
 
 #include <QRubberBand>
 
-#ifdef Q_OS_LINUX
+#if defined(Q_OS_UNIX) && !defined(Q_OS_MACOS)
 #include <QDockWidget>
 #define tFloatingWidgetBase QDockWidget
 #else
@@ -65,7 +65,7 @@ class CDockingStateReader;
  * This interface is used for opaque and non-opaque undocking. If opaque
  * undocking is used, the a real CFloatingDockContainer widget will be created
  */
-class ADS_EXPORT IFloatingWidget
+class  IFloatingWidget
 {
 public:
     virtual ~IFloatingWidget() = default;
@@ -101,7 +101,7 @@ public:
  * another dock container.
  * Every floating window of the docking system is a FloatingDockContainer.
  */
-class ADS_EXPORT CFloatingDockContainer : public tFloatingWidgetBase, public IFloatingWidget
+class  CFloatingDockContainer : public tFloatingWidgetBase, public IFloatingWidget
 {
 	Q_OBJECT
 private:
@@ -182,12 +182,11 @@ protected: // reimplements QWidget
 
 #ifdef Q_OS_MACOS
 	virtual bool event(QEvent *e) override;
-	virtual void moveEvent(QMoveEvent *event) override;
-#endif
-
-#ifdef Q_OS_LINUX
+    virtual void moveEvent(QMoveEvent *event) override;
+#elif defined(Q_OS_UNIX)
 	virtual void moveEvent(QMoveEvent *event) override;
 	virtual void resizeEvent(QResizeEvent *event) override;
+	virtual bool event(QEvent *e) override;
 #endif
 
 #ifdef Q_OS_WIN
@@ -263,7 +262,7 @@ public:
 	 */
 	void hideAndDeleteLater();
 
-#ifdef Q_OS_LINUX
+#if defined(Q_OS_UNIX) && !defined(Q_OS_MACOS)
     /**
 	 * This is a function that responds to FloatingWidgetTitleBar::maximizeRequest()
 	 * Maximize or normalize the container size.
@@ -299,7 +298,6 @@ public:
 	 */
 	bool hasNativeTitleBar();
 #endif
-
 }; // class FloatingDockContainer
 }
  // namespace ads

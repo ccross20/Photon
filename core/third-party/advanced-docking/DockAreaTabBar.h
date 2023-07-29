@@ -50,7 +50,7 @@ class IFloatingWidget;
  * has not finished. And we need to remove a tab, if the user drags a
  * a dock widget out of a group of tabbed widgets
  */
-class ADS_EXPORT CDockAreaTabBar : public QScrollArea
+class  CDockAreaTabBar : public QScrollArea
 {
 	Q_OBJECT
 private:
@@ -112,6 +112,19 @@ public:
 	 * Returns the tab with the given index
 	 */
 	CDockWidgetTab* tab(int Index) const;
+
+	/**
+	 * Returns the tab at the given position.
+	 * Returns -1 if the position is left of the first tab and count() if the
+	 * position is right of the last tab. Returns -2 to indicate an invalid
+	 * value.
+	 */
+	int tabAt(const QPoint& Pos) const;
+
+	/**
+	 * Returns the tab insertion index for the given mouse cursor position
+	 */
+	int tabInsertIndexAt(const QPoint& Pos) const;
 
 	/**
 	 * Filters the tab widget events

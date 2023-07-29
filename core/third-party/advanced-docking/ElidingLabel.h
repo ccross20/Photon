@@ -43,7 +43,7 @@ struct ElidingLabelPrivate;
  * and reading the text via a pointer to the base class QLabel does not work
  * properly
  */
-class ADS_EXPORT CElidingLabel : public QLabel
+class  CElidingLabel : public QLabel
 {
 	Q_OBJECT
 private:

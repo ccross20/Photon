@@ -130,7 +130,9 @@ void PixelLayoutCollectionPanel::doubleClicked(const QModelIndex &t_index)
 
     if(layout)
     {
+        PixelLayoutEditor *editor = new PixelLayoutEditor(layout);
 
+        editor->show();
     }
 }
 

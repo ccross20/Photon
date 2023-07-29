@@ -10,6 +10,7 @@ public:
     ChannelInfo info;
     QVector<ChannelEffect*> effects;
     QByteArray uniqueId;
+    QString parentName;
     double startTime = 0;
     double duration = 0;
 };

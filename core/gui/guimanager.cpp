@@ -7,7 +7,6 @@
 #include <QMainWindow>
 #include <QToolBar>
 #include "guimanager_p.h"
-#include "panel_p.h"
 #include "project/project.h"
 #include "photoncore.h"
 #include "plugin/pluginfactory.h"

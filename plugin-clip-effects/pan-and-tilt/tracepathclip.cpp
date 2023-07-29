@@ -140,7 +140,7 @@ QPainterPath TracePathClip::generatePath(double t_time) const
     return path;
 }
 
-void TracePathClip::evaluateFixture(ClipEffectEvaluationContext &t_context) const
+void TracePathClip::evaluate(FixtureClipEffectEvaluationContext &t_context) const
 {
     int currentIndex = 0;
     for(int i = 0; i < fixtures.length(); ++i)

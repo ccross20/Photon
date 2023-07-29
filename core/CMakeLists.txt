@@ -29,6 +29,20 @@ set(PROJECT_SOURCES
         parametereditor.cpp
         canvas/canvaseffect.h
         canvas/canvaseffect.cpp
+        channel/parameter/channelparameter.h
+        channel/parameter/channelparameter.cpp
+        channel/parameter/numberchannelparameter.h
+        channel/parameter/numberchannelparameter.cpp
+        channel/parameter/point2channelparameter.h
+        channel/parameter/point2channelparameter.cpp
+        channel/parameter/view/channelparameterview.h
+        channel/parameter/view/channelparameterview.cpp
+        channel/parameter/view/numberchannelparameterview.h
+        channel/parameter/view/numberchannelparameterview.cpp
+        channel/parameter/view/point2channelparameterview.h
+        channel/parameter/view/point2channelparameterview.cpp
+        channel/parameter/view/channelparameterwidget.h
+        channel/parameter/view/channelparameterwidget.cpp
         data/dmxmatrix.h
         data/dmxmatrix.cpp
         falloff/constantfalloffeffect.h
@@ -231,6 +245,8 @@ set(PROJECT_SOURCES
         scene/truss.cpp
         sequence/canvasclip.h
         sequence/canvasclip.cpp
+        sequence/canvasclipeffect.h
+        sequence/canvasclipeffect.cpp
         sequence/canvaslayergroup.h
         sequence/canvaslayergroup.cpp
         sequence/channel.h
@@ -252,6 +268,8 @@ set(PROJECT_SOURCES
         sequence/constantchanneleffect.cpp
         sequence/fixtureclip.h
         sequence/fixtureclip.cpp
+        sequence/fixtureclipeffect.h
+        sequence/fixtureclipeffect.cpp
         sequence/gradientchanneleffect.h
         sequence/gradientchanneleffect.cpp
         sequence/layer.h
@@ -358,6 +376,11 @@ set(PROJECT_SOURCES
         third-party/advanced-docking/FloatingDockContainer.cpp
         third-party/advanced-docking/FloatingDragPreview.cpp
         third-party/advanced-docking/IconProvider.cpp
+        third-party/advanced-docking/AutoHideSideBar.cpp
+        third-party/advanced-docking/AutoHideTab.cpp
+        third-party/advanced-docking/AutoHideDockContainer.cpp
+        third-party/advanced-docking/PushButton.cpp
+        third-party/advanced-docking/ResizeHandle.cpp
         third-party/advanced-docking/linux/FloatingWidgetTitleBar.cpp
         third-party/fastnoise.h
         third-party/fastnoise.cpp
@@ -376,6 +399,7 @@ add_library(photon-core SHARED ${PROJECT_SOURCES})
 
 target_include_directories(photon-core PUBLIC ../core)
 target_include_directories(photon-core PUBLIC ../keira)
+target_include_directories(photon-core PUBLIC third-party/advanced-docking)
 
 target_link_libraries(photon-core PRIVATE keira)
 

@@ -46,6 +46,7 @@
 
 #include "sequence/stateclip.h"
 #include "sequence/fixtureclip.h"
+#include "sequence/canvasclip.h"
 
 namespace photon {
 
@@ -173,6 +174,7 @@ void PluginFactory::init()
 
     registerClip(StateClip::info());
     registerClip(FixtureClip::info());
+    registerClip(CanvasClip::info());
 
     m_impl->nodeLibrary.registerParameter(keira::DecimalParameter::ParameterId,[](){return new keira::DecimalParameter();});
     m_impl->nodeLibrary.registerParameter(keira::IntegerParameter::ParameterId,[](){return new keira::IntegerParameter();});

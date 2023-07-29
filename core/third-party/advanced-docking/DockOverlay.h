@@ -40,7 +40,7 @@ class CDockOverlayCross;
  * DockOverlay paints a translucent rectangle over another widget. The geometry
  * of the rectangle is based on the mouse location.
  */
-class ADS_EXPORT CDockOverlay : public QFrame
+class  CDockOverlay : public QFrame
 {
 	Q_OBJECT
 private:
@@ -73,6 +73,11 @@ public:
 	void setAllowedAreas(DockWidgetAreas areas);
 
 	/**
+	 * Enable / disable a certain area
+	 */
+	void setAllowedArea(DockWidgetArea area, bool Enable);
+
+	/**
 	 * Returns flags with all allowed drop areas
 	 */
 	DockWidgetAreas allowedAreas() const;
@@ -81,6 +86,17 @@ public:
 	 * Returns the drop area under the current cursor location
 	 */
 	DockWidgetArea dropAreaUnderCursor() const;
+
+	/**
+	 * If the drop area is the CenterDockWidgetArea or a sidebar area,
+	 * then this function returns the index of the tab under cursor.
+	 * Call this function after call to dropAreaUnderCursor() because this
+	 * function updates the tab index.
+	 * A value of -1 indicates a position before the first tab and a value of
+	 * tabCount() indicates a position behind the last tab.
+	 * A value of -2 indicates an valid value
+	 */
+	int tabIndexUnderCursor() const;
 
 	/**
 	 * This function returns the same like dropAreaUnderCursor() if this

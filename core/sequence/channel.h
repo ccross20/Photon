@@ -43,9 +43,12 @@ struct PHOTONCORE_EXPORT ChannelInfo
     QStringList options;
     QString name;
     QString description;
+    QString parentName;
     QVariant defaultValue;
     QByteArray uniqueId;
+    QByteArray parentUniqueId;
     ChannelType type;
+    int subChannelIndex = 0;
 };
 
 class PHOTONCORE_EXPORT Channel : public QObject
@@ -74,6 +77,12 @@ public:
 
     void setEndTime(double);
     double endTime() const;
+
+    void setParentName(const QString &);
+    QString parentName() const;
+
+    QByteArray parentUniqueId() const;
+    int subChannelIndex() const;
 
     int effectCount() const;
     ChannelEffect *effectAtIndex(int index) const;

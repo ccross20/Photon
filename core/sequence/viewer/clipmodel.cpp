@@ -7,6 +7,7 @@
 #include "fixture/maskeffect.h"
 #include "sequence/routineclip.h"
 #include "sequence/fixtureclip.h"
+#include "sequence/canvasclip.h"
 #include "sequence/clipeffect.h"
 
 namespace photon {
@@ -180,13 +181,17 @@ ClipData::ClipData(Clip *t_clip) : AbstractTreeData(t_clip->name(), t_clip->uniq
 
 
     auto fixtureClip = dynamic_cast<FixtureClip*>(t_clip);
+    auto canvasClip = dynamic_cast<CanvasClip*>(t_clip);
 
 
     if(fixtureClip)
     {
         addChild(new StateData(fixtureClip));
-        addChild(m_clipEffectData);
     }
+
+    if(fixtureClip || canvasClip)
+        addChild(m_clipEffectData);
+
 
     addChild(m_maskFolder);
     addChild(m_falloffData);

@@ -23,10 +23,13 @@ namespace photon {
 void ChannelInfo::readFromJson(const QJsonObject &t_json)
 {
     name = t_json.value("name").toString();
+    parentName = t_json.value("parentName").toString();
     description = t_json.value("description").toString();
     uniqueId = t_json.value("uniqueId").toString().toLatin1();
+    parentUniqueId = t_json.value("parentUniqueId").toString().toLatin1();
     type = static_cast<ChannelType>(t_json.value("type").toInt());
     defaultValue = t_json.value("name").toVariant();
+    subChannelIndex = t_json.value("subChannelIndex").toInt();
     if(t_json.contains("options"))
     {
         auto optionArray = t_json.value("options").toArray();
@@ -41,10 +44,13 @@ void ChannelInfo::readFromJson(const QJsonObject &t_json)
 void ChannelInfo::writeToJson(QJsonObject &t_json) const
 {
     t_json.insert("name",name);
+    t_json.insert("parentName",parentName);
     t_json.insert("description",description);
     t_json.insert("uniqueId", QString(uniqueId));
+    t_json.insert("parentUniqueId", QString(parentUniqueId));
     t_json.insert("type",type);
     t_json.insert("defaultValue",QJsonValue::fromVariant(defaultValue));
+    t_json.insert("subChannelIndex",subChannelIndex);
 
     if(!options.isEmpty())
     {
@@ -64,11 +70,21 @@ Channel::Channel(const ChannelInfo &t_info, double t_startTime, double t_duratio
     m_impl->startTime = t_startTime;
     m_impl->duration = t_duration;
     m_impl->uniqueId = t_info.uniqueId;
+    m_impl->parentName = t_info.parentName;
 
     if(t_info.type == ChannelInfo::ChannelTypeColor)
-        m_impl->effects.append(photonApp->plugins()->createChannelEffect(GradientChannelEffect::info().effectId));
+    {
+        auto effect = photonApp->plugins()->createChannelEffect(GradientChannelEffect::info().effectId);
+        GradientData data(t_info.defaultValue.value<QColor>(),0.0);
+        static_cast<GradientChannelEffect*>(effect)->setColors(QVector<GradientData>{data});
+        m_impl->effects.append(effect);
+    }
     else
-        m_impl->effects.append(photonApp->plugins()->createChannelEffect(ConstantChannelEffect::info().effectId));
+    {
+        auto effect = photonApp->plugins()->createChannelEffect(ConstantChannelEffect::info().effectId);
+        static_cast<ConstantChannelEffect*>(effect)->setValue(t_info.defaultValue.toDouble());
+        m_impl->effects.append(effect);
+    }
     m_impl->effects.back()->m_impl->channel = this;
 }
 
@@ -90,6 +106,16 @@ Sequence *Channel::sequence() const
     }
 
     return nullptr;
+}
+
+void Channel::setParentName(const QString &t_name)
+{
+    m_impl->parentName = t_name;
+}
+
+QString Channel::parentName() const
+{
+    return m_impl->parentName;
 }
 
 void Channel::setDuration(double t_duration)
@@ -138,6 +164,16 @@ void Channel::updateInfo(const ChannelInfo &t_info)
 QByteArray Channel::uniqueId() const
 {
     return m_impl->uniqueId;
+}
+
+QByteArray Channel::parentUniqueId() const
+{
+    return m_impl->info.parentUniqueId;
+}
+
+int Channel::subChannelIndex() const
+{
+    return m_impl->info.subChannelIndex;
 }
 
 ChannelInfo Channel::info() const

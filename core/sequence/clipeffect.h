@@ -3,6 +3,7 @@
 
 #include "photon-global.h"
 #include "channel.h"
+#include "sequence.h"
 
 namespace photon {
 
@@ -22,21 +23,21 @@ struct ClipEffectInformation
     CategoryList categories;
 };
 
-struct ClipEffectEvaluationContext
+class PHOTONCORE_EXPORT ClipEffectEvaluationContext
 {
-    ClipEffectEvaluationContext(DMXMatrix &matrix):dmxMatrix(matrix){}
+public:
+    ClipEffectEvaluationContext(ProcessContext &context):dmxMatrix(context.dmxMatrix),
+        project(context.project),
+        globalTime(context.globalTime){}
+    virtual ~ClipEffectEvaluationContext(){}
+
     DMXMatrix &dmxMatrix;
     Project *project = nullptr;
-    Fixture *fixture = nullptr;
-    QImage *canvasImage = nullptr;
-    QImage *previousCanvasImage = nullptr;
     QHash<QByteArray,QVariant> channelValues;
     double relativeTime = 0.0;
     double globalTime = 0.0;
     double delayTime = 0.0;
     double strength = 1.0;
-    int fixtureIndex = 0;
-    int fixtureTotal = 0;
 };
 
 class PHOTONCORE_EXPORT ClipEffect : public QObject
@@ -48,7 +49,6 @@ public:
 
     virtual void init();
     virtual void processChannels(ProcessContext &) const;
-    virtual void evaluateFixture(ClipEffectEvaluationContext &) const;
 
     QByteArray id() const;
     QByteArray uniqueId() const;
@@ -66,6 +66,14 @@ public:
     void clearChannels();
     const QVector<Channel*> channels() const;
 
+    void addChannelParameter(ChannelParameter *);
+    void removeChannelParameter(ChannelParameter *);
+    ChannelParameter *channelParameterAtIndex(int index) const;
+    int channelParameterCount() const;
+    const QVector<ChannelParameter*> channelParameters() const;
+
+    void createChannelsFromParameter(ChannelParameter *);
+
     Clip *clip() const;
     virtual void restore(Project &);
     virtual void readFromJson(const QJsonObject &, const LoadContext &);
@@ -74,6 +82,7 @@ public:
 protected:
     virtual void startTimeUpdated(double);
     virtual void durationUpdated(double);
+    void prepareContext(ClipEffectEvaluationContext &) const;
 
 public slots:
     photon::Channel *addChannel(const photon::ChannelInfo &info = ChannelInfo{}, int index = -1);

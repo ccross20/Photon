@@ -25,6 +25,14 @@ PixelLayoutEditorSidePanel::PixelLayoutEditorSidePanel(PixelLayout *t_layout) : 
     setLayout(vLayout);
 
     connect(addButton, &QPushButton::clicked, this, &PixelLayoutEditorSidePanel::addClicked);
+
+    auto sources = pixelLayout->sources();
+    for(auto src : sources)
+    {
+        auto sourceObj = dynamic_cast<SceneObject*>(src);
+        layoutList->addItem(sourceObj ? sourceObj->name() : "Unnamed");
+    }
+
 }
 
 void PixelLayoutEditorSidePanel::addClicked()
@@ -36,8 +44,6 @@ void PixelLayoutEditorSidePanel::addClicked()
 
 
     auto currentSources = pixelLayout->sources();
-
-    qDebug() << sources.length();
 
     QMenu menu;
     for(auto src : sources)

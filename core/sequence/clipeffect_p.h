@@ -8,8 +8,10 @@ namespace photon {
 class ClipEffect::Impl
 {
 public:
-    ClipEffectEvaluationContext processFixture(Fixture *, ClipEffectEvaluationContext &, double);
+    void processContext(ClipEffectEvaluationContext &, double);
+    QVector<double> valuesForChannel(const QByteArray &, double);
     QVector<Channel*> channels;
+    QVector<ChannelParameter*> channelParameters;
     QString name;
     QByteArray id;
     QByteArray uniqueId;

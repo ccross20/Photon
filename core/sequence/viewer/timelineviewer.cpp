@@ -205,7 +205,8 @@ void TimelineViewer::mouseMoveEvent(QMouseEvent *event)
                     if(layer && layer->layer() != data.clip->layer())
                     {
                         auto clipLayer = dynamic_cast<ClipLayer*>(layer->layer());
-                        clipLayer->addClip(data.clip);
+                        if(clipLayer)
+                            clipLayer->addClip(data.clip);
                     }
 
 

@@ -25,7 +25,7 @@ struct IconProviderPrivate;
  * The IconProvider enables the user to register custom icons in case using
  * stylesheets is not an option.
  */
-class ADS_EXPORT CIconProvider
+class  CIconProvider
 {
 private:
 	IconProviderPrivate* d; ///< private data (pimpl)

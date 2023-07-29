@@ -5,8 +5,8 @@
 
 namespace photon {
 
-/*
-class CanvasClip : public Clip
+
+class PHOTONCORE_EXPORT CanvasClip : public Clip
 {
 public:
     CanvasClip();
@@ -16,19 +16,25 @@ public:
 
     void processChannels(ProcessContext &) override;
 
+    void addPixelLayout(PixelLayout *);
+    void removePixelLayout(PixelLayout *);
+    PixelLayout *pixelLayoutAtIndex(int index) const;
+    int pixelLayoutCount() const;
 
 
-    QString name() const override;
+    QVector<PixelSource*> sources() const;
 
     void restore(Project &) override;
     void readFromJson(const QJsonObject &, const LoadContext &) override;
     void writeToJson(QJsonObject &) const override;
 
+    static ClipInformation info();
+
 private:
     class Impl;
     Impl *m_impl;
 };
-*/
+
 
 } // namespace photon
 

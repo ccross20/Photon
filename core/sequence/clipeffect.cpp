@@ -1,25 +1,31 @@
 #include <QColor>
 #include "clipeffect_p.h"
 #include "clip.h"
-#include "sequence.h"
+#include "channel/parameter/channelparameter.h"
+#include "channel/parameter/view/channelparameterwidget.h"
 
 namespace photon {
 
-ClipEffectEvaluationContext ClipEffect::Impl::processFixture(Fixture *t_fixture, ClipEffectEvaluationContext &t_context, double initialRelativeTime)
+void ClipEffect::Impl::processContext( ClipEffectEvaluationContext &t_context, double initialRelativeTime)
 {
-    t_context.relativeTime = initialRelativeTime - clip->falloff(t_fixture);
-    if(t_context.relativeTime < 0)
-        return t_context;
 
-    t_context.fixture = t_fixture;
-    t_context.strength = clip->strengthAtTime(t_context.relativeTime);
+}
 
-    t_context.channelValues.clear();
-    for(const auto &channel : channels)
+QVector<double> ClipEffect::Impl::valuesForChannel(const QByteArray &t_uniqueId, double t_time)
+{
+    QVector<double> results;
+
+    for(auto channel : channels)
     {
-        t_context.channelValues.insert(channel->uniqueId(), channel->processDouble(t_context.relativeTime));
+        if(channel->uniqueId() == t_uniqueId)
+            return QVector<double>{channel->processDouble(t_time)};
+        if(channel->parentUniqueId() == t_uniqueId)
+        {
+            results.resize(channel->subChannelIndex() + 1);
+            results[channel->subChannelIndex()] = channel->processDouble(t_time);
+        }
     }
-    return t_context;
+    return results;
 }
 
 ClipEffect::ClipEffect(const QByteArray &t_id):m_impl(new Impl)
@@ -35,30 +41,31 @@ ClipEffect::~ClipEffect()
 
 void ClipEffect::processChannels(ProcessContext &t_context) const
 {
-    double initialRelativeTime = t_context.globalTime - clip()->startTime();
 
-    ClipEffectEvaluationContext localContext(t_context.dmxMatrix);
-    localContext.globalTime = t_context.globalTime;
-    localContext.relativeTime = initialRelativeTime;
-    localContext.fixture = t_context.fixture;
-    localContext.canvasImage = t_context.canvasImage;
-    localContext.previousCanvasImage = t_context.previousCanvasImage;
-    localContext.project = t_context.project;
-    localContext.fixtureTotal = clip()->maskedFixtures().length();
-    int index = 0;
-    for(auto fixture : clip()->maskedFixtures())
-    {
-        localContext.fixtureIndex = index++;
-        auto t = m_impl->processFixture(fixture, localContext, initialRelativeTime);
-        t.fixture = fixture;
-        if(fixture)
-            evaluateFixture(t);
-    }
 
 }
 
-void ClipEffect::evaluateFixture(ClipEffectEvaluationContext &) const
+void ClipEffect::prepareContext(ClipEffectEvaluationContext &t_context) const
 {
+    t_context.strength = clip()->strengthAtTime(t_context.relativeTime);
+
+    t_context.channelValues.clear();
+    for(auto channelParam : channelParameters())
+    {
+        auto values = m_impl->valuesForChannel(channelParam->uniqueId(), t_context.relativeTime);
+
+        if(values.length() == channelParam->channels())
+            t_context.channelValues.insert(channelParam->uniqueId(), channelParam->channelsToVariant(values));
+        else
+            t_context.channelValues.insert(channelParam->uniqueId(), channelParam->value());
+
+    }
+/*
+    for(const auto &channel : channels())
+    {
+        t_context.channelValues.insert(channel->uniqueId(), channel->processDouble(t_context.relativeTime));
+    }
+    */
 
 }
 
@@ -110,11 +117,6 @@ void ClipEffect::setName(const QString &t_name)
 QString ClipEffect::name() const
 {
     return m_impl->name;
-}
-
-QWidget *ClipEffect::createEditor()
-{
-    return nullptr;
 }
 
 void ClipEffect::updated()
@@ -202,8 +204,72 @@ int ClipEffect::channelCount() const
     return m_impl->channels.length();
 }
 
+void ClipEffect::addChannelParameter(ChannelParameter *t_parameter)
+{
+    m_impl->channelParameters.append(t_parameter);
+}
+
+void ClipEffect::removeChannelParameter(ChannelParameter *t_parameter)
+{
+    m_impl->channelParameters.removeOne(t_parameter);
+}
+
+ChannelParameter *ClipEffect::channelParameterAtIndex(int t_index) const
+{
+    return m_impl->channelParameters[t_index];
+}
+
+const QVector<ChannelParameter*> ClipEffect::channelParameters() const
+{
+    return m_impl->channelParameters;
+}
+
+int ClipEffect::channelParameterCount() const
+{
+    return m_impl->channelParameters.count();
+}
+
+QWidget *ClipEffect::createEditor()
+{
+    auto paramWidget = new ChannelParameterWidget(m_impl->channelParameters);
+    connect(paramWidget, &ChannelParameterWidget::addChannel,this, &ClipEffect::createChannelsFromParameter);
+
+    return paramWidget;
+}
+
 void ClipEffect::restore(Project &)
 {
+
+}
+
+void ClipEffect::createChannelsFromParameter(ChannelParameter *t_param)
+{
+    if(t_param->channels() == 1)
+    {
+        ChannelInfo info;
+        info.name = t_param->name();
+        info.uniqueId = t_param->uniqueId();
+        info.type = ChannelInfo::ChannelTypeNumber;
+        info.defaultValue = t_param->value();
+        addChannel(info);
+    }
+    else
+    {
+        int index = 0;
+        auto values = t_param->variantToChannels(t_param->value());
+        for(const auto &name : t_param->channelNames())
+        {
+            ChannelInfo info;
+            info.name = t_param->name() + "." + name;
+            info.uniqueId = t_param->uniqueId() + "." + name.toLatin1();
+            info.type = ChannelInfo::ChannelTypeNumber;
+            info.defaultValue = values[index];
+            info.parentName = t_param->name();
+            info.parentUniqueId = t_param->uniqueId();
+            info.subChannelIndex = index++;
+            addChannel(info);
+        }
+    }
 
 }
 

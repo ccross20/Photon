@@ -14,6 +14,7 @@
 #include "routine/routine.h"
 #include "gui/menufactory.h"
 #include "sequence/fixtureclip.h"
+#include "sequence/canvasclip.h"
 
 namespace photon {
 
@@ -172,6 +173,16 @@ void TimelineClipLayer::contextMenuEvent(QGraphicsSceneContextMenuEvent *event)
     menu.addAction("Create Clip",this,[time, this](){
 
         auto clip = new FixtureClip;
+        clip->setName("Clip");
+        clip->setStartTime(time);
+        clip->setDuration(5);
+        static_cast<ClipLayer*>(layer())->addClip(clip);
+    });
+
+
+    menu.addAction("Create Canvas Clip",this,[time, this](){
+
+        auto clip = new CanvasClip;
         clip->setName("Clip");
         clip->setStartTime(time);
         clip->setDuration(5);
