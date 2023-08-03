@@ -46,6 +46,11 @@ double NumberChannelParameter::maximum() const
     return m_impl->max;
 }
 
+double NumberChannelParameter::defaultValue() const
+{
+    return m_impl->defaultValue;
+}
+
 void NumberChannelParameter::setRange(double t_min, double t_max, double t_increment)
 {
     m_impl->min = t_min;
@@ -78,6 +83,7 @@ void NumberChannelParameter::readFromJson(const QJsonObject &t_json)
     m_impl->min = t_json.value("min").toDouble();
     m_impl->max = t_json.value("max").toDouble();
     m_impl->increment = t_json.value("increment").toDouble();
+    m_impl->defaultValue = t_json.value("default").toDouble();
     setValue(t_json.value("value").toDouble());
 }
 
@@ -86,6 +92,7 @@ void NumberChannelParameter::writeToJson(QJsonObject &t_json) const
     t_json.insert("min", m_impl->min);
     t_json.insert("max", m_impl->max);
     t_json.insert("increment", m_impl->increment);
+    t_json.insert("default", m_impl->defaultValue);
     t_json.insert("value", value().toDouble());
 }
 

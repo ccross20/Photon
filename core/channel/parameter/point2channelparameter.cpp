@@ -43,6 +43,11 @@ QVector<double> Point2ChannelParameter::variantToChannels(const QVariant &t_valu
     return QVector<double>{pt.x(), pt.y()};
 }
 
+QPointF Point2ChannelParameter::defaultValue() const
+{
+    return m_impl->defaultValue;
+}
+
 double Point2ChannelParameter::increment() const
 {
     return m_impl->increment;
@@ -104,6 +109,7 @@ void Point2ChannelParameter::readFromJson(const QJsonObject &t_json)
     m_impl->min = jsonToPoint(t_json.value("min").toObject());
     m_impl->max = jsonToPoint(t_json.value("max").toObject());
     m_impl->increment = t_json.value("increment").toDouble();
+    m_impl->defaultValue = jsonToPoint(t_json.value("default").toObject());
     setValue(jsonToPoint(t_json.value("value").toObject()));
 }
 
@@ -112,6 +118,7 @@ void Point2ChannelParameter::writeToJson(QJsonObject &t_json) const
     t_json.insert("min", jsonFromPoint(m_impl->min));
     t_json.insert("max", jsonFromPoint(m_impl->max));
     t_json.insert("increment", m_impl->increment);
+    t_json.insert("default", jsonFromPoint(m_impl->defaultValue));
     t_json.insert("value", jsonFromPoint(value().value<QPointF>()));
 }
 

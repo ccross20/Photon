@@ -263,6 +263,8 @@ void Channel::readFromJson(const QJsonObject &t_json, const LoadContext &)
     m_impl->info.type = static_cast<ChannelInfo::ChannelType>(t_json.value("type").toInt());
     m_impl->info.defaultValue = t_json.value("defaultValue");
     m_impl->uniqueId = t_json.value("uniqueId").toString().toLatin1();
+    m_impl->info.parentUniqueId = t_json.value("parentUniqueId").toString().toLatin1();
+    m_impl->info.subChannelIndex = t_json.value("subChannelIndex").toInt();
 
     for(auto effect : m_impl->effects)
         delete effect;
@@ -308,10 +310,13 @@ void Channel::writeToJson(QJsonObject &t_json) const
     t_json.insert("name",m_impl->info.name);
     t_json.insert("description",m_impl->info.description);
     t_json.insert("type",m_impl->info.type);
+    t_json.insert("subChannelIndex",m_impl->info.subChannelIndex);
+    t_json.insert("parentUniqueId",QString::fromLatin1(m_impl->info.parentUniqueId));
     t_json.insert("defaultValue",m_impl->info.defaultValue.toJsonValue());
 
     switch(m_impl->info.type)
     {
+    case photon::ChannelInfo::ChannelTypeIntegerStep:
     case photon::ChannelInfo::ChannelTypeInteger:
         t_json.insert("defaultValue",m_impl->info.defaultValue.toInt());
         break;

@@ -1,13 +1,15 @@
 #include <QGridLayout>
 #include <QLabel>
 #include <QPushButton>
+#include <QMenu>
 #include "channelparameterwidget.h"
 #include "../channelparameter.h"
 #include "channelparameterview.h"
+#include "sequence/clipeffect.h"
 
 namespace photon {
 
-ChannelParameterWidget::ChannelParameterWidget(QVector<ChannelParameter*> t_parameters, QWidget *parent)
+ChannelParameterWidget::ChannelParameterWidget(QVector<ChannelParameter*> t_parameters, ClipEffect *t_effect, QWidget *parent)
     : QWidget{parent}
 {
     QGridLayout *grid = new QGridLayout;
@@ -19,11 +21,36 @@ ChannelParameterWidget::ChannelParameterWidget(QVector<ChannelParameter*> t_para
         grid->addWidget(param->createView(),row,1);
 
         QPushButton *channelButton = new QPushButton("Add Channel");
+        channelButton->setEnabled(t_effect->channelsForParameter(param).isEmpty());
         grid->addWidget(channelButton,row,2);
 
-        connect(channelButton, &QPushButton::clicked,this,[this,param](){
-            emit addChannel(param);
-        });
+        if(param->type() == ChannelParameter::ChannelParameterColor)
+        {
+            connect(channelButton, &QPushButton::clicked,this,[this,param,channelButton](){
+                QMenu menu;
+                menu.addAction("Numbers",[this, param,channelButton](){
+                    channelButton->setEnabled(false);
+                    emit addChannel(param, ChannelInfo::ChannelTypeNumber);
+                });
+                menu.addAction("Color",[this, param,channelButton](){
+                    channelButton->setEnabled(false);
+                    emit addChannel(param, ChannelInfo::ChannelTypeColor);
+                });
+
+                menu.exec(channelButton->mapToGlobal(QPoint{}));
+            });
+
+
+        }
+        else
+        {
+            connect(channelButton, &QPushButton::clicked,this,[this,param,channelButton](){
+                channelButton->setEnabled(false);
+                emit addChannel(param, ChannelInfo::ChannelTypeNumber);
+            });
+        }
+
+
 
         ++row;
     }

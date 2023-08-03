@@ -29,14 +29,22 @@ set(PROJECT_SOURCES
         parametereditor.cpp
         canvas/canvaseffect.h
         canvas/canvaseffect.cpp
+        channel/parameter/boolchannelparameter.h
+        channel/parameter/boolchannelparameter.cpp
         channel/parameter/channelparameter.h
         channel/parameter/channelparameter.cpp
+        channel/parameter/colorchannelparameter.h
+        channel/parameter/colorchannelparameter.cpp
         channel/parameter/numberchannelparameter.h
         channel/parameter/numberchannelparameter.cpp
         channel/parameter/point2channelparameter.h
         channel/parameter/point2channelparameter.cpp
+        channel/parameter/view/boolchannelparameterview.h
+        channel/parameter/view/boolchannelparameterview.cpp
         channel/parameter/view/channelparameterview.h
         channel/parameter/view/channelparameterview.cpp
+        channel/parameter/view/colorchannelparameterview.h
+        channel/parameter/view/colorchannelparameterview.cpp
         channel/parameter/view/numberchannelparameterview.h
         channel/parameter/view/numberchannelparameterview.cpp
         channel/parameter/view/point2channelparameterview.h

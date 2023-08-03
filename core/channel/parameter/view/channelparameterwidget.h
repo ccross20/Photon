@@ -3,6 +3,7 @@
 
 #include <QWidget>
 #include "photon-global.h"
+#include "sequence/channel.h"
 
 namespace photon {
 
@@ -10,10 +11,10 @@ class ChannelParameterWidget : public QWidget
 {
     Q_OBJECT
 public:
-    explicit ChannelParameterWidget(QVector<ChannelParameter*> parameters, QWidget *parent = nullptr);
+    explicit ChannelParameterWidget(QVector<ChannelParameter*> parameters, ClipEffect *effect, QWidget *parent = nullptr);
 
 signals:
-    void addChannel(photon::ChannelParameter*);
+    void addChannel(photon::ChannelParameter*, ChannelInfo::ChannelType);
     void removeChannel(photon::ChannelParameter*);
 };
 

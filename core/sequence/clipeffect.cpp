@@ -28,6 +28,20 @@ QVector<double> ClipEffect::Impl::valuesForChannel(const QByteArray &t_uniqueId,
     return results;
 }
 
+QColor ClipEffect::Impl::colorForChannel(ChannelParameter *t_param, double t_time)
+{
+    for(auto channel : channels)
+    {
+        if(channel->uniqueId() == t_param->uniqueId())
+        {
+
+            return channel->processColor(t_time);
+        }
+    }
+
+    return t_param->value().value<QColor>();
+}
+
 ClipEffect::ClipEffect(const QByteArray &t_id):m_impl(new Impl)
 {
     m_impl->id = t_id;
@@ -57,8 +71,14 @@ void ClipEffect::prepareContext(ClipEffectEvaluationContext &t_context) const
         if(values.length() == channelParam->channels())
             t_context.channelValues.insert(channelParam->uniqueId(), channelParam->channelsToVariant(values));
         else
-            t_context.channelValues.insert(channelParam->uniqueId(), channelParam->value());
-
+        {
+            if(channelParam->type() == ChannelParameter::ChannelParameterColor)
+            {
+                t_context.channelValues.insert(channelParam->uniqueId(), m_impl->colorForChannel(channelParam, t_context.relativeTime));
+            }
+            else
+                t_context.channelValues.insert(channelParam->uniqueId(), channelParam->value());
+        }
     }
 /*
     for(const auto &channel : channels())
@@ -194,6 +214,22 @@ const QVector<Channel*> ClipEffect::channels() const
     return m_impl->channels;
 }
 
+const QVector<Channel*> ClipEffect::channelsForParameter(ChannelParameter *t_param) const
+{
+    QVector<Channel*> results;
+    for(auto channel : channels())
+    {
+        if(channel->uniqueId() == t_param->uniqueId())
+            return QVector<Channel*>{channel};
+        if(channel->parentUniqueId() == t_param->uniqueId())
+        {
+            results.resize(channel->subChannelIndex() + 1);
+            results[channel->subChannelIndex()] = channel;
+        }
+    }
+    return results;
+}
+
 Channel *ClipEffect::channelAtIndex(int t_index) const
 {
     return m_impl->channels[t_index];
@@ -231,7 +267,7 @@ int ClipEffect::channelParameterCount() const
 
 QWidget *ClipEffect::createEditor()
 {
-    auto paramWidget = new ChannelParameterWidget(m_impl->channelParameters);
+    auto paramWidget = new ChannelParameterWidget(m_impl->channelParameters, this);
     connect(paramWidget, &ChannelParameterWidget::addChannel,this, &ClipEffect::createChannelsFromParameter);
 
     return paramWidget;
@@ -242,34 +278,49 @@ void ClipEffect::restore(Project &)
 
 }
 
-void ClipEffect::createChannelsFromParameter(ChannelParameter *t_param)
+void ClipEffect::createChannelsFromParameter(ChannelParameter *t_param, ChannelInfo::ChannelType t_type)
 {
-    if(t_param->channels() == 1)
+
+    if(t_type == ChannelInfo::ChannelTypeNumber)
+    {
+        if(t_param->channels() == 1)
+        {
+            ChannelInfo info;
+            info.name = t_param->name();
+            info.uniqueId = t_param->uniqueId();
+            info.type = ChannelInfo::ChannelTypeNumber;
+            info.defaultValue = t_param->value();
+            addChannel(info);
+        }
+        else
+        {
+            int index = 0;
+            auto values = t_param->variantToChannels(t_param->value());
+            for(const auto &name : t_param->channelNames())
+            {
+                ChannelInfo info;
+                info.name = t_param->name() + "." + name;
+                info.uniqueId = t_param->uniqueId() + "." + name.toLatin1();
+                info.type = ChannelInfo::ChannelTypeNumber;
+                info.defaultValue = values[index];
+                info.parentName = t_param->name();
+                info.parentUniqueId = t_param->uniqueId();
+                info.subChannelIndex = index++;
+                addChannel(info);
+            }
+        }
+    }
+    else
     {
         ChannelInfo info;
         info.name = t_param->name();
         info.uniqueId = t_param->uniqueId();
-        info.type = ChannelInfo::ChannelTypeNumber;
+        info.type = t_type;
         info.defaultValue = t_param->value();
         addChannel(info);
     }
-    else
-    {
-        int index = 0;
-        auto values = t_param->variantToChannels(t_param->value());
-        for(const auto &name : t_param->channelNames())
-        {
-            ChannelInfo info;
-            info.name = t_param->name() + "." + name;
-            info.uniqueId = t_param->uniqueId() + "." + name.toLatin1();
-            info.type = ChannelInfo::ChannelTypeNumber;
-            info.defaultValue = values[index];
-            info.parentName = t_param->name();
-            info.parentUniqueId = t_param->uniqueId();
-            info.subChannelIndex = index++;
-            addChannel(info);
-        }
-    }
+
+
 
 }
 

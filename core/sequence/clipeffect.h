@@ -65,6 +65,7 @@ public:
     int channelCount() const;
     void clearChannels();
     const QVector<Channel*> channels() const;
+    const QVector<Channel*> channelsForParameter(ChannelParameter *) const;
 
     void addChannelParameter(ChannelParameter *);
     void removeChannelParameter(ChannelParameter *);
@@ -72,7 +73,7 @@ public:
     int channelParameterCount() const;
     const QVector<ChannelParameter*> channelParameters() const;
 
-    void createChannelsFromParameter(ChannelParameter *);
+    void createChannelsFromParameter(ChannelParameter *, ChannelInfo::ChannelType type = ChannelInfo::ChannelTypeNumber);
 
     Clip *clip() const;
     virtual void restore(Project &);

@@ -52,6 +52,11 @@ int ChannelParameter::channels()
     return m_impl->channelCount;
 }
 
+ChannelParameter::ChannelParameterType ChannelParameter::type() const
+{
+    return m_impl->type;
+}
+
 QVariant ChannelParameter::value() const
 {
     return m_impl->value;

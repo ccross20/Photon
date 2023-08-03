@@ -16,6 +16,8 @@ find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Widgets)
 set(SOURCES
     pluginclipeffects.cpp
     pluginclipeffects.h
+    canvas/draw/drawellipseclipeffect.h
+    canvas/draw/drawellipseclipeffect.cpp
     canvas/draw/drawrectangleclipeffect.h
     canvas/draw/drawrectangleclipeffect.cpp
     pan-and-tilt/tracepathclip.h

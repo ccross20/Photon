@@ -17,14 +17,6 @@ public:
 
     void readFromJson(const QJsonObject &, const LoadContext &) override;
     void writeToJson(QJsonObject &) const override;
-
-    QColor fillColor;
-    QColor strokeColor;
-    QPointF centerPt;
-    QPointF position;
-    QPointF scale;
-    double rotation;
-    double strokeWidth;
 };
 
 } // namespace photon

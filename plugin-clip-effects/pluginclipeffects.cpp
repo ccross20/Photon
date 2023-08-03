@@ -3,6 +3,7 @@
 
 #include "pan-and-tilt/tracepathclip.h"
 
+#include "canvas/draw/drawellipseclipeffect.h"
 #include "canvas/draw/drawrectangleclipeffect.h"
 
 
@@ -14,6 +15,7 @@ bool PluginClipEffects::initialize(const PluginContext &context)
     Q_UNUSED(context)
 
     photonApp->plugins()->registerClipEffect(TracePathClip::info());
+    photonApp->plugins()->registerClipEffect(DrawEllipseClipEffect::info());
     photonApp->plugins()->registerClipEffect(DrawRectangleClipEffect::info());
 
     return true;

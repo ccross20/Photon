@@ -1,28 +1,31 @@
 #include <QPainter>
 #include <QPainterPath>
-#include "drawrectangleclipeffect.h"
+#include "drawellipseclipeffect.h"
 #include "channel/parameter/numberchannelparameter.h"
 #include "channel/parameter/point2channelparameter.h"
 #include "channel/parameter/colorchannelparameter.h"
+#include "channel/parameter/boolchannelparameter.h"
 
 namespace photon {
 
-DrawRectangleClipEffect::DrawRectangleClipEffect()
+DrawEllipseClipEffect::DrawEllipseClipEffect()
 {
 
 }
 
-void DrawRectangleClipEffect::init()
+void DrawEllipseClipEffect::init()
 {
     addChannelParameter(new Point2ChannelParameter("position",QPointF{.5,.5}));
     addChannelParameter(new Point2ChannelParameter("center",QPointF{.5,.5}));
+    addChannelParameter(new BoolChannelParameter("circle"));
     addChannelParameter(new Point2ChannelParameter("scale",QPointF{.5,.5}));
     addChannelParameter(new NumberChannelParameter("rotation"));
-    addChannelParameter(new NumberChannelParameter("strokeWidth", 2.0));
+    addChannelParameter(new NumberChannelParameter("strokeWidth", 2.0,0,100));
     addChannelParameter(new ColorChannelParameter("color", Qt::red));
+    addChannelParameter(new ColorChannelParameter("strokeColor", Qt::black));
 }
 
-void DrawRectangleClipEffect::evaluate(CanvasClipEffectEvaluationContext &t_context) const
+void DrawEllipseClipEffect::evaluate(CanvasClipEffectEvaluationContext &t_context) const
 {
     QPainter painter{t_context.canvasImage};
     painter.setRenderHint(QPainter::Antialiasing);
@@ -35,9 +38,19 @@ void DrawRectangleClipEffect::evaluate(CanvasClipEffectEvaluationContext &t_cont
     QPointF scale = t_context.channelValues["scale"].value<QPointF>();
 
     QColor color = t_context.channelValues["color"].value<QColor>();
+    QColor strokeColor = t_context.channelValues["strokeColor"].value<QColor>();
+
+    double strokeWidth = t_context.channelValues["strokeWidth"].toDouble();
 
 
     QPointF relScale{scale.x() * w,scale.y() * h};
+
+    if(t_context.channelValues["circle"].toBool())
+    {
+        relScale.setY(relScale.x());
+    }
+
+
     QPointF relPos{pos.x() * w,pos.y() * h};
     QPointF relCenter{center.x() * relScale.x(),center.y() * relScale.y()};
 
@@ -49,36 +62,30 @@ void DrawRectangleClipEffect::evaluate(CanvasClipEffectEvaluationContext &t_cont
     //trans.translate(relCenter.x(), relCenter.y());
     //painter.translate(relCenter);
 
-    painter.setPen(Qt::NoPen);
+
+    if(strokeWidth <= 0.0)
+        painter.setPen(Qt::NoPen);
+    else
+        painter.setPen(QPen(strokeColor, strokeWidth));
 
     QPainterPath path;
-    path.addRect(-relCenter.x(), -relCenter.y(),relScale.x(),relScale.y());
+    path.addEllipse(-relCenter.x(), -relCenter.y(),relScale.x(),relScale.y());
 
     //painter.setOpacity(m_alphaParam->value().toDouble());
     //painter.fillPath(m_pathInputParam->value().value<QPainterPath>(),m_colorParam->value().value<QColor>());
-    painter.fillPath(trans.map(path), color);
+    painter.setBrush(color);
+    painter.drawPath(trans.map(path));
 
 }
 
-ClipEffectInformation DrawRectangleClipEffect::info()
+ClipEffectInformation DrawEllipseClipEffect::info()
 {
-    ClipEffectInformation toReturn([](){return new DrawRectangleClipEffect;});
-    toReturn.name = "Draw Rectangle";
-    toReturn.id = "photon.clip.effect.draw-rectangle";
+    ClipEffectInformation toReturn([](){return new DrawEllipseClipEffect;});
+    toReturn.name = "Draw Ellipse";
+    toReturn.id = "photon.clip.effect.draw-ellipse";
     toReturn.categories.append("Draw");
 
     return toReturn;
 }
-
-void DrawRectangleClipEffect::readFromJson(const QJsonObject &t_json, const LoadContext &t_context)
-{
-    ClipEffect::readFromJson(t_json, t_context);
-}
-
-void DrawRectangleClipEffect::writeToJson(QJsonObject &t_json) const
-{
-    ClipEffect::writeToJson(t_json);
-}
-
 
 } // namespace photon
