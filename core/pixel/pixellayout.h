@@ -27,7 +27,7 @@ public:
 
     QVector<PixelSource*> sources() const;
 
-    virtual void process(CanvasContext &) const;
+    virtual void process(ProcessContext &) const;
 
     virtual void readFromJson(const QJsonObject &, const LoadContext &);
     virtual void writeToJson(QJsonObject &) const;

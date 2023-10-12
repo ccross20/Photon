@@ -2,6 +2,7 @@
 #define SEQUENCE_P_H
 
 #include "sequence.h"
+#include "beatlayer.h"
 
 namespace photon
 {
@@ -13,6 +14,7 @@ public:
     void addLayer(Layer*);
     void removeLayer(Layer*);
     QVector<Layer*> layers;
+    QVector<BeatLayer*> beatLayers;
     QString name;
     QString filePath;
     Sequence *facade;

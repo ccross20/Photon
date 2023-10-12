@@ -44,6 +44,101 @@ void Sequence::init()
     addLayer(new ClipLayer("Layer 1"));
 }
 
+void Sequence::addBeatLayer(BeatLayer *t_layer)
+{
+    qDebug() << "Add" << t_layer->beats().length();
+    m_impl->beatLayers.append(t_layer);
+    emit beatLayerAdded(t_layer);
+}
+
+void Sequence::removeBeatLayer(BeatLayer *t_layer)
+{
+    m_impl->beatLayers.removeOne(t_layer);
+    emit beatLayerRemoved(t_layer);
+}
+
+bool Sequence::findClosestBeatToTime(float t_time, float *t_result) const
+{
+    *t_result = 0.0f;
+    if(m_impl->beatLayers.isEmpty())
+        return false;
+
+    auto layer = m_impl->beatLayers.front();
+    auto beats = layer->beats();
+
+    auto it = std::lower_bound(beats.begin(), beats.end(), t_time);
+
+    if (it == beats.begin()) {
+            *t_result = beats.front();
+    }
+
+    double a = *(it - 1);
+    double b = *(it);
+
+    if (fabs(t_time - a) < fabs(t_time - b)) {
+        *t_result = *(it - 1);
+    }
+    else
+        *t_result = *it;
+
+
+    return true;
+}
+
+bool Sequence::snapToBeat(float time, float *outTime, float tolerance) const
+{
+    *outTime = time;
+    bool hasSnap = false;
+    float winner = 100000000.f;
+    for(auto beatLayer : m_impl->beatLayers)
+    {
+        if(beatLayer->isSnappable())
+        {
+            float snapTime = 0;
+            if(beatLayer->snapToBeat(time, &snapTime, tolerance))
+            {
+                if(abs(snapTime - time) < winner)
+                {
+                    winner = snapTime;
+                    hasSnap = true;
+                }
+            }
+        }
+    }
+
+    if(hasSnap)
+    {
+        *outTime = winner;
+    }
+    return hasSnap;
+}
+
+const QVector<BeatLayer*> &Sequence::beatLayers() const
+{
+    return m_impl->beatLayers;
+}
+
+BeatLayer *Sequence::editableBeatLayer() const
+{
+    for(auto beatLayer : m_impl->beatLayers)
+    {
+        if(beatLayer->isEditable())
+            return beatLayer;
+    }
+    return nullptr;
+}
+
+void Sequence::setEditableBeatLayer(BeatLayer *t_layer)
+{
+    for(auto beatLayer : m_impl->beatLayers)
+    {
+        if(beatLayer->isEditable())
+            beatLayer->setIsEditable(false);
+    }
+    t_layer->setIsEditable(true);
+    emit editableBeatLayerChanged(t_layer);
+}
+
 Layer *Sequence::findLayerByGuid(const QUuid &t_guid)
 {
     for(auto layer : m_impl->layers)
@@ -146,6 +241,17 @@ void Sequence::readFromJson(const QJsonObject &t_json, const LoadContext &t_cont
             layer->readFromJson(layerObj, t_context);
         }
     }
+    auto beatArray = t_json.value("beatLayers").toArray();
+    for(auto layerJson : beatArray)
+    {
+        auto layerObj = layerJson.toObject();
+        auto beatLayer = new BeatLayer;
+        beatLayer->readFromJson(layerObj, t_context);
+        m_impl->beatLayers.append(beatLayer);
+    }
+
+    if(!m_impl->beatLayers.isEmpty())
+        m_impl->beatLayers.front()->setIsEditable(true);
 }
 
 void Sequence::writeToJson(QJsonObject &t_json) const
@@ -161,6 +267,15 @@ void Sequence::writeToJson(QJsonObject &t_json) const
         array.append(layerJson);
     }
     t_json.insert("layers", array);
+
+    QJsonArray beatArray;
+    for(auto layer : m_impl->beatLayers)
+    {
+        QJsonObject layerJson;
+        layer->writeToJson(layerJson);
+        beatArray.append(layerJson);
+    }
+    t_json.insert("beatLayers", beatArray);
 }
 
 

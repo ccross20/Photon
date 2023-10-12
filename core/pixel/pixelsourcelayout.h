@@ -30,7 +30,7 @@ public:
     PixelSource *source() const;
     void setSource(PixelSource *);
 
-    void process(CanvasContext &) const;
+    void process(ProcessContext &) const;
 
     void readFromJson(const QJsonObject &, const LoadContext &);
     void writeToJson(QJsonObject &) const;

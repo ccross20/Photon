@@ -9,6 +9,7 @@
 #include "sequence/fixtureclip.h"
 #include "sequence/canvasclip.h"
 #include "sequence/clipeffect.h"
+#include "pixel/pixellayout.h"
 
 namespace photon {
 
@@ -209,6 +210,13 @@ ClipData::ClipData(Clip *t_clip) : AbstractTreeData(t_clip->name(), t_clip->uniq
         }
     }
 
+    if(canvasClip)
+    {
+        m_pixelLayoutData = new PixelLayoutFolderData(canvasClip);
+        addChild(m_pixelLayoutData);
+    }
+
+
 }
 
 void ClipData::channelAdded(photon::Channel *t_channel)
@@ -341,6 +349,50 @@ void ClipEffectData::channelMoved(photon::Channel *)
 
 }
 
+PixelLayoutData::PixelLayoutData(PixelLayout *t_layout):AbstractTreeData(t_layout->name(), t_layout->uniqueId())
+{
+
+}
+
+PixelLayoutFolderData::PixelLayoutFolderData(CanvasClip *t_clip):AbstractTreeData("Pixel Layout", "pixel-layout"),m_clip(t_clip)
+{
+    connect(m_clip, &CanvasClip::pixelLayoutAdded, this, &PixelLayoutFolderData::pixelLayoutAdded);
+    connect(m_clip, &CanvasClip::pixelLayoutRemoved, this, &PixelLayoutFolderData::pixelLayoutRemoved);
+
+    for(int i = 0; i < t_clip->pixelLayoutCount(); ++i)
+    {
+        auto effectData = new PixelLayoutData(m_clip->pixelLayoutAtIndex(i));
+        addChild(effectData);
+    }
+    addChild(new CreateData("Add Pixel Layout..."));
+}
+
+PixelLayoutData *PixelLayoutFolderData::findPixelLayoutData(PixelLayout *t_layout)
+{
+    for(auto child : children())
+    {
+        PixelLayoutData *childData = dynamic_cast<PixelLayoutData*>(child);
+        if(childData && childData->pixelLayout() == t_layout)
+        {
+            return childData;
+        }
+    }
+    return nullptr;
+}
+
+void PixelLayoutFolderData::pixelLayoutAdded(photon::PixelLayout *t_layout)
+{
+    auto effectData = new PixelLayoutData(t_layout);
+    insertChild(effectData, childCount() - 1);
+}
+
+void PixelLayoutFolderData::pixelLayoutRemoved(photon::PixelLayout *t_layout)
+{
+    auto effect = findPixelLayoutData(t_layout);
+
+    if(effect)
+        removeChild(effect);
+}
 
 StateData::StateData(FixtureClip *t_clip):AbstractTreeData("State", t_clip->state()->uniqueId()),m_clip(t_clip)
 {

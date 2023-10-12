@@ -4,11 +4,17 @@
 namespace photon {
 
 
+void ChannelEffect::Impl::addToChannel(Channel *t_channel)
+{
+    channel = t_channel;
+    facade->addedToChannel();
+}
 
 ChannelEffect::ChannelEffect(const QByteArray &t_id):m_impl(new Impl)
 {
     m_impl->id = t_id;
     m_impl->uniqueId = QUuid::createUuid().toByteArray();
+    m_impl->facade = this;
 }
 
 ChannelEffect::~ChannelEffect()
@@ -73,6 +79,11 @@ QColor ChannelEffect::processColor(QColor, double) const
 }
 
 void ChannelEffect::restore(Project &)
+{
+
+}
+
+void ChannelEffect::addedToChannel()
 {
 
 }

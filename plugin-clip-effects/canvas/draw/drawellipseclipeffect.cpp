@@ -75,7 +75,6 @@ void DrawEllipseClipEffect::evaluate(CanvasClipEffectEvaluationContext &t_contex
     //painter.fillPath(m_pathInputParam->value().value<QPainterPath>(),m_colorParam->value().value<QColor>());
     painter.setBrush(color);
     painter.drawPath(trans.map(path));
-
 }
 
 ClipEffectInformation DrawEllipseClipEffect::info()

@@ -44,6 +44,8 @@ public:
     virtual void readFromJson(const QJsonObject &);
     virtual void writeToJson(QJsonObject &) const;
 
+
+
 private:
     friend class Clip;
     class Impl;

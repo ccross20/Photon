@@ -13,7 +13,7 @@ public:
 
 PixelLayout::PixelLayout() : m_impl(new Impl)
 {
-
+    m_impl->uniqueId = QUuid::createUuid().toByteArray();
 }
 
 PixelLayout::~PixelLayout()
@@ -70,7 +70,7 @@ void PixelLayout::setName(const QString &t_name)
 }
 
 
-void PixelLayout::process(CanvasContext &t_context) const
+void PixelLayout::process(ProcessContext &t_context) const
 {
     for(auto source : m_impl->sources)
     {
@@ -78,14 +78,37 @@ void PixelLayout::process(CanvasContext &t_context) const
     }
 }
 
-void PixelLayout::readFromJson(const QJsonObject &, const LoadContext &)
+void PixelLayout::readFromJson(const QJsonObject &t_json, const LoadContext &t_context)
 {
+    if(t_json.contains("sources"))
+    {
+        m_impl->sources.clear();
+        auto sourceArray = t_json.value("sources").toArray();
+        for(auto source : sourceArray)
+        {
+            auto sourceObj = source.toObject();
+            auto newLayout = new PixelSourceLayout();
+            newLayout->readFromJson(sourceObj, t_context);
 
+            m_impl->sources.append(newLayout);
+        }
+        m_impl->name = t_json.value("name").toString();
+        m_impl->uniqueId = t_json.value("uniqueId").toString().toLatin1();
+    }
 }
 
-void PixelLayout::writeToJson(QJsonObject &) const
+void PixelLayout::writeToJson(QJsonObject &t_json) const
 {
-
+    QJsonArray sourceArray;
+    for(auto source : m_impl->sources)
+    {
+        QJsonObject sourceObj;
+        source->writeToJson(sourceObj);
+        sourceArray.append(sourceObj);
+    }
+    t_json.insert("sources", sourceArray);
+    t_json.insert("name", m_impl->name);
+    t_json.insert("uniqueId", QString{m_impl->uniqueId});
 }
 
 } // namespace photon

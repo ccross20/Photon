@@ -12,6 +12,10 @@
 #include "gui/menufactory.h"
 #include "state/state.h"
 #include "sequence/stateclip.h"
+#include "project/project.h"
+#include "pixel/pixellayoutcollection.h"
+#include "pixel/pixellayout.h"
+#include "sequence/canvasclip.h"
 
 namespace photon {
 
@@ -149,6 +153,17 @@ void ClipTreeView::mousePressEvent(QMouseEvent *event)
                 }
             }
         }
+        else if(dynamic_cast<PixelLayoutFolderData*>(parentData))
+        {
+            CanvasClip *clip = dynamic_cast<PixelLayoutFolderData*>(parentData)->clip();
+            QMenu menu;
+            auto pixelLayouts = photonApp->project()->pixelLayouts()->layouts();
+            for(auto layout : pixelLayouts)
+            {
+                menu.addAction(layout->name(),[clip, layout](){clip->addPixelLayout(layout);});
+            }
+            menu.exec(event->globalPosition().toPoint());
+        }
 
     }
     else
@@ -178,6 +193,19 @@ void ClipTreeView::mousePressEvent(QMouseEvent *event)
                 QMenu itemMenu;
                 itemMenu.addAction("Remove",[effectItem](){
                     effectItem->effect()->channel()->removeEffect(effectItem->effect());
+                });
+
+                itemMenu.exec(event->globalPosition().toPoint());
+            }
+
+            if(dynamic_cast<PixelLayoutData*>(itemData))
+            {
+                auto layoutItem = dynamic_cast<PixelLayoutData*>(itemData);
+                auto parentItem = dynamic_cast<PixelLayoutFolderData*>(itemData->parent());
+
+                QMenu itemMenu;
+                itemMenu.addAction("Remove",[layoutItem, parentItem](){
+                    parentItem->clip()->removePixelLayout(layoutItem->pixelLayout());
                 });
 
                 itemMenu.exec(event->globalPosition().toPoint());

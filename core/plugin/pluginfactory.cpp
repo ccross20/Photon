@@ -78,6 +78,7 @@ public:
     QHash<QByteArray, MaskEffectInformation> maskEffects;
     QHash<QByteArray, ClipInformation> clips;
     QHash<QByteArray, ClipEffectInformation> clipEffects;
+    QHash<QByteArray, AudioProcessorInformation> audioProcessors;
     QHash<PanelId, std::function<Panel*()>> panels;
     keira::NodeLibrary nodeLibrary;
 
@@ -299,6 +300,26 @@ FalloffEffect *PluginFactory::createFalloffEffect(const QByteArray &effectId) co
     return nullptr;
 }
 
+void PluginFactory::registerAudioProcessor(const AudioProcessorInformation &info)
+{
+    m_impl->audioProcessors.insert(info.id, info);
+}
+
+QVector<AudioProcessorInformation> PluginFactory::audioProcessors() const
+{
+    return m_impl->audioProcessors.values();
+}
+
+AudioProcessor *PluginFactory::createAudioProcessor(const QByteArray &effectId) const
+{
+    auto info = m_impl->audioProcessors[effectId];
+    if(info.id == effectId)
+    {
+        auto effect = info.callback();
+        return effect;
+    }
+    return nullptr;
+}
 
 
 void PluginFactory::registerClip(const ClipInformation &info)

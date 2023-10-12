@@ -4,6 +4,7 @@
 #include <QObject>
 #include <QtPlugin>
 #include "plugin/iplugin.h"
+#include <boost/gil.hpp>
 
 namespace photon {
 

@@ -1,5 +1,6 @@
 #include "plugineffects.h"
 #include "plugin/pluginfactory.h"
+#include "generator/beatintegereffect.h"
 #include "generator/noiseeffect.h"
 #include "generator/sineeffect.h"
 #include "generator/pulseeffect.h"
@@ -19,7 +20,7 @@ bool PluginEffects::initialize(const PluginContext &context)
 {
     //initPluginResource();
     Q_UNUSED(context)
-
+    photonApp->plugins()->registerChannelEffect(BeatIntegerEffect::info());
     photonApp->plugins()->registerChannelEffect(PulseEffect::info());
     photonApp->plugins()->registerChannelEffect(SineEffect::info());
     photonApp->plugins()->registerChannelEffect(SawtoothEffect::info());

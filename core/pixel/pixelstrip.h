@@ -65,11 +65,12 @@ public:
     QWidget *createEditor() override;
     const QVector<QPointF> &positions() const override;
 
+    QByteArray sourceUniqueId() const override;
     int dmxOffset() const override;
     int dmxSize() const override;
     int universe() const override;
 
-    void process(CanvasContext &, const QTransform &) const override;
+    void process(ProcessContext &, const QTransform &) const override;
 
     void readFromJson(const QJsonObject &) override;
     void writeToJson(QJsonObject &) const override;

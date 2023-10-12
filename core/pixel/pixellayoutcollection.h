@@ -14,6 +14,7 @@ public:
 
     int layoutCount() const;
     PixelLayout *layoutAtIndex(uint) const;
+    PixelLayout *findLayoutWithId(const QByteArray &) const;
     const QVector<PixelLayout*> &layouts() const;
 
 signals:

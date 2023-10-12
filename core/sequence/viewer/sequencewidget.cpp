@@ -15,6 +15,7 @@
 #include "timelineviewer.h"
 #include "timelinescene.h"
 #include "sequenceclip.h"
+#include "waveformheader.h"
 #include "timelinemasterlayer.h"
 #include "sequence/sequence.h"
 #include "photoncore.h"
@@ -33,6 +34,7 @@
 #include "sequence/fixtureclip.h"
 #include "sequence/clipeffect.h"
 #include "fixture/maskeffect.h"
+#include "sequencewaveformeditor.h"
 
 namespace photon {
 
@@ -48,12 +50,13 @@ public:
     QSplitter *timeSplitter;
     TimelineViewer *viewer = nullptr;
     TimelineHeader *details;
+    WaveformHeader *waveformHeader;
     TimeBar *timebar;
     QToolBar *timeToolBar;
     ClipStructureViewer *curvePropertyEditor;
     QWidget *effectEditorContainer;
     QWidget *effectEditor = nullptr;
-    WaveformWidget *waveform = nullptr;
+    SequenceWaveformEditor *waveform = nullptr;
     QMediaPlayer *player = nullptr;
     QAudioOutput *audioOutput = nullptr;
     TimelineScene *scene;
@@ -92,7 +95,8 @@ SequenceWidget::SequenceWidget(QWidget *parent)
     m_impl->timeToolBar = new QToolBar;
     m_impl->scene = new TimelineScene;
     m_impl->viewer = new TimelineViewer;
-    m_impl->waveform = new WaveformWidget;
+    m_impl->waveform = new SequenceWaveformEditor;
+    m_impl->waveformHeader = new WaveformHeader;
     //m_impl->viewer->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
     m_impl->viewer->setScene(m_impl->scene);
     m_impl->viewer->setScale(m_impl->scale);
@@ -136,7 +140,7 @@ SequenceWidget::SequenceWidget(QWidget *parent)
     m_impl->viewer->centerOn(0,0);
 
     m_impl->detailsSplitter->addWidget(m_impl->details);
-    m_impl->detailsSplitter->addWidget(new QWidget);
+    m_impl->detailsSplitter->addWidget(m_impl->waveformHeader);
     m_impl->detailsSplitter->addWidget(m_impl->curvePropertyEditor);
 
     m_impl->horizontalSplitter->addWidget(m_impl->detailsSplitter);
@@ -175,7 +179,8 @@ void SequenceWidget::setSequence(Sequence *t_sequence)
     m_impl->viewer->centerOn(0,0);
     m_impl->details->setSequence(t_sequence);
     m_impl->player->setSource(t_sequence->filePath());
-    m_impl->waveform->loadAudio(t_sequence->filePath());
+    m_impl->waveform->setSequence(t_sequence);
+    m_impl->waveformHeader->setSequence(t_sequence);
 }
 
 Sequence *SequenceWidget::sequence() const

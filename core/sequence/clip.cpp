@@ -51,7 +51,7 @@ void Clip::Impl::markChanged()
 Clip::Clip(QObject *t_parent)
     : QObject{t_parent}, m_impl(new Impl(this))
 {
-    ChannelInfo info(ChannelInfo::ChannelTypeNumber,"Strength");
+    ChannelInfo info(ChannelInfo::ChannelTypeNumber,"Strength","Strength",1.0);
     addChannel(info);
 }
 
@@ -451,6 +451,7 @@ void Clip::clipEffectUpdatedSlot(photon::ClipEffect *t_effect)
 void Clip::addClipEffect(ClipEffect *t_effect)
 {
     m_impl->clipEffects.append(t_effect);
+    t_effect->setParent(this);
     t_effect->m_impl->clip = this;
 
     emit clipEffectAdded(t_effect);
@@ -510,6 +511,7 @@ void Clip::readFromJson(const QJsonObject &t_json, const LoadContext &t_context)
             if(effect){
                 effect->m_impl->clip = this;
                 effect->readFromJson(effectObj, t_context);
+                effect->setParent(this);
                 m_impl->clipEffects.append(effect);
 
             }

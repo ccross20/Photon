@@ -33,10 +33,13 @@ using PluginId = QByteArray;
 using SettingsPageId = QByteArray;
 using CategoryList = QVector<QByteArray>;
 
+class AudioProcessor;
+class BeatLayer;
 class BusEvaluator;
 class BusGraph;
 class DMXMatrix;
 class Canvas;
+class CanvasClip;
 class CanvasCollection;
 class CanvasEffect;
 class CanvasLayerGroup;

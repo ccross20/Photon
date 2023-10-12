@@ -665,8 +665,12 @@ void WaveformWidget::mousePressEvent(QMouseEvent *t_event)
     if(t_event->button() == Qt::MiddleButton)
         m_isDragging = true;
 
-    qDebug() << "Time:" << xToTime(t_event->pos().x());
-    setPlayhead(xToTime(t_event->pos().x()));
+    if(t_event->modifiers() == Qt::NoModifier)
+    {
+
+        //setPlayhead(xToTime(t_event->pos().x()));
+    }
+
 }
 
 void WaveformWidget::mouseMoveEvent(QMouseEvent *t_event)

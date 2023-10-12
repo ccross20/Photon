@@ -26,14 +26,19 @@ public:
     virtual const QVector<QPointF> &positions() const = 0;
     QVector3D boundingVector() const;
 
+    virtual QByteArray sourceUniqueId() const = 0;
     virtual int dmxOffset() const override;
     virtual int dmxSize() const override;
     virtual int universe() const override;
 
-    virtual void process(CanvasContext &, const QTransform &) const;
+    virtual void process(ProcessContext &, const QTransform &) const;
 
     virtual void readFromJson(const QJsonObject &);
     virtual void writeToJson(QJsonObject &) const;
+
+private:
+    class Impl;
+    Impl *m_impl;
 };
 
 } // namespace photon

@@ -10,7 +10,6 @@ namespace photon {
 
 SawtoothEffectEditor::SawtoothEffectEditor(SawtoothEffect *t_effect):ChannelEffectEditor(t_effect),m_effect(t_effect)
 {
-    setMaximumHeight(40);
 
     QDoubleSpinBox *freqSpin = new QDoubleSpinBox;
     freqSpin->setValue(m_effect->frequency());

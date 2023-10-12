@@ -8,6 +8,7 @@ namespace photon {
 
 class PHOTONCORE_EXPORT CanvasClip : public Clip
 {
+    Q_OBJECT
 public:
     CanvasClip();
 
@@ -29,6 +30,11 @@ public:
     void writeToJson(QJsonObject &) const override;
 
     static ClipInformation info();
+
+signals:
+
+    void pixelLayoutAdded(photon::PixelLayout *);
+    void pixelLayoutRemoved(photon::PixelLayout *);
 
 private:
     class Impl;

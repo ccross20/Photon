@@ -42,6 +42,11 @@ void AngleCapability::setAnglePercent(double value, DMXMatrix &t_matrix, double 
     t_matrix.setValuePercent(channel(), value, t_blend);
 }
 
+void AngleCapability::setAnglePercentCentered(double value, DMXMatrix &t_matrix, double t_blend)
+{
+    t_matrix.setValuePercent(channel(), .5 + value/2.0, t_blend);
+}
+
 double AngleCapability::getAnglePercent(const DMXMatrix &t_matrix)
 {
     return t_matrix.valuePercent(channel());

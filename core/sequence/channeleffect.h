@@ -45,6 +45,10 @@ public:
     virtual void readFromJson(const QJsonObject &);
     virtual void writeToJson(QJsonObject &) const;
 
+protected:
+
+    virtual void addedToChannel();
+
 private:
     friend class Channel;
     class Impl;

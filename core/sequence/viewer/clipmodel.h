@@ -11,6 +11,7 @@ namespace photon {
 class FalloffData;
 class ClipEffectData;
 class ClipEffectFolderData;
+class PixelLayoutFolderData;
 class MaskData;
 class FixtureClip;
 class StateData;
@@ -94,6 +95,7 @@ private:
     FalloffData *m_falloffData;
     FolderData *m_channelFolder;
     StateData *m_stateData;
+    PixelLayoutFolderData *m_pixelLayoutData;
     ClipEffectFolderData *m_clipEffectData;
     Clip *m_clip;
 
@@ -176,6 +178,34 @@ private slots:
 
 private:
     Clip *m_clip;
+};
+
+class PixelLayoutData : public AbstractTreeData
+{
+public:
+    PixelLayoutData(PixelLayout*);
+    PixelLayout *pixelLayout() const{return m_pixelLayout;}
+
+private:
+    PixelLayout *m_pixelLayout;
+
+};
+
+class PixelLayoutFolderData : public AbstractTreeData
+{
+    Q_OBJECT
+public:
+    PixelLayoutFolderData(CanvasClip*);
+    PixelLayoutData *findPixelLayoutData(PixelLayout *);
+
+    CanvasClip *clip() const{return m_clip;}
+
+private slots:
+    void pixelLayoutAdded(photon::PixelLayout*);
+    void pixelLayoutRemoved(photon::PixelLayout*);
+
+private:
+    CanvasClip *m_clip;
 };
 
 class MaskEffectData : public AbstractTreeData

@@ -5,7 +5,9 @@
 
 #include "canvas/draw/drawellipseclipeffect.h"
 #include "canvas/draw/drawrectangleclipeffect.h"
+#include "canvas/fill/fillnoiseeffect.h"
 
+#include "strobe/beatstrobeeffect.h"
 
 namespace photon {
 
@@ -17,6 +19,8 @@ bool PluginClipEffects::initialize(const PluginContext &context)
     photonApp->plugins()->registerClipEffect(TracePathClip::info());
     photonApp->plugins()->registerClipEffect(DrawEllipseClipEffect::info());
     photonApp->plugins()->registerClipEffect(DrawRectangleClipEffect::info());
+    photonApp->plugins()->registerClipEffect(FillNoiseEffect::info());
+    photonApp->plugins()->registerClipEffect(BeatStrobeEffect::info());
 
     return true;
 }

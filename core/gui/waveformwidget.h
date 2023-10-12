@@ -10,6 +10,17 @@ class WaveformWidget : public QWidget
 {
     Q_OBJECT
 public:
+
+    struct Range{
+        double start = 0;
+        double end = 0;
+
+        bool contains(double t_value) const
+        {
+            return t_value >= start && t_value <= end;
+        }
+    };
+
     explicit WaveformWidget(QWidget *parent = nullptr);
     virtual ~WaveformWidget();
 
@@ -21,9 +32,12 @@ public:
     double xToTime(int x) const;
     double timeToX(double time) const;
     void setPlayhead(double time);
+    double playheadTime() const{return m_playheadTime;}
     void clearPlayhead();
     void setSelectionRange(double start, double end);
     void clearSelection();
+
+    Range visibleRange(){return m_visibleRange;}
 
 public slots:
     void loadAudio(const QString &);
@@ -45,10 +59,6 @@ protected:
 
 private:
 
-    struct Range{
-        double start = 0;
-        double end = 0;
-    };
 
     double m_targetHZoomRatio;
     double m_targetHOffset;

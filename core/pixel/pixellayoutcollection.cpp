@@ -45,6 +45,16 @@ PixelLayout *PixelLayoutCollection::layoutAtIndex(uint t_index) const
     return m_impl->layouts.at(t_index);
 }
 
+PixelLayout *PixelLayoutCollection::findLayoutWithId(const QByteArray &t_id) const
+{
+    for(auto layout : m_impl->layouts)
+    {
+        if(layout->uniqueId() == t_id)
+            return layout;
+    }
+    return nullptr;
+}
+
 void PixelLayoutCollection::addLayout(photon::PixelLayout *t_layout)
 {
     if(m_impl->layouts.contains(t_layout))

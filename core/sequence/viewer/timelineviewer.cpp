@@ -7,6 +7,7 @@
 #include "timelinescene.h"
 #include "layeritem.h"
 #include "sequence/cliplayer.h"
+#include "sequence/sequence.h"
 
 namespace photon {
 
@@ -189,11 +190,16 @@ void TimelineViewer::mouseMoveEvent(QMouseEvent *event)
         }
         else
         {
+            auto scenePos = mapToScene(event->pos());
+            auto timelineScene = static_cast<TimelineScene*>(scene());
+            float time = scenePos.x();
+            timelineScene->sequence()->snapToBeat(scenePos.x(),&time,2);
+            scenePos.setX(time);
 
-            QPointF delta = mapToScene(event->pos()) - mapToScene(m_impl->startPoint.toPoint());
+            QPointF delta = scenePos - mapToScene(m_impl->startPoint.toPoint());
             for(const auto &data : m_impl->moveDatas)
             {
-                auto timelineScene = static_cast<TimelineScene*>(scene());
+
                 auto layer = timelineScene->layerAtY(mapToScene(event->pos()).y());
                 auto clipItem = timelineScene->itemForClip(data.clip);
 

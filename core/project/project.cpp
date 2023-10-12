@@ -233,6 +233,19 @@ void Project::readFromJson(const QJsonObject &json)
         m_impl->bus->readFromJson(busObj, photonApp->plugins()->nodeLibrary());
     }
 
+    if(json.contains("pixelLayouts"))
+    {
+        QJsonArray layoutArray = json.value("pixelLayouts").toArray();
+        for(const auto &layout : layoutArray)
+        {
+            const QJsonObject &layoutObj = layout.toObject();
+
+            PixelLayout *c = new PixelLayout;
+            c->readFromJson(layoutObj, context);
+            m_impl->pixelLayouts.addLayout(c);
+        }
+    }
+
     if(json.contains("routines"))
     {
         QJsonArray routineArray = json.value("routines").toArray();
@@ -272,18 +285,6 @@ void Project::readFromJson(const QJsonObject &json)
         }
     }
 
-    if(json.contains("pixelLayouts"))
-    {
-        QJsonArray layoutArray = json.value("pixelLayouts").toArray();
-        for(const auto &layout : layoutArray)
-        {
-            const QJsonObject &layoutObj = layout.toObject();
-
-            PixelLayout *c = new PixelLayout;
-            c->readFromJson(layoutObj, context);
-            m_impl->pixelLayouts.addLayout(c);
-        }
-    }
 
 
 

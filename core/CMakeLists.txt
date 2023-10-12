@@ -11,8 +11,8 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(QT NAMES Qt6 REQUIRED COMPONENTS Widgets)
-find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets)
+find_package(QT NAMES Qt6 REQUIRED COMPONENTS Widgets Network)
+find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets Network)
 find_package(Qt6 REQUIRED COMPONENTS
     3DCore
     3DRender
@@ -25,6 +25,8 @@ find_package(Qt6 REQUIRED COMPONENTS
 
 set(PROJECT_SOURCES
         photon-global.h
+        audio/audioprocessor.h
+        audio/audioprocessor.cpp
         parametereditor.h
         parametereditor.cpp
         canvas/canvaseffect.h
@@ -37,6 +39,8 @@ set(PROJECT_SOURCES
         channel/parameter/colorchannelparameter.cpp
         channel/parameter/numberchannelparameter.h
         channel/parameter/numberchannelparameter.cpp
+        channel/parameter/optionchannelparameter.h
+        channel/parameter/optionchannelparameter.cpp
         channel/parameter/point2channelparameter.h
         channel/parameter/point2channelparameter.cpp
         channel/parameter/view/boolchannelparameterview.h
@@ -47,12 +51,15 @@ set(PROJECT_SOURCES
         channel/parameter/view/colorchannelparameterview.cpp
         channel/parameter/view/numberchannelparameterview.h
         channel/parameter/view/numberchannelparameterview.cpp
+        channel/parameter/view/optionchannelparameterview.h
+        channel/parameter/view/optionchannelparameterview.cpp
         channel/parameter/view/point2channelparameterview.h
         channel/parameter/view/point2channelparameterview.cpp
         channel/parameter/view/channelparameterwidget.h
         channel/parameter/view/channelparameterwidget.cpp
         data/dmxmatrix.h
         data/dmxmatrix.cpp
+        data/types.h
         falloff/constantfalloffeffect.h
         falloff/constantfalloffeffect.cpp
         falloff/falloffeffect.h
@@ -251,6 +258,8 @@ set(PROJECT_SOURCES
         scene/sceneobject.cpp
         scene/truss.h
         scene/truss.cpp
+        sequence/beatlayer.h
+        sequence/beatlayer.cpp
         sequence/canvasclip.h
         sequence/canvasclip.cpp
         sequence/canvasclipeffect.h
@@ -332,10 +341,15 @@ set(PROJECT_SOURCES
         sequence/viewer/timelinescene.cpp
         sequence/viewer/timelineviewer.h
         sequence/viewer/timelineviewer.cpp
+        sequence/viewer/sequencewaveformeditor.h
+        sequence/viewer/sequencewaveformeditor.cpp
         sequence/viewer/sequencewidget.h
         sequence/viewer/sequencewidget.cpp
         sequence/viewer/stateeditor.h
         sequence/viewer/stateeditor.cpp
+        sequence/viewer/waveformheader.h
+        sequence/viewer/waveformheader_p.h
+        sequence/viewer/waveformheader.cpp
         settings/resourcemanager.h
         settings/resourcemanager.cpp
         settings/settings.h
@@ -419,6 +433,7 @@ target_link_libraries(photon-core PRIVATE
     Qt6::3DExtras
     Qt6::3DAnimation
     Qt6::MultimediaWidgets
+    Qt6::Network
 )
 
 target_compile_definitions(photon-core PRIVATE PHOTONCORE_LIBRARY)

@@ -33,6 +33,14 @@ public:
     void setAudioPath(const QString &);
     void addLayer(Layer *);
     void removeLayer(Layer *);
+    void addBeatLayer(BeatLayer *);
+    void removeBeatLayer(BeatLayer *);
+    BeatLayer *editableBeatLayer() const;
+    void setEditableBeatLayer(BeatLayer *);
+    const QVector<BeatLayer*> &beatLayers() const;
+    bool findClosestBeatToTime(float, float *) const;
+    bool snapToBeat(float time, float *outTime, float tolerance = .1) const;
+
     Layer *findLayerByGuid(const QUuid &guid);
     const QVector<Layer*> &layers() const;
     Project *project() const;
@@ -48,6 +56,9 @@ signals:
     void layerAdded(photon::Layer *);
     void layerRemoved(photon::Layer *);
     void fileChanged(const QString &);
+    void beatLayerAdded(photon::BeatLayer *);
+    void beatLayerRemoved(photon::BeatLayer *);
+    void editableBeatLayerChanged(photon::BeatLayer *);
 
 private slots:
 

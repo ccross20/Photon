@@ -188,7 +188,7 @@ ChannelInfo::ChannelType Channel::type() const
 
 void Channel::addEffect(ChannelEffect *t_effect)
 {
-    t_effect->m_impl->channel = this;
+    t_effect->m_impl->addToChannel(this);
     if(!m_impl->effects.isEmpty())
         t_effect->m_impl->previousEffect = m_impl->effects.back();
     m_impl->effects.append(t_effect);
@@ -288,7 +288,7 @@ void Channel::readFromJson(const QJsonObject &t_json, const LoadContext &)
                     effect->m_impl->previousEffect = m_impl->effects.back();
                 m_impl->effects.append(effect);
 
-                effect->m_impl->channel = this;
+                effect->m_impl->addToChannel(this);
             }
         }
     }

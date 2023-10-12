@@ -181,7 +181,7 @@ public:
     double center = .5;
     double angle = 0;
     double bend = 0;
-    double length = 10;
+    double length = 1;
     int offset = 0;
     int pixelCount = 100;
     int universe = 1;
@@ -194,6 +194,7 @@ void PixelStrip::Impl::remakePoints()
     QTransform t;
     t.translate(length * center, 0);
     t.rotate(angle);
+    t.translate(length * -center, 0);
 
     positions.resize(pixelCount);
     double position = 0;
@@ -302,6 +303,11 @@ const QVector<QPointF> &PixelStrip::positions() const
     return m_impl->positions;
 }
 
+QByteArray PixelStrip::sourceUniqueId() const
+{
+    return uniqueId();
+}
+
 int PixelStrip::dmxOffset() const
 {
     return m_impl->offset;
@@ -317,9 +323,9 @@ int PixelStrip::universe() const
     return m_impl->universe;
 }
 
-void PixelStrip::process(CanvasContext &, const QTransform &) const
+void PixelStrip::process(ProcessContext &t_context, const QTransform &t_transform) const
 {
-
+    PixelSource::process(t_context, t_transform);
 }
 
 void PixelStrip::readFromJson(const QJsonObject &t_json)

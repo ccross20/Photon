@@ -13,6 +13,7 @@
 #include "fixture/maskeffect.h"
 #include "sequence/clip.h"
 #include "sequence/clipeffect.h"
+#include "audio/audioprocessor.h"
 
 namespace photon {
 
@@ -45,6 +46,9 @@ public:
     QVector<EffectInformation> channelEffects() const;
     ChannelEffect *createChannelEffect(const QByteArray &effectId) const;
 
+    void registerAudioProcessor(const AudioProcessorInformation &info);
+    QVector<AudioProcessorInformation> audioProcessors() const;
+    AudioProcessor *createAudioProcessor(const QByteArray &effectId) const;
 
     void registerClip(const ClipInformation &info);
     QVector<ClipInformation> clips() const;

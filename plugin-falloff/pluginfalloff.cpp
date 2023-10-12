@@ -2,6 +2,7 @@
 #include "plugin/pluginfactory.h"
 #include "randomfalloff.h"
 #include "mapped2dfalloff.h"
+#include "beatfalloff.h"
 
 //inline void initPluginResource() { Q_INIT_RESOURCE(resources); }
 
@@ -14,6 +15,7 @@ bool PluginFalloff::initialize(const PluginContext &context)
 
     photonApp->plugins()->registerFalloffEffect(RandomFalloff::info());
     photonApp->plugins()->registerFalloffEffect(Mapped2DFalloff::info());
+    photonApp->plugins()->registerFalloffEffect(BeatFalloff::info());
 
     return true;
 }
