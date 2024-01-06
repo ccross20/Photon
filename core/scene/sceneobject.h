@@ -27,6 +27,10 @@ public:
     QString name() const;
     QByteArray uniqueId() const;
     QByteArray typeId() const;
+    const QStringList &tags() const;
+    void setTags(const QStringList &);
+    void addTag(const QString &);
+    void removeTag(const QString &);
 
     SceneObject *parentSceneObject() const;
 
@@ -39,7 +43,7 @@ public:
 
     virtual QWidget *createEditor();
 
-    virtual void readFromJson(const QJsonObject &);
+    virtual void readFromJson(const QJsonObject &, const LoadContext &);
     virtual void writeToJson(QJsonObject &) const;
 
     void triggerUpdate();

@@ -22,9 +22,11 @@ private slots:
     void setDefinition(const QString &path);
     void updateComments();
     void setIdentifier(const QString &);
+    void setTags(const QString &);
     void setUniverse(uint universe);
     void setOffset(uint channel);
     void setMode(int index);
+    void setDefaultState(int index);
     void setPosition(const QVector3D &);
     void setRotation(const QVector3D &);
 

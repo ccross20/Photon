@@ -5,6 +5,7 @@
 #include <QAction>
 #include <QKeyEvent>
 #include <QRandomGenerator>
+#include <QUuid>
 
 #include "guimanager_p.h"
 #include "panel_p.h"
@@ -20,6 +21,7 @@ Panel::Impl::Impl(const PanelId &id, Panel *panel) : id(id),
     layout(new QVBoxLayout()),
     m_ext(panel)
 {
+    uniqueId = QUuid::createUuid().toByteArray();
     layout->setContentsMargins(0,0,0,0);
     layout->setSpacing(0);
     layout->addWidget(toolbar);
@@ -55,11 +57,21 @@ Panel::~Panel()
 {
 }
 
+QByteArray Panel::uniqueId() const
+{
+    return m_impl->uniqueId;
+}
+
 PanelId Panel::id() const
 {
     return m_impl->id;
 }
 
+
+ads::CDockWidget *Panel::dockWidget() const
+{
+    return m_impl->dockWidget;
+}
 
 void Panel::init()
 {

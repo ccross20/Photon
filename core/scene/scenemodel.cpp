@@ -219,7 +219,7 @@ Qt::ItemFlags SceneModel::flags(const QModelIndex &index) const
 //! [2]
 int SceneModel::columnCount(const QModelIndex & /* parent */) const
 {
-    return 4;
+    return 5;
 }
 //! [2]
 
@@ -261,6 +261,8 @@ QVariant SceneModel::data(const QModelIndex &index, int role) const
                             return QString::number(fixture->dmxOffset()) + "-" + QString::number(fixture->dmxOffset() + fixture->dmxSize());
                         case 3:
                             return fixture->dmxSize();
+                        case 4:
+                            return layer->tags().join(", ");
                     }
                 }
                 else
@@ -301,6 +303,8 @@ QVariant SceneModel::headerData(int section, Qt::Orientation orientation,
                 return "Range";
             case 3:
                 return "Channels";
+            case 4:
+                return "Tags";
         }
 
     }

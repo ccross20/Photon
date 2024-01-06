@@ -24,8 +24,8 @@ public:
 
     QTransform transform() const;
 
-    QRectF localBounds() const;
-    QRectF canvasBounds() const;
+    bounds_d localBounds() const;
+    bounds_d canvasBounds() const;
 
     PixelSource *source() const;
     void setSource(PixelSource *);
@@ -34,6 +34,9 @@ public:
 
     void readFromJson(const QJsonObject &, const LoadContext &);
     void writeToJson(QJsonObject &) const;
+
+signals:
+    void transformUpdated();
 
 private:
     class Impl;

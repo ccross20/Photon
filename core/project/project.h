@@ -14,15 +14,15 @@ public:
     explicit Project(QObject *parent = nullptr);
     ~Project();
 
-    void addSequence(Sequence *);
     FixtureCollection *fixtures() const;
     RoutineCollection *routines() const;
-    SequenceCollection *sequences() const;
     CanvasCollection *canvases() const;
     PixelLayoutCollection *pixelLayouts() const;
+    StateCollection *states() const;
     BusGraph *bus() const;
     SceneObject *sceneRoot() const;
     SceneManager *scene() const;
+    TagCollection *tags() const;
 
     void save(const QString &path = QString{}) const;
     void load(const QString &path = QString{});

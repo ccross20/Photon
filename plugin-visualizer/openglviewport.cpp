@@ -3,6 +3,7 @@
 #include "openglviewport.h"
 #include "photoncore.h"
 #include "gui/panel/sequencepanel.h"
+#include "sequence/sequencecollection.h"
 #include "scene.h"
 #include "camera.h"
 
@@ -51,7 +52,7 @@ void OpenGLViewport::timerEvent(QTimerEvent *)
 
 
 
-    auto seqPanel = photonApp->activeSequencePanel();
+    auto seqPanel = photonApp->sequences()->activeSequencePanel();
     if(seqPanel && seqPanel->isPlaying())
     {
         m_scene->updateDMX(seqPanel->getDMX(),m_elapsedTimer.elapsed()/1000.0);

@@ -92,11 +92,14 @@ public:
     int uniqueIndex() const;
     void setUniqueIndex(int);
     void setUniverse(int universe);
+    void setDefaultState(State *);
+    State *defaultState() const;
 
     const QVector<FixtureChannel*> &channels() const;
     FixtureChannel* findChannelWithName(const QString &name) const;
 
     const QVector<FixtureWheel*> &wheels() const;
+    FixtureWheel *findWheel(const QString &) const;
     QVector<FixtureCapability*> findCapability(CapabilityType type, int index = 0) const;
 
     template<class V>
@@ -132,7 +135,7 @@ public:
     void loadFixtureDefinition(const QString &path);
     void readFromOpenFixtureJson(const QJsonObject &);
 
-    void readFromJson(const QJsonObject &) override;
+    void readFromJson(const QJsonObject &, const LoadContext &) override;
     void writeToJson(QJsonObject &) const override;
 
 signals:

@@ -21,6 +21,9 @@
 #include "graph/bus/dmxwriternode.h"
 #include "scene/sceneobject.h"
 #include "scene/scenemanager.h"
+#include "state/statecollection.h"
+#include "state/state.h"
+#include "tag/tagcollection.h"
 
 namespace photon {
 
@@ -32,8 +35,9 @@ public:
     CanvasCollection canvases;
     PixelLayoutCollection pixelLayouts;
     FixtureCollection fixtures;
-    SequenceCollection sequences;
     RoutineCollection routines;
+    TagCollection tags;
+    StateCollection states;
     BusGraph *bus;
     SceneManager *sceneManager;
 };
@@ -63,6 +67,11 @@ Project::Impl::Impl()
     bus->connectParameters(generateNode->findParameter(DMXGenerateMatrixNode::OutputDMX), sequenceNode->findParameter(SequenceNode::InputDMX));
     bus->connectParameters(sequenceNode->findParameter(SequenceNode::OutputDMX), writerNode->findParameter(DMXWriterNode::InputDMX));
 
+    State *state = new State();
+    state->setName("Default");
+    state->addDefaultCapabilities();
+
+    states.addState(state);
 
 }
 
@@ -98,25 +107,24 @@ SceneManager *Project::scene() const
     return m_impl->sceneManager;
 }
 
-void Project::addSequence(Sequence *t_sequence)
-{
-    m_impl->sequences.addSequence(t_sequence);
-    t_sequence->setParent(this);
-}
-
 RoutineCollection *Project::routines() const
 {
     return &m_impl->routines;
 }
 
-SequenceCollection *Project::sequences() const
-{
-    return &m_impl->sequences;
-}
-
 FixtureCollection *Project::fixtures() const
 {
     return &m_impl->fixtures;
+}
+
+StateCollection *Project::states() const
+{
+    return &m_impl->states;
+}
+
+TagCollection *Project::tags() const
+{
+    return &m_impl->tags;
 }
 
 CanvasCollection *Project::canvases() const
@@ -210,8 +218,7 @@ void Project::load(const QString &path)
 
 void Project::restore(Project &t_project)
 {
-    for(auto sequence : m_impl->sequences.sequences())
-        sequence->restore(t_project);
+
 }
 
 void Project::readFromJson(const QJsonObject &json)
@@ -219,11 +226,33 @@ void Project::readFromJson(const QJsonObject &json)
     LoadContext context;
     context.project = this;
 
+    if(json.contains("tags"))
+    {
+        QJsonArray tagArray = json.value("tags").toArray();
+        QStringList tags;
+        for(const auto &tag : tagArray)
+            tags << tag.toString();
+        m_impl->tags.replaceTags(tags);
+    }
+
+    if(json.contains("states"))
+    {
+
+        QJsonArray stateArray = json.value("states").toArray();
+        for(const auto &state : stateArray)
+        {
+            const QJsonObject &stateObj = state.toObject();
+
+            State *s = new State;
+            s->readFromJson(stateObj, context);
+            m_impl->states.addState(s);
+        }
+    }
     //m_impl->sceneManager = new SceneManager;
     if(json.contains("sceneManager"))
     {
         QJsonObject sceneObj = json.value("sceneManager").toObject();
-        m_impl->sceneManager->readFromJson(sceneObj);
+        m_impl->sceneManager->readFromJson(sceneObj, context);
     }
 
     m_impl->bus = new BusGraph;
@@ -259,19 +288,6 @@ void Project::readFromJson(const QJsonObject &json)
         }
     }
 
-    if(json.contains("sequences"))
-    {
-        QJsonArray sequenceArray = json.value("sequences").toArray();
-        for(const auto &seq : sequenceArray)
-        {
-            const QJsonObject &sequenceObj = seq.toObject();
-
-            Sequence *sequence = new Sequence;
-            sequence->readFromJson(sequenceObj, context);
-            m_impl->sequences.addSequence(sequence);
-        }
-    }
-
     if(json.contains("canvases"))
     {
         QJsonArray canvasArray = json.value("canvases").toArray();
@@ -298,16 +314,6 @@ void Project::writeToJson(QJsonObject &json) const
     m_impl->bus->writeToJson(busObj);
     json.insert("bus", busObj);
 
-
-    QJsonArray sequenceArray;
-    for(auto sequence : m_impl->sequences.sequences())
-    {
-        QJsonObject sequenceObj;
-        sequence->writeToJson(sequenceObj);
-        sequenceArray.append(sequenceObj);
-    }
-    json.insert("sequences", sequenceArray);
-
     QJsonArray routineArray;
     for(auto routine : m_impl->routines.routines())
     {
@@ -325,6 +331,22 @@ void Project::writeToJson(QJsonObject &json) const
         canvasArray.append(canvasObj);
     }
     json.insert("canvases", canvasArray);
+
+    QJsonArray stateArray;
+    for(auto state : m_impl->states.states())
+    {
+        QJsonObject stateObj;
+        state->writeToJson(stateObj);
+        canvasArray.append(stateObj);
+    }
+    json.insert("states", stateArray);
+
+    QJsonArray tagArray;
+    for(const auto &tag : m_impl->tags.tags())
+    {
+        tagArray.append(tag);
+    }
+    json.insert("tags", tagArray);
 
     QJsonArray layoutArray;
     for(auto layout : m_impl->pixelLayouts.layouts())

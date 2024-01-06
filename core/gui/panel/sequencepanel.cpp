@@ -3,6 +3,7 @@
 #include "sequence/sequence.h"
 #include "photoncore.h"
 #include "sequence/viewer/sequencewidget.h"
+#include "sequence/sequencecollection.h"
 
 namespace photon {
 
@@ -24,8 +25,8 @@ SequencePanel::SequencePanel() : Panel("photon.sequence"),m_impl(new Impl)
 
 SequencePanel::~SequencePanel()
 {
-    if(photonApp->activeSequencePanel() == this)
-        photonApp->setActiveSequencePanel(nullptr);
+    if(photonApp->sequences()->activeSequencePanel() == this)
+        photonApp->sequences()->setActiveSequencePanel(nullptr);
     delete m_impl;
 }
 

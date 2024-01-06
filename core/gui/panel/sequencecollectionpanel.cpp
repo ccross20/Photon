@@ -129,7 +129,7 @@ void SequenceCollectionPanel::doubleClicked(const QModelIndex &t_index)
 
     if(sequence)
     {
-        photonApp->editSequence(sequence);
+        photonApp->sequences()->editSequence(sequence);
     }
 }
 
@@ -143,7 +143,7 @@ void SequenceCollectionPanel::addClicked()
     {
         Sequence *sequence = new Sequence(text);
         sequence->init();
-        photonApp->project()->addSequence(sequence);
+        photonApp->sequences()->addSequence(sequence);
     }
 
 }
@@ -160,7 +160,7 @@ void SequenceCollectionPanel::removeClicked()
 
     for(auto seq : toDelete)
     {
-        photonApp->project()->sequences()->removeSequence(seq);
+        photonApp->sequences()->removeSequence(seq);
     }
 
 }
@@ -172,7 +172,7 @@ void SequenceCollectionPanel::selectionChanged(const QItemSelection &selected, c
 
 void SequenceCollectionPanel::projectDidOpen(photon::Project* project)
 {
-    SequenceCollectionModel *model = new SequenceCollectionModel(project->sequences());
+    SequenceCollectionModel *model = new SequenceCollectionModel(photonApp->sequences());
     m_impl->listView->setModel(model);
     m_impl->addButton->setEnabled(true);
     connect(m_impl->listView->selectionModel(), &QItemSelectionModel::selectionChanged, this, &SequenceCollectionPanel::selectionChanged);

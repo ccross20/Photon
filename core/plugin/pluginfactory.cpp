@@ -14,6 +14,7 @@
 #include "gui/panel/routineeditpanel.h"
 #include "gui/panel/dmxviewerpanel.h"
 #include "gui/panel/canvasviewerpanel.h"
+#include "gui/panel/tagcollectionpanel.h"
 #include "gui/panel/pixellayoutcollectionpanel.h"
 
 #include "graph/bus/dmxgeneratematrixnode.h"
@@ -31,6 +32,7 @@
 #include "sequence/constantchanneleffect.h"
 #include "sequence/gradientchanneleffect.h"
 #include "sequence/masterlayerchanneleffect.h"
+#include "channel/splinechanneleffect.h"
 
 #include "model/parameter/decimalparameter.h"
 #include "model/parameter/integerparameter.h"
@@ -154,6 +156,7 @@ void PluginFactory::init()
     registerPluginPanel("photon.routine",[](){return new RoutineEditPanel;});
     registerPluginPanel("photon.dmx-viewer",[](){return new DMXViewerPanel;});
     registerPluginPanel("photon.canvas-viewer",[](){return new CanvasViewerPanel;});
+    registerPluginPanel("photon.tag-collection",[](){return new TagCollectionPanel;});
     registerPluginPanel("photon.pixellayout-collection",[](){return new PixelLayoutCollectionPanel;});
 
     registerNode(FixtureWriterNode::info());
@@ -172,6 +175,7 @@ void PluginFactory::init()
     registerChannelEffect(ConstantChannelEffect::info());
     registerChannelEffect(GradientChannelEffect::info());
     registerChannelEffect(MasterLayerChannelEffect::info());
+    registerChannelEffect(SplineChannelEffect::info());
 
     registerClip(StateClip::info());
     registerClip(FixtureClip::info());

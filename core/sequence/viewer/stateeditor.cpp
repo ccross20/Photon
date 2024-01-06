@@ -170,7 +170,10 @@ void StateEditor::openAddMenu()
     menu.addAction("Zoom",[state](){state->addCapability(Capability_Zoom);});
     menu.addAction("Pan",[state](){state->addCapability(Capability_Pan);});
     menu.addAction("Color",[state](){state->addCapability(Capability_Color);});
-    menu.addAction("Color Wheel",[state](){state->addCapability(Capability_WheelSlot);});
+    menu.addAction("Color Slot",[state](){state->addCapability(Capability_ColorWheelSlot);});
+    menu.addAction("Gobo Slot",[state](){state->addCapability(Capability_WheelSlot);});
+    menu.addAction("Wheel Rotation",[state](){state->addCapability(Capability_WheelRotation);});
+    menu.addAction("Wheel Slot Rotation",[state](){state->addCapability(Capability_WheelSlotRotation);});
 
     menu.exec(m_addButton->mapToGlobal(QPoint(0,0)));
 }

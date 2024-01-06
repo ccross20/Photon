@@ -47,6 +47,9 @@ public:
 
     void processChannels(ProcessContext &, double lastTime);
 
+
+    void save(const QString &path = QString{}) const;
+    void load(const QString &path = QString{});
     void restore(Project &);
     void readFromJson(const QJsonObject &, const LoadContext &);
     void writeToJson(QJsonObject &) const;

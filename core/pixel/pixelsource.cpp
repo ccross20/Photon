@@ -257,7 +257,7 @@ void PixelSource::process(ProcessContext &t_context, const QTransform &t_transfo
     }
 }
 
-void PixelSource::readFromJson(const QJsonObject &)
+void PixelSource::readFromJson(const QJsonObject &, const LoadContext &)
 {
 
 }

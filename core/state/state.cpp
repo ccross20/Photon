@@ -9,7 +9,11 @@
 #include "focusstate.h"
 #include "panstate.h"
 #include "colorstate.h"
+#include "gobostate.h"
 #include "colorwheelstate.h"
+#include "wheelrotationstate.h"
+#include "wheelslotrotationstate.h"
+#include "fixture/capability/shutterstrobecapability.h"
 
 namespace photon {
 
@@ -19,6 +23,7 @@ public:
     StateCapability *addCapability(CapabilityType t_type);
 
     QVector<StateCapability*> capabilities;
+    QString name;
     QByteArray uniqueId;
 };
 
@@ -53,8 +58,17 @@ StateCapability *State::Impl::addCapability(CapabilityType t_type)
         case Capability_Color:
             toAdd = new ColorState;
             break;
-        case Capability_WheelSlot:
+        case Capability_ColorWheelSlot:
             toAdd = new ColorWheelState;
+            break;
+        case Capability_WheelSlot:
+            toAdd = new GoboState;
+            break;
+        case Capability_WheelRotation:
+            toAdd = new WheelRotationState;
+            break;
+        case Capability_WheelSlotRotation:
+            toAdd = new WheelSlotRotationState;
             break;
         default:
             break;
@@ -80,17 +94,31 @@ QByteArray State::uniqueId() const
     return m_impl->uniqueId;
 }
 
+QString State::name() const
+{
+    return m_impl->name;
+}
+
+void State::setName(const QString &t_value)
+{
+    if(m_impl->name == t_value)
+        return;
+    m_impl->name = t_value;
+    emit metadataUpdated();
+}
+
 void State::addDefaultCapabilities()
 {
-    /*
-    addCapability(Capability_Strobe);
-    addCapability(Capability_Dimmer);
-    addCapability(Capability_Tilt);
-    addCapability(Capability_Pan);
-    addCapability(Capability_Focus);
-    addCapability(Capability_Zoom);
-    addCapability(Capability_Color);
-    */
+
+
+    addCapability(Capability_Strobe)->setChannelValue(1,ShutterStrobeCapability::Shutter_Open);
+    addCapability(Capability_Dimmer)->setChannelValue(0,0);
+    addCapability(Capability_TiltAngleCentered)->setChannelValue(0,0);
+    addCapability(Capability_Pan)->setChannelValue(0,0);
+    addCapability(Capability_Focus)->setChannelValue(0,0);
+    addCapability(Capability_Zoom)->setChannelValue(0,0);
+    addCapability(Capability_Color)->setChannelValue(0,QVariant::fromValue(Qt::white));
+
 }
 
 const QVector<StateCapability*> &State::capabilities() const
@@ -131,6 +159,7 @@ void State::evaluate(const StateEvaluationContext &t_context) const
 void State::readFromJson(const QJsonObject &t_json, const LoadContext &t_context)
 {
     m_impl->uniqueId = t_json.value("uniqueId").toString().toLatin1();
+    m_impl->name = t_json.value("name").toString();
 
     if(t_json.contains("capabilities"))
     {
@@ -156,6 +185,7 @@ void State::readFromJson(const QJsonObject &t_json, const LoadContext &t_context
 void State::writeToJson(QJsonObject &t_json) const
 {
     t_json.insert("uniqueId", QString(m_impl->uniqueId));
+    t_json.insert("name", m_impl->name);
 
     QJsonArray capabilityArray;
     for(auto capability : m_impl->capabilities)

@@ -161,8 +161,7 @@ SequenceWidget::SequenceWidget(QWidget *parent)
     connect(m_impl->curvePropertyEditor, &ClipStructureViewer::selectClipEffect, this, &SequenceWidget::selectClipEffect);
     connect(m_impl->curvePropertyEditor, &ClipStructureViewer::clearSelection, this, &SequenceWidget::clearEditor);
     connect(m_impl->timebar, &TimeBar::changeTime, this, &SequenceWidget::gotoTime);
-    connect(m_impl->viewer->horizontalScrollBar(), &QAbstractSlider::valueChanged, m_impl->timebar, &TimeBar::setOffset);
-    connect(m_impl->viewer->horizontalScrollBar(), &QAbstractSlider::valueChanged, this, &SequenceWidget::xOffsetChanged);
+    connect(m_impl->viewer, &TimelineViewer::offsetChanged, this, &SequenceWidget::setOffset);
 
     connect(m_impl->player, &QMediaPlayer::positionChanged, this, &SequenceWidget::positionChanged);
 
@@ -193,6 +192,22 @@ void SequenceWidget::setScale(double t_scale)
     m_impl->scale = t_scale;
     m_impl->timebar->setScale(t_scale);
     m_impl->viewer->setScale(t_scale);
+
+    ChannelEffectEditor *channelEditor = dynamic_cast<ChannelEffectEditor*>(m_impl->effectEditor);
+    if(channelEditor)
+        channelEditor->setXScale(t_scale);
+    m_impl->waveform->frameTime(m_impl->visibleStartTime(), m_impl->visibleEndTime());
+}
+
+void SequenceWidget::setOffset(double t_offset)
+{
+    m_impl->offset = t_offset;
+    m_impl->timebar->setOffset(t_offset);
+    m_impl->viewer->setOffset(t_offset);
+
+    ChannelEffectEditor *channelEditor = dynamic_cast<ChannelEffectEditor*>(m_impl->effectEditor);
+    if(channelEditor)
+        channelEditor->setOffset(t_offset);
     m_impl->waveform->frameTime(m_impl->visibleStartTime(), m_impl->visibleEndTime());
 }
 
@@ -204,9 +219,7 @@ void SequenceWidget::selectEffect(photon::ChannelEffect *t_effect)
     auto editor = t_effect->createEditor();
     editor->setOffset(m_impl->offset);
     editor->setScale(QPointF(m_impl->scale,editor->scale().y()));
-    connect(m_impl->viewer->horizontalScrollBar(), &QAbstractSlider::valueChanged, editor, &ChannelEffectEditor::setOffset);
-    connect(editor, &ChannelEffectEditor::offsetChanged, m_impl->viewer->horizontalScrollBar(), &QAbstractSlider::setValue);
-    connect(m_impl->viewer, &TimelineViewer::scaleChanged, editor, &ChannelEffectEditor::setXScale);
+    connect(editor, &ChannelEffectEditor::offsetChanged, this, &SequenceWidget::setOffset);
     connect(editor, &ChannelEffectEditor::xScaleChanged, m_impl->viewer, &TimelineViewer::setScale);
 
     QHBoxLayout *layout = new QHBoxLayout;
@@ -358,12 +371,6 @@ void SequenceWidget::selectionChanged()
     m_impl->curvePropertyEditor->restoreState();
 }
 
-void SequenceWidget::xOffsetChanged(int t_value)
-{
-    m_impl->offset = t_value;
-    m_impl->waveform->frameTime(m_impl->visibleStartTime(), m_impl->visibleEndTime());
-}
-
 void SequenceWidget::gotoTime(double t_time)
 {
     m_impl->currentTime = t_time;
@@ -423,9 +430,10 @@ void SequenceWidget::horizontalSplitterMoved(int pos, int index)
 
 void SequenceWidget::processPreview(ProcessContext &context)
 {
-    if(abs(m_impl->currentTime - m_impl->lastPreviewTime) < .005)
-        return;
+    //if(abs(m_impl->currentTime - m_impl->lastPreviewTime) < .005)
+        //return;
     context.globalTime = m_impl->currentTime;
+    context.project = sequence()->project();
     m_impl->scene->sequence()->processChannels(context, 0);
     m_impl->lastPreviewTime = m_impl->currentTime;
 }
@@ -440,6 +448,7 @@ DMXMatrix SequenceWidget::getDMX()
     DMXMatrix matrix;
     ProcessContext context{matrix};
 
+    context.project = sequence()->project();
     context.globalTime = m_impl->currentTime;
     m_impl->scene->sequence()->processChannels(context, 0);
 

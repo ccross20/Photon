@@ -14,6 +14,11 @@ public:
     FixtureWheelSlot *wheelSlot = nullptr;
 };
 
+
+WheelSlotCapability::WheelSlotCapability(DMXRange range, CapabilityType capability) : FixtureCapability(range, capability),m_impl(new Impl){
+
+}
+
 WheelSlotCapability::WheelSlotCapability() : FixtureCapability(DMXRange(),Capability_WheelSlot),m_impl(new Impl)
 {
 

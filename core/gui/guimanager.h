@@ -40,6 +40,7 @@ public:
     Panel *createFloatingPanel(const PanelId &panelId);
     Panel *createDockedPanel(const PanelId &panelId, DockWidgetArea t_area = RightDockWidgetArea, bool t_isTab = false);
     Panel *findPanel(const PanelId &panelId) const;
+    void bringPanelToFront(Panel *panel) const;
     int panelCount() const;
     bool saveLayout(const QString &filename = QString());
     bool restoreLayout(const QString &filename = QString());

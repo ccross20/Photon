@@ -199,6 +199,8 @@ set(PROJECT_SOURCES
         gui/pixellayouteditor.h
         gui/pixellayouteditor_p.h
         gui/pixellayouteditor.cpp
+        gui/pointedit.h
+        gui/pointedit.cpp
         gui/sceneobjectselector.h
         gui/sceneobjectselector_p.h
         gui/sceneobjectselector.cpp
@@ -306,8 +308,6 @@ set(PROJECT_SOURCES
         sequence/sequence.cpp
         sequence/sequencecollection.h
         sequence/sequencecollection.cpp
-        sequence/spline.h
-        sequence/spline.cpp
         sequence/stateclip.h
         sequence/stateclip.cpp
         sequence/track.h
@@ -417,7 +417,26 @@ set(PROJECT_SOURCES
 
 qt_add_resources(PROJECT_SOURCES third-party/advanced-docking/ads.qrc)
 
-add_library(photon-core SHARED ${PROJECT_SOURCES})
+add_library(photon-core SHARED ${PROJECT_SOURCES}
+    state/statecollection.h state/statecollection.cpp
+    tag/tagcollection.h tag/tagcollection.cpp
+    gui/panel/tagcollectionpanel.h gui/panel/tagcollectionpanel.cpp
+    gui/panel/tagcollectionpanel_p.h
+    gui/tagpicker.h gui/tagpicker.cpp
+    gui/tageditwidget.h gui/tageditwidget.cpp
+    gui/tageditwidget_p.h
+    scene/scenearrow.h scene/scenearrow.cpp
+    state/gobostate.h state/gobostate.cpp
+    fixture/capability/wheelshakecapability.h fixture/capability/wheelshakecapability.cpp
+    fixture/capability/wheelrotationcapability.h fixture/capability/wheelrotationcapability.cpp
+    fixture/capability/wheelslotrotationcapability.h fixture/capability/wheelslotrotationcapability.cpp
+    state/wheelrotationstate.h state/wheelrotationstate.cpp
+    state/wheelslotrotationstate.h state/wheelslotrotationstate.cpp
+    state/slotstate.h state/slotstate.cpp
+    data/spline.cpp data/spline.h
+    util/BezierUtils.h
+    util/mathutils.h
+    channel/splinechanneleffect.h channel/splinechanneleffect.cpp)
 
 target_include_directories(photon-core PUBLIC ../core)
 target_include_directories(photon-core PUBLIC ../keira)

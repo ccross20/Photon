@@ -5,7 +5,7 @@
 
 namespace photon {
 
-class CanvasDialog : public QDialog
+class PHOTONCORE_EXPORT CanvasDialog : public QDialog
 {
     Q_OBJECT
 public:

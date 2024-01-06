@@ -29,6 +29,38 @@ public:
         if(t_universe < channels.size() && t_channel < 512)
             blend(channels[t_universe][t_channel], t_value, t_blend);
     }
+
+    void setRangeMappedValuePercent(FixtureChannel *t_channel, double t_value,DMXRange t_range)
+    {
+        setRangeMappedValuePercent(t_channel, t_value, t_range.start, t_range.end);
+    }
+
+    void setRangeMappedValuePercent(FixtureChannel *t_channel, double t_value,uchar t_min,uchar t_max)
+    {
+        double delta = t_max - t_min;
+        delta *= t_value;
+        delta += t_min;
+        if(delta > 255)
+            delta = 255;
+        if(delta < 0)
+            delta = 0;
+        uint universe = t_channel->universe() - 1;
+        uint channel = t_channel->universalChannelNumber();
+        if(universe < channels.size() && channel < 512)
+            blend(channels[universe][channel], delta, 1.0);
+
+        if(t_channel->fineChannels().length() > 0 && t_channel->fineChannels()[0]->isValid())
+        {
+            double remainder = (delta * 255.0) - floor(delta * 255.0);
+
+            uint fineUniverse = t_channel->fineChannels()[0]->universe() - 1;
+            uint fineChannel = t_channel->fineChannels()[0]->universalChannelNumber();
+            if(fineUniverse < channels.size() && fineChannel < 512)
+                blend(channels[fineUniverse][fineChannel], floor(remainder * 255.0), 1.0);
+        }
+
+
+    }
     void setValuePercent(FixtureChannel *t_channel, double t_value, double t_blend = 1.0)
     {
         double currentValue = valuePercent(t_channel);

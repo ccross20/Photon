@@ -253,9 +253,9 @@ uint Truss::beams() const
     return m_impl->beams;
 }
 
-void Truss::readFromJson(const QJsonObject &t_json)
+void Truss::readFromJson(const QJsonObject &t_json, const LoadContext &t_context)
 {
-    SceneObject::readFromJson(t_json);
+    SceneObject::readFromJson(t_json, t_context);
 
     m_impl->segmentLength = t_json.value("segmentLength").toDouble(m_impl->segmentLength);
     m_impl->length = t_json.value("length").toDouble(m_impl->length);

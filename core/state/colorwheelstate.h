@@ -11,6 +11,9 @@ public:
     ColorWheelState();
 
     void evaluate(const StateEvaluationContext &) const override;
+
+private:
+    QStringList wheelOptions;
 };
 
 } // namespace photon

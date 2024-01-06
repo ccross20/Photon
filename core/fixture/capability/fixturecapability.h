@@ -51,6 +51,7 @@ enum CapabilityType{
     Capability_Color,
     Capability_NoFunction,
     Capability_WheelSlot,
+    Capability_ColorWheelSlot,
     Capability_WheelShake,
     Capability_WheelSlotRotation,
     Capability_WheelRotation
@@ -78,6 +79,7 @@ enum FixtureUnit{
 };
 
 enum SpeedEnum{
+    Speed_Unknown,
     Speed_Fast,
     Speed_Slow,
     Speed_Stop,
@@ -86,6 +88,7 @@ enum SpeedEnum{
 };
 
 enum RotationSpeedEnum{
+    RotationSpeed_Unknown,
     RotationSpeed_FastCW,
     RotationSpeed_SlowCW,
     RotationSpeed_Stop,

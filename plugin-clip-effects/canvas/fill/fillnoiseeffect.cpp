@@ -4,6 +4,8 @@
 #include "channel/parameter/colorchannelparameter.h"
 #include "channel/parameter/optionchannelparameter.h"
 #include "util/gilconcurrent.h"
+#include "util/utils.h"
+
 using namespace boost::gil;
 namespace photon {
 
@@ -20,6 +22,10 @@ void FillNoiseEffect::init()
     addChannelParameter(new Point2ChannelParameter("scale",QPointF{.5,.5}));
     addChannelParameter(new NumberChannelParameter("seed"));
     addChannelParameter(new NumberChannelParameter("frequency", .1,0,100));
+    addChannelParameter(new NumberChannelParameter("speed"));
+    addChannelParameter(new NumberChannelParameter("direction"));
+    addChannelParameter(new ColorChannelParameter("colorA", Qt::white));
+    addChannelParameter(new ColorChannelParameter("colorB", Qt::black));
 }
 
 void FillNoiseEffect::evaluate(CanvasClipEffectEvaluationContext &t_context) const
@@ -28,6 +34,9 @@ void FillNoiseEffect::evaluate(CanvasClipEffectEvaluationContext &t_context) con
     //t_context.canvasImage
 
     NoiseGenerator noise;
+
+    QColor colorA = t_context.channelValues["colorA"].value<QColor>();
+    QColor colorB = t_context.channelValues["colorB"].value<QColor>();
 
     noise.setOffset(t_context.channelValues["origin"].value<QPointF>());
     noise.setScale(t_context.channelValues["scale"].value<QPointF>());
@@ -42,7 +51,7 @@ void FillNoiseEffect::evaluate(CanvasClipEffectEvaluationContext &t_context) con
 
     bounds_i outBounds{t_context.canvasImage->rect()};
 
-    concurrentViewTransform<bgra8_view_t>(view, outBounds,[&noise](const bgra8_view_t &output, const bounds_i &bounds)
+    concurrentViewTransform<bgra8_view_t>(view, outBounds,[&noise, &colorA, &colorB](const bgra8_view_t &output, const bounds_i &bounds)
     {
         for (std::ptrdiff_t y=0; y<output.height(); ++y) {
             typename bgra8_view_t::x_iterator it=output.row_begin(y);
@@ -54,11 +63,12 @@ void FillNoiseEffect::evaluate(CanvasClipEffectEvaluationContext &t_context) con
                 else if(greyVal > 1.0f)
                     greyVal = 1.0f;
 
-                uchar gray = static_cast<uchar>(greyVal*255);
-                (*it)[0] = gray;
-                (*it)[1] = gray;
-                (*it)[2] = gray;
-                (*it)[3] = 255;
+                QColor c = blendColors(colorA, colorB, greyVal);
+
+                (*it)[0] = c.red();
+                (*it)[1] = c.green();
+                (*it)[2] = c.blue();
+                (*it)[3] = c.alpha();
             }
         }
     }

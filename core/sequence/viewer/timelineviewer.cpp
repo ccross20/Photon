@@ -48,6 +48,8 @@ public:
     QPoint lastPosition;
     double scale = 5.0;
     double playheadTime = 0.0;
+    double startXPos = 0.0;
+    double xOffset = 0.0;
     InteractionMode interactionMode = InteractionSelect;
 
 };
@@ -55,10 +57,19 @@ public:
 TimelineViewer::TimelineViewer() : QGraphicsView(),m_impl(new Impl)
 {
     setAlignment(Qt::AlignTop | Qt::AlignLeft);
+    //setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    //setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    setTransformationAnchor(QGraphicsView::NoAnchor);
+
     //setViewportUpdateMode(QGraphicsView::FullViewportUpdate);
     //setCacheMode(QGraphicsView::CacheNone);
+    setSceneRect(QRectF{-5000,-500,10000,1000});
 
-    setTransform(QTransform::fromScale(m_impl->scale, 1.0));
+    QTransform xform;
+    xform.translate(-m_impl->xOffset,0);
+    xform.scale(m_impl->scale,1.0);
+
+    setTransform(xform);
 }
 
 TimelineViewer::~TimelineViewer()
@@ -71,8 +82,33 @@ void TimelineViewer::setScale(double t_value)
     if(m_impl->scale == t_value)
         return;
     m_impl->scale = t_value;
-    setTransform(QTransform::fromScale(m_impl->scale, 1.0));
+
+    QTransform xform;
+    //xform.translate(-m_impl->xOffset,0);
+    xform.translate(-width()/2.0,-height()/2.0);
+    //xform.scale(m_impl->scale,1.0);
+
+
+    setTransform(xform);
     emit scaleChanged(m_impl->scale);
+}
+
+void TimelineViewer::setOffset(double t_value)
+{
+    if(m_impl->xOffset == t_value)
+        return;
+    m_impl->xOffset = t_value;
+
+
+    QTransform xform;
+    //xform.translate(-m_impl->xOffset,0);
+    xform.translate(-width()/2.0,-height()/2.0);
+    //xform.scale(m_impl->scale,1.0);
+
+    qDebug() << width() << height();
+
+    setTransform(xform);
+    emit offsetChanged(m_impl->xOffset);
 }
 
 void TimelineViewer::movePlayheadTo(double t_time)
@@ -127,7 +163,7 @@ void TimelineViewer::mousePressEvent(QMouseEvent *event)
 {
     m_impl->startPoint = event->pos();
     m_impl->lastPosition = event->pos();
-
+    m_impl->startXPos = (m_impl->startPoint.x() + m_impl->xOffset) / m_impl->scale;
 
     auto item = itemAt(event->pos());
 
@@ -167,12 +203,31 @@ void TimelineViewer::mousePressEvent(QMouseEvent *event)
 
 void TimelineViewer::mouseMoveEvent(QMouseEvent *event)
 {
+    QPoint deltaPt = event->pos() - m_impl->lastPosition;
 
     if((event->buttons() & Qt::LeftButton))
     {
 
         if(event->modifiers() & Qt::ControlModifier)
         {
+            double newScaleX = m_impl->scale;
+
+
+
+            if(deltaPt.x() > 0)
+                newScaleX *= 1.1;
+            else if(deltaPt.x() < 0)
+                newScaleX /= 1.1;
+
+
+            setScale(newScaleX);
+
+            double newXPos = (m_impl->startPoint.x() + m_impl->xOffset) / newScaleX;
+
+            setOffset(m_impl->xOffset - ((newXPos - m_impl->startXPos) * newScaleX) );
+            m_impl->startXPos = (m_impl->startPoint.x() + m_impl->xOffset) / newScaleX;
+
+            /*
             double const ZOOM_INCREMENT = 1.1;
             QPointF delta = event->pos() - m_impl->lastPosition;
             if(delta.x() < 0)
@@ -187,6 +242,7 @@ void TimelineViewer::mouseMoveEvent(QMouseEvent *event)
             setTransform(QTransform::fromScale(m_impl->scale, 1.0));
 
             emit scaleChanged(m_impl->scale);
+*/
         }
         else
         {
@@ -242,8 +298,8 @@ void TimelineViewer::mouseMoveEvent(QMouseEvent *event)
     }
     if((event->buttons() & Qt::MiddleButton))
     {
-        QPoint delta = event->pos() - m_impl->lastPosition;
-        horizontalScrollBar()->setValue(horizontalScrollBar()->value() + delta.x());
+       // QPoint delta = event->pos() - m_impl->lastPosition;
+       // horizontalScrollBar()->setValue(horizontalScrollBar()->value() + delta.x());
     }
     else
     {

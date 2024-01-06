@@ -1,3 +1,7 @@
+#include <QJsonDocument>
+#include <QFile>
+#include <QFileDialog>
+#include <QSettings>
 #include "sequence_p.h"
 #include "layer_p.h"
 #include "cliplayer.h"
@@ -5,6 +9,10 @@
 #include "canvaslayergroup.h"
 #include "project/project.h"
 #include "photoncore.h"
+#include "fixture/fixturecollection.h"
+#include "fixture/fixture.h"
+#include "state/stateevaluationcontext.h"
+#include "state/state.h"
 
 namespace photon {
 
@@ -42,6 +50,88 @@ Sequence::~Sequence()
 void Sequence::init()
 {
     addLayer(new ClipLayer("Layer 1"));
+}
+
+void Sequence::save(const QString &t_path) const
+{
+    QSettings qsettings;
+
+    qsettings.beginGroup("app");
+    QString startPath = qsettings.value("sequencepath", QDir::homePath()).toString();
+    qsettings.endGroup();
+
+    QString savePath = t_path;
+    if(savePath.isEmpty())
+    {
+        savePath = QFileDialog::getSaveFileName(nullptr,"Save Sequence", startPath, "Photon Sequence (*.seq)");
+    }
+
+    if(savePath.isEmpty())
+    {
+        qWarning("There was no path to save to.");
+        return;
+    }
+
+    QFile saveFile(savePath);
+
+    if (!saveFile.open(QIODevice::WriteOnly)) {
+        qWarning("Couldn't open save file.");
+        return;
+    }
+
+    qsettings.beginGroup("app");
+    qsettings.setValue("sequencepath", QFileInfo(savePath).path());
+    qsettings.endGroup();
+
+    QJsonObject jsonObj;
+    writeToJson(jsonObj);
+
+    saveFile.write(QJsonDocument(jsonObj).toJson());
+
+    qDebug() << "Saved to: " << saveFile.fileName();
+}
+
+void Sequence::load(const QString &t_path)
+{
+    QString loadPath = t_path;
+    if(loadPath.isNull())
+    {
+        QSettings qsettings;
+        qsettings.beginGroup("app");
+        QString startPath = qsettings.value("sequencepath", QDir::homePath()).toString();
+        qsettings.endGroup();
+
+        loadPath = QFileDialog::getOpenFileName(nullptr, "Photon Sequence",
+                                                startPath,
+                                                "*.seq");
+
+        if(loadPath.isNull())
+            return;
+        qsettings.beginGroup("app");
+        qsettings.setValue("sequencepath", QFileInfo(loadPath).path());
+        qsettings.endGroup();
+
+    }
+
+
+    QFile loadFile(loadPath);
+
+    if (!loadFile.open(QIODevice::ReadOnly)) {
+        qWarning("Couldn't open load file.");
+        return;
+    }
+
+    QByteArray saveData = loadFile.readAll();
+
+    QJsonDocument loadDoc(QJsonDocument::fromJson(saveData));
+
+    LoadContext context;
+    context.project = photonApp->project();
+
+    readFromJson(loadDoc.object(), context);
+    restore(*photonApp->project());
+
+    qDebug() << "Load from: " << loadFile.fileName();
 }
 
 void Sequence::addBeatLayer(BeatLayer *t_layer)
@@ -203,8 +293,28 @@ void Sequence::removeLayer(Layer *t_layer)
 
 void Sequence::processChannels(ProcessContext &t_context, double lastTime)
 {
+    StateEvaluationContext localContext(t_context.dmxMatrix);
+    localContext.globalTime = t_context.globalTime;
+    localContext.relativeTime = t_context.globalTime;
+
+
+
+    for(auto fixture : t_context.project->fixtures()->fixtures())
+    {
+        localContext.fixture = fixture;
+        auto defState = fixture->defaultState();
+        if(defState)
+        {
+            defState->initializeValues(localContext);
+            defState->evaluate(localContext);
+        }
+    }
+
+
     for(auto layer : m_impl->layers)
         layer->processChannels(t_context);
+
+    //qDebug() << t_context.dmxMatrix.value(0,3);
 }
 
 void Sequence::restore(Project &t_project)

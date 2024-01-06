@@ -8,7 +8,6 @@
 
 namespace photon {
 
-class SequencePanel;
 
 class PHOTONCORE_EXPORT PhotonCore : public QApplication
 {
@@ -24,13 +23,12 @@ public:
     ResourceManager *resources() const;
     void setProject(Project *);
     Project *project() const;
-    void editSequence(Sequence *);
     void editRoutine(Routine *);
 
     BusEvaluator *busEvaluator() const;
     Timekeeper *timekeeper() const;
-    void setActiveSequencePanel(SequencePanel *panel);
-    SequencePanel *activeSequencePanel() const;
+
+    SequenceCollection *sequences() const;
 
 
     QString appDataPath() const;
@@ -42,6 +40,8 @@ public slots:
     void closeProject();
     void loadProject(const QString &path = QString{});
     void newProject();
+    void loadSequence(const QString &path = QString{});
+    void newSequence();
 
 signals:
     void projectWillOpen();

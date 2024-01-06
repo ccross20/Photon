@@ -3,6 +3,7 @@
 #include "model/parameter/buttonparameter.h"
 #include "sequence/sequence.h"
 #include "gui/panel/sequencepanel.h"
+#include "sequence/sequencecollection.h"
 #include "photoncore.h"
 
 namespace photon {
@@ -55,7 +56,9 @@ void SequenceNode::evaluate(keira::EvaluationContext *) const
     ProcessContext context{matrix};
     context.project = photonApp->project();
 
-    auto panel = photonApp->activeSequencePanel();
+
+
+    auto panel = photonApp->sequences()->activeSequencePanel();
 
     if(panel)
         panel->processPreview(context);

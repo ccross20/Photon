@@ -130,6 +130,8 @@ void DMXViewerCells::setData(const photon::DMXMatrix &t_matrix)
 
     for(auto it = t_matrix.channels[0].cbegin(); it != t_matrix.channels[0].cend() && cellIt != m_impl->cells.end(); ++it)
     {
+        if((*cellIt).value != *it)
+            (*cellIt).needsRedraw = true;
         (*cellIt).value = *it;
         ++cellIt;
     }

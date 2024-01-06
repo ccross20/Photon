@@ -14,7 +14,7 @@ public:
     SceneObject *findObjectById(const QByteArray&);
     SceneObject *rootObject() const;
 
-    void readFromJson(const QJsonObject &json);
+    void readFromJson(const QJsonObject &json, const LoadContext &);
     void writeToJson(QJsonObject &json) const;
 
 private slots:

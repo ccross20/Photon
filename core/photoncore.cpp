@@ -1,5 +1,6 @@
 #include <QStandardPaths>
 #include <QFileDialog>
+#include <QInputDialog>
 #include "photoncore.h"
 #include "gui/guimanager.h"
 #include "plugin/pluginfactory.h"
@@ -10,6 +11,8 @@
 #include "graph/bus/busevaluator.h"
 #include "settings/resourcemanager.h"
 #include "settings/settings.h"
+#include "sequence/sequencecollection.h"
+#include "sequence/sequence.h"
 
 inline void initPluginResource() { Q_INIT_RESOURCE(resources); }
 
@@ -21,7 +24,7 @@ public:
     Impl(PhotonCore *);
     ~Impl();
 
-
+    SequenceCollection *sequences;
     ResourceManager *resources;
     Settings *settings;
     PluginFactory *plugins;
@@ -29,11 +32,13 @@ public:
     Project *project = nullptr;
     Timekeeper *timekeeper;
     BusEvaluator *busEvaluator;
+    Sequence *activeSequence = nullptr;
     SequencePanel *activeSequencePanel = nullptr;
     QVersionNumber version;
 };
 
-PhotonCore::Impl::Impl(PhotonCore *t_core):    
+PhotonCore::Impl::Impl(PhotonCore *t_core):
+    sequences(new SequenceCollection),
     resources(new ResourceManager()),
     settings(new Settings(t_core)),
     plugins(new PluginFactory(t_core)),gui(new GuiManager),timekeeper(new Timekeeper),busEvaluator(new BusEvaluator)
@@ -48,6 +53,7 @@ PhotonCore::Impl::~Impl()
     delete timekeeper;
     delete settings;
     delete resources;
+    delete sequences;
 }
 
 PhotonCore::PhotonCore(int &argc, char **argv) : QApplication(argc, argv),
@@ -103,9 +109,37 @@ Settings *PhotonCore::settings() const
     return m_impl->settings;
 }
 
+SequenceCollection *PhotonCore::sequences() const
+{
+    return m_impl->sequences;
+}
+
 ResourceManager *PhotonCore::resources() const
 {
     return m_impl->resources;
+}
+
+void PhotonCore::loadSequence(const QString &t_path)
+{
+    Sequence *sequence = new Sequence;
+    sequence->load(t_path);
+    m_impl->sequences->addSequence(sequence);
+    m_impl->sequences->editSequence(sequence);
+}
+
+void PhotonCore::newSequence()
+{
+    bool ok;
+    QString text = QInputDialog::getText(nullptr, "New Sequence",
+                                         "Name:", QLineEdit::Normal,
+                                         "Untitled", &ok);
+    if (ok && !text.isEmpty())
+    {
+        Sequence *sequence = new Sequence;
+        sequence->setName(text);
+        m_impl->sequences->addSequence(sequence);
+        m_impl->sequences->editSequence(sequence);
+    }
 }
 
 void PhotonCore::newProject()
@@ -128,6 +162,7 @@ void PhotonCore::closeProject()
     if(!m_impl->project)
         return;
 
+    m_impl->sequences->clear();
     emit projectWillClose(m_impl->project);
 
     delete m_impl->project;
@@ -170,24 +205,6 @@ Timekeeper *PhotonCore::timekeeper() const
 {
     return m_impl->timekeeper;
 }
-
-void PhotonCore::setActiveSequencePanel(SequencePanel *panel)
-{
-    m_impl->activeSequencePanel = panel;
-}
-
-SequencePanel *PhotonCore::activeSequencePanel() const
-{
-    return m_impl->activeSequencePanel;
-}
-
-void PhotonCore::editSequence(Sequence *t_sequence)
-{
-    SequencePanel *sequencePanel = static_cast<SequencePanel*>(m_impl->gui->createDockedPanel("photon.sequence", GuiManager::CenterDockWidgetArea, true));
-    sequencePanel->setSequence(t_sequence);
-    setActiveSequencePanel(sequencePanel);
-}
-
 void PhotonCore::editRoutine(Routine *t_routine)
 {
     RoutineEditPanel *routinePanel = static_cast<RoutineEditPanel*>(m_impl->gui->createDockedPanel("photon.routine", GuiManager::CenterDockWidgetArea, true));

@@ -25,6 +25,7 @@ public slots:
     void togglePlay(bool);
     void rewind();
     void setScale(double);
+    void setOffset(double);
     void gotoTime(double);
     void pickFile();
 
@@ -34,7 +35,6 @@ private slots:
     void editorSplitterMoved(int, int);
     void horizontalSplitterMoved(int, int);
     void selectionChanged();
-    void xOffsetChanged(int);
     void positionChanged(qint64);
     void selectEffect(photon::ChannelEffect *);
     void selectMask(photon::MaskEffect *);

@@ -11,6 +11,7 @@
 #include "modifier/easeeffect.h"
 #include "mask/treemaskeffect.h"
 #include "mask/randommaskeffect.h"
+#include "mask/tagmaskeffect.h"
 
 //inline void initPluginResource() { Q_INIT_RESOURCE(resources); }
 
@@ -32,6 +33,7 @@ bool PluginEffects::initialize(const PluginContext &context)
 
     photonApp->plugins()->registerMaskEffect(TreeMaskEffect::info());
     photonApp->plugins()->registerMaskEffect(RandomMaskEffect::info());
+    photonApp->plugins()->registerMaskEffect(TagMaskEffect::info());
 
     return true;
 }

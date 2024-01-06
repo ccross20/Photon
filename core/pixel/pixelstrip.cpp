@@ -328,9 +328,9 @@ void PixelStrip::process(ProcessContext &t_context, const QTransform &t_transfor
     PixelSource::process(t_context, t_transform);
 }
 
-void PixelStrip::readFromJson(const QJsonObject &t_json)
+void PixelStrip::readFromJson(const QJsonObject &t_json, const LoadContext &t_context)
 {
-    SceneObject::readFromJson(t_json);
+    SceneObject::readFromJson(t_json, t_context);
 
     m_impl->length = t_json.value("length").toDouble(m_impl->length);
     m_impl->center = t_json.value("center").toDouble(m_impl->center);

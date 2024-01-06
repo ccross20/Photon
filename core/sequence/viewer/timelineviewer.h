@@ -17,9 +17,11 @@ public:
 public slots:
     void movePlayheadTo(double t_time);
     void setScale(double);
+    void setOffset(double);
 
 signals:
     void scaleChanged(double);
+    void offsetChanged(double);
 
 protected:
     void drawBackground(QPainter *painter, const QRectF &rect) override;

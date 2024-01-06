@@ -6,15 +6,22 @@
 
 namespace photon {
 
-ColorWheelState::ColorWheelState() : StateCapability(CapabilityType::Capability_WheelSlot)
+ColorWheelState::ColorWheelState() : StateCapability(CapabilityType::Capability_ColorWheelSlot)
 {
+    wheelOptions = QStringList{"Color Wheel", "Index"};
+
+
     setName("Color Wheel");
 
     auto info = ChannelInfo(ChannelInfo::ChannelTypeIntegerStep, "Mode","The state of the shutter",FixtureWheelSlot::Slot_Open);
     info.options = {"Open","Red","Cyan","Green","Blue","Yellow","Magenta"};
     addAvailableChannel(info);
 
-    addAvailableChannel(ChannelInfo(ChannelInfo::ChannelTypeInteger, "Wheel","Which Color Wheel",1));
+    auto wheelInfo = ChannelInfo(ChannelInfo::ChannelTypeIntegerStep, "Wheel","Which wheel to use","Color Wheel");
+    wheelInfo.options = wheelOptions;
+    addAvailableChannel(wheelInfo);
+
+    addAvailableChannel(ChannelInfo(ChannelInfo::ChannelTypeInteger, "Wheel Index","Which Color Wheel",1));
 }
 
 QVector3D colorToVector(const QColor &t_color)
@@ -26,14 +33,28 @@ QVector3D colorToVector(const QColor &t_color)
 
 void ColorWheelState::evaluate(const StateEvaluationContext &t_context) const
 {
-    auto allSlots = getFixtureCapabilities(t_context);
+    auto allSlots = t_context.fixture->findCapability(Capability_WheelSlot);
     int color = getChannelInteger(t_context,0);
-    int wheelIndex = getChannelInteger(t_context,1)-1;
+    int wheelType = getChannelInteger(t_context,1);
+    int wheelIndex = getChannelInteger(t_context,2)-1;
 
-    if(wheelIndex < 0 || wheelIndex >= t_context.fixture->wheels().length())
-        return;
+    QString wheelName;
 
-    QString wheelName = t_context.fixture->wheels()[wheelIndex]->name();
+    if(wheelType < wheelOptions.length()-1)
+    {
+        auto wheel = t_context.fixture->findWheel(wheelOptions[wheelType]);
+        if(!wheel)
+            return;
+        wheelName = wheel->name();
+    }
+    else
+    {
+        if(wheelIndex < 0 || wheelIndex >= t_context.fixture->wheels().length())
+            return;
+    }
+
+
+    wheelName = t_context.fixture->wheels()[wheelIndex]->name();
     wheelName = wheelName.toLower();
 
     QVector<WheelSlotCapability*> colorSlots;

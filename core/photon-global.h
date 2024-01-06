@@ -10,6 +10,7 @@
 #include <QCoreApplication>
 #include <QJsonObject>
 #include <QJsonArray>
+#include "data/types.h"
 
 namespace photon
 {
@@ -87,6 +88,8 @@ class Settings;
 class SettingsPage;
 class State;
 class StateCapability;
+class StateCollection;
+class TagCollection;
 class Timekeeper;
 class Timeline;
 

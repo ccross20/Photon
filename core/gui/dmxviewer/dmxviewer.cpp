@@ -27,7 +27,7 @@ DMXViewer::DMXViewer(QWidget *parent)
     setStyleSheet("background:#363636;");
 
 
-    connect(&m_impl->timer, &QTimer::timeout, this, &DMXViewer::timeout);
+    //connect(&m_impl->timer, &QTimer::timeout, this, &DMXViewer::timeout);
     m_impl->timer.start(1000/24);
 }
 

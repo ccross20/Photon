@@ -16,13 +16,16 @@ public:
 
 private slots:
     void valueChanged(double);
+    void rateChanged(double);
 
 protected:
     void relayout(const QRectF &) override;
 
 private:
     ConstantChannelEffect *m_effect;
+    QGraphicsRectItem *m_parentItem;
     RectangleGizmo *m_originHandle;
+    RectangleGizmo *m_rateHandle;
     QGraphicsPathItem *m_pathItem;
 
 };
@@ -35,6 +38,8 @@ public:
 
     void setValue(double);
     double value() const{return m_value;}
+    void setRate(double);
+    double rate() const{return m_rate;}
     double process(double value, double time) const override;
     ChannelEffectEditor *createEditor() override;
 
@@ -46,6 +51,7 @@ public:
 
 private:
     double m_value = 1.0;
+    double m_rate = 0;
 };
 
 } // namespace photon

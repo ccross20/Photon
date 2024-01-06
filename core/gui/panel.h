@@ -7,12 +7,17 @@
 #include "photon-global.h"
 #include "gui/guimanager.h"
 
+namespace ads {
+class CDockWidget;
+}
+
 namespace photon {
 
 
 class PanelDockTitle;
 class BaseEvent;
 class CommandContainer;
+
 
 class PHOTONCORE_EXPORT Panel : public QWidget
 {
@@ -21,6 +26,7 @@ public:
     Panel(const PanelId &panelId, QWidget *parent = nullptr);
     virtual ~Panel() override;
 
+    QByteArray uniqueId() const;
     QByteArray id() const;
     QString name() const;
     void setName(const QString &);
@@ -35,6 +41,7 @@ public:
     GuiManager *gui() const;
     CommandContainer *commands() const;
     QVector<QWidget*> windowFrameWidgets() const;
+    ads::CDockWidget *dockWidget() const;
 
     void addWindowFrameWidget(QWidget *widget);
     void removeWindowFrameWidget(QWidget *widget);

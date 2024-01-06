@@ -86,7 +86,8 @@ set(SOURCES
 )
 
 qt_add_resources(SOURCES resources.qrc)
-add_library(plugin-visualizer SHARED ${SOURCES})
+add_library(plugin-visualizer SHARED ${SOURCES}
+    arrowmodel.h arrowmodel.cpp)
 
 
 

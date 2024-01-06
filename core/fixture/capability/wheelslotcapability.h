@@ -9,14 +9,14 @@ class PHOTONCORE_EXPORT WheelSlotCapability : public FixtureCapability
 {
 public:
     WheelSlotCapability();
-    ~WheelSlotCapability();
-
+    WheelSlotCapability(DMXRange range, CapabilityType capability = Capability_WheelSlot);
+    virtual ~WheelSlotCapability();
 
     QString wheelName() const;
     int slotNumber() const;
     FixtureWheelSlot *wheelSlot() const;
     void selectSlot(DMXMatrix &t_matrix) const;
-    void readFromOpenFixtureJson(const QJsonObject &) override;
+    virtual void readFromOpenFixtureJson(const QJsonObject &) override;
 
 private:
     class Impl;

@@ -12,6 +12,7 @@
 #include "scene/truss.h"
 #include "pixel/pixelstrip.h"
 #include "scene/sceneiterator.h"
+#include "scene/scenearrow.h"
 
 namespace photon {
 
@@ -84,6 +85,7 @@ void FixtureCollectionPanel::addClicked()
     menu.addAction("Group",[this](){addGroup();});
     menu.addAction("Truss",[this](){addTruss();});
     menu.addAction("Light Strip",[this](){addLightStrip();});
+    menu.addAction("Arrow",[this](){addArrow();});
 
     menu.exec(m_impl->addButton->mapToGlobal(m_impl->addButton->rect().bottomLeft()));
 }
@@ -178,6 +180,13 @@ void FixtureCollectionPanel::addTruss()
     auto truss = new Truss;
     truss->setName("Truss");
     truss->setParentSceneObject(photonApp->project()->sceneRoot());
+}
+
+void FixtureCollectionPanel::addArrow()
+{
+    auto arrow = new SceneArrow;
+    arrow->setName("Arrow");
+    arrow->setParentSceneObject(photonApp->project()->sceneRoot());
 }
 
 void FixtureCollectionPanel::addLightStrip()

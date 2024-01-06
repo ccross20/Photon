@@ -10,6 +10,8 @@
 #include "project/project.h"
 #include "photoncore.h"
 #include "plugin/pluginfactory.h"
+#include "sequence/sequencecollection.h"
+#include "panel_p.h"
 /*
 #include "settings/settings.h"
 #include "menu/menufactory.h"
@@ -64,6 +66,7 @@ void GuiManager::Impl::createAppWindow()
     windowMenu->addAction("Routine", [](){photonApp->gui()->createFloatingPanel("photon.routine-collection");});
     windowMenu->addAction("Sequence", [](){photonApp->gui()->createFloatingPanel("photon.sequence-collection");});
     windowMenu->addAction("Canvas Viewer", [](){photonApp->gui()->createFloatingPanel("photon.canvas-viewer");});
+    windowMenu->addAction("Tags", [](){photonApp->gui()->createFloatingPanel("photon.tag-collection");});
     menubar->addMenu(windowMenu);
 
     Panel *panel1 = createPanel("photon.bus");
@@ -88,6 +91,10 @@ void GuiManager::Impl::createAppWindow()
     toolBar->addAction("Load",[](){photonApp->loadProject();});
     toolBar->addAction("New",[](){photonApp->newProject();});
     toolBar->addAction("Save Layout",[this](){m_ext->saveLayout();});
+    toolBar->addAction("New Sequence",[](){photonApp->newSequence();});
+    toolBar->addAction("Load Sequence",[](){photonApp->loadSequence();});
+    toolBar->addAction("Save Sequence",[](){photonApp->sequences()->activeSequence()->save();});
+
 
 
     window->addToolBar(Qt::ToolBarArea::TopToolBarArea, toolBar);
@@ -391,6 +398,7 @@ Panel *GuiManager::createFloatingPanel(const PanelId &panelId)
     DockWidget->setWidget(panel);
     DockWidget->setMinimumSizeHintMode(ads::CDockWidget::MinimumSizeHintFromContent);
     DockWidget->setFeature(ads::CDockWidget::DockWidgetAlwaysCloseAndDelete, true);
+    panel->m_impl->dockWidget = DockWidget;
 
     connect(panel, &Panel::nameUpdated, DockWidget, [panel, DockWidget](){ DockWidget->setWindowTitle(panel->name());});
 
@@ -398,6 +406,12 @@ Panel *GuiManager::createFloatingPanel(const PanelId &panelId)
     return panel;
 }
 
+void GuiManager::bringPanelToFront(Panel *panel) const
+{
+    //qDebug() << m_impl->dockManager()->findDockWidget(panel->id())->isCurrentTab();
+    if(panel->dockWidget())
+        panel->dockWidget()->raise();
+}
 
 Panel *GuiManager::createDockedPanel(const PanelId &panelId, DockWidgetArea t_area, bool t_isTab)
 {
@@ -414,10 +428,12 @@ Panel *GuiManager::createDockedPanel(const PanelId &panelId, DockWidgetArea t_ar
     DockWidget->setWidget(panel);
     DockWidget->setMinimumSizeHintMode(ads::CDockWidget::MinimumSizeHintFromContent);
     DockWidget->setFeature(ads::CDockWidget::DockWidgetAlwaysCloseAndDelete, true);
+    panel->m_impl->dockWidget = DockWidget;
 
     connect(panel, &Panel::nameUpdated, DockWidget, [panel, DockWidget](){ DockWidget->setWindowTitle(panel->name());});
 
     auto busDock = m_impl->dockManager()->findDockWidget("photon.bus");
+
 
     if(t_isTab)
         m_impl->dockManager()->addDockWidgetTabToArea(DockWidget,busDock ? busDock->dockAreaWidget() : nullptr);

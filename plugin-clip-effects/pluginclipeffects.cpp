@@ -2,10 +2,12 @@
 #include "plugin/pluginfactory.h"
 
 #include "pan-and-tilt/tracepathclip.h"
+#include "pan-and-tilt/aligntoarrowclip.h"
 
 #include "canvas/draw/drawellipseclipeffect.h"
 #include "canvas/draw/drawrectangleclipeffect.h"
 #include "canvas/fill/fillnoiseeffect.h"
+#include "canvas/fill/fillcoloreffect.h"
 
 #include "strobe/beatstrobeeffect.h"
 
@@ -17,10 +19,12 @@ bool PluginClipEffects::initialize(const PluginContext &context)
     Q_UNUSED(context)
 
     photonApp->plugins()->registerClipEffect(TracePathClip::info());
+    photonApp->plugins()->registerClipEffect(AlignToArrowClip::info());
     photonApp->plugins()->registerClipEffect(DrawEllipseClipEffect::info());
     photonApp->plugins()->registerClipEffect(DrawRectangleClipEffect::info());
     photonApp->plugins()->registerClipEffect(FillNoiseEffect::info());
     photonApp->plugins()->registerClipEffect(BeatStrobeEffect::info());
+    photonApp->plugins()->registerClipEffect(FillColorEffect::info());
 
     return true;
 }

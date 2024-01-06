@@ -5,6 +5,7 @@
 #include "photon-global.h"
 
 namespace photon {
+class SequencePanel;
 
 class PHOTONCORE_EXPORT SequenceCollection : public QObject
 {
@@ -13,9 +14,15 @@ public:
     explicit SequenceCollection(QObject *parent = nullptr);
     ~SequenceCollection();
 
+    void clear();
     int sequenceCount() const;
     Sequence *sequenceAtIndex(uint) const;
     const QVector<Sequence*> &sequences() const;
+
+    void editSequence(Sequence *);
+    void setActiveSequencePanel(SequencePanel *panel);
+    SequencePanel *activeSequencePanel() const;
+    Sequence *activeSequence() const;
 
 signals:
     void sequenceWillBeAdded(photon::Sequence *, int);
@@ -26,6 +33,7 @@ signals:
 public slots:
     void addSequence(photon::Sequence *);
     void removeSequence(photon::Sequence *);
+    void panelDestroyed(QObject*);
 
 private:
     class Impl;

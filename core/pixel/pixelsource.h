@@ -33,7 +33,7 @@ public:
 
     virtual void process(ProcessContext &, const QTransform &) const;
 
-    virtual void readFromJson(const QJsonObject &);
+    virtual void readFromJson(const QJsonObject &, const LoadContext &);
     virtual void writeToJson(QJsonObject &) const;
 
 private:

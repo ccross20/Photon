@@ -50,11 +50,11 @@ void SceneManager::descendantRemoved(photon::SceneObject *t_object)
 
 }
 
-void SceneManager::readFromJson(const QJsonObject &json)
+void SceneManager::readFromJson(const QJsonObject &json, const LoadContext &t_context)
 {
     if(json.contains("root"))
     {
-        m_impl->root->readFromJson(json.value("root").toObject());
+        m_impl->root->readFromJson(json.value("root").toObject(), t_context);
     }
 
     m_impl->nextFixtureIndex = json.value("nextFixtureIndex").toInt();

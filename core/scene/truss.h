@@ -61,7 +61,7 @@ public:
 
     QWidget *createEditor() override;
 
-    void readFromJson(const QJsonObject &) override;
+    void readFromJson(const QJsonObject &, const LoadContext &) override;
     void writeToJson(QJsonObject &) const override;
 
 private:

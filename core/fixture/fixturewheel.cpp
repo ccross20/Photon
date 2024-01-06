@@ -133,7 +133,7 @@ public:
 
 FixtureWheel::FixtureWheel(const QString &t_name):m_impl(new Impl)
 {
-    m_impl->name = t_name;
+    m_impl->name = t_name.toLower();
 }
 
 FixtureWheel::~FixtureWheel()

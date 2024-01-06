@@ -72,7 +72,7 @@ public:
 
     void process(ProcessContext &, const QTransform &) const override;
 
-    void readFromJson(const QJsonObject &) override;
+    void readFromJson(const QJsonObject &, const LoadContext &) override;
     void writeToJson(QJsonObject &) const override;
 
 private:

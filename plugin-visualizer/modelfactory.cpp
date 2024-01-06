@@ -2,6 +2,7 @@
 #include "fixturemodel.h"
 #include "scene/sceneobject.h"
 #include "trussmodel.h"
+#include "arrowmodel.h"
 
 namespace photon {
 
@@ -23,6 +24,10 @@ SceneObjectModel* ModelFactory::createModel(SceneObject* t_sceneObj)
     if(t_sceneObj->typeId() == "truss")
     {
         return new TrussModel(t_sceneObj);
+    }
+    if(t_sceneObj->typeId() == "arrow")
+    {
+        return new ArrowModel(t_sceneObj);
     }
 
     return nullptr;

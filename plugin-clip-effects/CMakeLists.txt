@@ -31,7 +31,9 @@ set(SOURCES
 
 
 
-add_library(plugin-clip-effects SHARED ${SOURCES})
+add_library(plugin-clip-effects SHARED ${SOURCES}
+    canvas/fill/fillcoloreffect.h canvas/fill/fillcoloreffect.cpp
+    pan-and-tilt/aligntoarrowclip.h pan-and-tilt/aligntoarrowclip.cpp)
 
 
 

@@ -1,11 +1,13 @@
 
 #include <QStyleOptionGraphicsItem>
 #include <QPainter>
+#include <QGraphicsSceneMouseEvent>
 #include "rectanglegizmo.h"
 
 namespace photon {
 
-RectangleGizmo::RectangleGizmo(const QRectF &t_rect, std::function<void(QPointF)> t_callback):QGraphicsItem(),m_callback(t_callback),m_rect(t_rect)
+RectangleGizmo::RectangleGizmo(const QRectF &t_rect, std::function<void(QPointF)> t_callback,
+                               PositionMode t_mode):QGraphicsItem(),m_callback(t_callback),m_rect(t_rect),m_mode(t_mode)
 {
     setFlags(QGraphicsItem::ItemIsMovable | QGraphicsItem::ItemSendsScenePositionChanges);
     setAcceptHoverEvents(true);
@@ -38,7 +40,10 @@ void RectangleGizmo::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
 {
     QGraphicsItem::mouseMoveEvent(event);
 
-    m_callback(pos());
+    if(m_mode == PositionRelative)
+        m_callback(pos());
+    else
+        m_callback(event->scenePos());
 }
 
 void RectangleGizmo::paint(QPainter *painter, const QStyleOptionGraphicsItem *option,

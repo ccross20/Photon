@@ -7,7 +7,7 @@
 
 namespace photon {
 
-class CanvasCollectionPanel : public Panel
+class PHOTONCORE_EXPORT CanvasCollectionPanel : public Panel
 {
 public:
     CanvasCollectionPanel();

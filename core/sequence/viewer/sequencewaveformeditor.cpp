@@ -43,7 +43,7 @@ SequenceWaveformEditor::SequenceWaveformEditor(Sequence *t_sequence, QWidget *t_
 
 SequenceWaveformEditor::~SequenceWaveformEditor()
 {
-    delete m_impl->sequence;
+    delete m_impl;
 }
 
 Sequence *SequenceWaveformEditor::sequence() const

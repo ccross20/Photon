@@ -6,6 +6,10 @@
 #include "fixturevirtualchannel.h"
 #include "fixtureeditorwidget.h"
 #include "fixturewheel.h"
+#include "state/state.h"
+#include "project/project.h"
+#include "state/statecollection.h"
+#include "photoncore.h"
 
 namespace photon {
 
@@ -17,6 +21,7 @@ public:
     QVector<FixtureVirtualChannel*> virtualChannels;
     QVector<FixtureMode> modes;
     QVector<FixtureWheel*> wheels;
+    State *defaultState = nullptr;
     QString definitionPath;
     QString description;
     QString manufacturer;
@@ -35,6 +40,9 @@ Fixture::Fixture(const QString &path) :SceneObject("fixture"), m_impl(new Impl)
 {
     if(!path.isEmpty())
         loadFixtureDefinition(path);
+
+    if(photonApp->project())
+        m_impl->defaultState = photonApp->project()->states()->stateAtIndex(0);
 }
 
 Fixture::~Fixture()
@@ -54,6 +62,17 @@ const QVector<FixtureWheel*> &Fixture::wheels() const
     return m_impl->wheels;
 }
 
+FixtureWheel *Fixture::findWheel(const QString &t_name) const
+{
+    QString searchName = t_name.toLower();
+    for(auto it = m_impl->wheels.cbegin(); it != m_impl->wheels.cend(); ++it)
+    {
+        if((*it)->name() == searchName)
+            return *it;
+    }
+    return nullptr;
+}
+
 QVector<FixtureCapability*> Fixture::findCapability(CapabilityType t_type, int t_index) const
 {
     QVector<FixtureCapability*> results;
@@ -63,9 +82,9 @@ QVector<FixtureCapability*> Fixture::findCapability(CapabilityType t_type, int t
     {
         auto channel = *it;
 
-        if(channel->capabilityType() == t_type)
+        //if(channel->capabilityType() == t_type)
         {
-            if(t_index < 0 || channelCounter == t_index)
+            //if(t_index < 0 || channelCounter == t_index)
             {
                 for(auto capabilityIt = channel->capabilities().cbegin(); capabilityIt != channel->capabilities().cend(); ++capabilityIt)
                 {
@@ -73,9 +92,10 @@ QVector<FixtureCapability*> Fixture::findCapability(CapabilityType t_type, int t
                         results.append(*capabilityIt);
                 }
             }
-
+/*
             if(channelCounter == t_index)
                 return results;
+*/
 
             ++channelCounter;
         }
@@ -85,9 +105,9 @@ QVector<FixtureCapability*> Fixture::findCapability(CapabilityType t_type, int t
     {
         auto channel = *it;
 
-        if(channel->capabilityType() == t_type)
+        //if(channel->capabilityType() == t_type)
         {
-            if(t_index < 0 || channelCounter == t_index)
+            //if(t_index < 0 || channelCounter == t_index)
             {
                 for(auto capabilityIt = channel->capabilities().cbegin(); capabilityIt != channel->capabilities().cend(); ++capabilityIt)
                 {
@@ -95,15 +115,28 @@ QVector<FixtureCapability*> Fixture::findCapability(CapabilityType t_type, int t
                         results.append(*capabilityIt);
                 }
             }
-
+/*
             if(channelCounter == t_index)
                 return results;
+*/
 
             ++channelCounter;
         }
     }
 
     return results;
+}
+
+void Fixture::setDefaultState(State *t_state)
+{
+    m_impl->defaultState = t_state;
+    qDebug() << "set state";
+    emit metadataChanged(this);
+}
+
+State *Fixture::defaultState() const
+{
+    return m_impl->defaultState;
 }
 
 void Fixture::setComments(const QString &t_value)
@@ -423,9 +456,9 @@ int Fixture::mode() const
     return m_impl->selectedMode;
 }
 
-void Fixture::readFromJson(const QJsonObject &json)
+void Fixture::readFromJson(const QJsonObject &json, const LoadContext &t_context)
 {
-    SceneObject::readFromJson(json);
+    SceneObject::readFromJson(json, t_context);
     //QString version = json.value("version").toString();
     m_impl->description = json.value("description").toString();
     m_impl->dmxOffset = json.value("dmxOffset").toInt(0);
@@ -438,6 +471,12 @@ void Fixture::readFromJson(const QJsonObject &json)
     m_impl->uniqueIndex = json.value("uniqueIndex").toInt(0);
     loadFixtureDefinition(m_impl->definitionPath);
     setMode(json.value("selectedMode").toInt(-1));
+
+    QByteArray stateId = json.value("stateId").toString("default").toLatin1();
+    if(!stateId.isEmpty())
+        m_impl->defaultState = t_context.project->states()->findStateById(stateId);
+    else
+        m_impl->defaultState = nullptr;
 
 }
 
@@ -455,6 +494,11 @@ void Fixture::writeToJson(QJsonObject &json) const
     json.insert("selectedMode", m_impl->selectedMode);
     json.insert("definitionPath", m_impl->definitionPath);
     json.insert("uniqueIndex", m_impl->uniqueIndex);
+
+    if(m_impl->defaultState)
+        json.insert("stateId", QString{m_impl->defaultState->uniqueId()});
+    else
+        json.insert("stateId", "");
 
 
 }

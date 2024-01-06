@@ -9,7 +9,13 @@ namespace photon {
 class PHOTONCORE_EXPORT RectangleGizmo : public QGraphicsItem
 {
 public:
-    RectangleGizmo(const QRectF &rect, std::function<void(QPointF)>);
+    enum PositionMode{
+        PositionRelative,
+        PositionAbsolute
+    };
+
+
+    RectangleGizmo(const QRectF &rect, std::function<void(QPointF)>, PositionMode mode = PositionRelative);
 
     void setRect(const QRectF &);
     QRectF boundingRect() const override;
@@ -26,6 +32,7 @@ private:
     int m_orientation = Qt::Horizontal | Qt::Vertical;
     std::function<void(QPointF)> m_callback;
     QRectF m_rect;
+    PositionMode m_mode;
 };
 
 } // namespace photon

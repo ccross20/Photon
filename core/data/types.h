@@ -201,6 +201,174 @@ inline bool point_i::isZero() const
 }
 
 
+//--------------------------------------------------------------vector_base
+template<class T> struct vector_base
+{
+    typedef T value_type;
+    typedef vector_base<T> self_type;
+    T x = 0;
+    T y = 0;
+    vector_base() {}
+    vector_base(T x_, T y_) : x(x_), y(y_) {}
+
+    vector_base(const vector_base &other)
+    {
+        x = other.x;
+        y = other.y;
+    }
+
+    template<typename FromT>
+    vector_base(const vector_base<FromT> &other)
+    {
+        x = other.x;
+        y = other.y;
+    }
+
+    template<typename FromT>
+    vector_base(const point_base<FromT> &other)
+    {
+        x = other.x;
+        y = other.y;
+    }
+
+    vector_base<T> & operator=(const vector_base<T> &other)
+    {
+        x = other.x;
+        y = other.y;
+        return *this;
+    }
+
+    std::string toString() const
+    {
+        return "(" + std::to_string(x) + "," + std::to_string(y) + ")";
+    }
+
+    vector_base<T> &operator+=(const vector_base<T> &p) {
+        x += p.x;
+        y += p.y;
+        return *this;
+    }
+
+    vector_base<T> operator+(const vector_base<T> &v) const {
+        return vector_base<T>(x + v.x, y + v.y);
+    }
+
+    vector_base<T> &operator-=(const vector_base<T> &p) {
+        x -= p.x;
+        y -= p.y;
+        return *this;
+    }
+
+    vector_base<T> operator-(const vector_base<T> &v) const {
+        return vector_base<T>(x - v.x, y - v.y);
+    }
+
+    vector_base<T> &operator+=(const point_base<T> &p) {
+        x += p.x;
+        y += p.y;
+        return *this;
+    }
+
+    vector_base<T> operator+(const point_base<T> &v) const {
+        return vector_base<T>(x + v.x, y + v.y);
+    }
+
+    vector_base<T> &operator-=(const point_base<T> &p) {
+        x -= p.x;
+        y -= p.y;
+        return *this;
+    }
+
+    vector_base<T> operator-(const point_base<T> &v) const {
+        return vector_base<T>(x - v.x, y - v.y);
+    }
+
+    vector_base<T> operator-() const {
+        return vector_base<T>(-x,-y);
+    }
+
+    template <typename U>
+    vector_base<T> operator*(U f) const {
+        return vector_base<T>(f * x, f * y);
+    }
+
+    template <typename U>
+    vector_base<T> &operator*=(U f) {
+        x *= f;
+        y *= f;
+        return *this;
+    }
+    template <typename U>
+    vector_base<T> operator/(U f) const {
+        double inv = (double)1 / f;
+        return vector_base<T>(x * inv, y * inv);
+    }
+
+    template <typename U>
+    vector_base<T> &operator/=(U f) {
+        double inv = (double)1 / f;
+        x *= inv;
+        y *= inv;
+        return *this;
+    }
+
+    operator QVariant() const
+    {
+        return QVariant::fromValue(*this);
+    }
+
+    bool HasZeroLength() const { return x == 0 && y == 0;}
+    double lengthSquared() const { return x * x + y * y; }
+    double length() const { return sqrt(lengthSquared()); }
+    self_type normalized() const {if(HasZeroLength())return *this; return *this/length();}
+    void normalize()
+    {
+        if(!HasZeroLength())
+            *this/length();
+    }
+
+    bool operator==(const vector_base<T> &p) const { return x == p.x && y == p.y; }
+    bool operator!=(const vector_base<T> &p) const { return x != p.x || y != p.y; }
+
+    friend QDebug operator<< (QDebug debug, const vector_base<T> &pt)
+    {
+        QDebugStateSaver saver(debug);
+        debug.nospace() << "Vector (" << pt.x << "," << pt.y << ")";
+
+        return debug;
+    }
+
+    friend QDataStream & operator<< (QDataStream& stream, const vector_base<T> &pt)
+    {
+        stream << pt.x;
+        stream << pt.y;
+        return stream;
+    }
+    friend QDataStream & operator>> (QDataStream& stream, vector_base<T> &pt)
+    {
+        stream >> pt.x;
+        stream >> pt.y;
+        return stream;
+    }
+};
+
+
+typedef vector_base<int>    vector_i; //-----vector_i
+typedef vector_base<float>  vector_f; //-----vector_f
+typedef vector_base<double> vector_d; //-----vector_d
+
+template <typename T>
+inline double Dot(const vector_base<T> &v1, const vector_base<T> &v2) {
+    return v1.x * v2.x + v1.y * v2.y;
+}
+
+template <typename T>
+inline double AbsDot(const vector_base<T> &v1, const vector_base<T> &v2) {
+    return std::abs(Dot(v1, v2));
+}
+
+
+
 //--------------------------------------------------------------size_base
 template<class T> struct size_base
 {
@@ -870,6 +1038,178 @@ inline Bounds unite_bounds(const Bounds& r1, const Bounds& r2)
 typedef bounds_base<int>    bounds_i; //----rect_i
 typedef bounds_base<float>  bounds_f; //----rect_f
 typedef bounds_base<double> bounds_d; //----rect_d
+
+//----------------------------------------------------------------line_base
+template<class T> struct line_base
+{
+    typedef T            value_type;
+    typedef line_base<T> self_type;
+    T x1 = 0;
+    T y1 = 0;
+    T x2 = 0;
+    T y2 = 0;
+
+    line_base() {}
+    line_base(T x1_, T y1_, T x2_, T y2_) :
+        x1(x1_), y1(y1_), x2(x2_), y2(y2_) {}
+
+    template<typename FromT>
+    line_base(const line_base<FromT> &other)
+    {
+        if(other.is_valid())
+        {
+            x1 = other.x1;
+            y1 = other.y1;
+            x2 = other.x2;
+            y2 = other.y2;
+        }
+    }
+
+    line_base(const point_base<T> &p1, const point_base<T> &p2)
+    {
+        x1 = p1.x;
+        y1 = p1.y;
+        x2 = p2.x;
+        y2 = p2.y;
+    }
+
+    line_base<T> & operator=(const line_base<T> &other)
+    {
+        x1 = other.x1;
+        y1 = other.y1;
+        x2 = other.x2;
+        y2 = other.y2;
+        return *this;
+    }
+
+    double length() const{
+        double dx = x2-x1;
+        double dy = y2-y1;
+        return sqrt(dx * dx + dy * dy);
+    }
+
+    bounds_base<T> bounds() const {
+        bounds_base<T> b;
+        b.unite(p1());
+        b.unite(p2());
+        return b;
+    }
+
+    bool HasZeroLength() const { return x1 == 0 && y1 == 0 && x2 == 0 && y2 == 0;}
+
+    point_base<T> p1() const
+    {
+        return point_base<T>{x1, y1};
+    }
+
+    point_base<T> p2() const
+    {
+        return point_base<T>{x2, y2};
+    }
+
+    operator QVariant() const
+    {
+        return QVariant::fromValue(*this);
+    }
+
+    line_base<T> &operator+=(const point_base<T> &p) {
+        x1 += p.x;
+        y1 += p.y;
+        x2 += p.x;
+        y2 += p.y;
+        return *this;
+    }
+
+    line_base<T> operator+(const point_base<T> &v) const {
+        return line_base<T>(x1 + v.x, y1 + v.y,x2 + v.x, y2 + v.y);
+    }
+
+    line_base<T> &operator-=(const point_base<T> &p) {
+        x1 -= p.x;
+        y1 -= p.y;
+        x2 -= p.x;
+        y2 -= p.y;
+        return *this;
+    }
+
+    line_base<T> operator-(const point_base<T> &v) const {
+        return line_base<T>(x1 - v.x, y1 - v.y,x2 - v.x, y2 - v.y);
+    }
+
+    line_base<T> &operator*=(const point_base<T> &p) {
+        x1 *= p.x;
+        y1 *= p.y;
+        x2 *= p.x;
+        y2 *= p.y;
+        return *this;
+    }
+
+    line_base<T> &operator*=(const T &p) {
+        x1 *= p;
+        y1 *= p;
+        x2 *= p;
+        y2 *= p;
+        return *this;
+    }
+
+    line_base<T> &operator/=(const T &p) {
+        x1 /= p;
+        y1 /= p;
+        x2 /= p;
+        y2 /= p;
+        return *this;
+    }
+
+    line_base<T> operator*(const point_base<T> &v) const {
+        return line_base<T>(x1 * v.x, y1 * v.y,x2 * v.x, y2 * v.y);
+    }
+
+    line_base<T> operator*(const T &v) const {
+        return line_base<T>(x1 * v, y1 * v, x2 * v, y2 * v);
+    }
+
+    line_base<T> operator/(const T &v) const {
+        return line_base<T>(x1 / v, y1 / v, x2 / v, y2 / v);
+    }
+
+    line_base<T> operator-() const {
+        return line_base<T>(-x1,-y1,-x2,-y2);
+    }
+
+    bool operator==(const line_base<T> &margin) const { return x1 == margin.x1 && y1 == margin.y1 && x2 == margin.x2 && y2 == margin.y2; }
+    bool operator!=(const line_base<T> &margin) const { return x1 != margin.x1 || y1 != margin.y1 || x2 != margin.x2 || y2 != margin.y2; }
+
+    friend QDebug operator<< (QDebug debug, const line_base<T> &margin)
+    {
+        QDebugStateSaver saver(debug);
+        debug.nospace() << "Line (" << margin.x1 << "," << margin.y1 << "," << margin.x2 << "," << margin.y2 << ")";
+
+        return debug;
+    }
+
+    friend QDataStream & operator<< (QDataStream& stream, const self_type &margin)
+    {
+        stream << margin.x1;
+        stream << margin.y1;
+        stream << margin.x2;
+        stream << margin.y2;
+        return stream;
+    }
+    friend QDataStream & operator>> (QDataStream& stream, self_type &margin)
+    {
+        stream >> margin.x1;
+        stream >> margin.y1;
+        stream >> margin.x2;
+        stream >> margin.y2;
+        return stream;
+    }
+};
+
+typedef line_base<int>    line_i; //-----vertex_i
+typedef line_base<float>  line_f; //-----vertex_f
+typedef line_base<double> line_d; //-----vertex_d
+
+
 
 
 }

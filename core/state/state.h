@@ -13,6 +13,8 @@ public:
     State();
     ~State();
 
+    QString name() const;
+    void setName(const QString &);
     void addDefaultCapabilities();
     QByteArray uniqueId() const;
     virtual void initializeValues(StateEvaluationContext &) const;
@@ -25,6 +27,7 @@ public:
     void writeToJson(QJsonObject &) const;
 
 signals:
+    void metadataUpdated();
     void channelAdded(int index);
     void channelRemoved(int index);
     void channelUpdated(int index);

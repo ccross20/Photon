@@ -99,8 +99,9 @@ void TimelineScene::Impl::layoutLayers()
 
 TimelineScene::TimelineScene(Sequence *t_sequence):QGraphicsScene(),m_impl(new Impl(this, t_sequence))
 {
-    //setSceneRect(0,0,300,100);
     setSequence(t_sequence);
+    //setSceneRect(QRectF{-100000,-1000,20000000,20000});
+
 }
 TimelineScene::~TimelineScene()
 {
@@ -141,6 +142,10 @@ void TimelineScene::setSequence(Sequence *t_sequence)
 
     connect(m_impl->sequence, &Sequence::layerAdded, this, &TimelineScene::layerAdded);
     connect(m_impl->sequence, &Sequence::layerRemoved, this, &TimelineScene::layerRemoved);
+
+
+    addRect(QRect{0,0,100,100},Qt::NoPen, Qt::red);
+    addRect(QRect{300,300,100,100},Qt::NoPen, Qt::red);
 }
 
 Sequence *TimelineScene::sequence() const

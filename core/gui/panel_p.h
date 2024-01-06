@@ -25,6 +25,9 @@ public:
     QWidget *content = nullptr;
     Qt::Orientation orientation = Qt::Horizontal;
     QString name;
+    QByteArray uniqueId;
+
+    ads::CDockWidget *dockWidget;
     bool isActivated = false;
     bool toolbarIsHidden = true;
     bool scrollIfPossible = true;

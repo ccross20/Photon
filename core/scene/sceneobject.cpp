@@ -5,6 +5,8 @@
 #include "sceneobject_p.h"
 #include "scenefactory.h"
 #include "sceneiterator.h"
+#include "photoncore.h"
+#include "util/utils.h"
 
 namespace photon {
 
@@ -121,16 +123,51 @@ QWidget *SceneObject::createEditor()
     return new QWidget();
 }
 
+const QStringList &SceneObject::tags() const
+{
+    return m_impl->tags;
+}
+
+void SceneObject::setTags(const QStringList &t_tags)
+{
+    m_impl->tags = t_tags;
+    m_impl->tags.sort();
+    emit metadataChanged(this);
+}
+
+void SceneObject::addTag(const QString &t_tag)
+{
+    if(m_impl->tags.contains(t_tag.toLower()))
+        return;
+
+    m_impl->tags.append(t_tag.toLower());
+    m_impl->tags.sort();
+    emit metadataChanged(this);
+}
+
+void SceneObject::removeTag(const QString &t_tag)
+{
+    if(!m_impl->tags.contains(t_tag.toLower()))
+        return;
+
+    m_impl->tags.removeOne(t_tag);
+    m_impl->tags.sort();
+    emit metadataChanged(this);
+}
+
+
 SceneObject *SceneObject::clone() const
 {
     SceneObject *newObj = SceneFactory::createObject(typeId());
 
+    LoadContext c;
+    c.project = photonApp->project();
     QJsonObject json;
 
     if(newObj)
     {
         writeToJson(json);
-        newObj->readFromJson(json);
+        newObj->readFromJson(json, c);
 
         auto cloned = SceneIterator::ToList(newObj);
         for(auto obj : cloned)
@@ -262,7 +299,7 @@ SceneObject *SceneObject::parentSceneObject() const
     return static_cast<SceneObject*>(parent());
 }
 
-void SceneObject::readFromJson(const QJsonObject &t_json)
+void SceneObject::readFromJson(const QJsonObject &t_json, const LoadContext &t_context)
 {
 
     m_impl->name = t_json.value("name").toString();
@@ -277,6 +314,8 @@ void SceneObject::readFromJson(const QJsonObject &t_json)
                                     static_cast<float>(rotationObj.value("y").toDouble()),
                                     static_cast<float>(rotationObj.value("z").toDouble())};
 
+    m_impl->tags = jsonToStringList(t_json.value("tags").toArray());
+
     m_impl->rebuildMatrix();
     if(t_json.contains("children"))
     {
@@ -285,7 +324,7 @@ void SceneObject::readFromJson(const QJsonObject &t_json)
         {
             auto childObj = child.toObject();
             auto sceneChild = SceneFactory::createObject(childObj.value("typeId").toString().toLatin1());
-            sceneChild->readFromJson(childObj);
+            sceneChild->readFromJson(childObj, t_context);
             m_impl->addChild(sceneChild,-1);
         }
     }
@@ -310,6 +349,8 @@ void SceneObject::writeToJson(QJsonObject &t_json) const
     rotationObj.insert("y", m_impl->rotation.y());
     rotationObj.insert("z", m_impl->rotation.z());
     t_json.insert("rotation", rotationObj);
+
+    t_json.insert("tags", stringListToJson(m_impl->tags));
 
     if(!m_impl->children.isEmpty())
     {

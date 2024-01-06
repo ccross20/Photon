@@ -3,6 +3,7 @@
 
 #include <QColor>
 #include <QJsonObject>
+#include <QJsonArray>
 #include <QPoint>
 #include <QPointF>
 
@@ -35,6 +36,23 @@ static QJsonObject pointFToJson(const QPointF &t_pt)
     return obj;
 }
 
+
+static QJsonArray stringListToJson(const QStringList &t_list)
+{
+    QJsonArray array;
+    for(const auto &str : t_list)
+        array << str;
+    return array;
+}
+
+static QStringList jsonToStringList(const QJsonArray &t_array)
+{
+    QStringList list;
+    for(const auto &str : t_array)
+        list << str.toString();
+    return list;
+}
+
 static QPoint jsonToPoint(const QJsonObject &t_obj)
 {
     return QPoint{t_obj.value("x").toInt(), t_obj.value("y").toInt()};
@@ -44,7 +62,6 @@ static QPointF jsonToPointF(const QJsonObject &t_obj)
 {
     return QPointF{t_obj.value("x").toDouble(), t_obj.value("y").toDouble()};
 }
-
 
 class Utils
 {

@@ -9,28 +9,56 @@ namespace photon {
 class PixelSourceLayout::Impl
 {
 public:
+    void rebuildBounds();
+
     QPointF position;
-    QPointF scale;
-    double rotation;
+    QPointF scale = QPointF{1,1};
+    QTransform transform;
+    bounds_d bounds;
+    double rotation = 0;
     QString name;
     QByteArray uniqueId;
     PixelSource *source = nullptr;
 };
 
+void PixelSourceLayout::Impl::rebuildBounds()
+{
+    if(!source)
+        return;
+
+    transform = QTransform{};
+    transform.translate(position.x(), position.y());
+    transform.scale(scale.x(), scale.y());
+    transform.rotate(rotation);
+
+
+
+    bounds_d bnds;
+
+    for(const auto &pt : source->positions())
+        bnds.unite(QPointF{pt.x() * scale.x(), pt.y() * scale.y()});
+
+    bounds = bnds;
+}
+
 PixelSourceLayout::PixelSourceLayout(PixelSource *t_source) : QObject(), m_impl(new Impl)
 {
     m_impl->uniqueId = QUuid::createUuid().toByteArray();
     m_impl->source = t_source;
+
+    m_impl->rebuildBounds();
 }
 
 PixelSourceLayout::~PixelSourceLayout()
 {
-
+    delete m_impl;
 }
 
-void PixelSourceLayout::setPosition(const QPointF &)
+void PixelSourceLayout::setPosition(const QPointF &t_value)
 {
-    delete m_impl;
+    m_impl->position = t_value;
+    m_impl->rebuildBounds();
+    emit transformUpdated();
 }
 
 QPointF PixelSourceLayout::position() const
@@ -39,9 +67,11 @@ QPointF PixelSourceLayout::position() const
 }
 
 
-void PixelSourceLayout::setRotation(double)
+void PixelSourceLayout::setRotation(double t_value)
 {
-
+    m_impl->rotation = t_value;
+    m_impl->rebuildBounds();
+    emit transformUpdated();
 }
 
 double PixelSourceLayout::rotation() const
@@ -50,9 +80,11 @@ double PixelSourceLayout::rotation() const
 }
 
 
-void PixelSourceLayout::setScale(const QPointF &)
+void PixelSourceLayout::setScale(const QPointF &t_scale)
 {
-
+    m_impl->scale = t_scale;
+    m_impl->rebuildBounds();
+    emit transformUpdated();
 }
 
 QPointF PixelSourceLayout::scale() const
@@ -63,21 +95,19 @@ QPointF PixelSourceLayout::scale() const
 
 QTransform PixelSourceLayout::transform() const
 {
-    QTransform tform;
-
-    return tform;
+    return m_impl->transform;
 }
 
 
-QRectF PixelSourceLayout::canvasBounds() const
+bounds_d PixelSourceLayout::canvasBounds() const
 {
-    return QRectF{};
+    return m_impl->bounds;
 }
 
 
-QRectF PixelSourceLayout::localBounds() const
+bounds_d PixelSourceLayout::localBounds() const
 {
-    return QRectF{};
+    return m_impl->bounds;
 }
 
 PixelSource *PixelSourceLayout::source() const
@@ -88,6 +118,7 @@ PixelSource *PixelSourceLayout::source() const
 void PixelSourceLayout::setSource(PixelSource *t_source)
 {
     m_impl->source = t_source;
+    m_impl->rebuildBounds();
 }
 
 void PixelSourceLayout::process(ProcessContext &t_context) const
@@ -114,6 +145,7 @@ void PixelSourceLayout::readFromJson(const QJsonObject &t_json, const LoadContex
     if(sourceObj)
     {
         m_impl->source = dynamic_cast<PixelSource*>(sourceObj);
+        m_impl->rebuildBounds();
     }
 
 }

@@ -61,7 +61,7 @@ CanvasDialog::CanvasDialog(Canvas *t_canvas, QWidget *t_parent): QDialog(t_paren
 
 CanvasDialog::~CanvasDialog()
 {
-
+    delete m_impl;
 }
 
 void CanvasDialog::accept()

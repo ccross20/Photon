@@ -54,11 +54,14 @@ void BusEvaluator::evaluate()
         return;
 
     keira::EvaluationContext context;
+    m_impl->matrix = DMXMatrix{};
     m_impl->bus->findNode("DMX Generator")->findParameter(DMXGenerateMatrixNode::OutputDMX)->setValue(m_impl->matrix);
     m_impl->bus->evaluate(&context);
     m_impl->elapsed = m_impl->timer.elapsed() / 1000.0;
 
     m_impl->matrix = m_impl->bus->findNode("output")->findParameter(DMXWriterNode::InputDMX)->value().value<DMXMatrix>();
+
+    //qDebug() << m_impl->matrix.value(0,3);
 
     emit evaluationCompleted();
     m_impl->timer.restart();

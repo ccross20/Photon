@@ -314,49 +314,37 @@ double PulseEffect::process(double value, double time) const
         value = previousEffect()->process(value, time);
     }
 
-    float globalTime = time + channel()->startTime();
 
-    float beatTime;
-    if(!channel()->sequence()->findClosestBeatToTime(globalTime, &beatTime))
+    double loopTime = m_frequency;
+    double loopCount = std::floor((time - m_offset) / loopTime);
+    double adjustedTime =  (time - m_offset) - (loopCount * loopTime);
+    double gap = m_frequency - m_duration;
+
+    if(time < m_offset)
         return value;
 
-    beatTime += m_offset;
-    //double loopTime = m_frequency;
-    //double loopCount = std::floor((time - m_offset) / loopTime);
-    double adjustedTime =  beatTime;
-    double distance = globalTime - beatTime;
-
-    //qDebug() << beatTime << globalTime << distance;
-
-    //qDebug() << distance << m_duration;
-    //if(time < m_offset)
-      //  return value;
-
-
-
-
+    if(adjustedTime > gap)
+        return m_amplitude;
 
     double inDuration = m_easeInDuration;
     double outDuration = m_easeOutDuration;
+    double totalDuration = inDuration + outDuration;
 
-
-    if(globalTime < beatTime)
+    if(totalDuration > gap)
     {
-        if(-distance > inDuration)
-            return value;
-
-        //qDebug() << (inDuration-distance)/ inDuration;
-        return (m_easingIn.valueForProgress((inDuration+distance)/ inDuration) * (m_amplitude - value)) + value;
+        inDuration = (m_easeInDuration / totalDuration) * gap;
+        outDuration = (m_easeOutDuration / totalDuration) * gap;
     }
 
-    if(distance < m_duration)
-        return m_amplitude;
-
-    if(globalTime > m_duration + beatTime)
+    if(adjustedTime > gap - inDuration)
     {
-        return (m_easingOut.valueForProgress(1.0 - ((distance - m_duration) / outDuration)) * (m_amplitude - value)) + value;
+        return (m_easingIn.valueForProgress((adjustedTime - (gap - inDuration))/ inDuration) * (m_amplitude - value)) + value;
     }
 
+    if(adjustedTime < outDuration && loopCount > 0)
+    {
+        return (m_easingOut.valueForProgress(1.0 - (adjustedTime / outDuration)) * (m_amplitude - value)) + value;
+    }
 
     return value;
 }
