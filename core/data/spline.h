@@ -3,6 +3,7 @@
 #include <QDataStream>
 #include <QPainterPath>
 #include "photon-global.h"
+#include "types.h"
 
 namespace photon {
 
@@ -16,22 +17,22 @@ public:
         SplineStep
     };
     SplinePoint(SplineType type = SplineLinear):m_inType(type),m_outType(type){}
-    SplinePoint(QPointF position, SplineType type = SplineLinear):m_position(position),m_inType(type),m_outType(type){}
-    SplinePoint(QPointF position,QPointF in,QPointF out):m_position(position),m_in(in),m_out(out),m_inType(SplineCubic),m_outType(SplineCubic){}
+    SplinePoint(point_d position, SplineType type = SplineLinear):m_position(position),m_inType(type),m_outType(type){}
+    SplinePoint(point_d position,point_d in,point_d out):m_position(position),m_in(in),m_out(out),m_inType(SplineCubic),m_outType(SplineCubic){}
 
-    QPointF position() const {return m_position;}
-    QPointF in() const {return m_in + m_position;}
-    QPointF out() const {return m_out + m_position;}
-    QPointF inRelative() const {return m_in;}
-    QPointF outRelative() const {return m_out;}
+    point_d position() const {return m_position;}
+    point_d in() const {return m_in + m_position;}
+    point_d out() const {return m_out + m_position;}
+    point_d inRelative() const {return m_in;}
+    point_d outRelative() const {return m_out;}
     SplineType outType() const{return m_outType;}
     void setOutType(const SplinePoint::SplineType type);
 
-    void setPosition(const QPointF &pt);
-    void setIn(const QPointF &pt, bool link = true);
-    void setOut(const QPointF &pt, bool link = true);
-    void setInRelative(const QPointF &pt);
-    void setOutRelative(const QPointF &pt);
+    void setPosition(const point_d &pt);
+    void setIn(const point_d &pt, bool link = true);
+    void setOut(const point_d &pt, bool link = true);
+    void setInRelative(const point_d &pt);
+    void setOutRelative(const point_d &pt);
     void setAutoTangents(bool value);
 
     bool autoTangents() const{return m_autoTangents;}
@@ -44,7 +45,7 @@ public:
 
     bool operator==(const SplinePoint &other) const;
 
-    friend QDataStream & operator<< (QDataStream& stream, const SplinePoint &point)
+    PHOTONCORE_EXPORT friend QDataStream & operator<< (QDataStream& stream, const SplinePoint &point)
     {
         unsigned short int version = 1;
         stream << version;
@@ -59,7 +60,7 @@ public:
         stream << point.m_autoTangents;
         return stream;
     }
-    friend QDataStream & operator>> (QDataStream& stream, SplinePoint &point)
+    PHOTONCORE_EXPORT friend QDataStream & operator>> (QDataStream& stream, SplinePoint &point)
     {
         unsigned short int version;
         int inType,outType;
@@ -81,12 +82,12 @@ public:
 private:
 
     friend class Spline;
-    void setAutoIn(const QPointF &pt);
-    void setAutoOut(const QPointF &pt);
+    void setAutoIn(const point_d &pt);
+    void setAutoOut(const point_d &pt);
 
-    QPointF m_position;
-    QPointF m_in;
-    QPointF m_out;
+    point_d m_position;
+    point_d m_in;
+    point_d m_out;
     SplineType m_inType;
     SplineType m_outType;
     bool m_lockX = false;
@@ -95,17 +96,17 @@ private:
     bool m_autoTangents = true;
 };
 
-class Spline
+class PHOTONCORE_EXPORT Spline
 {
 public:
     Spline();
-    Spline(const std::vector<SplinePoint> &points);
+    Spline(const QVector<SplinePoint> &points);
 
     uint insert(const SplinePoint &pt);
     void remove(uint index);
     uint insertPointAtX(double x);
 
-    QRectF bounds() const;
+    bounds_d bounds() const;
     double value(double f, bool precise = false) const;
     void clear(){m_points.clear();}
 
@@ -114,7 +115,8 @@ public:
     bool nextPoint(double position, uint *index);
     bool previousPoint(double position, uint *index);
 
-    uint setPointPosition(uint index, QPointF position);
+    uint setPointPosition(uint index, point_d position);
+
 
     void sort();
     void recalculate();
@@ -129,7 +131,7 @@ public:
     auto cend() const{return m_points.cend();}
     auto begin(){return m_points.begin();}
     auto end(){return m_points.end();}
-    std::vector<SplinePoint> &points(){return m_points;}
+    QVector<SplinePoint> &points(){return m_points;}
 
     bool operator==(const Spline &other) const;
 
@@ -139,15 +141,15 @@ public:
     SplinePoint &operator[](size_t i){return m_points[i];}
     const SplinePoint &operator[](size_t i) const{return m_points[i];}
 
-    friend QDataStream & operator<< (QDataStream& stream, const Spline &curve);
-    friend QDataStream & operator>> (QDataStream& stream, Spline &curve);
+    PHOTONCORE_EXPORT friend QDataStream & operator<< (QDataStream& stream, const Spline &curve);
+    PHOTONCORE_EXPORT friend QDataStream & operator>> (QDataStream& stream, Spline &curve);
 
 private:
-    std::vector<SplinePoint> m_points;
+    QVector<SplinePoint> m_points;
     unsigned m_outVertex = 0;
     unsigned m_subVertex = 0;
 };
 
-} // namespace exo
+} // namespace deco
 
 #endif // SPLINE_H

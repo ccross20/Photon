@@ -1,6 +1,8 @@
 #include <QScrollBar>
 #include <QMouseEvent>
 #include <QWheelEvent>
+#include <QPaintEvent>
+#include <QGraphicsSceneMouseEvent>
 #include "timelineviewer.h"
 #include "sequenceclip.h"
 #include "sequence/clip.h"
@@ -44,30 +46,25 @@ public:
 
 
     QVector<ClipMoveData> moveDatas;
+    QTransform transform;
     QPointF startPoint;
     QPoint lastPosition;
     double scale = 5.0;
     double playheadTime = 0.0;
     double startXPos = 0.0;
     double xOffset = 0.0;
+    TimelineScene *scene = nullptr;
     InteractionMode interactionMode = InteractionSelect;
 
 };
 
-TimelineViewer::TimelineViewer() : QGraphicsView(),m_impl(new Impl)
+TimelineViewer::TimelineViewer() : QWidget(),m_impl(new Impl)
 {
-    setAlignment(Qt::AlignTop | Qt::AlignLeft);
-    //setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    //setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    setTransformationAnchor(QGraphicsView::NoAnchor);
-
-    //setViewportUpdateMode(QGraphicsView::FullViewportUpdate);
-    //setCacheMode(QGraphicsView::CacheNone);
-    setSceneRect(QRectF{-5000,-500,10000,1000});
+    setMouseTracking(true);
 
     QTransform xform;
     xform.translate(-m_impl->xOffset,0);
-    xform.scale(m_impl->scale,1.0);
+    //xform.scale(m_impl->scale,1.0);
 
     setTransform(xform);
 }
@@ -77,6 +74,22 @@ TimelineViewer::~TimelineViewer()
     delete m_impl;
 }
 
+void TimelineViewer::setScene(TimelineScene *t_scene)
+{
+    m_impl->scene = t_scene;
+}
+
+void TimelineViewer::setTransform(const QTransform &t_transform)
+{
+    m_impl->transform = t_transform;
+    update();
+}
+
+QPointF TimelineViewer::mapToScene(const QPointF &t_pt)
+{
+    return m_impl->transform.map(t_pt);
+}
+
 void TimelineViewer::setScale(double t_value)
 {
     if(m_impl->scale == t_value)
@@ -84,9 +97,9 @@ void TimelineViewer::setScale(double t_value)
     m_impl->scale = t_value;
 
     QTransform xform;
-    //xform.translate(-m_impl->xOffset,0);
-    xform.translate(-width()/2.0,-height()/2.0);
-    //xform.scale(m_impl->scale,1.0);
+    xform.translate(-m_impl->xOffset,0);
+    //xform.translate(-width()/2.0,-height()/2.0);
+    xform.scale(m_impl->scale,1.0);
 
 
     setTransform(xform);
@@ -101,11 +114,9 @@ void TimelineViewer::setOffset(double t_value)
 
 
     QTransform xform;
-    //xform.translate(-m_impl->xOffset,0);
-    xform.translate(-width()/2.0,-height()/2.0);
-    //xform.scale(m_impl->scale,1.0);
+    xform.translate(-m_impl->xOffset,0);
+    xform.scale(m_impl->scale,1.0);
 
-    qDebug() << width() << height();
 
     setTransform(xform);
     emit offsetChanged(m_impl->xOffset);
@@ -126,13 +137,12 @@ void TimelineViewer::movePlayheadTo(double t_time)
 
     //double mappedTime = mapFromScene(QPointF(m_impl->playheadTime,0)).x();
 
-    scene()->update(updateRect.adjusted(-2,0,4,0));
+    update(updateRect.adjusted(-2,0,4,0));
     //scene()->update();
 }
 
 void TimelineViewer::drawBackground(QPainter *painter, const QRectF &rect)
 {
-    QGraphicsView::drawBackground(painter, rect);
     painter->fillRect(rect, QColor(25,25,25));
 
 
@@ -140,7 +150,6 @@ void TimelineViewer::drawBackground(QPainter *painter, const QRectF &rect)
 
 void TimelineViewer::drawForeground(QPainter *painter, const QRectF &rect)
 {
-    QGraphicsView::drawForeground(painter, rect);
 
     /*
     painter->setRenderHint(QPainter::Antialiasing);
@@ -155,7 +164,49 @@ void TimelineViewer::drawForeground(QPainter *painter, const QRectF &rect)
 
 void TimelineViewer::paintEvent(QPaintEvent *event)
 {
-    QGraphicsView::paintEvent(event);
+    QWidget::paintEvent(event);
+
+    QPainter painter(this);
+    painter.setTransform(m_impl->transform);
+
+    drawBackground(&painter, event->rect());
+
+    m_impl->scene->render(&painter,rect(), m_impl->transform.inverted().mapRect(rect()));
+    drawForeground(&painter, event->rect());
+}
+
+QGraphicsSceneMouseEvent *TimelineViewer::createMouseEvent(QMouseEvent *t_event)
+{
+    QEvent::Type eventType = QEvent::GraphicsSceneMousePress;
+
+    switch (t_event->type()) {
+    case QEvent::MouseButtonPress:
+        eventType = QEvent::GraphicsSceneMousePress;
+        break;
+    case QEvent::MouseButtonRelease:
+        eventType = QEvent::GraphicsSceneMouseRelease;
+        break;
+    case QEvent::MouseMove:
+        eventType = QEvent::GraphicsSceneMouseMove;
+        break;
+    default:
+        break;
+    }
+
+    QTransform xform = m_impl->transform.inverted();
+
+    QGraphicsSceneMouseEvent *sceneEvent = new QGraphicsSceneMouseEvent(eventType);
+    sceneEvent->setPos(xform.map(t_event->pos().toPointF()));
+    sceneEvent->setButtonDownPos(t_event->button(),xform.map(t_event->pos().toPointF()));
+    sceneEvent->setButtonDownScenePos(t_event->button(),xform.map(t_event->pos().toPointF()));
+    sceneEvent->setScenePos(xform.map(t_event->pos().toPointF()));
+    sceneEvent->setLastPos(xform.map(m_impl->lastPosition.toPointF()));
+    sceneEvent->setButton(t_event->button());
+    sceneEvent->setButtons(t_event->buttons());
+    sceneEvent->setFlags(t_event->flags());
+
+
+    return sceneEvent;
 
 }
 
@@ -165,7 +216,7 @@ void TimelineViewer::mousePressEvent(QMouseEvent *event)
     m_impl->lastPosition = event->pos();
     m_impl->startXPos = (m_impl->startPoint.x() + m_impl->xOffset) / m_impl->scale;
 
-    auto item = itemAt(event->pos());
+    auto item = m_impl->scene->itemAt(event->pos(), m_impl->transform);
 
     auto clipItem = dynamic_cast<SequenceClip*>(item);
 
@@ -197,8 +248,14 @@ void TimelineViewer::mousePressEvent(QMouseEvent *event)
                 break;
         }
     }
+
     if(!(event->buttons() & Qt::MiddleButton))
-        QGraphicsView::mousePressEvent(event);
+    {
+        QGraphicsSceneMouseEvent *sceneEvent = createMouseEvent(event);
+        m_impl->scene->mousePressEvent(sceneEvent);
+        delete sceneEvent;
+    }
+
 }
 
 void TimelineViewer::mouseMoveEvent(QMouseEvent *event)
@@ -247,7 +304,7 @@ void TimelineViewer::mouseMoveEvent(QMouseEvent *event)
         else
         {
             auto scenePos = mapToScene(event->pos());
-            auto timelineScene = static_cast<TimelineScene*>(scene());
+            auto timelineScene = static_cast<TimelineScene*>(m_impl->scene);
             float time = scenePos.x();
             timelineScene->sequence()->snapToBeat(scenePos.x(),&time,2);
             scenePos.setX(time);
@@ -303,7 +360,7 @@ void TimelineViewer::mouseMoveEvent(QMouseEvent *event)
     }
     else
     {
-        auto item = itemAt(event->pos());
+        auto item = m_impl->scene->itemAt(event->pos(),m_impl->transform);
 
         auto clipItem = dynamic_cast<SequenceClip*>(item);
 
@@ -336,14 +393,18 @@ void TimelineViewer::mouseMoveEvent(QMouseEvent *event)
     m_impl->lastPosition = event->pos();
 
     if(!(event->buttons() & Qt::MiddleButton))
-        QGraphicsView::mouseMoveEvent(event);
+    {
+        QGraphicsSceneMouseEvent *sceneEvent = createMouseEvent(event);
+        m_impl->scene->mouseMoveEvent(sceneEvent);
+        delete sceneEvent;
+    }
 }
 
 void TimelineViewer::mouseReleaseEvent(QMouseEvent *event)
 {
     for(const auto &data : m_impl->moveDatas)
     {
-        auto timelineScene = static_cast<TimelineScene*>(scene());
+        auto timelineScene = static_cast<TimelineScene*>(m_impl->scene);
         auto clipItem = timelineScene->itemForClip(data.clip);
         if(clipItem)
             clipItem->setZValue(0);
@@ -352,12 +413,16 @@ void TimelineViewer::mouseReleaseEvent(QMouseEvent *event)
     m_impl->interactionMode = Impl::InteractionSelect;
 
     if(!(event->buttons() & Qt::MiddleButton))
-        QGraphicsView::mouseReleaseEvent(event);
+    {
+        QGraphicsSceneMouseEvent *sceneEvent = createMouseEvent(event);
+        m_impl->scene->mouseReleaseEvent(sceneEvent);
+        delete sceneEvent;
+    }
 }
 
 void TimelineViewer::wheelEvent(QWheelEvent *event)
 {
-    QGraphicsView::wheelEvent(event);
+    QWidget::wheelEvent(event);
 
     if(event->modifiers() & Qt::ControlModifier)
     {

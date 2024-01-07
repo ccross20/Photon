@@ -144,8 +144,8 @@ void TimelineScene::setSequence(Sequence *t_sequence)
     connect(m_impl->sequence, &Sequence::layerRemoved, this, &TimelineScene::layerRemoved);
 
 
-    addRect(QRect{0,0,100,100},Qt::NoPen, Qt::red);
-    addRect(QRect{300,300,100,100},Qt::NoPen, Qt::red);
+    //addRect(QRect{0,0,100,100},Qt::NoPen, Qt::red);
+    //addRect(QRect{300,300,100,100},Qt::NoPen, Qt::red);
 }
 
 Sequence *TimelineScene::sequence() const

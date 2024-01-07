@@ -30,6 +30,7 @@ private slots:
 protected:
     void contextMenuEvent(QGraphicsSceneContextMenuEvent *contextMenuEvent) override;
 
+    friend class TimelineViewer;
 private:
     class Impl;
     Impl *m_impl;

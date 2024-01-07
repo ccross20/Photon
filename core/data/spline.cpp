@@ -1,5 +1,7 @@
 #include <algorithm>
 #include "spline.h"
+#include "util/mathutils.h"
+#include "util/BezierUtils.h"
 
 namespace photon {
 
@@ -17,48 +19,48 @@ bool SplinePoint::operator==(const SplinePoint &other) const
             m_autoTangents == other.m_autoTangents;
 }
 
-void SplinePoint::setPosition(const QPointF &pt)
+void SplinePoint::setPosition(const point_d &pt)
 {
     if(!m_lockX)
-        m_position.setX(pt.x());
+        m_position.x = pt.x;
     if(!m_lockY)
-        m_position.setY(pt.y());
+        m_position.y = pt.y;
 }
 
-void SplinePoint::setIn(const QPointF &pt, bool link)
+void SplinePoint::setIn(const point_d &pt, bool link)
 {
-    double inAngleBefore = atan2(m_in.y(), m_in.x());
+    double inAngleBefore = atan2(m_in.y, m_in.x);
     setInRelative(pt - m_position);
     if(m_lockTangents && link)
     {
-        double inAngleAfter = atan2(m_in.y(), m_in.x());
-        double outAngle = atan2(m_out.y(), m_out.x()) + (inAngleAfter - inAngleBefore);
-        double length = QLineF(QPointF(), m_out).length();
-        m_out = (QPointF(cos(outAngle) * length,sin(outAngle) * length));
+        double inAngleAfter = atan2(m_in.y, m_in.x);
+        double outAngle = atan2(m_out.y, m_out.x) + (inAngleAfter - inAngleBefore);
+        double length = vector_d(m_out).length();
+        m_out = (point_d(cos(outAngle) * length,sin(outAngle) * length));
     }
     m_autoTangents = false;
 }
 
-void SplinePoint::setOut(const QPointF &pt, bool link)
+void SplinePoint::setOut(const point_d &pt, bool link)
 {
-    double outAngleBefore = atan2(m_out.y(), m_out.x());
+    double outAngleBefore = atan2(m_out.y, m_out.x);
     setOutRelative(pt - m_position);
     if(m_lockTangents && link)
     {
-        double outAngleAfter = atan2(m_out.y(), m_out.x());
-        double inAngle = atan2(m_in.y(), m_in.x()) + (outAngleAfter - outAngleBefore);
-        double length = QLineF(0,0,m_in.x(), m_in.y()).length();
-        setInRelative(QPointF(cos(inAngle) * length,sin(inAngle) * length));
+        double outAngleAfter = atan2(m_out.y, m_out.x);
+        double inAngle = atan2(m_in.y, m_in.x) + (outAngleAfter - outAngleBefore);
+        double length = vector_d(m_in.x, m_in.y).length();
+        setInRelative(point_d(cos(inAngle) * length,sin(inAngle) * length));
     }
     m_autoTangents = false;
 }
 
-void SplinePoint::setAutoIn(const QPointF &pt)
+void SplinePoint::setAutoIn(const point_d &pt)
 {
     setInRelative(pt);
 }
 
-void SplinePoint::setAutoOut(const QPointF &pt)
+void SplinePoint::setAutoOut(const point_d &pt)
 {
     setOutRelative(pt);
 }
@@ -73,18 +75,18 @@ void SplinePoint::setOutType(const SplinePoint::SplineType type)
     m_outType = type;
 }
 
-void SplinePoint::setInRelative(const QPointF &pt)
+void SplinePoint::setInRelative(const point_d &pt)
 {
     m_in = pt;
-    if(m_in.x() > 0)
-        m_in.setX(0);
+    if(m_in.x > 0)
+        m_in.x = 0;
 }
 
-void SplinePoint::setOutRelative(const QPointF &pt)
+void SplinePoint::setOutRelative(const point_d &pt)
 {
     m_out = pt;
-    if(m_out.x() < 0)
-        m_out.setX(0);
+    if(m_out.x < 0)
+        m_out.x = 0;
 }
 
 Spline::Spline()
@@ -92,7 +94,7 @@ Spline::Spline()
 
 }
 
-Spline::Spline(const std::vector<SplinePoint> &points) : m_points(points)
+Spline::Spline(const QVector<SplinePoint> &points) : m_points(points)
 {
 
 }
@@ -105,7 +107,7 @@ QPainterPath Spline::path() const
         return resultPath;
 
     auto it = m_points.cbegin();
-    resultPath.moveTo(QPointF((*it).position().x(),(*it).position().y()));
+    resultPath.moveTo(QPointF((*it).position().x,(*it).position().y));
     SplinePoint lastPt = (*it);
     uint index = 1;
     for(++it; it != m_points.cend(); ++it)
@@ -113,23 +115,23 @@ QPainterPath Spline::path() const
         switch (lastPt.outType()) {
             case SplinePoint::SplineLinear:
             {
-                resultPath.lineTo(QPointF((*it).position().x(),(*it).position().y()));
+                resultPath.lineTo(QPointF((*it).position().x,(*it).position().y));
             }
             break;
             case SplinePoint::SplineCubic:
             {
-                QPointF outAbs = lastPt.out();
-                QPointF inAbs = (*it).in();
+                point_d outAbs = lastPt.out();
+                point_d inAbs = (*it).in();
 
-                outAbs.setX(qMin(outAbs.x(), (*it).position().x()));
-                inAbs.setX(qMax(inAbs.x(), lastPt.position().x()));
-                resultPath.cubicTo(QPointF(outAbs.x(),outAbs.y()),QPointF(inAbs.x(),inAbs.y()),QPointF((*it).position().x(),(*it).position().y()));
+                outAbs.x = qMin(outAbs.x, (*it).position().x);
+                inAbs.x = qMax(inAbs.x, lastPt.position().x);
+                resultPath.cubicTo(QPointF(outAbs.x,outAbs.y),QPointF(inAbs.x,inAbs.y),QPointF((*it).position().x,(*it).position().y));
             }
             break;
             case SplinePoint::SplineStep:
             {
-                resultPath.lineTo(QPointF((*it).position().x(),lastPt.position().y()));
-                resultPath.lineTo(QPointF((*it).position().x(),(*it).position().y()));
+                resultPath.lineTo(QPointF((*it).position().x,lastPt.position().y));
+                resultPath.lineTo(QPointF((*it).position().x,(*it).position().y));
             }
             break;
         }
@@ -157,12 +159,12 @@ bool Spline::nextPoint(double position, uint *index)
 {
     if(m_points.size() <= 0)
         return false;
-    if(m_points.back().position().x() <= position)
+    if(m_points.back().position().x <= position)
         return false;
     uint counter = 0;
     for(auto &pt : m_points)
     {
-        if(pt.position().x() > position)
+        if(pt.position().x > position)
         {
             *index = counter;
             return true;
@@ -176,14 +178,14 @@ bool Spline::previousPoint(double position, uint *index)
 {
     if(m_points.size() <= 0)
         return false;
-    if(m_points.front().position().x() >= position)
+    if(m_points.front().position().x >= position)
         return false;
 
     uint counter = m_points.size() - 1;
     for(auto it = m_points.crbegin(); it != m_points.crend(); ++it)
     {
         const SplinePoint &pt = *it;
-        if(pt.position().x() < position)
+        if(pt.position().x < position)
         {
             *index = counter;
             return true;
@@ -195,7 +197,7 @@ bool Spline::previousPoint(double position, uint *index)
 
 void Spline::sort()
 {
-    std::sort(m_points.begin(), m_points.end(),[](const SplinePoint &a, const SplinePoint &b){return a.position().x() < b.position().x();});
+    std::sort(m_points.begin(), m_points.end(),[](const SplinePoint &a, const SplinePoint &b){return a.position().x < b.position().x;});
 }
 
 void Spline::recalculate()
@@ -211,30 +213,29 @@ void Spline::recalculate()
     {
         SplinePoint &thisPoint = *it;
 
-        double delta = thisPoint.position().x() - lastPoint->position().x();
+        double delta = thisPoint.position().x - lastPoint->position().x;
         if(lastPoint->autoTangents())
         {
-            lastPoint->setAutoOut(QPointF{delta * .33, 0});
+            lastPoint->setAutoOut(point_d{delta * .33, 0});
         }
 
         if(thisPoint.autoTangents())
         {
-            thisPoint.setAutoIn(QPointF{-delta * .33, 0});
+            thisPoint.setAutoIn(point_d{-delta * .33, 0});
         }
 
         lastPoint = &thisPoint;
     }
 }
 
-
 uint Spline::insert(const SplinePoint &pt)
 {
     uint index = 0;
     for(auto it = m_points.begin(); it != m_points.end(); ++it, ++index)
     {
-        if((*it).position().x() >= pt.position().x())
+        if((*it).position().x >= pt.position().x)
         {
-            if(qFuzzyCompare((*it).position().x(), pt.position().x()))
+            if(qFuzzyCompare((*it).position().x, pt.position().x))
                 (*it).setPosition(pt.position());
             else
                 m_points.insert(it, pt);
@@ -250,20 +251,20 @@ uint Spline::insertPointAtX(double x)
 {
     if(m_points.empty())
     {
-        m_points.push_back(SplinePoint(QPointF(x,0)));
+        m_points.push_back(SplinePoint(point_d(x,0)));
         return 0;
     }
 
 
-    if(x < m_points.front().position().x())
+    if(x < m_points.front().position().x)
     {
-        m_points.insert(m_points.begin(), SplinePoint(QPointF(x,m_points.front().position().y()), m_points.front().outType()));
+        m_points.insert(m_points.begin(), SplinePoint(point_d(x,m_points.front().position().y), m_points.front().outType()));
         return 0;
     }
 
-    if(x > m_points.back().position().x())
+    if(x > m_points.back().position().x)
     {
-        m_points.push_back(SplinePoint(QPointF(x,m_points.back().position().y()), m_points.back().outType()));
+        m_points.push_back(SplinePoint(point_d(x,m_points.back().position().y), m_points.back().outType()));
         return m_points.size() - 1;
     }
 
@@ -273,7 +274,7 @@ uint Spline::insertPointAtX(double x)
     uint after = 0;
     for(auto it = m_points.cbegin(); it != m_points.cend(); ++it, ++index)
     {
-        if((*it).position().x() >= x)
+        if((*it).position().x >= x)
         {
             before = index-1;
             after = index;
@@ -284,7 +285,7 @@ uint Spline::insertPointAtX(double x)
     SplinePoint &beforePt = m_points[before];
     SplinePoint &afterPt = m_points[after];
 
-    if(beforePt.position().x() == x || afterPt.position().x() == x)
+    if(beforePt.position().x == x || afterPt.position().x == x)
     {
         return 0;
     }
@@ -292,7 +293,7 @@ uint Spline::insertPointAtX(double x)
     if(beforePt.outType() == SplinePoint::SplineLinear)
     {
         double y = value(x);
-        SplinePoint midSplinePt(QPointF(x,y), SplinePoint::SplineLinear);
+        SplinePoint midSplinePt(point_d(x,y), SplinePoint::SplineLinear);
 
 
 
@@ -302,20 +303,21 @@ uint Spline::insertPointAtX(double x)
     else if(beforePt.outType() == SplinePoint::SplineStep)
     {
         double y = value(x);
-        SplinePoint midSplinePt(QPointF(x,y), SplinePoint::SplineStep);
+        SplinePoint midSplinePt(point_d(x,y), SplinePoint::SplineStep);
 
         m_points.insert(m_points.begin() + after,midSplinePt);
     }
     else if(beforePt.outType() == SplinePoint::SplineCubic)
     {
-        /*
-        QPointF out = beforePt.out();
-        QPointF in = afterPt.in();
+        point_d out = beforePt.out();
+        point_d in = afterPt.in();
 
         double y = value(x);
         double t;
-        calc_bezier_closest_point(beforePt.position(), out, in, afterPt.position(),QPointF(x,y), &t);
-
+        calc_bezier_closest_point(beforePt.position(), out, in, afterPt.position(),point_d(x,y), &t);
+        //double t = (x - beforePt.position().x)/(afterPt.position().x - beforePt.position().x);
+        //qDebug() << t;
+        //double t = .5;
 
         double x12 = (out.x - beforePt.position().x)*t + beforePt.position().x;
         double y12 = (out.y - beforePt.position().y)*t + beforePt.position().y;
@@ -332,17 +334,18 @@ uint Spline::insertPointAtX(double x)
         double x234 = (x34-x23)*t+x23;
         double y234 = (y34-y23)*t+y23;
 
+        //double x1234 = (x234-x123)*t+x123;
         double y1234 = (y234-y123)*t+y123;
 
-        QPointF midPt = QPointF(x,y1234);
+        point_d midPt = point_d(x,y1234);
 
 
-        beforePt.setOutRelative(QPointF(x12,y12) - beforePt.position());
+        beforePt.setOutRelative(point_d(x12,y12) - beforePt.position());
 
-        SplinePoint midSplinePt(midPt,QPointF(x123,y123) - midPt,QPointF(x234,y234) - midPt);
+        SplinePoint midSplinePt(midPt,point_d(x123,y123) - midPt,point_d(x234,y234) - midPt);
         midSplinePt.setAutoTangents(false);
 
-        afterPt.setInRelative(QPointF(x34,y34) - afterPt.position());
+        afterPt.setInRelative(point_d(x34,y34) - afterPt.position());
 
 
 
@@ -350,7 +353,6 @@ uint Spline::insertPointAtX(double x)
         m_points.insert(m_points.begin() + after,midSplinePt);
         //midSplinePt.setInType(beforePt.outType());
         midSplinePt.setOutType(beforePt.outType());
-        */
     }
 
 
@@ -364,15 +366,13 @@ void Spline::remove(uint index)
         m_points.erase(m_points.cbegin() + index);
 }
 
-static double root_find_y(const QPointF &a, const QPointF &b, const QPointF &c, const QPointF &d, const double x)
+static double root_find_y(const point_d &a, const point_d &b, const point_d &c, const point_d &d, const double x)
 {
-    //return BezierMath::yForX(a,b,c,d,x);
-    return 0.0;
+    return pomax::yForX(a,b,c,d,x);
 }
 
-double test_calc_bezier_y(const QPointF &a, const QPointF &b, const QPointF &c, const QPointF &d, const double x)
+double test_calc_bezier_y(const point_d &a, const point_d &b, const point_d &c, const point_d &d, const double x)
 {
-    /*
     uint iterations = 6;
 
     double ptA;
@@ -412,8 +412,7 @@ double test_calc_bezier_y(const QPointF &a, const QPointF &b, const QPointF &c, 
     return (deltaY * multiple) + leftY;
 
     //return  - calc_bezier(a.y, b.y, c.y, d.y, center - length);
-    */
-    return 0.0;
+
 
 }
 
@@ -421,21 +420,21 @@ double Spline::value(double f, bool precise) const
 {
     if(m_points.empty())
         return 0.0;
-    if(f <= m_points.front().position().x())
-        return m_points.front().position().y();
-    else if(f >= m_points.back().position().x())
-        return m_points.back().position().y();
+    if(f <= m_points.front().position().x)
+        return m_points.front().position().y;
+    else if(f >= m_points.back().position().x)
+        return m_points.back().position().y;
 
 
     for(auto it = m_points.cbegin()+1; it != m_points.cend(); ++it)
     {
-        if((*it).position().x() >= f)
+        if((*it).position().x >= f)
         {
 
             const SplinePoint &pt = (*(it-1));
-            if(qFuzzyCompare((*it).position().x(), f))
+            if(qFuzzyCompare((*it).position().x, f))
             {
-                return (*it).position().y();
+                return (*it).position().y;
             }
 
             const SplinePoint &nextPt = *it;
@@ -445,10 +444,10 @@ double Spline::value(double f, bool precise) const
             if(pt.outType() == SplinePoint::SplineCubic)
             {
 
-                QPointF a = pt.position();
-                QPointF b = QPointF(qMin(pt.out().x(), nextPt.position().x()),pt.out().y());
-                QPointF c = QPointF(qMax(nextPt.in().x(), pt.position().x()),nextPt.in().y());
-                QPointF d = nextPt.position();
+                point_d a = pt.position();
+                point_d b = point_d(qMin(pt.out().x, nextPt.position().x),pt.out().y);
+                point_d c = point_d(qMax(nextPt.in().x, pt.position().x),nextPt.in().y);
+                point_d d = nextPt.position();
 
                 double x = f;
 
@@ -461,23 +460,21 @@ double Spline::value(double f, bool precise) const
             }
             else if(pt.outType() == SplinePoint::SplineLinear)
             {
-
-                QPointF a = pt.position();
-                QPointF b = nextPt.position();
-                QPointF intersectionPoint;
-                QLineF line(a, b);
-                line.intersects(QLineF(f,5000000,f,-5000000), &intersectionPoint);
-                return intersectionPoint.y();
+                point_d a = pt.position();
+                point_d b = nextPt.position();
+                double resultX, resultY;
+                calc_intersection(a.x,a.y,b.x,b.y,f,5000000,f,-5000000,&resultX, &resultY);
+                return resultY;
             }
             else {
-                return pt.position().y();
+                return pt.position().y;
             }
         }
     }
-    return m_points.back().position().y();
+    return m_points.back().position().y;
 }
 
-uint Spline::setPointPosition(uint index, QPointF position)
+uint Spline::setPointPosition(uint index, point_d position)
 {
     /*
     if(position.x > 1.0)
@@ -496,12 +493,12 @@ uint Spline::setPointPosition(uint index, QPointF position)
 
 
 
-    if(index < m_points.size()-2 && pt.position().x() > m_points[index+1].position().x())
+    if(index < m_points.size()-2 && pt.position().x > m_points[index+1].position().x)
     {
         std::swap(pt, m_points[index+1]);
         return index + 1;
     }
-    else if(index > 0 && pt.position().x() < m_points[index-1].position().x())
+    else if(index > 0 && pt.position().x < m_points[index-1].position().x)
     {
         std::swap(pt, m_points[index-1]);
         return index-1;
@@ -513,10 +510,10 @@ void Spline::removePointAtX(double position)
 {
     if(m_points.size() == 0)
         return;
-    auto it = std::lower_bound(m_points.begin(),m_points.end(),position,  [](const SplinePoint &a, const double &b){return a.position().x() < b;});
+    auto it = std::lower_bound(m_points.begin(),m_points.end(),position,  [](const SplinePoint &a, const double &b){return a.position().x < b;});
     if(it == m_points.end())
         return;
-    if(qFuzzyCompare((*it).position().x(), position))
+    if(qFuzzyCompare((*it).position().x, position))
     {
         m_points.erase(it);
     }
@@ -526,10 +523,10 @@ bool Spline::hasPointAtX(double position) const
 {
     if(m_points.size() == 0)
         return false;
-    auto it = std::lower_bound(m_points.cbegin(),m_points.cend(),position,  [](const SplinePoint &a, const double &b){return a.position().x() < b;});
+    auto it = std::lower_bound(m_points.cbegin(),m_points.cend(),position,  [](const SplinePoint &a, const double &b){return a.position().x < b;});
     if(it == m_points.end())
         return false;
-    return qFuzzyCompare((*it).position().x(), position);
+    return qFuzzyCompare((*it).position().x, position);
 }
 
 bool Spline::operator==(const Spline &other) const
@@ -537,29 +534,21 @@ bool Spline::operator==(const Spline &other) const
     return m_points == other.m_points;
 }
 
-QRectF Spline::bounds() const
+bounds_d Spline::bounds() const
 {
-    double x1,y1,x2,y2;
+    bounds_d result;
 
+    for(const SplinePoint &pt : m_points)
+        result.unite(pt.position());
 
-    for(const SplinePoint &splinePt : m_points)
-    {
-        const QPointF pt = splinePt.position();
-        if(x1 > pt.x()) x1 = pt.x();
-        if(y1 > pt.y()) y1 = pt.y();
-        if(x2 < pt.x()) x2 = pt.x();
-        if(y2 < pt.y()) y2 = pt.y();
-
-    }
-
-    return QRectF(QPointF(x1,y1), QPointF(x2,y2));
+    return result;
 }
 
 QDataStream & operator<< (QDataStream& stream, const Spline &curve)
 {
     unsigned short int version = 1;
     stream << version;
-    stream << QVector<SplinePoint>{curve.m_points.cbegin(),curve.m_points.cend()};
+    stream << curve.m_points;
     return stream;
 }
 
@@ -569,8 +558,8 @@ QDataStream & operator>> (QDataStream& stream, Spline &curve)
     QVector<SplinePoint> vect;
     stream >> version;
     stream >> vect;
-    curve.m_points = std::vector<SplinePoint>{vect.cbegin(), vect.cend()};
+    curve.m_points = vect;
     return stream;
 }
 
-} // namespace exo
+} // namespace deco

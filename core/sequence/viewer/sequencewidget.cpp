@@ -137,7 +137,7 @@ SequenceWidget::SequenceWidget(QWidget *parent)
     m_impl->verticalSplitter->addWidget(m_impl->waveform);
     m_impl->verticalSplitter->addWidget(m_impl->effectEditorContainer);
 
-    m_impl->viewer->centerOn(0,0);
+    //m_impl->viewer->centerOn(0,0);
 
     m_impl->detailsSplitter->addWidget(m_impl->details);
     m_impl->detailsSplitter->addWidget(m_impl->waveformHeader);
@@ -147,7 +147,7 @@ SequenceWidget::SequenceWidget(QWidget *parent)
     m_impl->horizontalSplitter->addWidget(m_impl->verticalSplitter);
     setLayout(vLayout);
     connect(photonApp->timekeeper(), &Timekeeper::tick, this, &SequenceWidget::tick);
-    connect(m_impl->viewer->verticalScrollBar(), &QAbstractSlider::valueChanged, m_impl->details, &TimelineHeader::offsetChanged);
+    //connect(m_impl->viewer->verticalScrollBar(), &QAbstractSlider::valueChanged, m_impl->details, &TimelineHeader::offsetChanged);
     connect(m_impl->viewer, &TimelineViewer::scaleChanged, this, &SequenceWidget::setScale);
 
     connect(m_impl->scene, &TimelineScene::selectionChanged, this, &SequenceWidget::selectionChanged);
@@ -175,7 +175,7 @@ SequenceWidget::~SequenceWidget()
 void SequenceWidget::setSequence(Sequence *t_sequence)
 {
     m_impl->scene->setSequence(t_sequence);
-    m_impl->viewer->centerOn(0,0);
+    //m_impl->viewer->centerOn(0,0);
     m_impl->details->setSequence(t_sequence);
     m_impl->player->setSource(t_sequence->filePath());
     m_impl->waveform->setSequence(t_sequence);
