@@ -17,7 +17,9 @@ void FillColorEffect::init()
 
 void FillColorEffect::evaluate(CanvasClipEffectEvaluationContext &t_context) const
 {
-    t_context.canvasImage->fill(t_context.channelValues["color"].value<QColor>());
+    QColor color = t_context.channelValues["color"].value<QColor>();
+    color.setAlphaF(t_context.strength);
+    t_context.canvasImage->fill(color);
 
 }
 

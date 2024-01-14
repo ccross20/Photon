@@ -21,6 +21,16 @@ struct EffectInformation
     CategoryList categories;
 };
 
+struct ChannelEffectViewState
+{
+    double yScale = -1.0;
+    double yOffset = -1.0;
+
+    ChannelEffectViewState(){}
+    ChannelEffectViewState(double scale, double offset):yScale(scale),yOffset(offset){}
+};
+
+
 class PHOTONCORE_EXPORT ChannelEffect
 {
 public:
@@ -39,6 +49,9 @@ public:
     virtual QColor processColor(QColor value, double time) const;
     virtual ChannelEffectEditor *createEditor() {return new ChannelEffectEditor(this);}
     void updated();
+
+    ChannelEffectViewState viewState() const;
+    void setViewState(const ChannelEffectViewState &);
 
     ChannelEffect *previousEffect() const;
     virtual void restore(Project &);

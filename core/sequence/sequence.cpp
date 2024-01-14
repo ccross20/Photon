@@ -81,6 +81,7 @@ void Sequence::save(const QString &t_path) const
 
     qsettings.beginGroup("app");
     qsettings.setValue("sequencepath", QFileInfo(savePath).path());
+    qsettings.setValue("lastsequence", savePath);
     qsettings.endGroup();
 
     QJsonObject jsonObj;
@@ -109,6 +110,7 @@ void Sequence::load(const QString &t_path)
             return;
         qsettings.beginGroup("app");
         qsettings.setValue("sequencepath", QFileInfo(loadPath).path());
+        qsettings.setValue("lastsequence", loadPath);
         qsettings.endGroup();
 
     }

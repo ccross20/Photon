@@ -14,6 +14,7 @@ public:
     Channel *channel = nullptr;
     ChannelEffect *previousEffect = nullptr;
     ChannelEffect *facade;
+    ChannelEffectViewState viewState;
 };
 
 }

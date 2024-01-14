@@ -25,6 +25,7 @@ public slots:
     void togglePlay(bool);
     void rewind();
     void setScale(double);
+    void setScalePoint(QPointF);
     void setOffset(double);
     void gotoTime(double);
     void pickFile();

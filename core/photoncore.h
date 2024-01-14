@@ -42,6 +42,7 @@ public slots:
     void newProject();
     void loadSequence(const QString &path = QString{});
     void newSequence();
+    void reloadLastSession();
 
 signals:
     void projectWillOpen();

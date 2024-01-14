@@ -88,6 +88,16 @@ void ChannelEffect::addedToChannel()
 
 }
 
+ChannelEffectViewState ChannelEffect::viewState() const
+{
+    return m_impl->viewState;
+}
+
+void ChannelEffect::setViewState(const ChannelEffectViewState &t_state)
+{
+    m_impl->viewState = t_state;
+}
+
 void ChannelEffect::readFromJson(const QJsonObject &t_json)
 {
     if(t_json.contains("name"))

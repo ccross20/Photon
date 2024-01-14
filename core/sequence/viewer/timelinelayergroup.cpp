@@ -136,6 +136,12 @@ void TimelineLayerGroup::removeLayer()
 
 }
 
+LayerItem *TimelineLayerGroup::findLayer(Layer *t_layer)
+{
+    QVector<LayerItem*>::const_iterator it;
+    return m_impl->findLayer(t_layer, &it);
+}
+
 void TimelineLayerGroup::addedToScene(TimelineScene *t_scene)
 {
     for(Layer *layer : static_cast<LayerGroup*>(layer())->layers())

@@ -68,15 +68,16 @@ public:
     void setOffset(double);
     void setScale(QPointF);
     void remakeTransform();
+    QPointF scale(){return QPointF{m_xScale, m_yScale};}
     QTransform transform() const;
     QRectF sceneBounds() const;
     QPointF viewScale() const;
     QPointF viewOffset() const;
+    void fitY();
 
 signals:
     void relayout();
     void scaleChanged(QPointF);
-    void xScaleChanged(double);
     void offsetChanged(double);
 
 protected:
@@ -88,6 +89,7 @@ protected:
     void mouseReleaseEvent(QMouseEvent *event) override;
 
     void wheelEvent(QWheelEvent *event) override;
+    void resizeEvent(QResizeEvent *t_event) override;
 
 private:
     void rebuildPaths();
@@ -107,8 +109,9 @@ private:
     double m_xScale = 1;
     double m_yScale = 50;
     double m_xOffset = 0;
-    double m_yOffset = 200;
+    double m_yOffset = 0;
     double m_startXPos;
+    double m_startYPos;
     bool m_pathsDirty = true;
     bool m_colorsDirty = true;
 };

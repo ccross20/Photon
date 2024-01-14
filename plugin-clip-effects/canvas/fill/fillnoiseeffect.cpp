@@ -38,6 +38,9 @@ void FillNoiseEffect::evaluate(CanvasClipEffectEvaluationContext &t_context) con
     QColor colorA = t_context.channelValues["colorA"].value<QColor>();
     QColor colorB = t_context.channelValues["colorB"].value<QColor>();
 
+    colorA.setAlphaF(colorA.alphaF() * t_context.strength);
+    colorB.setAlphaF(colorB.alphaF() * t_context.strength);
+
     noise.setOffset(t_context.channelValues["origin"].value<QPointF>());
     noise.setScale(t_context.channelValues["scale"].value<QPointF>());
     noise.setFrequency(t_context.channelValues["frequency"].toDouble());

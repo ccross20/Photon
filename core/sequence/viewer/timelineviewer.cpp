@@ -57,13 +57,13 @@ public:
 TimelineViewer::TimelineViewer() : QGraphicsView(),m_impl(new Impl)
 {
     setAlignment(Qt::AlignTop | Qt::AlignLeft);
-    //setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    //setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     setTransformationAnchor(QGraphicsView::NoAnchor);
 
     //setViewportUpdateMode(QGraphicsView::FullViewportUpdate);
     //setCacheMode(QGraphicsView::CacheNone);
-    setSceneRect(QRectF{-5000,-500,10000,1000});
+    setSceneRect(QRectF{-5000,0,40000,500});
 
     QTransform xform;
     xform.translate(-m_impl->xOffset,0);
@@ -83,10 +83,12 @@ void TimelineViewer::setScale(double t_value)
         return;
     m_impl->scale = t_value;
 
+    if(t_value < 2.0)
+        m_impl->scale = 2.0;
+
     QTransform xform;
-    //xform.translate(-m_impl->xOffset,0);
-    xform.translate(-width()/2.0,-height()/2.0);
-    //xform.scale(m_impl->scale,1.0);
+    xform.translate(-m_impl->xOffset,0);
+    xform.scale(m_impl->scale,1.0);
 
 
     setTransform(xform);
@@ -101,11 +103,9 @@ void TimelineViewer::setOffset(double t_value)
 
 
     QTransform xform;
-    //xform.translate(-m_impl->xOffset,0);
-    xform.translate(-width()/2.0,-height()/2.0);
-    //xform.scale(m_impl->scale,1.0);
+    xform.translate(-m_impl->xOffset,0);
+    xform.scale(m_impl->scale,1.0);
 
-    qDebug() << width() << height();
 
     setTransform(xform);
     emit offsetChanged(m_impl->xOffset);
@@ -298,7 +298,8 @@ void TimelineViewer::mouseMoveEvent(QMouseEvent *event)
     }
     if((event->buttons() & Qt::MiddleButton))
     {
-       // QPoint delta = event->pos() - m_impl->lastPosition;
+        QPoint delta = event->pos() - m_impl->lastPosition;
+        setOffset(m_impl->xOffset - delta.x());
        // horizontalScrollBar()->setValue(horizontalScrollBar()->value() + delta.x());
     }
     else

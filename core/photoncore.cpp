@@ -1,5 +1,6 @@
 #include <QStandardPaths>
 #include <QFileDialog>
+#include <QSettings>
 #include <QInputDialog>
 #include "photoncore.h"
 #include "gui/guimanager.h"
@@ -140,6 +141,20 @@ void PhotonCore::newSequence()
         m_impl->sequences->addSequence(sequence);
         m_impl->sequences->editSequence(sequence);
     }
+}
+
+void PhotonCore::reloadLastSession()
+{
+    QSettings qsettings;
+
+    qsettings.beginGroup("app");
+    QString lastProject = qsettings.value("lastproject").toString();
+    QString lastSequence = qsettings.value("lastsequence").toString();
+    qsettings.endGroup();
+
+
+    loadProject(lastProject);
+    loadSequence(lastSequence);
 }
 
 void PhotonCore::newProject()

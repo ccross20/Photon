@@ -194,6 +194,7 @@ void Project::load(const QString &path)
             return;
         qsettings.beginGroup("app");
         qsettings.setValue("loadpath", QFileInfo(loadPath).path());
+        qsettings.setValue("lastproject", loadPath);
         qsettings.endGroup();
 
     }

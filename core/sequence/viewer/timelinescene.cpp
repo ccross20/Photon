@@ -36,6 +36,21 @@ TimelineScene::Impl::Impl(TimelineScene *t_facade, Sequence *t_sequence):facade(
 
 LayerItem *TimelineScene::Impl::findLayer(Layer *t_layer)
 {
+
+    for(auto layer : layers)
+    {
+        if(layer->layer() == t_layer)
+            return layer;
+
+        if(layer->layer()->isGroup())
+        {
+            auto result = static_cast<TimelineLayerGroup *>(layer)->findLayer(t_layer);
+            if(result)
+                return result;
+        }
+    }
+
+
     auto result = std::find_if(layers.cbegin(), layers.cend(),[t_layer](const LayerItem *t_testLayer){
                      return t_testLayer->layer() == t_layer;
                  });
@@ -118,6 +133,7 @@ SequenceClip *TimelineScene::itemForClip(Clip* t_clip) const
     auto layer = itemForLayer(t_clip->layer());
     if(layer)
         return static_cast<TimelineClipLayer*>(layer)->itemForClip(t_clip);
+
     return nullptr;
 }
 
@@ -144,8 +160,8 @@ void TimelineScene::setSequence(Sequence *t_sequence)
     connect(m_impl->sequence, &Sequence::layerRemoved, this, &TimelineScene::layerRemoved);
 
 
-    addRect(QRect{0,0,100,100},Qt::NoPen, Qt::red);
-    addRect(QRect{300,300,100,100},Qt::NoPen, Qt::red);
+    //addRect(QRect{0,0,100,100},Qt::NoPen, Qt::red);
+    //addRect(QRect{300,300,100,100},Qt::NoPen, Qt::red);
 }
 
 Sequence *TimelineScene::sequence() const

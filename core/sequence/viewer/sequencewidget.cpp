@@ -137,7 +137,7 @@ SequenceWidget::SequenceWidget(QWidget *parent)
     m_impl->verticalSplitter->addWidget(m_impl->waveform);
     m_impl->verticalSplitter->addWidget(m_impl->effectEditorContainer);
 
-    m_impl->viewer->centerOn(0,0);
+    //m_impl->viewer->centerOn(0,0);
 
     m_impl->detailsSplitter->addWidget(m_impl->details);
     m_impl->detailsSplitter->addWidget(m_impl->waveformHeader);
@@ -175,7 +175,7 @@ SequenceWidget::~SequenceWidget()
 void SequenceWidget::setSequence(Sequence *t_sequence)
 {
     m_impl->scene->setSequence(t_sequence);
-    m_impl->viewer->centerOn(0,0);
+    //m_impl->viewer->centerOn(0,0);
     m_impl->details->setSequence(t_sequence);
     m_impl->player->setSource(t_sequence->filePath());
     m_impl->waveform->setSequence(t_sequence);
@@ -196,6 +196,19 @@ void SequenceWidget::setScale(double t_scale)
     ChannelEffectEditor *channelEditor = dynamic_cast<ChannelEffectEditor*>(m_impl->effectEditor);
     if(channelEditor)
         channelEditor->setXScale(t_scale);
+    m_impl->waveform->frameTime(m_impl->visibleStartTime(), m_impl->visibleEndTime());
+}
+
+
+void SequenceWidget::setScalePoint(QPointF t_scale)
+{
+    m_impl->scale = t_scale.x();
+    m_impl->timebar->setScale(t_scale.x());
+    m_impl->viewer->setScale(t_scale.x());
+
+    ChannelEffectEditor *channelEditor = dynamic_cast<ChannelEffectEditor*>(m_impl->effectEditor);
+    if(channelEditor)
+        channelEditor->setScale(t_scale);
     m_impl->waveform->frameTime(m_impl->visibleStartTime(), m_impl->visibleEndTime());
 }
 
@@ -220,7 +233,8 @@ void SequenceWidget::selectEffect(photon::ChannelEffect *t_effect)
     editor->setOffset(m_impl->offset);
     editor->setScale(QPointF(m_impl->scale,editor->scale().y()));
     connect(editor, &ChannelEffectEditor::offsetChanged, this, &SequenceWidget::setOffset);
-    connect(editor, &ChannelEffectEditor::xScaleChanged, m_impl->viewer, &TimelineViewer::setScale);
+    //connect(editor, &ChannelEffectEditor::scaleChanged, m_impl->viewer, &TimelineViewer::setScale);
+    connect(editor, &ChannelEffectEditor::scaleChanged, this, &SequenceWidget::setScalePoint);
 
     QHBoxLayout *layout = new QHBoxLayout;
     layout->setContentsMargins(0,0,0,0);

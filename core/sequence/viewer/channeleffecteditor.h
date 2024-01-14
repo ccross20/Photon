@@ -11,6 +11,7 @@ class QGraphicsView;
 namespace photon {
 class ChannelEffect;
 
+
 class PHOTONCORE_EXPORT ChannelEffectEditor : public QWidget
 {
     Q_OBJECT
@@ -33,13 +34,13 @@ public:
 
 signals:
     void scaleChanged(QPointF);
-    void xScaleChanged(double);
     void offsetChanged(double);
 
 public slots:
     void setScale(QPointF);
     void setXScale(double);
     void setOffset(double);
+    void fitY();
     void channelUpdated(photon::Channel *);
     void effectUpdated(photon::ChannelEffect *);
 

@@ -26,6 +26,7 @@ void DrawRectangleClipEffect::evaluate(CanvasClipEffectEvaluationContext &t_cont
 {
     QPainter painter{t_context.canvasImage};
     painter.setRenderHint(QPainter::Antialiasing);
+    painter.setOpacity(t_context.strength);
 
     float w = static_cast<float>(t_context.canvasImage->width());
     float h = static_cast<float>(t_context.canvasImage->height());

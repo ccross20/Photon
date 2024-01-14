@@ -94,6 +94,7 @@ void GuiManager::Impl::createAppWindow()
     toolBar->addAction("New Sequence",[](){photonApp->newSequence();});
     toolBar->addAction("Load Sequence",[](){photonApp->loadSequence();});
     toolBar->addAction("Save Sequence",[](){photonApp->sequences()->activeSequence()->save();});
+    toolBar->addAction("Reload Session",[](){photonApp->reloadLastSession();});
 
 
 
