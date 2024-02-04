@@ -13,12 +13,15 @@ CanvasClipEffect::~CanvasClipEffect()
 
 }
 
-void CanvasClipEffect::processChannels(ProcessContext &t_context) const
+void CanvasClipEffect::processChannels(ProcessContext &t_context)
 {
     double initialRelativeTime = t_context.globalTime - clip()->startTime();
 
     CanvasClipEffectEvaluationContext localContext(t_context);
     localContext.relativeTime = initialRelativeTime;
+    localContext.openglContext = t_context.openglContext;
+    localContext.canvas = t_context.canvas;
+    localContext.buffer = t_context.frameBuffer;
 
     for(auto source :  static_cast<CanvasClip*>(clip())->sources())
     {

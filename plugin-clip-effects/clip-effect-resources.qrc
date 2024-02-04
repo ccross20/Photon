@@ -1,0 +1,8 @@
+<RCC>
+    <qresource prefix="/">
+        <file>clip-effect-resources/shader/circle.frag</file>
+        <file>clip-effect-resources/shader/ellipse.frag</file>
+        <file>clip-effect-resources/shader/gauss_blur.frag</file>
+        <file>clip-effect-resources/shader/distort/kaleidoscope.frag</file>
+    </qresource>
+</RCC>

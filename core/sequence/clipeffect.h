@@ -48,7 +48,7 @@ public:
     virtual ~ClipEffect();
 
     virtual void init();
-    virtual void processChannels(ProcessContext &) const;
+    virtual void processChannels(ProcessContext &);
 
     QByteArray id() const;
     QByteArray uniqueId() const;

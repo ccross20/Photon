@@ -9,5 +9,9 @@
         <file>resources/styles.css</file>
         <file>resources/icons/green-check.png</file>
         <file>resources/icons/white-check.png</file>
+        <file>resources/shader/BasicTextureVertex.vert</file>
+        <file>resources/shader/texture.frag</file>
+        <file>resources/shader/projectedvertex.vert</file>
+        <file>resources/shader/TextureOpacity.frag</file>
     </qresource>
 </RCC>

@@ -11,8 +11,8 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(QT NAMES Qt6 REQUIRED COMPONENTS Widgets Network)
-find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets Network)
+find_package(QT NAMES Qt6 COMPONENTS Widgets Network OpenGLWidgets)
+find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Widgets Network OpenGLWidgets)
 find_package(Qt6 REQUIRED COMPONENTS
     3DCore
     3DRender
@@ -210,6 +210,18 @@ set(PROJECT_SOURCES
         gui/waveformwidget.cpp
         gui/window.h
         gui/window.cpp
+        opengl/offscreenrenderer.h
+        opengl/offscreenrenderer.cpp
+        opengl/openglframebuffer.h
+        opengl/openglframebuffer.cpp
+        opengl/openglplane.h
+        opengl/openglplane.cpp
+        opengl/openglshader.h
+        opengl/openglshader.cpp
+        opengl/opengltexture.h
+        opengl/opengltexture.cpp
+        opengl/opengltexturedplane.h
+        opengl/opengltexturedplane.cpp
         photoncore.h
         photoncore.cpp
         project/project.h
@@ -453,6 +465,8 @@ target_link_libraries(photon-core PRIVATE
     Qt6::3DAnimation
     Qt6::MultimediaWidgets
     Qt6::Network
+    Qt6::OpenGLWidgets
+    Qt6::OpenGL
 )
 
 target_compile_definitions(photon-core PRIVATE PHOTONCORE_LIBRARY)

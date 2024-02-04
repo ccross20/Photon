@@ -28,7 +28,7 @@ public:
     TracePathClip();
 
     void init() override;
-    void evaluate(FixtureClipEffectEvaluationContext &) const override;
+    void evaluate(FixtureClipEffectEvaluationContext &) override;
     QWidget *createEditor() override;
     static ClipEffectInformation info();
     void autoAssignFixtures(double);

@@ -74,12 +74,14 @@ QJsonObject jsonFromColor(const QColor &t_color)
 
 void ColorChannelParameter::readFromJson(const QJsonObject &t_json)
 {
+    ChannelParameter::readFromJson(t_json);
     m_impl->defaultValue = jsonToColor(t_json.value("default").toObject());
     setValue(jsonToColor(t_json.value("value").toObject()));
 }
 
 void ColorChannelParameter::writeToJson(QJsonObject &t_json) const
 {
+    ChannelParameter::writeToJson(t_json);
     t_json.insert("default", jsonFromColor(m_impl->defaultValue));
     t_json.insert("value", jsonFromColor(value().value<QColor>()));
 }

@@ -8,6 +8,8 @@
 #include "canvas/draw/drawrectangleclipeffect.h"
 #include "canvas/fill/fillnoiseeffect.h"
 #include "canvas/fill/fillcoloreffect.h"
+#include "canvas/blurclipeffect.h"
+#include "canvas/distort/kaleidoscopeclipeffect.h"
 
 #include "strobe/beatstrobeeffect.h"
 
@@ -25,6 +27,8 @@ bool PluginClipEffects::initialize(const PluginContext &context)
     photonApp->plugins()->registerClipEffect(FillNoiseEffect::info());
     photonApp->plugins()->registerClipEffect(BeatStrobeEffect::info());
     photonApp->plugins()->registerClipEffect(FillColorEffect::info());
+    photonApp->plugins()->registerClipEffect(BlurClipEffect::info());
+    photonApp->plugins()->registerClipEffect(KaleidoscopeClipEffect::info());
 
     return true;
 }

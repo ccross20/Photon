@@ -9,8 +9,8 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(QT NAMES Qt6 REQUIRED COMPONENTS Core Widgets Concurrent)
-find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Widgets Concurrent)
+find_package(QT NAMES Qt6 REQUIRED COMPONENTS Core Widgets Concurrent OpenGLWidgets)
+find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Widgets Concurrent OpenGLWidgets)
 
 
 set(SOURCES
@@ -33,7 +33,10 @@ set(SOURCES
 
 add_library(plugin-clip-effects SHARED ${SOURCES}
     canvas/fill/fillcoloreffect.h canvas/fill/fillcoloreffect.cpp
-    pan-and-tilt/aligntoarrowclip.h pan-and-tilt/aligntoarrowclip.cpp)
+    pan-and-tilt/aligntoarrowclip.h pan-and-tilt/aligntoarrowclip.cpp
+    clip-effect-resources.qrc
+    canvas/blurclipeffect.h canvas/blurclipeffect.cpp
+    canvas/distort/kaleidoscopeclipeffect.h canvas/distort/kaleidoscopeclipeffect.cpp)
 
 
 
@@ -52,6 +55,10 @@ include_directories("${PROJECT_SOURCE_DIR}/third-party/boost")
 #target_compile_definitions(plugin-visualizer PRIVATE PLUGINVISUALIZER_LIBRARY)
 
 target_link_libraries(plugin-clip-effects PRIVATE photon-core)
+target_link_libraries(plugin-clip-effects PRIVATE
+    Qt6::OpenGLWidgets
+    Qt6::OpenGL
+)
 
 set_target_properties(plugin-clip-effects PROPERTIES
                       RUNTIME_OUTPUT_DIRECTORY_DEBUG "${PROJECT_BINARY_DIR}/../photon-desktop/extensions/clip-effects/"

@@ -80,6 +80,7 @@ ChannelParameterView *NumberChannelParameter::createView()
 
 void NumberChannelParameter::readFromJson(const QJsonObject &t_json)
 {
+    ChannelParameter::readFromJson(t_json);
     m_impl->min = t_json.value("min").toDouble();
     m_impl->max = t_json.value("max").toDouble();
     m_impl->increment = t_json.value("increment").toDouble();
@@ -89,6 +90,7 @@ void NumberChannelParameter::readFromJson(const QJsonObject &t_json)
 
 void NumberChannelParameter::writeToJson(QJsonObject &t_json) const
 {
+    ChannelParameter::writeToJson(t_json);
     t_json.insert("min", m_impl->min);
     t_json.insert("max", m_impl->max);
     t_json.insert("increment", m_impl->increment);

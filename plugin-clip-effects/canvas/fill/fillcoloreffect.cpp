@@ -15,11 +15,16 @@ void FillColorEffect::init()
 
 }
 
-void FillColorEffect::evaluate(CanvasClipEffectEvaluationContext &t_context) const
+void FillColorEffect::evaluate(CanvasClipEffectEvaluationContext &t_context)
 {
     QColor color = t_context.channelValues["color"].value<QColor>();
     color.setAlphaF(t_context.strength);
-    t_context.canvasImage->fill(color);
+    //t_context.canvasImage->fill(color);
+
+    auto f = t_context.openglContext->functions();
+
+    f->glClearColor(color.redF(), color.greenF(), color.blueF(), color.alphaF());
+    f->glClear(GL_COLOR_BUFFER_BIT);
 
 }
 

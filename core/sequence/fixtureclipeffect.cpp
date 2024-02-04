@@ -14,7 +14,7 @@ FixtureClipEffect::~FixtureClipEffect()
 
 }
 
-void FixtureClipEffect::processChannels(ProcessContext &t_context) const
+void FixtureClipEffect::processChannels(ProcessContext &t_context)
 {
     double initialRelativeTime = t_context.globalTime - clip()->startTime();
 

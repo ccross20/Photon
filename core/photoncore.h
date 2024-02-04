@@ -4,6 +4,7 @@
 #include <QApplication>
 #include <QDir>
 #include <QVersionNumber>
+#include <QOffscreenSurface>
 #include "photon-global.h"
 
 namespace photon {
@@ -29,6 +30,8 @@ public:
     Timekeeper *timekeeper() const;
 
     SequenceCollection *sequences() const;
+    QOffscreenSurface *surface() const;
+    void initSurface();
 
 
     QString appDataPath() const;

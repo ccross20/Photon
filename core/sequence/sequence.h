@@ -4,7 +4,11 @@
 #include "photon-global.h"
 #include "data/dmxmatrix.h"
 
+class QOpenGLContext;
+
 namespace photon {
+
+class OpenGLFrameBuffer;
 
 class ProcessContext
 {
@@ -14,6 +18,9 @@ public:
     Project *project = nullptr;
     QImage *canvasImage = nullptr;
     QImage *previousCanvasImage = nullptr;
+    OpenGLFrameBuffer *frameBuffer = nullptr;
+    Canvas *canvas = nullptr;
+    QOpenGLContext *openglContext;
     DMXMatrix &dmxMatrix;
     double globalTime;
     double relativeTime;

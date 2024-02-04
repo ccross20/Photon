@@ -22,7 +22,7 @@ void DrawRectangleClipEffect::init()
     addChannelParameter(new ColorChannelParameter("color", Qt::red));
 }
 
-void DrawRectangleClipEffect::evaluate(CanvasClipEffectEvaluationContext &t_context) const
+void DrawRectangleClipEffect::evaluate(CanvasClipEffectEvaluationContext &t_context)
 {
     QPainter painter{t_context.canvasImage};
     painter.setRenderHint(QPainter::Antialiasing);

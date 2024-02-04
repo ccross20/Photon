@@ -13,7 +13,7 @@ public:
     FillNoiseEffect();
 
     void init() override;
-    void evaluate(CanvasClipEffectEvaluationContext &) const override;
+    void evaluate(CanvasClipEffectEvaluationContext &) override;
     static ClipEffectInformation info();
 
 private:

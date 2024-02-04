@@ -106,6 +106,7 @@ QJsonObject jsonFromPoint(const QPointF &t_pt)
 
 void Point2ChannelParameter::readFromJson(const QJsonObject &t_json)
 {
+    ChannelParameter::readFromJson(t_json);
     m_impl->min = jsonToPoint(t_json.value("min").toObject());
     m_impl->max = jsonToPoint(t_json.value("max").toObject());
     m_impl->increment = t_json.value("increment").toDouble();
@@ -115,6 +116,7 @@ void Point2ChannelParameter::readFromJson(const QJsonObject &t_json)
 
 void Point2ChannelParameter::writeToJson(QJsonObject &t_json) const
 {
+    ChannelParameter::writeToJson(t_json);
     t_json.insert("min", jsonFromPoint(m_impl->min));
     t_json.insert("max", jsonFromPoint(m_impl->max));
     t_json.insert("increment", m_impl->increment);

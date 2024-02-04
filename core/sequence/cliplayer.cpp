@@ -73,7 +73,10 @@ void ClipLayer::processChannels(ProcessContext &t_context)
     for(auto clip : m_impl->clips)
     {
         if(clip->timeIsValid(t_context.globalTime))
+        {
+            t_context.relativeTime = t_context.globalTime - clip->startTime();
             clip->processChannels(t_context);
+        }
     }
 }
 

@@ -28,7 +28,7 @@ void AlignToArrowClip::init()
     m_arrow = static_cast<SceneArrow*>(arrowObj);
 }
 
-void AlignToArrowClip::evaluate(FixtureClipEffectEvaluationContext &t_context) const
+void AlignToArrowClip::evaluate(FixtureClipEffectEvaluationContext &t_context)
 {
     QMatrix4x4 matrix;
     //matrix.translate(fixture->globalPosition());

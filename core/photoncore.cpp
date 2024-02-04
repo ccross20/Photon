@@ -36,6 +36,7 @@ public:
     Sequence *activeSequence = nullptr;
     SequencePanel *activeSequencePanel = nullptr;
     QVersionNumber version;
+    QOffscreenSurface *surface = nullptr;
 };
 
 PhotonCore::Impl::Impl(PhotonCore *t_core):
@@ -103,6 +104,8 @@ void PhotonCore::init()
     m_impl->gui->init();
 
     connect(m_impl->timekeeper, &Timekeeper::tick, m_impl->busEvaluator, &BusEvaluator::evaluate);
+
+    initSurface();
 }
 
 Settings *PhotonCore::settings() const
@@ -118,6 +121,23 @@ SequenceCollection *PhotonCore::sequences() const
 ResourceManager *PhotonCore::resources() const
 {
     return m_impl->resources;
+}
+
+void PhotonCore::initSurface()
+{
+    QSurfaceFormat fmt;
+    //fmt.setVersion(3, 3);
+    //fmt.setProfile(QSurfaceFormat::CoreProfile);
+    fmt.setSwapBehavior(QSurfaceFormat::SingleBuffer);
+
+    m_impl->surface = new QOffscreenSurface;
+    m_impl->surface->create();
+}
+
+QOffscreenSurface *PhotonCore::surface() const
+{
+    return m_impl->surface;
+
 }
 
 void PhotonCore::loadSequence(const QString &t_path)

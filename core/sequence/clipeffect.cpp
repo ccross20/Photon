@@ -11,6 +11,16 @@ void ClipEffect::Impl::processContext( ClipEffectEvaluationContext &t_context, d
 
 }
 
+ChannelParameter *ClipEffect::Impl::findChannelParameter(const QByteArray &t_uniqueId)
+{
+    for(auto channelParam : channelParameters)
+    {
+        if(channelParam->uniqueId() == t_uniqueId)
+            return channelParam;
+    }
+    return nullptr;
+}
+
 QVector<double> ClipEffect::Impl::valuesForChannel(const QByteArray &t_uniqueId, double t_time)
 {
     QVector<double> results;
@@ -53,7 +63,7 @@ ClipEffect::~ClipEffect()
     delete m_impl;
 }
 
-void ClipEffect::processChannels(ProcessContext &t_context) const
+void ClipEffect::processChannels(ProcessContext &t_context)
 {
 
 
@@ -344,6 +354,17 @@ void ClipEffect::readFromJson(const QJsonObject &t_json, const LoadContext &t_co
         channel->readFromJson(channelJson.toObject(), t_context);
         m_impl->channels.append(channel);
     }
+
+
+    auto channelParamArray = t_json.value("channelParameters").toArray();
+    for(auto channelJson : channelParamArray)
+    {
+        auto jsonObj = channelJson.toObject();
+
+        auto channelParam = m_impl->findChannelParameter(jsonObj.value("uniqueId").toString().toLatin1());
+        if(channelParam)
+            channelParam->readFromJson(jsonObj);
+    }
 }
 
 void ClipEffect::writeToJson(QJsonObject &t_json) const
@@ -359,6 +380,16 @@ void ClipEffect::writeToJson(QJsonObject &t_json) const
         array.append(channelObj);
     }
     t_json.insert("channels", array);
+
+
+    QJsonArray paramArray;
+    for(auto channelParam : m_impl->channelParameters)
+    {
+        QJsonObject channelObj;
+        channelParam->writeToJson(channelObj);
+        paramArray.append(channelObj);
+    }
+    t_json.insert("channelParameters", paramArray);
 }
 
 

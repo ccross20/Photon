@@ -161,7 +161,7 @@ void BeatStrobeEffect::init()
     addChannelParameter(new NumberChannelParameter("pulseDuration",.1));
 }
 
-void BeatStrobeEffect::evaluate(FixtureClipEffectEvaluationContext &t_context) const
+void BeatStrobeEffect::evaluate(FixtureClipEffectEvaluationContext &t_context)
 {
     m_impl->minPan = t_context.channelValues["minPan"].toDouble();
     m_impl->maxPan = t_context.channelValues["maxPan"].toDouble();

@@ -37,12 +37,14 @@ ChannelParameterView *BoolChannelParameter::createView()
 
 void BoolChannelParameter::readFromJson(const QJsonObject &t_json)
 {
+    ChannelParameter::readFromJson(t_json);
     m_impl->defaultValue = t_json.value("default").toDouble();
     setValue(t_json.value("value").toDouble());
 }
 
 void BoolChannelParameter::writeToJson(QJsonObject &t_json) const
 {
+    ChannelParameter::writeToJson(t_json);
     t_json.insert("default", m_impl->defaultValue);
     t_json.insert("value", value().toDouble());
 }

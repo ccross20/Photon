@@ -226,6 +226,7 @@ void PixelSource::process(ProcessContext &t_context, const QTransform &t_transfo
     int u = universe()-1;
     int channel = dmxOffset();
 
+    return;
     //qDebug() << "Write to dmx " << u << channel;
 
     for(auto it = positions().cbegin(); it != positions().cend(); it++)

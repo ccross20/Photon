@@ -6,6 +6,11 @@
 #include "pixel/pixellayout.h"
 #include "scene/sceneobject.h"
 #include "pixel/pixellayoutcollection.h"
+#include "opengl/openglshader.h"
+#include "opengl/openglplane.h"
+#include "opengl/opengltexture.h"
+#include "opengl/openglframebuffer.h"
+#include "sequence.h"
 
 namespace photon {
 
@@ -13,6 +18,9 @@ class CanvasClip::Impl
 {
 public:
     QVector<PixelLayout*> pixelLayouts;
+    OpenGLShader *shader = nullptr;
+    OpenGLPlane *plane = nullptr;
+    OpenGLTexture *texture = nullptr;
 };
 
 CanvasClip::CanvasClip(): Clip(),m_impl(new Impl)
@@ -32,7 +40,38 @@ CanvasClip::~CanvasClip()
 
 void CanvasClip::processChannels(ProcessContext &t_context)
 {
+    if(!m_impl->plane)
+    {
+        m_impl->plane = new OpenGLPlane(t_context.openglContext, bounds_d{-1,-1,1,1}, false);
+        m_impl->shader = new OpenGLShader(t_context.openglContext, ":/resources/shader/BasicTextureVertex.vert",
+                                    ":/resources/shader/TextureOpacity.frag");
+
+        int w = t_context.canvas->width();
+        int h = t_context.canvas->height();
+        m_impl->texture = new OpenGLTexture;
+        m_impl->texture->resize(t_context.openglContext, QImage::Format::Format_ARGB32_Premultiplied, w, h);
+
+    }
+
+    double amount = strengthAtTime(t_context.relativeTime);
+
+
+    OpenGLFrameBuffer *previousBuffer = t_context.frameBuffer;
+    OpenGLFrameBuffer buffer(m_impl->texture, t_context.openglContext);
+    t_context.openglContext->functions()->glClearColor(.0f,.0f,.0f,.0f);
+    t_context.openglContext->functions()->glClear(GL_COLOR_BUFFER_BIT);
+    t_context.frameBuffer = &buffer;
+
     Clip::processChannels(t_context);
+
+    t_context.frameBuffer = previousBuffer;
+    t_context.frameBuffer->bind();
+    m_impl->shader->bind(t_context.openglContext);
+    m_impl->texture->bind(t_context.openglContext);
+    m_impl->shader->setTexture("tex",m_impl->texture->handle());
+    m_impl->shader->setFloat("opacity",  amount);
+    m_impl->plane->draw();
+
 
     for(auto pixelLayout : m_impl->pixelLayouts)
         pixelLayout->process(t_context);

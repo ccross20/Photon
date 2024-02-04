@@ -22,8 +22,8 @@ public:
     FixtureClipEffect(const QByteArray &t_id = QByteArray());
     virtual ~FixtureClipEffect();
 
-    virtual void processChannels(ProcessContext &) const override;
-    virtual void evaluate(FixtureClipEffectEvaluationContext &) const = 0;
+    virtual void processChannels(ProcessContext &) override;
+    virtual void evaluate(FixtureClipEffectEvaluationContext &) = 0;
 };
 
 } // namespace photon

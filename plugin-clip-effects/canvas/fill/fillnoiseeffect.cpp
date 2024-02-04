@@ -28,7 +28,7 @@ void FillNoiseEffect::init()
     addChannelParameter(new ColorChannelParameter("colorB", Qt::black));
 }
 
-void FillNoiseEffect::evaluate(CanvasClipEffectEvaluationContext &t_context) const
+void FillNoiseEffect::evaluate(CanvasClipEffectEvaluationContext &t_context)
 {
     //m_noise.noise()
     //t_context.canvasImage

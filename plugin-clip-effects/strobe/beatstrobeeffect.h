@@ -12,7 +12,7 @@ public:
     ~BeatStrobeEffect();
 
     void init() override;
-    void evaluate(FixtureClipEffectEvaluationContext &) const override;
+    void evaluate(FixtureClipEffectEvaluationContext &) override;
     static ClipEffectInformation info();
 
 private:

@@ -33,6 +33,8 @@ public:
 
     void paint(const QImage &);
 
+    OpenGLTexture *texture() const;
+    void updateTexture();
 
     void restore(Project &);
     void readFromJson(const QJsonObject &, const LoadContext &);
@@ -40,7 +42,7 @@ public:
 
 signals:
     void metadataUpdated();
-    void didPaint(const QImage &);
+    void textureDidUpdate();
 
 private:
     class Impl;
