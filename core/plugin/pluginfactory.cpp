@@ -46,7 +46,6 @@
 #include "graph/parameter/pathparameter.h"
 #include "graph/parameter/vector3dparameter.h"
 
-#include "sequence/stateclip.h"
 #include "sequence/fixtureclip.h"
 #include "sequence/canvasclip.h"
 
@@ -177,7 +176,6 @@ void PluginFactory::init()
     registerChannelEffect(MasterLayerChannelEffect::info());
     registerChannelEffect(SplineChannelEffect::info());
 
-    registerClip(StateClip::info());
     registerClip(FixtureClip::info());
     registerClip(CanvasClip::info());
 

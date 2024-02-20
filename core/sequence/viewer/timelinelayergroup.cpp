@@ -1,5 +1,7 @@
 #include <QPainter>
 #include <QGraphicsScene>
+#include <QGraphicsSceneContextMenuEvent>
+#include <QMenu>
 #include "timelinelayergroup.h"
 #include "sequence/layergroup.h"
 #include "sequence/cliplayer.h"
@@ -49,7 +51,7 @@ LayerItem *TimelineLayerGroup::Impl::addLayer(Layer *t_layer)
 
         childLayers.append(timelineLayer);
         timelineLayer->setParentItem(facade);
-        facade->scene()->addItem(timelineLayer);
+        //facade->scene()->addItem(timelineLayer);
         timelineLayer->addedToScene(static_cast<TimelineScene*>(facade->scene()));
         layoutLayers();
 
@@ -62,7 +64,7 @@ LayerItem *TimelineLayerGroup::Impl::addLayer(Layer *t_layer)
         TimelineMasterLayer *timelineLayer = new TimelineMasterLayer(masterLayer);
 
         childLayers.append(timelineLayer);
-        facade->scene()->addItem(timelineLayer);
+        //facade->scene()->addItem(timelineLayer);
         timelineLayer->addedToScene(static_cast<TimelineScene*>(facade->scene()));
         layoutLayers();
 
@@ -98,12 +100,14 @@ void TimelineLayerGroup::Impl::layoutLayers()
 
 TimelineLayerGroup::TimelineLayerGroup(LayerGroup *t_group): LayerItem(t_group),m_impl(new Impl(this))
 {
-
+    connect(t_group, &LayerGroup::layerAdded,this,&TimelineLayerGroup::layerAdded);
+    connect(t_group, &LayerGroup::layerRemoved,this,&TimelineLayerGroup::layerRemoved);
+    connect(t_group, &LayerGroup::layerUpdated,this,&TimelineLayerGroup::layerModified);
 }
 
 TimelineLayerGroup::~TimelineLayerGroup()
 {
-
+    delete m_impl;
 }
 
 QRectF TimelineLayerGroup::boundingRect() const
@@ -118,12 +122,13 @@ void TimelineLayerGroup::paint(QPainter *painter, const QStyleOptionGraphicsItem
 
 void TimelineLayerGroup::layerAdded(photon::Layer *t_layer)
 {
-
+    qDebug() << "Layer added " << t_layer->name();
+    m_impl->addLayer(t_layer);
 }
 
 void TimelineLayerGroup::layerRemoved(photon::Layer *t_layer)
 {
-
+    m_impl->removeLayer(t_layer);
 }
 
 void TimelineLayerGroup::layerModified(photon::Layer *t_layer)
@@ -134,6 +139,20 @@ void TimelineLayerGroup::layerModified(photon::Layer *t_layer)
 void TimelineLayerGroup::removeLayer()
 {
 
+}
+
+LayerItem *TimelineLayerGroup::layerAtY(double t_y) const
+{
+    for(auto layer : m_impl->childLayers)
+    {
+        //qDebug() << layer->boundingRect();
+        auto globalRect = layer->mapRectToScene(layer->boundingRect());
+        if(globalRect.top() < t_y && globalRect.bottom() > t_y)
+        {
+            return layer;
+        }
+    }
+    return nullptr;
 }
 
 LayerItem *TimelineLayerGroup::findLayer(Layer *t_layer)
@@ -152,7 +171,21 @@ void TimelineLayerGroup::addedToScene(TimelineScene *t_scene)
 
 void TimelineLayerGroup::contextMenuEvent(QGraphicsSceneContextMenuEvent *event)
 {
+    QGraphicsObject::contextMenuEvent(event);
+    if(event->isAccepted())
+        return;
 
+    event->accept();
+
+
+    QMenu menu;
+
+    menu.addAction("Add Layer to Group",this,[this](){
+        static_cast<LayerGroup*>(layer())->addLayer(new ClipLayer("Layer " + QString::number(layer()->children().length() + 1)));
+
+    });
+
+    menu.exec(event->screenPos());
 }
 
 } // namespace photon

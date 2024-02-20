@@ -38,6 +38,15 @@ public:
 
     void buildLayout() override;
 
+signals:
+    void editLayer(photon::Layer *);
+
+private slots:
+    void editLayerSlot();
+    void layerUpdated(photon::Layer *);
+    void layerAdded(photon::Layer *);
+    void layerRemoved(photon::Layer *);
+
 private:
     class Impl;
     Impl *m_impl;
@@ -52,7 +61,9 @@ public:
 
     void setSequence(Sequence *);
     Sequence *sequence() const;
+
 signals:
+    void editLayer(photon::Layer *);
 
 public slots:
     void offsetChanged(int);

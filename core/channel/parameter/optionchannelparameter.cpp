@@ -43,11 +43,13 @@ ChannelParameterView *OptionChannelParameter::createView()
 void OptionChannelParameter::readFromJson(const QJsonObject &t_json)
 {
     ChannelParameter::readFromJson(t_json);
+    /*
     auto optionArray = t_json.value("options").toArray();
     for(auto option : optionArray)
     {
         m_impl->options.append(option.toString());
     }
+*/
     m_impl->defaultValue = t_json.value("default").toInt();
 }
 
@@ -59,7 +61,7 @@ void OptionChannelParameter::writeToJson(QJsonObject &t_json) const
     for(auto option : m_impl->options)
         array.append(option);
 
-    t_json.insert("options", array);
+    //t_json.insert("options", array);
     t_json.insert("default", m_impl->defaultValue);
 }
 

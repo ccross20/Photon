@@ -4,18 +4,18 @@
 #include "clipstructureviewer.h"
 #include "sequence/channeleffect.h"
 #include "sequence/channel.h"
-#include "sequence/clip.h"
+#include "sequence/fixtureclip.h"
 #include "falloff/falloffeffect.h"
 #include "fixture/maskeffect.h"
 #include "photoncore.h"
 #include "plugin/pluginfactory.h"
 #include "gui/menufactory.h"
 #include "state/state.h"
-#include "sequence/stateclip.h"
 #include "project/project.h"
 #include "pixel/pixellayoutcollection.h"
 #include "pixel/pixellayout.h"
 #include "sequence/canvasclip.h"
+#include "sequence/canvaslayergroup.h"
 
 namespace photon {
 
@@ -78,7 +78,7 @@ void ClipTreeView::mousePressEvent(QMouseEvent *event)
             if(factory.showMenu(event->globalPosition().toPoint(), selectedInfo))
             {
 
-                Clip *clip = dynamic_cast<FalloffData*>(parentData)->clip();
+                FixtureClip *clip = dynamic_cast<FalloffData*>(parentData)->clip();
 
                 auto effect = photonApp->plugins()->createFalloffEffect(selectedInfo.effectId);
 
@@ -137,7 +137,7 @@ void ClipTreeView::mousePressEvent(QMouseEvent *event)
             if(factory.showMenu(event->globalPosition().toPoint(), selectedInfo))
             {
 
-                Clip *clip = dynamic_cast<MaskData*>(parentData)->clip();
+                FixtureClip *clip = dynamic_cast<MaskData*>(parentData)->clip();
 
                 auto effect = photonApp->plugins()->createMaskEffect(selectedInfo.effectId);
 
@@ -155,12 +155,12 @@ void ClipTreeView::mousePressEvent(QMouseEvent *event)
         }
         else if(dynamic_cast<PixelLayoutFolderData*>(parentData))
         {
-            CanvasClip *clip = dynamic_cast<PixelLayoutFolderData*>(parentData)->clip();
+            CanvasLayerGroup *layer = dynamic_cast<PixelLayoutFolderData*>(parentData)->layer();
             QMenu menu;
             auto pixelLayouts = photonApp->project()->pixelLayouts()->layouts();
             for(auto layout : pixelLayouts)
             {
-                menu.addAction(layout->name(),[clip, layout](){clip->addPixelLayout(layout);});
+                menu.addAction(layout->name(),[layer, layout](){layer->addPixelLayout(layout);});
             }
             menu.exec(event->globalPosition().toPoint());
         }
@@ -198,6 +198,18 @@ void ClipTreeView::mousePressEvent(QMouseEvent *event)
                 itemMenu.exec(event->globalPosition().toPoint());
             }
 
+            if(dynamic_cast<ClipEffectData*>(itemData))
+            {
+                auto effectItem = dynamic_cast<ClipEffectData*>(itemData);
+
+                QMenu itemMenu;
+                itemMenu.addAction("Remove",[effectItem](){
+                    effectItem->effect()->clip()->removeClipEffect(effectItem->effect());
+                });
+
+                itemMenu.exec(event->globalPosition().toPoint());
+            }
+
             if(dynamic_cast<PixelLayoutData*>(itemData))
             {
                 auto layoutItem = dynamic_cast<PixelLayoutData*>(itemData);
@@ -205,7 +217,7 @@ void ClipTreeView::mousePressEvent(QMouseEvent *event)
 
                 QMenu itemMenu;
                 itemMenu.addAction("Remove",[layoutItem, parentItem](){
-                    parentItem->clip()->removePixelLayout(layoutItem->pixelLayout());
+                    parentItem->layer()->removePixelLayout(layoutItem->pixelLayout());
                 });
 
                 itemMenu.exec(event->globalPosition().toPoint());
@@ -262,6 +274,11 @@ void ClipStructureViewer::selectionChanged(const QItemSelection &selected, const
         m_states.insert(m_clip->uniqueId(),dynamic_cast<StateData*>(itemData)->state()->uniqueId());
         emit selectState(dynamic_cast<StateData*>(itemData)->state());
     }
+    else if(dynamic_cast<ClipParameterData*>(itemData))
+    {
+        m_states.insert(m_clip->uniqueId(),dynamic_cast<ClipParameterData*>(itemData)->clip()->uniqueId());
+        emit selectClipParameter(dynamic_cast<ClipParameterData*>(itemData)->clip());
+    }
     else if(dynamic_cast<MaskEffectData*>(itemData))
     {
         m_states.insert(m_clip->uniqueId(),dynamic_cast<MaskEffectData*>(itemData)->effect()->uniqueId());
@@ -298,12 +315,6 @@ void ClipStructureViewer::restoreState()
     {
         viewId(m_states.value(m_clip->uniqueId()));
         return;
-    }
-
-    StateClip *stateClip = dynamic_cast<StateClip*>(m_clip);
-    if(stateClip)
-    {
-        viewId(stateClip->state()->uniqueId());
     }
 }
 

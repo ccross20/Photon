@@ -4,6 +4,7 @@
 #include "photon-global.h"
 #include "channel.h"
 #include "sequence.h"
+#include "channel/parameter/channelparametercontainer.h"
 
 namespace photon {
 
@@ -67,13 +68,9 @@ public:
     const QVector<Channel*> channels() const;
     const QVector<Channel*> channelsForParameter(ChannelParameter *) const;
 
+    ChannelParameterContainer *parameters() const;
     void addChannelParameter(ChannelParameter *);
     void removeChannelParameter(ChannelParameter *);
-    ChannelParameter *channelParameterAtIndex(int index) const;
-    int channelParameterCount() const;
-    const QVector<ChannelParameter*> channelParameters() const;
-
-    void createChannelsFromParameter(ChannelParameter *, ChannelInfo::ChannelType type = ChannelInfo::ChannelTypeNumber);
 
     Clip *clip() const;
     virtual void restore(Project &);
@@ -81,6 +78,8 @@ public:
     virtual void writeToJson(QJsonObject &) const;
 
 protected:
+    virtual void addedToClip(Clip*);
+    virtual void layerChanged(Layer*);
     virtual void startTimeUpdated(double);
     virtual void durationUpdated(double);
     void prepareContext(ClipEffectEvaluationContext &) const;
@@ -89,6 +88,8 @@ public slots:
     photon::Channel *addChannel(const photon::ChannelInfo &info = ChannelInfo{}, int index = -1);
     void removeChannel(int index);
     void channelUpdatedSlot(photon::Channel *);
+
+    void createChannelsFromParameter(ChannelParameter *, ChannelInfo::ChannelType type = ChannelInfo::ChannelTypeNumber);
 
 signals:
 
@@ -99,6 +100,7 @@ signals:
 
 private:
     friend class Clip;
+    friend class CanvasLayerGroup;
     class Impl;
     Impl *m_impl;
 };

@@ -10,6 +10,9 @@
 #include "canvas/fill/fillcoloreffect.h"
 #include "canvas/blurclipeffect.h"
 #include "canvas/distort/kaleidoscopeclipeffect.h"
+#include "canvas/draw/cloudtunnel.h"
+#include "canvas/draw/imageclipeffect.h"
+#include "canvas/style/strokeclipeffect.h"
 
 #include "strobe/beatstrobeeffect.h"
 
@@ -28,7 +31,10 @@ bool PluginClipEffects::initialize(const PluginContext &context)
     photonApp->plugins()->registerClipEffect(BeatStrobeEffect::info());
     photonApp->plugins()->registerClipEffect(FillColorEffect::info());
     photonApp->plugins()->registerClipEffect(BlurClipEffect::info());
+    photonApp->plugins()->registerClipEffect(CloudTunnel::info());
     photonApp->plugins()->registerClipEffect(KaleidoscopeClipEffect::info());
+    photonApp->plugins()->registerClipEffect(ImageClipEffect::info());
+    photonApp->plugins()->registerClipEffect(StrokeClipEffect::info());
 
     return true;
 }

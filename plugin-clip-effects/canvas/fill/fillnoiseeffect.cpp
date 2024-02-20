@@ -5,6 +5,9 @@
 #include "channel/parameter/optionchannelparameter.h"
 #include "util/gilconcurrent.h"
 #include "util/utils.h"
+#include "pixel/canvas.h"
+#include "opengl/openglshader.h"
+#include "opengl/openglplane.h"
 
 using namespace boost::gil;
 namespace photon {
@@ -28,10 +31,32 @@ void FillNoiseEffect::init()
     addChannelParameter(new ColorChannelParameter("colorB", Qt::black));
 }
 
+void FillNoiseEffect::initializeContext(QOpenGLContext *t_context, Canvas *t_canvas)
+{
+    m_texture = new OpenGLTexture;
+    m_texture->resize(t_context, QImage::Format::Format_ARGB32_Premultiplied, t_canvas->width(), t_canvas->height());
+
+    m_plane = new OpenGLPlane(t_context, bounds_d{-1,-1,1,1}, false);
+    m_shader = new OpenGLShader(t_context, ":/resources/shader/BasicTextureVertex.vert",
+                                ":/resources/shader/texture.frag");
+    m_shader->bind(t_context);
+
+}
+
+void FillNoiseEffect::canvasResized(QOpenGLContext *t_context, Canvas *t_canvas)
+{
+    m_texture->resize(t_context, QImage::Format::Format_ARGB32_Premultiplied, t_canvas->width(), t_canvas->height());
+}
+
 void FillNoiseEffect::evaluate(CanvasClipEffectEvaluationContext &t_context)
 {
     //m_noise.noise()
     //t_context.canvasImage
+
+    int w = t_context.canvas->width();
+    int h = t_context.canvas->height();
+
+    QImage image{w,h,QImage::Format_ARGB32_Premultiplied};
 
     NoiseGenerator noise;
 
@@ -48,11 +73,11 @@ void FillNoiseEffect::evaluate(CanvasClipEffectEvaluationContext &t_context)
     noise.setInterpolation(static_cast<NoiseGenerator::Interpolation>(t_context.channelValues["interpolation"].toInt()));
     noise.setSeed(t_context.channelValues["seed"].toInt());
     int pitch = 4;
-    int scanWidth = t_context.canvasImage->width() * pitch;
+    int scanWidth = w * pitch;
 
-    auto view = interleaved_view(t_context.canvasImage->width(), t_context.canvasImage->height(),reinterpret_cast<bgra8_ptr_t>(t_context.canvasImage->bits()),scanWidth);
+    auto view = interleaved_view(w,h,reinterpret_cast<bgra8_ptr_t>(image.bits()),scanWidth);
 
-    bounds_i outBounds{t_context.canvasImage->rect()};
+    bounds_i outBounds{0,0,w,h};
 
     concurrentViewTransform<bgra8_view_t>(view, outBounds,[&noise, &colorA, &colorB](const bgra8_view_t &output, const bounds_i &bounds)
     {
@@ -76,6 +101,13 @@ void FillNoiseEffect::evaluate(CanvasClipEffectEvaluationContext &t_context)
         }
     }
     );
+
+    m_texture->loadRaster(t_context.openglContext, &image);
+    m_shader->bind(t_context.openglContext);
+    m_shader->setTexture("tex",m_texture->handle());
+
+    m_plane->draw();
+
 }
 
 ClipEffectInformation FillNoiseEffect::info()

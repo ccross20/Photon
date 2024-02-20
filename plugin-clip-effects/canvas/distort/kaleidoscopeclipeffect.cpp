@@ -23,6 +23,26 @@ void KaleidoscopeClipEffect::init()
 
 }
 
+void KaleidoscopeClipEffect::initializeContext(QOpenGLContext *t_context, Canvas *t_canvas)
+{
+    m_plane = new OpenGLPlane(t_context, bounds_d{-1,-1,1,1}, false);
+    m_shader = new OpenGLShader(t_context, ":/resources/shader/BasicTextureVertex.vert",
+                                ":/clip-effect-resources/shader/distort/kaleidoscope.frag");
+
+    m_basicShader = new OpenGLShader(t_context, ":/resources/shader/BasicTextureVertex.vert",
+                                     ":/resources/shader/texture.frag");
+    m_shader->bind(t_context);
+
+    m_texture = new OpenGLTexture;
+    m_texture->resize(t_context, QImage::Format::Format_ARGB32_Premultiplied, t_canvas->width(), t_canvas->height());
+
+}
+
+void KaleidoscopeClipEffect::canvasResized(QOpenGLContext *t_context, Canvas *t_canvas)
+{
+    m_texture->resize(t_context, QImage::Format::Format_ARGB32_Premultiplied, t_canvas->width(), t_canvas->height());
+}
+
 void KaleidoscopeClipEffect::evaluate(CanvasClipEffectEvaluationContext &t_context)
 {
     //float w = static_cast<float>(t_context.canvasImage->width());
@@ -31,22 +51,6 @@ void KaleidoscopeClipEffect::evaluate(CanvasClipEffectEvaluationContext &t_conte
     double val1 = t_context.channelValues["value1"].toDouble();
     double val2 = t_context.channelValues["value2"].toDouble();
 
-    if(!m_plane)
-    {
-        m_plane = new OpenGLPlane(t_context.openglContext, bounds_d{-1,-1,1,1}, false);
-        m_shader = new OpenGLShader(t_context.openglContext, ":/resources/shader/BasicTextureVertex.vert",
-                                    ":/clip-effect-resources/shader/distort/kaleidoscope.frag");
-
-        m_basicShader = new OpenGLShader(t_context.openglContext, ":/resources/shader/BasicTextureVertex.vert",
-                                    ":/resources/shader/texture.frag");
-        m_shader->bind(t_context.openglContext);
-
-        int w = t_context.canvas->width();
-        int h = t_context.canvas->height();
-
-        m_texture = new OpenGLTexture;
-        m_texture->resize(t_context.openglContext, QImage::Format::Format_ARGB32_Premultiplied, w, h);
-    }
 
     OpenGLFrameBuffer buffer(m_texture, t_context.openglContext);
     t_context.openglContext->functions()->glClearColor(.0f,.0f,.0f,.0f);

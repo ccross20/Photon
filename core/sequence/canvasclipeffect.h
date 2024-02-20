@@ -9,15 +9,11 @@ namespace photon {
 class PHOTONCORE_EXPORT CanvasClipEffectEvaluationContext : public ClipEffectEvaluationContext
 {
 public:
-    CanvasClipEffectEvaluationContext(ProcessContext &context):ClipEffectEvaluationContext(context),canvasImage(context.canvasImage),
-        previousCanvasImage(context.previousCanvasImage){}
+    CanvasClipEffectEvaluationContext(ProcessContext &context):ClipEffectEvaluationContext(context){}
 
     QOpenGLContext *openglContext = nullptr;
-    QImage *canvasImage = nullptr;
-    QImage *previousCanvasImage = nullptr;
     OpenGLFrameBuffer *buffer = nullptr;
     Canvas *canvas = nullptr;
-    PixelSource *source = nullptr;
 };
 
 
@@ -30,8 +26,14 @@ public:
     CanvasClipEffect(const QByteArray &t_id = QByteArray());
     virtual ~CanvasClipEffect();
 
+    virtual void initializeContext(QOpenGLContext *, Canvas *);
+    virtual void canvasResized(QOpenGLContext *, Canvas *);
     virtual void processChannels(ProcessContext &) override;
     virtual void evaluate(CanvasClipEffectEvaluationContext &) = 0;
+
+protected:
+
+    virtual void layerChanged(Layer*) override;
 };
 
 } // namespace photon

@@ -9,6 +9,7 @@
 #include "sequence/fixtureclip.h"
 #include "sequence/canvasclip.h"
 #include "sequence/clipeffect.h"
+#include "sequence/canvaslayergroup.h"
 #include "pixel/pixellayout.h"
 
 namespace photon {
@@ -176,10 +177,11 @@ MasterLayerData::MasterLayerData(MasterLayer *t_layer) : AbstractTreeData(t_laye
 
 ClipData::ClipData(Clip *t_clip) : AbstractTreeData(t_clip->name(), t_clip->uniqueId()),m_clip(t_clip)
 {
-    m_maskFolder = new MaskData(m_clip);
-    m_falloffData = new FalloffData(m_clip);
+
+    m_parameterData = new ClipParameterData(m_clip);
     m_clipEffectData = new ClipEffectFolderData(m_clip);
 
+    addChild(m_parameterData);
 
     auto fixtureClip = dynamic_cast<FixtureClip*>(t_clip);
     auto canvasClip = dynamic_cast<CanvasClip*>(t_clip);
@@ -188,14 +190,18 @@ ClipData::ClipData(Clip *t_clip) : AbstractTreeData(t_clip->name(), t_clip->uniq
     if(fixtureClip)
     {
         addChild(new StateData(fixtureClip));
+        m_maskFolder = new MaskData(fixtureClip);
+        m_falloffData = new FalloffData(fixtureClip);
     }
 
     if(fixtureClip || canvasClip)
         addChild(m_clipEffectData);
 
-
-    addChild(m_maskFolder);
-    addChild(m_falloffData);
+    if(fixtureClip)
+    {
+        addChild(m_maskFolder);
+        addChild(m_falloffData);
+    }
 
     if(t_clip)
     {
@@ -210,11 +216,13 @@ ClipData::ClipData(Clip *t_clip) : AbstractTreeData(t_clip->name(), t_clip->uniq
         }
     }
 
+    /*
     if(canvasClip)
     {
         m_pixelLayoutData = new PixelLayoutFolderData(canvasClip);
         addChild(m_pixelLayoutData);
     }
+*/
 
 
 }
@@ -265,6 +273,10 @@ FalloffEffectData::FalloffEffectData(FalloffEffect *t_effect):AbstractTreeData(t
 
 }
 
+ClipParameterData::ClipParameterData(Clip *t_clip): AbstractTreeData("Parameters","parameters"),m_clip(t_clip)
+{
+
+}
 
 ClipEffectFolderData::ClipEffectFolderData(Clip *t_clip): AbstractTreeData("Effects","effects"),m_clip(t_clip)
 {
@@ -354,14 +366,14 @@ PixelLayoutData::PixelLayoutData(PixelLayout *t_layout):AbstractTreeData(t_layou
 
 }
 
-PixelLayoutFolderData::PixelLayoutFolderData(CanvasClip *t_clip):AbstractTreeData("Pixel Layout", "pixel-layout"),m_clip(t_clip)
+PixelLayoutFolderData::PixelLayoutFolderData(CanvasLayerGroup *t_clip):AbstractTreeData("Pixel Layout", "pixel-layout"),m_layer(t_clip)
 {
-    connect(m_clip, &CanvasClip::pixelLayoutAdded, this, &PixelLayoutFolderData::pixelLayoutAdded);
-    connect(m_clip, &CanvasClip::pixelLayoutRemoved, this, &PixelLayoutFolderData::pixelLayoutRemoved);
+    connect(m_layer, &CanvasLayerGroup::pixelLayoutAdded, this, &PixelLayoutFolderData::pixelLayoutAdded);
+    connect(m_layer, &CanvasLayerGroup::pixelLayoutRemoved, this, &PixelLayoutFolderData::pixelLayoutRemoved);
 
     for(int i = 0; i < t_clip->pixelLayoutCount(); ++i)
     {
-        auto effectData = new PixelLayoutData(m_clip->pixelLayoutAtIndex(i));
+        auto effectData = new PixelLayoutData(m_layer->pixelLayoutAtIndex(i));
         addChild(effectData);
     }
     addChild(new CreateData("Add Pixel Layout..."));
@@ -409,10 +421,10 @@ CreateData::CreateData(const QString &name): AbstractTreeData(name)
 
 }
 
-FalloffData::FalloffData(Clip *t_clip): AbstractTreeData("Falloff","falloff"),m_clip(t_clip)
+FalloffData::FalloffData(FixtureClip *t_clip): AbstractTreeData("Falloff","falloff"),m_clip(t_clip)
 {
-    connect(m_clip, &Clip::falloffEffectAdded, this, &FalloffData::effectAdded);
-    connect(m_clip, &Clip::falloffEffectRemoved, this, &FalloffData::effectRemoved);
+    connect(m_clip, &FixtureClip::falloffEffectAdded, this, &FalloffData::effectAdded);
+    connect(m_clip, &FixtureClip::falloffEffectRemoved, this, &FalloffData::effectRemoved);
 
     for(int i = 0; i < t_clip->falloffEffectCount(); ++i)
     {
@@ -454,10 +466,10 @@ void FalloffData::effectMoved(photon::FalloffEffect *t_effect)
 
 }
 
-MaskData::MaskData(Clip *t_clip): AbstractTreeData("Selection Mask","mask"),m_clip(t_clip)
+MaskData::MaskData(FixtureClip *t_clip): AbstractTreeData("Selection Mask","mask"),m_clip(t_clip)
 {
-    connect(m_clip, &Clip::maskAdded, this, &MaskData::effectAdded);
-    connect(m_clip, &Clip::maskRemoved, this, &MaskData::effectRemoved);
+    connect(m_clip, &FixtureClip::maskAdded, this, &MaskData::effectAdded);
+    connect(m_clip, &FixtureClip::maskRemoved, this, &MaskData::effectRemoved);
 
     for(int i = 0; i < t_clip->maskEffectCount(); ++i)
     {

@@ -1,5 +1,6 @@
 #include "layer_p.h"
 #include "sequence.h"
+#include "layergroup.h"
 
 namespace photon {
 
@@ -26,6 +27,16 @@ Layer::Layer(const QString &t_name, const QByteArray &layerType, QObject *parent
 Layer::~Layer()
 {
     delete m_impl;
+}
+
+LayerGroup *Layer::parentGroup() const
+{
+    return dynamic_cast<LayerGroup*>(parent());
+}
+
+QWidget *Layer::createEditor()
+{
+    return nullptr;
 }
 
 QByteArray Layer::uniqueId() const

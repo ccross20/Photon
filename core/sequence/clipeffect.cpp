@@ -11,16 +11,6 @@ void ClipEffect::Impl::processContext( ClipEffectEvaluationContext &t_context, d
 
 }
 
-ChannelParameter *ClipEffect::Impl::findChannelParameter(const QByteArray &t_uniqueId)
-{
-    for(auto channelParam : channelParameters)
-    {
-        if(channelParam->uniqueId() == t_uniqueId)
-            return channelParam;
-    }
-    return nullptr;
-}
-
 QVector<double> ClipEffect::Impl::valuesForChannel(const QByteArray &t_uniqueId, double t_time)
 {
     QVector<double> results;
@@ -56,10 +46,12 @@ ClipEffect::ClipEffect(const QByteArray &t_id):m_impl(new Impl)
 {
     m_impl->id = t_id;
     m_impl->uniqueId = QUuid::createUuid().toByteArray();
+    m_impl->parameters = new ChannelParameterContainer;
 }
 
 ClipEffect::~ClipEffect()
 {
+    delete m_impl->parameters;
     delete m_impl;
 }
 
@@ -69,33 +61,27 @@ void ClipEffect::processChannels(ProcessContext &t_context)
 
 }
 
+void ClipEffect::addChannelParameter(ChannelParameter *t_param)
+{
+    m_impl->parameters->addChannelParameter(t_param);
+}
+
+void ClipEffect::removeChannelParameter(ChannelParameter *t_param)
+{
+    m_impl->parameters->removeChannelParameter(t_param);
+}
+
+ChannelParameterContainer *ClipEffect::parameters() const
+{
+    return m_impl->parameters;
+}
+
 void ClipEffect::prepareContext(ClipEffectEvaluationContext &t_context) const
 {
     t_context.strength = clip()->strengthAtTime(t_context.relativeTime);
 
-    t_context.channelValues.clear();
-    for(auto channelParam : channelParameters())
-    {
-        auto values = m_impl->valuesForChannel(channelParam->uniqueId(), t_context.relativeTime);
+    t_context.channelValues = m_impl->parameters->valuesFromChannels(m_impl->channels, t_context.relativeTime);
 
-        if(values.length() == channelParam->channels())
-            t_context.channelValues.insert(channelParam->uniqueId(), channelParam->channelsToVariant(values));
-        else
-        {
-            if(channelParam->type() == ChannelParameter::ChannelParameterColor)
-            {
-                t_context.channelValues.insert(channelParam->uniqueId(), m_impl->colorForChannel(channelParam, t_context.relativeTime));
-            }
-            else
-                t_context.channelValues.insert(channelParam->uniqueId(), channelParam->value());
-        }
-    }
-/*
-    for(const auto &channel : channels())
-    {
-        t_context.channelValues.insert(channel->uniqueId(), channel->processDouble(t_context.relativeTime));
-    }
-    */
 
 }
 
@@ -250,34 +236,29 @@ int ClipEffect::channelCount() const
     return m_impl->channels.length();
 }
 
-void ClipEffect::addChannelParameter(ChannelParameter *t_parameter)
+void ClipEffect::addedToClip(Clip *t_clip)
 {
-    m_impl->channelParameters.append(t_parameter);
+
 }
 
-void ClipEffect::removeChannelParameter(ChannelParameter *t_parameter)
+void ClipEffect::layerChanged(Layer *t_layer)
 {
-    m_impl->channelParameters.removeOne(t_parameter);
+
 }
 
-ChannelParameter *ClipEffect::channelParameterAtIndex(int t_index) const
+void ClipEffect::createChannelsFromParameter(ChannelParameter *t_param, ChannelInfo::ChannelType t_type)
 {
-    return m_impl->channelParameters[t_index];
-}
+    auto channels = m_impl->parameters->createChannelsFromParameter(t_param, t_type);
 
-const QVector<ChannelParameter*> ClipEffect::channelParameters() const
-{
-    return m_impl->channelParameters;
-}
-
-int ClipEffect::channelParameterCount() const
-{
-    return m_impl->channelParameters.count();
+    for(const auto &channelInfo : channels)
+        addChannel(channelInfo);
 }
 
 QWidget *ClipEffect::createEditor()
 {
-    auto paramWidget = new ChannelParameterWidget(m_impl->channelParameters, this);
+    auto paramWidget = new ChannelParameterWidget(m_impl->parameters->channelParameters(), [this](ChannelParameter *t_param){
+        return channelsForParameter(t_param).isEmpty();
+    });
     connect(paramWidget, &ChannelParameterWidget::addChannel,this, &ClipEffect::createChannelsFromParameter);
 
     return paramWidget;
@@ -285,52 +266,6 @@ QWidget *ClipEffect::createEditor()
 
 void ClipEffect::restore(Project &)
 {
-
-}
-
-void ClipEffect::createChannelsFromParameter(ChannelParameter *t_param, ChannelInfo::ChannelType t_type)
-{
-
-    if(t_type == ChannelInfo::ChannelTypeNumber)
-    {
-        if(t_param->channels() == 1)
-        {
-            ChannelInfo info;
-            info.name = t_param->name();
-            info.uniqueId = t_param->uniqueId();
-            info.type = ChannelInfo::ChannelTypeNumber;
-            info.defaultValue = t_param->value();
-            addChannel(info);
-        }
-        else
-        {
-            int index = 0;
-            auto values = t_param->variantToChannels(t_param->value());
-            for(const auto &name : t_param->channelNames())
-            {
-                ChannelInfo info;
-                info.name = t_param->name() + "." + name;
-                info.uniqueId = t_param->uniqueId() + "." + name.toLatin1();
-                info.type = ChannelInfo::ChannelTypeNumber;
-                info.defaultValue = values[index];
-                info.parentName = t_param->name();
-                info.parentUniqueId = t_param->uniqueId();
-                info.subChannelIndex = index++;
-                addChannel(info);
-            }
-        }
-    }
-    else
-    {
-        ChannelInfo info;
-        info.name = t_param->name();
-        info.uniqueId = t_param->uniqueId();
-        info.type = t_type;
-        info.defaultValue = t_param->value();
-        addChannel(info);
-    }
-
-
 
 }
 
@@ -355,16 +290,7 @@ void ClipEffect::readFromJson(const QJsonObject &t_json, const LoadContext &t_co
         m_impl->channels.append(channel);
     }
 
-
-    auto channelParamArray = t_json.value("channelParameters").toArray();
-    for(auto channelJson : channelParamArray)
-    {
-        auto jsonObj = channelJson.toObject();
-
-        auto channelParam = m_impl->findChannelParameter(jsonObj.value("uniqueId").toString().toLatin1());
-        if(channelParam)
-            channelParam->readFromJson(jsonObj);
-    }
+    m_impl->parameters->readFromJson(t_json, t_context);
 }
 
 void ClipEffect::writeToJson(QJsonObject &t_json) const
@@ -382,14 +308,7 @@ void ClipEffect::writeToJson(QJsonObject &t_json) const
     t_json.insert("channels", array);
 
 
-    QJsonArray paramArray;
-    for(auto channelParam : m_impl->channelParameters)
-    {
-        QJsonObject channelObj;
-        channelParam->writeToJson(channelObj);
-        paramArray.append(channelObj);
-    }
-    t_json.insert("channelParameters", paramArray);
+    m_impl->parameters->writeToJson(t_json);
 }
 
 

@@ -1,5 +1,5 @@
 #include "beatfalloff.h"
-#include "sequence/clip.h"
+#include "sequence/fixtureclip.h"
 #include "sequence/sequence.h"
 #include "sequence/beatlayer.h"
 

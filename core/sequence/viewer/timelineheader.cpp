@@ -6,6 +6,7 @@
 #include <QPainter>
 #include <QPaintEvent>
 #include <QScrollBar>
+#include <QPushButton>
 #include "sequence/layer.h"
 #include "sequence/layergroup.h"
 #include "sequence/sequence.h"
@@ -79,14 +80,20 @@ Layer *LayerHeader::layer() const
 class LayerGroupHeader::Impl
 {
 public:
-    QComboBox *canvasCombo;
+    QPushButton *editButton;
+    QVBoxLayout *subLayerLayout;
 };
 
 
 
 LayerGroupHeader::LayerGroupHeader(LayerGroup *t_group) : LayerHeader(t_group),m_impl(new Impl)
 {
+    m_impl->subLayerLayout = new QVBoxLayout;
+    m_impl->subLayerLayout->setContentsMargins(20,0,0,0);
 
+    connect(t_group, &LayerGroup::layerAdded,this,&LayerGroupHeader::layerAdded);
+    connect(t_group, &LayerGroup::layerRemoved,this,&LayerGroupHeader::layerRemoved);
+    connect(t_group, &LayerGroup::layerUpdated,this,&LayerGroupHeader::layerUpdated);
 }
 
 LayerGroupHeader::~LayerGroupHeader()
@@ -94,30 +101,66 @@ LayerGroupHeader::~LayerGroupHeader()
     delete m_impl;
 }
 
+void LayerGroupHeader::layerUpdated(photon::Layer *)
+{
+
+}
+
+void LayerGroupHeader::layerAdded(photon::Layer *t_layer)
+{
+    auto header = new LayerHeader(t_layer);
+    header->buildLayout();
+    m_impl->subLayerLayout->addWidget(header);
+
+    setMaximumHeight(layer()->height());
+}
+
+void LayerGroupHeader::layerRemoved(photon::Layer *)
+{
+
+}
+
 LayerGroup *LayerGroupHeader::group() const
 {
     return static_cast<LayerGroup*>(layer());
 }
 
+void LayerGroupHeader::editLayerSlot()
+{
+    emit editLayer(layer());
+}
+
 void LayerGroupHeader::buildLayout()
 {
-    QVBoxLayout *vLayout = new QVBoxLayout;
-    vLayout->setContentsMargins(0,0,0,0);
+
+    QVBoxLayout *masterLayout = new QVBoxLayout;
+    masterLayout->setContentsMargins(0,0,0,0);
 
     QHBoxLayout *hLayout = new QHBoxLayout;
     hLayout->setContentsMargins(0,0,0,0);
     hLayout->addWidget(label());
 
-    m_impl->canvasCombo = new QComboBox;
+    m_impl->editButton = new QPushButton("Edit");
 
-    for(auto canvas : photonApp->project()->canvases()->canvases())
-        m_impl->canvasCombo->addItem(canvas->name());
+    connect(m_impl->editButton, &QPushButton::clicked, this, &LayerGroupHeader::editLayerSlot);
 
-    hLayout->addWidget(m_impl->canvasCombo);
+    hLayout->addWidget(m_impl->editButton);
 
-    vLayout->addLayout(hLayout);
-    vLayout->addStretch();
-    setLayout(vLayout);
+    masterLayout->addLayout(hLayout);
+
+
+    for(auto layer : group()->layers())
+    {
+        auto header = new LayerHeader(layer);
+        header->buildLayout();
+        m_impl->subLayerLayout->addWidget(header);
+    }
+
+    masterLayout->addLayout(m_impl->subLayerLayout);
+
+
+    //m_impl->subLayerLayout->addStretch();
+    setLayout(masterLayout);
 }
 
 
@@ -232,6 +275,8 @@ void TimelineHeader::layerAdded(photon::Layer *t_layer)
     if(t_layer->isGroup())
     {
         header = new LayerGroupHeader(static_cast<LayerGroup*>(t_layer));
+
+        connect(header, SIGNAL(editLayer(photon::Layer *)), this, SIGNAL(editLayer(photon::Layer *)));
     }
     else
     {
@@ -253,6 +298,7 @@ void TimelineHeader::layerRemoved(photon::Layer *t_layer)
 
     if(header)
     {
+        disconnect(header, SIGNAL(editLayer()), this, SIGNAL(editLayer()));
         m_impl->headers.erase(it);
         m_impl->vLayout->removeWidget(header);
     }

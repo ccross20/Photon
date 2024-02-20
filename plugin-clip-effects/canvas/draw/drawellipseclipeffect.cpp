@@ -30,16 +30,27 @@ void DrawEllipseClipEffect::init()
     addChannelParameter(new ColorChannelParameter("color", Qt::red));
     addChannelParameter(new ColorChannelParameter("strokeColor", Qt::black));
 
-    QOffscreenSurface *surface = photonApp->surface();
 
-    QOpenGLContext context;
+}
 
-    context.setShareContext(QOpenGLContext::globalShareContext());
-    context.create();
-    context.makeCurrent(surface);
+void DrawEllipseClipEffect::initializeContext(QOpenGLContext *t_context, Canvas *)
+{
+    m_plane = new OpenGLPlane(t_context, bounds_d{-1,-1,1,1}, false);
+    m_shader = new OpenGLShader(t_context, ":/resources/shader/projectedvertex.vert",
+                                ":/clip-effect-resources/shader/ellipse.frag");
+    m_shader->bind(t_context);
+    m_viewportLoc = m_shader->uniformLocation("projMatrix");
+    m_cameraLoc = m_shader->uniformLocation("mvMatrix");
 
+    m_circleShader = new OpenGLShader(t_context, ":/resources/shader/projectedvertex.vert",
+                                      ":/clip-effect-resources/shader/circle.frag");
+    m_circleShader->bind(t_context);
+    m_circleViewportLoc = m_circleShader->uniformLocation("projMatrix");
+    m_circleCameraLoc = m_circleShader->uniformLocation("mvMatrix");
+}
 
-
+void DrawEllipseClipEffect::canvasResized(QOpenGLContext *, Canvas *)
+{
 
 }
 
@@ -47,22 +58,6 @@ void DrawEllipseClipEffect::evaluate(CanvasClipEffectEvaluationContext &t_contex
 {
     //float w = static_cast<float>(t_context.canvasImage->width());
     //float h = static_cast<float>(t_context.canvasImage->height());
-
-    if(!m_plane)
-    {
-        m_plane = new OpenGLPlane(t_context.openglContext, bounds_d{-1,-1,1,1}, false);
-        m_shader = new OpenGLShader(t_context.openglContext, ":/resources/shader/projectedvertex.vert",
-                                    ":/clip-effect-resources/shader/ellipse.frag");
-        m_shader->bind(t_context.openglContext);
-        m_viewportLoc = m_shader->uniformLocation("projMatrix");
-        m_cameraLoc = m_shader->uniformLocation("mvMatrix");
-
-        m_circleShader = new OpenGLShader(t_context.openglContext, ":/resources/shader/projectedvertex.vert",
-                                          ":/clip-effect-resources/shader/circle.frag");
-        m_circleShader->bind(t_context.openglContext);
-        m_circleViewportLoc = m_circleShader->uniformLocation("projMatrix");
-        m_circleCameraLoc = m_circleShader->uniformLocation("mvMatrix");
-    }
 
 
     QPointF pos = t_context.channelValues["position"].value<QPointF>();
@@ -95,14 +90,25 @@ void DrawEllipseClipEffect::evaluate(CanvasClipEffectEvaluationContext &t_contex
 
     QMatrix4x4 camMatrix;
     camMatrix.setToIdentity();
-    camMatrix.translate(pos.x(), pos.y());
-    camMatrix.translate(center.x(), center.y());
+    camMatrix.translate(pos.x()*2.0, pos.y()*2.0);
+    camMatrix.translate(center.x()*2.0, center.y()*2.0);
     camMatrix.rotate(rotation,0,0,1);
-    camMatrix.translate(-center.x(), -center.y());
-    m_shader->setMatrix(isCircle ? m_circleCameraLoc : m_cameraLoc, camMatrix);
+    camMatrix.translate(-center.x()*2.0, -center.y()*2.0);
+    shader->setMatrix(isCircle ? m_circleCameraLoc : m_cameraLoc, camMatrix);
 
     //m_canvas->texture()->bind(t_context.openglContext);
     //m_shader->setTexture("tex",m_canvas->texture()->handle());
+
+    if(strokeWidth > 0)
+    {
+        shader->setColor("fillColor", strokeColor);
+        shader->setFloat2("ratio", scale.x() + (strokeWidth/100.0), scale.y()+ (strokeWidth/100.0));
+        shader->setFloat("falloff", 0);
+        m_plane->draw(t_context.openglContext);
+    }
+
+
+
 
     shader->setColor("fillColor", color);
     shader->setFloat2("ratio", scale.x(), scale.y());

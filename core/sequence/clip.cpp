@@ -10,16 +10,18 @@
 #include "photoncore.h"
 #include "plugin/pluginfactory.h"
 #include "clipeffect_p.h"
+#include "channel/parameter/view/channelparameterwidget.h"
+#include "channel/parameter/channelparametercontainer.h"
+#include "channel/parameter/channelparameter.h"
 
 namespace photon {
 
 Clip::Impl::Impl(Clip *t_facade):facade(t_facade)
 {
+    parameters = new ChannelParameterContainer;
     uniqueId = QUuid::createUuid().toByteArray();
     easeInCurve.setType(QEasingCurve::Type::InOutCubic);
     easeOutCurve.setType(QEasingCurve::Type::InOutCubic);
-    falloffEffects.append(photonApp->plugins()->createFalloffEffect(ConstantFalloffEffect::info().effectId));
-    falloffEffects.back()->m_impl->clip = t_facade;
 }
 
 void Clip::Impl::setLayer(ClipLayer *t_layer)
@@ -27,19 +29,12 @@ void Clip::Impl::setLayer(ClipLayer *t_layer)
     if(layer)
         layer->removeClip(facade);
     layer = t_layer;
+    facade->layerDidChange(layer);
 }
 
 void Clip::Impl::setSequence(Sequence *t_sequence)
 {
     sequence = t_sequence;
-}
-
-double Clip::Impl::falloff(Fixture *t_fixture)
-{
-    if(falloffEffects.isEmpty())
-        return 0.0;
-
-    return falloffEffects.back()->falloff(t_fixture);
 }
 
 void Clip::Impl::markChanged()
@@ -63,9 +58,14 @@ Clip::Clip(double t_start, double t_duration, QObject *t_parent) : Clip(t_parent
 
 Clip::~Clip()
 {
-    for(auto effect : m_impl->falloffEffects)
-        delete effect;
+    delete m_impl->parameters;
     delete m_impl;
+}
+
+void Clip::layerDidChange(Layer *t_layer)
+{
+    for(auto effect : m_impl->clipEffects)
+        effect->layerChanged(t_layer);
 }
 
 QByteArray Clip::type() const
@@ -113,112 +113,25 @@ ClipLayer *Clip::layer() const
     return m_impl->layer;
 }
 
-double Clip::falloff(Fixture *t_fixture) const
-{
-    return m_impl->falloff(t_fixture);
-}
-
-void Clip::setDefaultFalloff(double t_falloff)
-{
-    m_impl->defaultFalloff = t_falloff;
-    m_impl->markChanged();
-    emit clipUpdated(this);
-}
-
-double Clip::defaultFalloff() const
-{
-    return m_impl->defaultFalloff;
-}
-
 void Clip::markChanged()
 {
     m_impl->markChanged();
 }
 
-void Clip::addFalloffEffect(FalloffEffect *t_effect)
+ChannelParameterContainer *Clip::parameters() const
 {
-    if(!m_impl->falloffEffects.isEmpty())
-        t_effect->m_impl->previousEffect = m_impl->falloffEffects.back();
-    m_impl->falloffEffects.append(t_effect);
-    t_effect->m_impl->clip = this;
-
-    emit falloffEffectAdded(t_effect);
-    m_impl->markChanged();
-}
-
-void Clip::removeFalloffEffect(FalloffEffect *t_effect)
-{
-    if(m_impl->falloffEffects.removeOne(t_effect))
-    {
-        t_effect->m_impl->clip = nullptr;
-        for(uint i = 1; i < m_impl->falloffEffects.length(); ++i)
-        {
-            m_impl->falloffEffects[i]->m_impl->previousEffect = m_impl->falloffEffects[i-1];
-        }
-
-        emit falloffEffectRemoved(t_effect);
-    }
-}
-
-FalloffEffect *Clip::falloffEffectAtIndex(int t_index) const
-{
-    return m_impl->falloffEffects[t_index];
-}
-
-void Clip::addMaskEffect(MaskEffect *t_effect)
-{
-    if(!m_impl->maskEffects.isEmpty())
-        t_effect->m_impl->previousEffect = m_impl->maskEffects.back();
-    m_impl->maskEffects.append(t_effect);
-    t_effect->m_impl->clip = this;
-
-    emit maskAdded(t_effect);
-    m_impl->markChanged();
-}
-
-void Clip::removeMaskEffect(MaskEffect *t_effect)
-{
-    if(m_impl->maskEffects.removeOne(t_effect))
-    {
-        t_effect->m_impl->clip = nullptr;
-        for(uint i = 1; i < m_impl->falloffEffects.length(); ++i)
-        {
-            m_impl->maskEffects[i]->m_impl->previousEffect = m_impl->maskEffects[i-1];
-        }
-
-        emit maskRemoved(t_effect);
-    }
-}
-
-MaskEffect *Clip::maskEffectAtIndex(int index) const
-{
-    return m_impl->maskEffects[index];
-}
-
-int Clip::maskEffectCount() const
-{
-    return m_impl->maskEffects.length();
-}
-
-const QVector<Fixture*> Clip::maskedFixtures() const
-{
-    if(m_impl->maskEffects.isEmpty())
-        return photonApp->project()->fixtures()->fixtures();
-    return m_impl->maskEffects.back()->process(photonApp->project()->fixtures()->fixtures());
-}
-
-int Clip::falloffEffectCount() const
-{
-    return m_impl->falloffEffects.length();
+    return m_impl->parameters;
 }
 
 bool Clip::timeIsValid(double t_time) const
 {
-    return m_impl->startTime < t_time && t_time < endTime() + m_impl->defaultFalloff;
+    return m_impl->startTime < t_time && t_time < endTime();
 }
 
 void Clip::processChannels(ProcessContext &t_context)
 {
+
+
     for(auto effect : m_impl->clipEffects)
     {
         effect->processChannels(t_context);
@@ -241,12 +154,6 @@ double Clip::strengthAtTime(double t_value) const
     }
 
     return strengthValue;
-}
-
-void Clip::maskUpdatedSlot(photon::MaskEffect *t_mask)
-{
-    emit maskUpdated(t_mask);
-    m_impl->markChanged();
 }
 
 void Clip::setStartTime(double t_value)
@@ -310,12 +217,6 @@ void Clip::durationUpdated(double t_value)
     }
     for(auto effect : m_impl->clipEffects)
         effect->durationUpdated(t_value);
-}
-
-void Clip::falloffUpdatedSlot(photon::FalloffEffect *t_falloff)
-{
-    emit falloffUpdated(t_falloff);
-    m_impl->markChanged();
 }
 
 void Clip::restore(Project &t_project)
@@ -414,9 +315,51 @@ void Clip::setEaseOutType(QEasingCurve::Type t_value)
     emit clipUpdated(this);
 }
 
+const QVector<Channel*> Clip::channelsForParameter(ChannelParameter *t_param) const
+{
+    QVector<Channel*> results;
+    for(auto channel : channels())
+    {
+        if(channel->uniqueId() == t_param->uniqueId())
+            return QVector<Channel*>{channel};
+        if(channel->parentUniqueId() == t_param->uniqueId())
+        {
+            results.resize(channel->subChannelIndex() + 1);
+            results[channel->subChannelIndex()] = channel;
+        }
+    }
+    return results;
+}
+
 QWidget *Clip::widget() const
 {
-    return nullptr;
+    if(m_impl->parameters->channelParameterCount() == 0)
+        return nullptr;
+
+    auto paramWidget = new ChannelParameterWidget(m_impl->parameters->channelParameters(), [this](ChannelParameter *t_param){
+        return channelsForParameter(t_param).isEmpty();
+    });
+    connect(paramWidget, &ChannelParameterWidget::addChannel,this, &Clip::createChannelsFromParameter);
+
+    return paramWidget;
+}
+
+void Clip::createChannelsFromParameter(ChannelParameter *t_param, ChannelInfo::ChannelType t_type)
+{
+    auto channels = m_impl->parameters->createChannelsFromParameter(t_param, t_type);
+
+    for(const auto &channelInfo : channels)
+        addChannel(channelInfo);
+}
+
+void Clip::addChannelParameter(ChannelParameter *t_param)
+{
+    m_impl->parameters->addChannelParameter(t_param);
+}
+
+void Clip::removeChannelParameter(ChannelParameter *t_param)
+{
+    m_impl->parameters->removeChannelParameter(t_param);
 }
 
 photon::Channel *Clip::addChannel(const photon::ChannelInfo &t_info, int t_index)
@@ -448,6 +391,11 @@ void Clip::clipEffectUpdatedSlot(photon::ClipEffect *t_effect)
     markChanged();
 }
 
+const QVector<ClipEffect*> &Clip::clipEffects() const
+{
+    return m_impl->clipEffects;
+}
+
 void Clip::addClipEffect(ClipEffect *t_effect)
 {
     m_impl->clipEffects.append(t_effect);
@@ -455,6 +403,9 @@ void Clip::addClipEffect(ClipEffect *t_effect)
     t_effect->m_impl->clip = this;
 
     emit clipEffectAdded(t_effect);
+    t_effect->addedToClip(this);
+    if(layer())
+        t_effect->layerChanged(layer());
     m_impl->markChanged();
 }
 
@@ -480,14 +431,10 @@ int Clip::clipEffectCount() const
 
 void Clip::readFromJson(const QJsonObject &t_json, const LoadContext &t_context)
 {
-    for(auto effect : m_impl->falloffEffects)
-        delete effect;
-    m_impl->falloffEffects.clear();
 
     m_impl->type = t_json.value("type").toString().toLatin1();
     m_impl->startTime = t_json.value("startTime").toDouble();
     m_impl->duration = t_json.value("duration").toDouble();
-    m_impl->defaultFalloff = t_json.value("defaultFalloff").toDouble();
     m_impl->easeInCurve.setType(static_cast<QEasingCurve::Type>(t_json.value("easeInType").toInt(QEasingCurve::Type::InOutCubic)));
     m_impl->easeOutCurve.setType(static_cast<QEasingCurve::Type>(t_json.value("easeOutType").toInt(QEasingCurve::Type::InOutCubic)));
     m_impl->easeInDuration = t_json.value("easeInDuration").toDouble();
@@ -513,6 +460,7 @@ void Clip::readFromJson(const QJsonObject &t_json, const LoadContext &t_context)
                 effect->readFromJson(effectObj, t_context);
                 effect->setParent(this);
                 m_impl->clipEffects.append(effect);
+                effect->addedToClip(this);
 
             }
             else
@@ -522,49 +470,6 @@ void Clip::readFromJson(const QJsonObject &t_json, const LoadContext &t_context)
         }
     }
 
-    if(t_json.contains("falloffEffects"))
-    {
-        auto effectArray = t_json.value("falloffEffects").toArray();
-
-        for(auto item : effectArray)
-        {
-            auto effectObj = item.toObject();
-            auto id = effectObj.value("id").toString();
-
-            auto effect = photonApp->plugins()->createFalloffEffect(id.toLatin1());
-
-            if(effect){
-                effect->readFromJson(effectObj);
-                if(!m_impl->falloffEffects.isEmpty())
-                    effect->m_impl->previousEffect = m_impl->falloffEffects.back();
-                m_impl->falloffEffects.append(effect);
-
-                effect->m_impl->clip = this;
-            }
-        }
-    }
-
-    if(t_json.contains("maskEffects"))
-    {
-        auto effectArray = t_json.value("maskEffects").toArray();
-
-        for(auto item : effectArray)
-        {
-            auto effectObj = item.toObject();
-            auto id = effectObj.value("id").toString();
-
-            auto effect = photonApp->plugins()->createMaskEffect(id.toLatin1());
-
-            if(effect){
-                effect->readFromJson(effectObj);
-                if(!m_impl->maskEffects.isEmpty())
-                    effect->m_impl->previousEffect = m_impl->maskEffects.back();
-                m_impl->maskEffects.append(effect);
-
-                effect->m_impl->clip = this;
-            }
-        }
-    }
 
     for(auto channel : m_impl->channels)
         delete channel;
@@ -580,7 +485,7 @@ void Clip::readFromJson(const QJsonObject &t_json, const LoadContext &t_context)
         m_impl->channels.append(channel);
     }
 
-    qDebug() << "Load clip" << name();
+    m_impl->parameters->readFromJson(t_json, t_context);
 
 }
 
@@ -589,7 +494,6 @@ void Clip::writeToJson(QJsonObject &t_json) const
     t_json.insert("type", QString(m_impl->type));
     t_json.insert("startTime", m_impl->startTime);
     t_json.insert("duration", m_impl->duration);
-    t_json.insert("defaultFalloff", m_impl->defaultFalloff);
     t_json.insert("easeInType", m_impl->easeInCurve.type());
     t_json.insert("easeOutType", m_impl->easeOutCurve.type());
     t_json.insert("easeInDuration", m_impl->easeInDuration);
@@ -609,27 +513,6 @@ void Clip::writeToJson(QJsonObject &t_json) const
     }
     t_json.insert("clipEffects", clipEffectArray);
 
-    QJsonArray falloffArray;
-    for(auto effect : m_impl->falloffEffects)
-    {
-        QJsonObject effectObj;
-        effectObj.insert("id", QString(effect->id()));
-        effect->writeToJson(effectObj);
-        falloffArray.append(effectObj);
-    }
-    t_json.insert("falloffEffects", falloffArray);
-
-
-    QJsonArray maskArray;
-    for(auto effect : m_impl->maskEffects)
-    {
-        QJsonObject effectObj;
-        effectObj.insert("id", QString(effect->id()));
-        effect->writeToJson(effectObj);
-        maskArray.append(effectObj);
-    }
-    t_json.insert("maskEffects", maskArray);
-
     QJsonArray array;
     for(auto channel : m_impl->channels)
     {
@@ -638,6 +521,8 @@ void Clip::writeToJson(QJsonObject &t_json) const
         array.append(channelObj);
     }
     t_json.insert("channels", array);
+
+    m_impl->parameters->writeToJson(t_json);
 }
 
 } // namespace photon

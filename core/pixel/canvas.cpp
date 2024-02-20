@@ -75,7 +75,7 @@ void Canvas::setSize(const QSize &t_size)
 
     context.doneCurrent();
 
-
+    emit sizeUpdated(m_impl->size);
     emit metadataUpdated();
 }
 
@@ -125,6 +125,7 @@ void Canvas::readFromJson(const QJsonObject &t_json, const LoadContext &)
     {
         auto sizeObj = t_json.value("size").toObject();
 
+
         m_impl->size.setWidth(std::max(std::min(sizeObj.value("width").toInt(1),10000),1));
         m_impl->size.setHeight(std::max(std::min(sizeObj.value("height").toInt(1),10000),1));
 
@@ -136,6 +137,8 @@ void Canvas::readFromJson(const QJsonObject &t_json, const LoadContext &)
     context.setShareContext(QOpenGLContext::globalShareContext());
     context.create();
     context.makeCurrent(surface);
+
+    qDebug() << m_impl->size;
 
     m_impl->texture = new OpenGLTexture(true);
     m_impl->texture->resize(&context, QImage::Format::Format_ARGB32_Premultiplied ,m_impl->size.width(), m_impl->size.height());

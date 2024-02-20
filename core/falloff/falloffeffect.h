@@ -34,7 +34,7 @@ public:
     void setName(const QString &);
     QString name() const;
 
-    Clip *clip() const;
+    FixtureClip *clip() const;
     int index() const;
     virtual double falloff(Fixture *) const = 0;
     virtual QWidget *createEditor() {return new QWidget();}
@@ -47,7 +47,7 @@ public:
 
 
 private:
-    friend class Clip;
+    friend class FixtureClip;
     class Impl;
     Impl *m_impl;
 };

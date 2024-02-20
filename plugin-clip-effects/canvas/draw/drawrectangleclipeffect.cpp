@@ -24,6 +24,7 @@ void DrawRectangleClipEffect::init()
 
 void DrawRectangleClipEffect::evaluate(CanvasClipEffectEvaluationContext &t_context)
 {
+    /*
     QPainter painter{t_context.canvasImage};
     painter.setRenderHint(QPainter::Antialiasing);
     painter.setOpacity(t_context.strength);
@@ -58,6 +59,7 @@ void DrawRectangleClipEffect::evaluate(CanvasClipEffectEvaluationContext &t_cont
     //painter.setOpacity(m_alphaParam->value().toDouble());
     //painter.fillPath(m_pathInputParam->value().value<QPainterPath>(),m_colorParam->value().value<QColor>());
     painter.fillPath(trans.map(path), color);
+*/
 
 }
 

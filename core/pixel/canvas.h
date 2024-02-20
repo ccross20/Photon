@@ -41,6 +41,7 @@ public:
     void writeToJson(QJsonObject &) const;
 
 signals:
+    void sizeUpdated(QSize);
     void metadataUpdated();
     void textureDidUpdate();
 

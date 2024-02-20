@@ -1,5 +1,5 @@
 #include "falloffeffect_p.h"
-#include "sequence/clip.h"
+#include "sequence/fixtureclip.h"
 
 namespace photon {
 
@@ -14,7 +14,7 @@ FalloffEffect::~FalloffEffect()
     delete m_impl;
 }
 
-Clip *FalloffEffect::clip() const
+FixtureClip *FalloffEffect::clip() const
 {
     return m_impl->clip;
 }

@@ -7,7 +7,7 @@
 #include "tracepathclip.h"
 #include "fixture/fixture.h"
 #include "fixture/capability/anglecapability.h"
-#include "sequence/clip.h"
+#include "sequence/fixtureclip.h"
 #include "project/project.h"
 #include "fixture/fixturecollection.h"
 
@@ -75,7 +75,7 @@ QWidget *TracePathClip::createEditor()
 void TracePathClip::autoAssignFixtures(double t_time)
 {
     fixtures.clear();
-    auto maskedFixtures = clip()->maskedFixtures();
+    auto maskedFixtures = fixtureClip()->maskedFixtures();
 
     double segLength = 1.0/maskedFixtures.length();
     double currentLength = 0.0;
@@ -176,7 +176,7 @@ void TracePathClip::evaluate(FixtureClipEffectEvaluationContext &t_context)
     if(currentLength < 0.0)
         currentLength = 1.0 - currentLength;
 
-    initialRelativeTime -= clip()->falloff(fixture);
+    initialRelativeTime -= fixtureClip()->falloff(fixture);
     auto pt = path.pointAtPercent(std::max(std::min(currentLength,1.0),0.0));
     QVector3D pt3D{static_cast<float>(pt.x()),0.0f, static_cast<float>(pt.y())};
 

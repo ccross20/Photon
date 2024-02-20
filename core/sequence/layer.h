@@ -19,8 +19,9 @@ public:
     void setName(const QString &name);
     QUuid guid() const;
     QByteArray layerType() const;
+    LayerGroup *parentGroup() const;
 
-
+    virtual QWidget *createEditor();
     virtual bool isGroup() const{return false;}
     virtual Layer *findLayerByGuid(const QUuid &guid);
     virtual void processChannels(ProcessContext &);

@@ -11,6 +11,7 @@ namespace photon {
 class FalloffData;
 class ClipEffectData;
 class ClipEffectFolderData;
+class ClipParameterData;
 class PixelLayoutFolderData;
 class MaskData;
 class FixtureClip;
@@ -95,6 +96,7 @@ private:
     FalloffData *m_falloffData;
     FolderData *m_channelFolder;
     StateData *m_stateData;
+    ClipParameterData *m_parameterData;
     PixelLayoutFolderData *m_pixelLayoutData;
     ClipEffectFolderData *m_clipEffectData;
     Clip *m_clip;
@@ -166,10 +168,10 @@ class FalloffData : public AbstractTreeData
 {
     Q_OBJECT
 public:
-    FalloffData(Clip*);
+    FalloffData(FixtureClip*);
     FalloffEffectData *findEffectData(FalloffEffect *);
 
-    Clip *clip() const{return m_clip;}
+    FixtureClip *clip() const{return m_clip;}
 
 private slots:
     void effectAdded(photon::FalloffEffect*);
@@ -177,7 +179,7 @@ private slots:
     void effectMoved(photon::FalloffEffect*);
 
 private:
-    Clip *m_clip;
+    FixtureClip *m_clip;
 };
 
 class PixelLayoutData : public AbstractTreeData
@@ -195,17 +197,17 @@ class PixelLayoutFolderData : public AbstractTreeData
 {
     Q_OBJECT
 public:
-    PixelLayoutFolderData(CanvasClip*);
+    PixelLayoutFolderData(CanvasLayerGroup*);
     PixelLayoutData *findPixelLayoutData(PixelLayout *);
 
-    CanvasClip *clip() const{return m_clip;}
+    CanvasLayerGroup *layer() const{return m_layer;}
 
 private slots:
     void pixelLayoutAdded(photon::PixelLayout*);
     void pixelLayoutRemoved(photon::PixelLayout*);
 
 private:
-    CanvasClip *m_clip;
+    CanvasLayerGroup *m_layer;
 };
 
 class MaskEffectData : public AbstractTreeData
@@ -237,6 +239,18 @@ private:
     Clip *m_clip;
 };
 
+class ClipParameterData : public AbstractTreeData
+{
+    Q_OBJECT
+public:
+    ClipParameterData(Clip*);
+
+    Clip *clip() const{return m_clip;}
+
+private:
+    Clip *m_clip;
+};
+
 class ClipEffectData : public AbstractTreeData
 {
     Q_OBJECT
@@ -259,10 +273,10 @@ class MaskData : public AbstractTreeData
 {
     Q_OBJECT
 public:
-    MaskData(Clip*);
+    MaskData(FixtureClip*);
     MaskEffectData *findEffectData(MaskEffect *);
 
-    Clip *clip() const{return m_clip;}
+    FixtureClip *clip() const{return m_clip;}
 
 private slots:
     void effectAdded(photon::MaskEffect*);
@@ -270,7 +284,7 @@ private slots:
     void effectMoved(photon::MaskEffect*);
 
 private:
-    Clip *m_clip;
+    FixtureClip *m_clip;
 };
 
 

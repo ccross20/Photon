@@ -157,11 +157,13 @@ SequenceWidget::SequenceWidget(QWidget *parent)
     connect(m_impl->curvePropertyEditor, &ClipStructureViewer::selectFalloff, this, &SequenceWidget::selectFalloff);
     connect(m_impl->curvePropertyEditor, &ClipStructureViewer::selectState, this, &SequenceWidget::selectState);
     connect(m_impl->curvePropertyEditor, &ClipStructureViewer::selectEffect, this, &SequenceWidget::selectEffect);
+    connect(m_impl->curvePropertyEditor, &ClipStructureViewer::selectClipParameter, this, &SequenceWidget::selectClipParameter);
     connect(m_impl->curvePropertyEditor, &ClipStructureViewer::selectMask, this, &SequenceWidget::selectMask);
     connect(m_impl->curvePropertyEditor, &ClipStructureViewer::selectClipEffect, this, &SequenceWidget::selectClipEffect);
     connect(m_impl->curvePropertyEditor, &ClipStructureViewer::clearSelection, this, &SequenceWidget::clearEditor);
     connect(m_impl->timebar, &TimeBar::changeTime, this, &SequenceWidget::gotoTime);
     connect(m_impl->viewer, &TimelineViewer::offsetChanged, this, &SequenceWidget::setOffset);
+    connect(m_impl->details, &TimelineHeader::editLayer, this, &SequenceWidget::editLayer);
 
     connect(m_impl->player, &QMediaPlayer::positionChanged, this, &SequenceWidget::positionChanged);
 
@@ -185,6 +187,18 @@ void SequenceWidget::setSequence(Sequence *t_sequence)
 Sequence *SequenceWidget::sequence() const
 {
     return m_impl->scene->sequence();
+}
+
+void SequenceWidget::editLayer(photon::Layer *t_layer)
+{
+    clearEditor();
+
+    QHBoxLayout *layout = new QHBoxLayout;
+    layout->setContentsMargins(0,0,0,0);
+    m_impl->effectEditor = t_layer->createEditor();
+    layout->addWidget(m_impl->effectEditor);
+
+    m_impl->effectEditorContainer->setLayout(layout);
 }
 
 void SequenceWidget::setScale(double t_scale)
@@ -288,6 +302,22 @@ void SequenceWidget::selectClipEffect(photon::ClipEffect *t_effect)
     }
 
 
+}
+
+void SequenceWidget::selectClipParameter(photon::Clip *t_clip)
+{
+    clearEditor();
+    QHBoxLayout *layout = new QHBoxLayout;
+    layout->setContentsMargins(0,0,0,0);
+
+    auto editor = t_clip->widget();
+
+    if(editor)
+    {
+        layout->addWidget(editor);
+        m_impl->effectEditor = editor;
+        m_impl->effectEditorContainer->setLayout(layout);
+    }
 }
 
 void SequenceWidget::selectState(photon::State *t_state)

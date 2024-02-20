@@ -40,28 +40,20 @@ public:
     Sequence *sequence() const;
     ClipLayer *layer() const;
     virtual void processChannels(ProcessContext &);
-    bool timeIsValid(double) const;
-    QByteArray type() const;    
-
-    void addMaskEffect(MaskEffect *);
-    void removeMaskEffect(MaskEffect *);
-    MaskEffect *maskEffectAtIndex(int index) const;
-    int maskEffectCount() const;
-    const QVector<Fixture*> maskedFixtures() const;
+    virtual bool timeIsValid(double) const;
+    QByteArray type() const;
     virtual QWidget *widget() const;
 
-    void addFalloffEffect(FalloffEffect *);
-    void removeFalloffEffect(FalloffEffect *);
-    FalloffEffect *falloffEffectAtIndex(int index) const;
-    int falloffEffectCount() const;
-    void setDefaultFalloff(double);
-    double defaultFalloff() const;
-    double falloff(Fixture *t_fixture) const;
+    ChannelParameterContainer *parameters() const;
+    void addChannelParameter(ChannelParameter *);
+    void removeChannelParameter(ChannelParameter *);
+    const QVector<Channel*> channelsForParameter(ChannelParameter *) const;
 
     void addClipEffect(ClipEffect *);
     void removeClipEffect(ClipEffect *);
     ClipEffect *clipEffectAtIndex(int index) const;
     int clipEffectCount() const;
+    const QVector<ClipEffect*> &clipEffects() const;
 
     void setStartTime(double);
     void setEndTime(double);
@@ -98,32 +90,24 @@ public:
 protected:
     virtual void startTimeUpdated(double);
     virtual void durationUpdated(double);
+    virtual void layerDidChange(Layer *);
     void setType(const QByteArray t_type);
 
 
 public slots:
-    void falloffUpdatedSlot(photon::FalloffEffect *);
     void channelUpdatedSlot(photon::Channel *);
-    void maskUpdatedSlot(photon::MaskEffect *);
     void clipEffectUpdatedSlot(photon::ClipEffect *);
     photon::Channel *addChannel(const photon::ChannelInfo &info = ChannelInfo{}, int index = -1);
     void removeChannel(int index);
+    void createChannelsFromParameter(ChannelParameter *, ChannelInfo::ChannelType type = ChannelInfo::ChannelTypeNumber);
 
 signals:
 
-    void falloffEffectAdded(photon::FalloffEffect*);
-    void falloffEffectRemoved(photon::FalloffEffect*);
-    void maskAdded(photon::MaskEffect *);
-    void maskRemoved(photon::MaskEffect *);
-    void maskUpdated(photon::MaskEffect *);
-    void maskMoved(photon::MaskEffect *);
     void clipEffectAdded(photon::ClipEffect *);
     void clipEffectRemoved(photon::ClipEffect *);
     void clipEffectUpdated(photon::ClipEffect *);
     void clipEffectMoved(photon::ClipEffect *);
-    void falloffMapChanged(photon::FixtureFalloffMap *);
     void clipUpdated(photon::Clip *);
-    void falloffUpdated(photon::FalloffEffect *);
     void channelUpdated(photon::Channel *);
     void channelAdded(photon::Channel *);
     void channelRemoved(photon::Channel *);

@@ -3,7 +3,7 @@
 #include "aligntoarrowclip.h"
 #include "fixture/fixture.h"
 #include "fixture/capability/anglecapability.h"
-#include "sequence/clip.h"
+#include "sequence/fixtureclip.h"
 #include "project/project.h"
 #include "scene/sceneiterator.h"
 #include "photoncore.h"
@@ -47,7 +47,7 @@ void AlignToArrowClip::evaluate(FixtureClipEffectEvaluationContext &t_context)
 
     double initialRelativeTime = t_context.globalTime - clip()->startTime();
 
-    initialRelativeTime -= clip()->falloff(fixture);
+    initialRelativeTime -= fixtureClip()->falloff(fixture);
 
     auto arrowMatrix = m_arrow->globalMatrix();
 

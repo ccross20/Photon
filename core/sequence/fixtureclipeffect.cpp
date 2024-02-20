@@ -1,6 +1,6 @@
 #include "fixtureclipeffect.h"
 #include "sequence.h"
-#include "clip.h"
+#include "fixtureclip.h"
 
 namespace photon {
 
@@ -14,21 +14,26 @@ FixtureClipEffect::~FixtureClipEffect()
 
 }
 
+FixtureClip *FixtureClipEffect::fixtureClip() const
+{
+    return static_cast<FixtureClip*>(clip());
+}
+
 void FixtureClipEffect::processChannels(ProcessContext &t_context)
 {
     double initialRelativeTime = t_context.globalTime - clip()->startTime();
 
     FixtureClipEffectEvaluationContext localContext(t_context);
     localContext.relativeTime = initialRelativeTime;
-    localContext.fixtureTotal = clip()->maskedFixtures().length();
+    localContext.fixtureTotal = fixtureClip()->maskedFixtures().length();
     int index = 0;
-    for(auto fixture : clip()->maskedFixtures())
+    for(auto fixture : fixtureClip()->maskedFixtures())
     {
         if(!fixture)
             continue;
         localContext.fixtureIndex = index++;
 
-        localContext.relativeTime = initialRelativeTime - clip()->falloff(fixture);
+        localContext.relativeTime = initialRelativeTime - fixtureClip()->falloff(fixture);
         if(localContext.relativeTime < 0)
             continue;
 

@@ -2,7 +2,7 @@
 #include <QLabel>
 #include <QDoubleSpinBox>
 #include "constantfalloffeffect.h"
-#include "sequence/clip.h"
+#include "sequence/fixtureclip.h"
 
 namespace photon {
 

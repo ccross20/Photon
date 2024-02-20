@@ -60,9 +60,9 @@ int LayerGroup::height() const
     int total = 20;
     for(auto layer : m_impl->layers)
     {
-        total += layer->height();
+        total += layer->height() + 2;
     }
-    return total;
+    return total - 2;
 }
 
 void LayerGroup::processChannels(ProcessContext &t_context)

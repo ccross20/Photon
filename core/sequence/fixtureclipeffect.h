@@ -22,6 +22,7 @@ public:
     FixtureClipEffect(const QByteArray &t_id = QByteArray());
     virtual ~FixtureClipEffect();
 
+    FixtureClip *fixtureClip() const;
     virtual void processChannels(ProcessContext &) override;
     virtual void evaluate(FixtureClipEffectEvaluationContext &) = 0;
 };

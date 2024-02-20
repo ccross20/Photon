@@ -42,13 +42,13 @@ void RoutineClip::Impl::processFixture(Fixture *t_fixture, RoutineEvaluationCont
     routine->markClean();
 }
 
-RoutineClip::RoutineClip(QObject *t_parent) : Clip(t_parent),m_impl(new Impl)
+RoutineClip::RoutineClip(QObject *t_parent) : FixtureClip(t_parent),m_impl(new Impl)
 {
     m_impl->facade = this;
     setType("routine");
 }
 
-RoutineClip::RoutineClip(double t_start, double t_duration, QObject *t_parent) : Clip(t_start, t_duration, t_parent),m_impl(new Impl)
+RoutineClip::RoutineClip(double t_start, double t_duration, QObject *t_parent) : FixtureClip(t_start, t_duration, t_parent),m_impl(new Impl)
 {
     m_impl->facade = this;
     setType("routine");
@@ -70,8 +70,6 @@ void RoutineClip::processChannels(ProcessContext &t_context)
     localContext.globalTime = t_context.globalTime;
     localContext.relativeTime = initialRelativeTime;
     localContext.fixture = t_context.fixture;
-    localContext.canvasImage = t_context.canvasImage;
-    localContext.previousCanvasImage = t_context.previousCanvasImage;
     localContext.project = t_context.project;
 
     for(auto fixture : maskedFixtures())

@@ -7,7 +7,7 @@
 #include "channel/parameter/boolchannelparameter.h"
 #include "sequence/sequence.h"
 #include "sequence/beatlayer.h"
-#include "sequence/clip.h"
+#include "sequence/fixtureclip.h"
 #include "fixture/fixture.h"
 #include "fixture/capability/anglecapability.h"
 #include "fixture/capability/dimmercapability.h"
@@ -50,7 +50,7 @@ void BeatStrobeEffect::Impl::setGroupCount(int t_value)
     groupCount = t_value;
     beatCells.clear();
 
-    auto allFixtures = facade->clip()->maskedFixtures();
+    auto allFixtures = facade->fixtureClip()->maskedFixtures();
     auto beatLayers = facade->clip()->sequence()->beatLayers();
     if(beatLayers.isEmpty())
         return;
@@ -196,7 +196,7 @@ void BeatStrobeEffect::evaluate(FixtureClipEffectEvaluationContext &t_context)
     {
         for(auto fix : nextCell.fixtures)
         {
-            double relTime = initialRelativeTime - clip()->falloff(fix.fixture);
+            double relTime = initialRelativeTime - fixtureClip()->falloff(fix.fixture);
 
 
             auto dimmers = fix.fixture->findCapability(Capability_Dimmer);
@@ -218,7 +218,7 @@ void BeatStrobeEffect::evaluate(FixtureClipEffectEvaluationContext &t_context)
     {
         for(auto fix : cell.fixtures)
         {
-            double relTime = initialRelativeTime - clip()->falloff(fix.fixture);
+            double relTime = initialRelativeTime - fixtureClip()->falloff(fix.fixture);
 
 
             auto dimmers = fix.fixture->findCapability(Capability_Dimmer);

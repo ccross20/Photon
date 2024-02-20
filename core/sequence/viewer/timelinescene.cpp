@@ -183,7 +183,18 @@ LayerItem *TimelineScene::layerAtY(double t_y) const
         //qDebug() << layer->boundingRect();
         auto globalRect = layer->mapRectToScene(layer->boundingRect());
         if(globalRect.top() < t_y && globalRect.bottom() > t_y)
+        {
+            auto group = dynamic_cast<TimelineLayerGroup*>(layer);
+            if(group)
+            {
+                auto subLayer = group->layerAtY(t_y);
+
+                if(subLayer)
+                    return subLayer;
+            }
+
             return layer;
+        }
     }
     return nullptr;
 }

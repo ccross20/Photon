@@ -13,5 +13,7 @@
         <file>resources/shader/texture.frag</file>
         <file>resources/shader/projectedvertex.vert</file>
         <file>resources/shader/TextureOpacity.frag</file>
+        <file>resources/shader/distance/distance_dtnn_fix.frag</file>
+        <file>resources/shader/distance/distance_init_fix.frag</file>
     </qresource>
 </RCC>

@@ -16,11 +16,11 @@ public:
     ProcessContext(DMXMatrix &matrix):dmxMatrix(matrix){}
     Fixture *fixture = nullptr;
     Project *project = nullptr;
-    QImage *canvasImage = nullptr;
-    QImage *previousCanvasImage = nullptr;
     OpenGLFrameBuffer *frameBuffer = nullptr;
+    QHash<QByteArray,QVariant> channelValues;
     Canvas *canvas = nullptr;
     QOpenGLContext *openglContext;
+    QImage *image;
     DMXMatrix &dmxMatrix;
     double globalTime;
     double relativeTime;

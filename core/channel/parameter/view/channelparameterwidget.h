@@ -11,7 +11,7 @@ class ChannelParameterWidget : public QWidget
 {
     Q_OBJECT
 public:
-    explicit ChannelParameterWidget(QVector<ChannelParameter*> parameters, ClipEffect *effect, QWidget *parent = nullptr);
+    explicit ChannelParameterWidget(QVector<ChannelParameter*> parameters, std::function<bool(ChannelParameter *)> allow, QWidget *parent = nullptr);
 
 signals:
     void addChannel(photon::ChannelParameter*, ChannelInfo::ChannelType);

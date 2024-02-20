@@ -11,6 +11,8 @@ public:
     KaleidoscopeClipEffect();
 
     void init() override;
+    void initializeContext(QOpenGLContext *, Canvas *) override;
+    void canvasResized(QOpenGLContext *, Canvas *) override;
     void evaluate(CanvasClipEffectEvaluationContext &) override;
     static ClipEffectInformation info();
 

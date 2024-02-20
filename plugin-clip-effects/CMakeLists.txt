@@ -36,7 +36,10 @@ add_library(plugin-clip-effects SHARED ${SOURCES}
     pan-and-tilt/aligntoarrowclip.h pan-and-tilt/aligntoarrowclip.cpp
     clip-effect-resources.qrc
     canvas/blurclipeffect.h canvas/blurclipeffect.cpp
-    canvas/distort/kaleidoscopeclipeffect.h canvas/distort/kaleidoscopeclipeffect.cpp)
+    canvas/distort/kaleidoscopeclipeffect.h canvas/distort/kaleidoscopeclipeffect.cpp
+    canvas/draw/cloudtunnel.h canvas/draw/cloudtunnel.cpp
+    canvas/draw/imageclipeffect.h canvas/draw/imageclipeffect.cpp
+    canvas/style/strokeclipeffect.h canvas/style/strokeclipeffect.cpp)
 
 
 

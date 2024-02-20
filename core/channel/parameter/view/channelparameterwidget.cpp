@@ -5,11 +5,10 @@
 #include "channelparameterwidget.h"
 #include "../channelparameter.h"
 #include "channelparameterview.h"
-#include "sequence/clipeffect.h"
 
 namespace photon {
 
-ChannelParameterWidget::ChannelParameterWidget(QVector<ChannelParameter*> t_parameters, ClipEffect *t_effect, QWidget *parent)
+ChannelParameterWidget::ChannelParameterWidget(QVector<ChannelParameter*> t_parameters, std::function<bool(ChannelParameter *)> allow, QWidget *parent)
     : QWidget{parent}
 {
     QGridLayout *grid = new QGridLayout;
@@ -21,7 +20,7 @@ ChannelParameterWidget::ChannelParameterWidget(QVector<ChannelParameter*> t_para
         grid->addWidget(param->createView(),row,1);
 
         QPushButton *channelButton = new QPushButton("Add Channel");
-        channelButton->setEnabled(t_effect->channelsForParameter(param).isEmpty());
+        channelButton->setEnabled(allow(param));
         grid->addWidget(channelButton,row,2);
 
         if(param->type() == ChannelParameter::ChannelParameterColor)

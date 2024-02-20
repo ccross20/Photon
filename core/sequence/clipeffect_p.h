@@ -11,9 +11,8 @@ public:
     void processContext(ClipEffectEvaluationContext &, double);
     QVector<double> valuesForChannel(const QByteArray &, double);
     QColor colorForChannel(ChannelParameter *, double);
-    ChannelParameter *findChannelParameter(const QByteArray &);
     QVector<Channel*> channels;
-    QVector<ChannelParameter*> channelParameters;
+    ChannelParameterContainer *parameters;
     QString name;
     QByteArray id;
     QByteArray uniqueId;

@@ -1,7 +1,6 @@
 #ifndef PHOTON_DRAWELLIPSECLIPEFFECT_H
 #define PHOTON_DRAWELLIPSECLIPEFFECT_H
 
-#include <QWidget>
 #include "sequence/canvasclipeffect.h"
 
 namespace photon {
@@ -12,6 +11,8 @@ public:
     DrawEllipseClipEffect();
 
     void init() override;
+    void initializeContext(QOpenGLContext *, Canvas *) override;
+    void canvasResized(QOpenGLContext *, Canvas *) override;
     void evaluate(CanvasClipEffectEvaluationContext &) override;
     static ClipEffectInformation info();
 

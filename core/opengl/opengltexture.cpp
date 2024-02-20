@@ -51,13 +51,9 @@ void OpenGLTexture::resize(QOpenGLContext *context, QImage::Format format, int w
         return;
 
     switch (format) {
-    case QImage::Format::Format_Invalid:
-        break;
+    default:
     case QImage::Format::Format_ARGB32_Premultiplied:
-        if(m_isViewport)
             resize(context, GL_RGBA, w, h, GL_BGRA, GL_UNSIGNED_BYTE,4,1, data);
-        else
-            resize(context, GL_RGBA, w, h, GL_RGBA, GL_UNSIGNED_BYTE,4,1, data);
         break;
 
     }

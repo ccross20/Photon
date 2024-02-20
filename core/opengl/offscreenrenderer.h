@@ -7,7 +7,7 @@
 
 namespace photon {
 
-class OffscreenRenderer : public QOpenGLExtraFunctions
+class PHOTONCORE_EXPORT OffscreenRenderer : public QOpenGLExtraFunctions
 {
 public:
     OffscreenRenderer(QOpenGLContext *context);

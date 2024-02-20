@@ -1,36 +1,47 @@
+#include <QMatrix4x4>
 #include "canvasclip.h"
-#include "scene/sceneiterator.h"
 #include "photoncore.h"
 #include "project/project.h"
-#include "pixel/pixelsource.h"
-#include "pixel/pixellayout.h"
-#include "scene/sceneobject.h"
-#include "pixel/pixellayoutcollection.h"
 #include "opengl/openglshader.h"
 #include "opengl/openglplane.h"
 #include "opengl/opengltexture.h"
 #include "opengl/openglframebuffer.h"
+#include "pixel/canvas.h"
 #include "sequence.h"
+#include "channel/parameter/numberchannelparameter.h"
+#include "channel/parameter/point2channelparameter.h"
+#include "clipeffect.h"
+#include "canvasclipeffect.h"
+#include "canvaslayergroup.h"
 
 namespace photon {
 
 class CanvasClip::Impl
 {
 public:
-    QVector<PixelLayout*> pixelLayouts;
     OpenGLShader *shader = nullptr;
     OpenGLPlane *plane = nullptr;
     OpenGLTexture *texture = nullptr;
+    int viewportLoc;
+    int cameraLoc;
 };
 
 CanvasClip::CanvasClip(): Clip(),m_impl(new Impl)
 {
     setId("canvasclip");
+    addChannelParameter(new Point2ChannelParameter("position",QPointF{0,0}));
+    addChannelParameter(new Point2ChannelParameter("center",QPointF{0,0}));
+    addChannelParameter(new Point2ChannelParameter("scale",QPointF{1,1}));
+    addChannelParameter(new NumberChannelParameter("rotation"));
 }
 
 CanvasClip::CanvasClip(double t_start, double t_duration, QObject *t_parent) : Clip(t_start, t_duration, t_parent),m_impl(new Impl)
 {    
     setId("canvasclip");
+    addChannelParameter(new Point2ChannelParameter("position",QPointF{0,0}));
+    addChannelParameter(new Point2ChannelParameter("center",QPointF{0,0}));
+    addChannelParameter(new Point2ChannelParameter("scale",QPointF{1,1}));
+    addChannelParameter(new NumberChannelParameter("rotation"));
 }
 
 CanvasClip::~CanvasClip()
@@ -38,28 +49,77 @@ CanvasClip::~CanvasClip()
     delete m_impl;
 }
 
+void CanvasClip::layerDidChange(Layer *t_layer)
+{
+    auto group = dynamic_cast<CanvasLayerGroup*>(t_layer->parentGroup());
+    if(group)
+    {
+        group->openGLContext()->makeCurrent(photonApp->surface());
+        initializeContext(group->openGLContext(), group->canvas());
+    }
+    Clip::layerDidChange(t_layer);
+}
+
+void CanvasClip::initializeContext(QOpenGLContext *t_context, Canvas *t_canvas)
+{
+    if(!t_canvas)
+        return;
+
+    for(auto clipEffect : clipEffects())
+    {
+        auto canvasEffect = dynamic_cast<CanvasClipEffect*>(clipEffect);
+        if(canvasEffect)
+            canvasEffect->initializeContext(t_context, t_canvas);
+    }
+
+    m_impl->plane = new OpenGLPlane(t_context, bounds_d{-1,-1,1,1}, false);
+    m_impl->shader = new OpenGLShader(t_context, ":/resources/shader/projectedvertex.vert",
+                                      ":/resources/shader/TextureOpacity.frag");
+    m_impl->shader->bind(t_context);
+    m_impl->viewportLoc = m_impl->shader->uniformLocation("projMatrix");
+    m_impl->cameraLoc = m_impl->shader->uniformLocation("mvMatrix");
+
+    QMatrix4x4 mat;
+    mat.setToIdentity();
+    mat.ortho(-1,1, -1,1,-1,1);
+
+    m_impl->shader->setMatrix(m_impl->viewportLoc,mat);
+    int w = t_canvas->width();
+    int h = t_canvas->height();
+    m_impl->texture = new OpenGLTexture;
+    m_impl->texture->resize(t_context, QImage::Format::Format_ARGB32_Premultiplied, w, h);
+
+}
+
+void CanvasClip::canvasResized(QOpenGLContext *t_context, Canvas *t_canvas)
+{
+    for(auto clipEffect : clipEffects())
+    {
+        auto canvasEffect = dynamic_cast<CanvasClipEffect*>(clipEffect);
+        if(canvasEffect)
+            canvasEffect->canvasResized(t_context, t_canvas);
+    }
+
+    m_impl->texture->resize(t_context, QImage::Format::Format_ARGB32_Premultiplied, t_canvas->width(), t_canvas->height());
+}
+
 void CanvasClip::processChannels(ProcessContext &t_context)
 {
-    if(!m_impl->plane)
-    {
-        m_impl->plane = new OpenGLPlane(t_context.openglContext, bounds_d{-1,-1,1,1}, false);
-        m_impl->shader = new OpenGLShader(t_context.openglContext, ":/resources/shader/BasicTextureVertex.vert",
-                                    ":/resources/shader/TextureOpacity.frag");
-
-        int w = t_context.canvas->width();
-        int h = t_context.canvas->height();
-        m_impl->texture = new OpenGLTexture;
-        m_impl->texture->resize(t_context.openglContext, QImage::Format::Format_ARGB32_Premultiplied, w, h);
-
-    }
 
     double amount = strengthAtTime(t_context.relativeTime);
 
+    QPointF pos = t_context.channelValues["position"].value<QPointF>();
+    QPointF center = t_context.channelValues["center"].value<QPointF>();
+    QPointF scale = t_context.channelValues["scale"].value<QPointF>();
+    double rotation = t_context.channelValues["rotation"].toDouble();
+
+
+    auto f = t_context.openglContext->functions();
 
     OpenGLFrameBuffer *previousBuffer = t_context.frameBuffer;
     OpenGLFrameBuffer buffer(m_impl->texture, t_context.openglContext);
-    t_context.openglContext->functions()->glClearColor(.0f,.0f,.0f,.0f);
-    t_context.openglContext->functions()->glClear(GL_COLOR_BUFFER_BIT);
+    f->glClearColor(.0f,.0f,.0f,.0f);
+    f->glClear(GL_COLOR_BUFFER_BIT);
     t_context.frameBuffer = &buffer;
 
     Clip::processChannels(t_context);
@@ -70,59 +130,23 @@ void CanvasClip::processChannels(ProcessContext &t_context)
     m_impl->texture->bind(t_context.openglContext);
     m_impl->shader->setTexture("tex",m_impl->texture->handle());
     m_impl->shader->setFloat("opacity",  amount);
+
+
+    QMatrix4x4 camMatrix;
+    camMatrix.setToIdentity();
+    camMatrix.translate(pos.x()*2.0, pos.y()*2.0);
+    camMatrix.translate(center.x(), center.y());
+    camMatrix.rotate(rotation,0,0,1);
+    camMatrix.scale(scale.x(), scale.y());
+    camMatrix.translate(-center.x(), -center.y());
+    m_impl->shader->setMatrix(m_impl->cameraLoc, camMatrix);
+
+
     m_impl->plane->draw();
 
 
-    for(auto pixelLayout : m_impl->pixelLayouts)
-        pixelLayout->process(t_context);
 }
 
-void CanvasClip::addPixelLayout(PixelLayout *t_layout)
-{
-    if(m_impl->pixelLayouts.contains(t_layout))
-        return;
-    m_impl->pixelLayouts << t_layout;
-    emit pixelLayoutAdded(t_layout);
-}
-
-void CanvasClip::removePixelLayout(PixelLayout *t_layout)
-{
-    if(m_impl->pixelLayouts.removeOne(t_layout))
-        emit pixelLayoutRemoved(t_layout);
-}
-
-PixelLayout *CanvasClip::pixelLayoutAtIndex(int t_index) const
-{
-    return m_impl->pixelLayouts[t_index];
-}
-
-int CanvasClip::pixelLayoutCount() const
-{
-    return m_impl->pixelLayouts.length();
-}
-
-QVector<PixelSource*> CanvasClip::sources() const
-{
-    QVector<PixelSource*> results;
-
-    if(m_impl->pixelLayouts.isEmpty())
-    {
-        auto sources = SceneIterator::FindMany(photonApp->project()->sceneRoot(),[](SceneObject *obj, bool *keepGoing){
-                *keepGoing = true;
-           return dynamic_cast<PixelSource*>(obj);
-        });
-
-        for(auto src : sources)
-            results << dynamic_cast<PixelSource*>(src);
-    }
-    else
-    {
-        for(auto pixelLayout : m_impl->pixelLayouts)
-            results << pixelLayout->sources();
-    }
-
-    return results;
-}
 
 void CanvasClip::restore(Project &t_project)
 {
@@ -133,31 +157,12 @@ void CanvasClip::readFromJson(const QJsonObject &t_json, const LoadContext &t_co
 {
     Clip::readFromJson(t_json, t_context);
 
-    if(t_json.contains("pixelLayouts"))
-    {
-        auto pixelLayoutArray = t_json.value("pixelLayouts").toArray();
-        for(auto layoutObj : pixelLayoutArray)
-        {
-            auto layout = t_context.project->pixelLayouts()->findLayoutWithId(layoutObj.toString().toLatin1());
-
-            if(layout)
-                m_impl->pixelLayouts.append(layout);
-        }
-    }
-
 }
 
 void CanvasClip::writeToJson(QJsonObject &t_json) const
 {
     Clip::writeToJson(t_json);
 
-    QJsonArray pixelLayoutArray;
-    for(auto pl : m_impl->pixelLayouts)
-    {
-        pixelLayoutArray.append(QString{pl->uniqueId()});
-    }
-
-    t_json.insert("pixelLayouts", pixelLayoutArray);
 }
 
 

@@ -13,11 +13,16 @@ public:
     FillNoiseEffect();
 
     void init() override;
+    void initializeContext(QOpenGLContext *, Canvas *) override;
+    void canvasResized(QOpenGLContext *, Canvas *) override;
     void evaluate(CanvasClipEffectEvaluationContext &) override;
     static ClipEffectInformation info();
 
 private:
     NoiseGenerator m_noise;
+    OpenGLShader *m_shader = nullptr;
+    OpenGLPlane *m_plane = nullptr;
+    OpenGLTexture *m_texture = nullptr;
 };
 
 } // namespace photon

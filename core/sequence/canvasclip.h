@@ -1,5 +1,6 @@
 #ifndef PHOTON_CANVASCLIP_H
 #define PHOTON_CANVASCLIP_H
+#include <QOpenGLContext>
 #include "clip.h"
 
 
@@ -17,13 +18,8 @@ public:
 
     void processChannels(ProcessContext &) override;
 
-    void addPixelLayout(PixelLayout *);
-    void removePixelLayout(PixelLayout *);
-    PixelLayout *pixelLayoutAtIndex(int index) const;
-    int pixelLayoutCount() const;
-
-
-    QVector<PixelSource*> sources() const;
+    virtual void initializeContext(QOpenGLContext *, Canvas *);
+    virtual void canvasResized(QOpenGLContext *, Canvas *);
 
     void restore(Project &) override;
     void readFromJson(const QJsonObject &, const LoadContext &) override;
@@ -31,10 +27,8 @@ public:
 
     static ClipInformation info();
 
-signals:
-
-    void pixelLayoutAdded(photon::PixelLayout *);
-    void pixelLayoutRemoved(photon::PixelLayout *);
+protected:
+    void layerDidChange(Layer*) override;
 
 private:
     class Impl;

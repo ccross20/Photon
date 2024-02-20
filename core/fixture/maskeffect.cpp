@@ -1,5 +1,5 @@
 #include "maskeffect_p.h"
-#include "sequence/clip.h"
+#include "sequence/fixtureclip.h"
 
 namespace photon {
 
@@ -46,7 +46,7 @@ QString MaskEffect::name() const
     return m_impl->name;
 }
 
-Clip *MaskEffect::clip() const
+FixtureClip *MaskEffect::clip() const
 {
     return m_impl->clip;
 }

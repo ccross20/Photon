@@ -19,6 +19,7 @@ public:
     QRectF boundingRect() const override;
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *item, QWidget *widget) override;
     LayerItem *findLayer(Layer *t_layer);
+    LayerItem *layerAtY(double) const;
 
 public slots:
 

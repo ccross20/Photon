@@ -1,7 +1,6 @@
 #include "cliplayer_p.h"
 #include "clip_p.h"
 #include "routineclip.h"
-#include "stateclip.h"
 #include "sequence.h"
 #include "plugin/pluginfactory.h"
 #include "photoncore.h"
@@ -75,6 +74,8 @@ void ClipLayer::processChannels(ProcessContext &t_context)
         if(clip->timeIsValid(t_context.globalTime))
         {
             t_context.relativeTime = t_context.globalTime - clip->startTime();
+            t_context.channelValues = clip->parameters()->valuesFromChannels(clip->channels(), t_context.relativeTime);
+
             clip->processChannels(t_context);
         }
     }

@@ -320,8 +320,6 @@ set(PROJECT_SOURCES
         sequence/sequence.cpp
         sequence/sequencecollection.h
         sequence/sequencecollection.cpp
-        sequence/stateclip.h
-        sequence/stateclip.cpp
         sequence/track.h
         sequence/track.cpp
         sequence/viewer/clipmodel.h
@@ -448,7 +446,11 @@ add_library(photon-core SHARED ${PROJECT_SOURCES}
     data/spline.cpp data/spline.h
     util/BezierUtils.h
     util/mathutils.h
-    channel/splinechanneleffect.h channel/splinechanneleffect.cpp)
+    channel/splinechanneleffect.h channel/splinechanneleffect.cpp
+    channel/parameter/channelparametercontainer.h channel/parameter/channelparametercontainer.cpp
+    channel/parameter/fileparameter.h channel/parameter/fileparameter.cpp
+    channel/parameter/view/filechannelparameterview.h channel/parameter/view/filechannelparameterview.cpp
+    opengl/distancetransform.cpp opengl/distancetransform.h)
 
 target_include_directories(photon-core PUBLIC ../core)
 target_include_directories(photon-core PUBLIC ../keira)

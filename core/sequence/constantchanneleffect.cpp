@@ -11,14 +11,14 @@ ConstantEffectEditor::ConstantEffectEditor(ConstantChannelEffect *t_effect):Chan
 
 
     QDoubleSpinBox *constantSpin = new QDoubleSpinBox;
-    constantSpin->setMinimum(-255);
-    constantSpin->setMaximum(255);
+    constantSpin->setMinimum(-10000);
+    constantSpin->setMaximum(10000);
     constantSpin->setValue(m_effect->value());
     connect(constantSpin, &QDoubleSpinBox::valueChanged, this, &ConstantEffectEditor::valueChanged);
 
     QDoubleSpinBox *rateSpin = new QDoubleSpinBox;
-    rateSpin->setMinimum(-255);
-    rateSpin->setMaximum(255);
+    rateSpin->setMinimum(-10000);
+    rateSpin->setMaximum(10000);
     rateSpin->setValue(m_effect->rate()*100);
     connect(rateSpin, &QDoubleSpinBox::valueChanged, this, &ConstantEffectEditor::rateChanged);
 

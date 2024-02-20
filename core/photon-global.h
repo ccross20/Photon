@@ -47,6 +47,7 @@ class CanvasLayerGroup;
 class Channel;
 class ChannelEffect;
 class ChannelEffectEditor;
+class ChannelParameterContainer;
 class ChannelParameter;
 class ChannelParameterView;
 class Clip;

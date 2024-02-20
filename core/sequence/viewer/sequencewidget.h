@@ -37,8 +37,10 @@ private slots:
     void horizontalSplitterMoved(int, int);
     void selectionChanged();
     void positionChanged(qint64);
+    void editLayer(photon::Layer *);
     void selectEffect(photon::ChannelEffect *);
     void selectMask(photon::MaskEffect *);
+    void selectClipParameter(photon::Clip *);
     void selectFalloff(photon::FalloffEffect *);
     void selectClipEffect(photon::ClipEffect *);
     void selectState(photon::State *);

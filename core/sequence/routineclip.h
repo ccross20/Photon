@@ -1,10 +1,10 @@
 #ifndef PHOTON_ROUTINECLIP_H
 #define PHOTON_ROUTINECLIP_H
-#include "clip.h"
+#include "fixtureclip.h"
 
 namespace photon {
 
-class PHOTONCORE_EXPORT RoutineClip : public Clip
+class PHOTONCORE_EXPORT RoutineClip : public FixtureClip
 {
     Q_OBJECT
 public:

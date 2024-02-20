@@ -12,7 +12,8 @@ public:
     {
         ChannelParameterNumber,
         ChannelParameterColor,
-        ChannelParameterPoint
+        ChannelParameterPoint,
+        ChannelParameterText
     };
 
 

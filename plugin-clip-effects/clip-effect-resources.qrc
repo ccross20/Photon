@@ -4,5 +4,8 @@
         <file>clip-effect-resources/shader/ellipse.frag</file>
         <file>clip-effect-resources/shader/gauss_blur.frag</file>
         <file>clip-effect-resources/shader/distort/kaleidoscope.frag</file>
+        <file>clip-effect-resources/shader/generate/cloudtunnel.frag</file>
+        <file>clip-effect-resources/shader/style/offset_stroke.frag</file>
+        <file>clip-effect-resources/shader/style/stroke.frag</file>
     </qresource>
 </RCC>
