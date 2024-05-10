@@ -7,7 +7,6 @@
 #include "photoncore.h"
 #include "plugin/pluginfactory.h"
 #include "sequence/constantchanneleffect.h"
-#include "sequence/gradientchanneleffect.h"
 
 namespace photon {
 
@@ -39,6 +38,15 @@ void ChannelInfo::readFromJson(const QJsonObject &t_json)
             options.append(option.toString());
         }
     }
+    if(t_json.contains("subChannelNames"))
+    {
+        auto optionArray = t_json.value("subChannelNames").toArray();
+
+        for(auto option : optionArray)
+        {
+            subChannelNames.append(option.toString());
+        }
+    }
 }
 
 void ChannelInfo::writeToJson(QJsonObject &t_json) const
@@ -61,6 +69,15 @@ void ChannelInfo::writeToJson(QJsonObject &t_json) const
         }
         t_json.insert("options", optionArray);
     }
+    if(!subChannelNames.isEmpty())
+    {
+        QJsonArray optionArray;
+        for(const auto &option : subChannelNames)
+        {
+            optionArray.append(option);
+        }
+        t_json.insert("subChannelNames", optionArray);
+    }
 
 }
 
@@ -74,10 +91,35 @@ Channel::Channel(const ChannelInfo &t_info, double t_startTime, double t_duratio
 
     if(t_info.type == ChannelInfo::ChannelTypeColor)
     {
-        auto effect = photonApp->plugins()->createChannelEffect(GradientChannelEffect::info().effectId);
-        GradientData data(t_info.defaultValue.value<QColor>(),0.0);
-        static_cast<GradientChannelEffect*>(effect)->setColors(QVector<GradientData>{data});
-        m_impl->effects.append(effect);
+        ChannelInfo subInfo;
+        subInfo.parentUniqueId = t_info.uniqueId;
+        subInfo.subChannelIndex = 0;
+        subInfo.name = t_info.name + ".hue";
+        addSubChannel(new Channel{subInfo,t_startTime, t_duration});
+        subInfo.name = t_info.name + ".saturation";
+        subInfo.subChannelIndex = 1;
+        addSubChannel(new Channel{subInfo,t_startTime, t_duration});
+        subInfo.name = t_info.name + ".lightness";
+        subInfo.subChannelIndex = 2;
+        addSubChannel(new Channel{subInfo,t_startTime, t_duration});
+        subInfo.name = t_info.name + ".alpha";
+        subInfo.subChannelIndex = 3;
+        addSubChannel(new Channel{subInfo,t_startTime, t_duration});
+
+
+    }
+    else if(t_info.type == ChannelInfo::ChannelTypePoint)
+    {
+        ChannelInfo subInfo;
+        subInfo.parentUniqueId = t_info.uniqueId;
+        subInfo.name = t_info.name + ".x";
+        subInfo.subChannelIndex = 0;
+        addSubChannel(new Channel{subInfo,t_startTime, t_duration});
+        subInfo.name = t_info.name + ".y";
+        subInfo.subChannelIndex = 1;
+        addSubChannel(new Channel{subInfo,t_startTime, t_duration});
+
+
     }
     else
     {
@@ -91,6 +133,30 @@ Channel::Channel(const ChannelInfo &t_info, double t_startTime, double t_duratio
 Channel::~Channel()
 {
     delete m_impl;
+}
+
+void Channel::addSubChannel(Channel *t_channel)
+{
+    m_impl->subChannels.append(t_channel);
+    t_channel->setParent(this);
+
+    connect(t_channel, &Channel::channelUpdated, this, &Channel::channelUpdated);
+}
+
+void Channel::removeSubChannel(Channel *t_channel)
+{
+    m_impl->subChannels.removeOne(t_channel);
+    t_channel->setParent(nullptr);
+}
+
+const QVector<Channel*> &Channel::subChannels() const
+{
+    return m_impl->subChannels;
+}
+
+int Channel::subChannelCount() const
+{
+    return m_impl->subChannels.length();
 }
 
 Sequence *Channel::sequence() const
@@ -123,6 +189,11 @@ void Channel::setDuration(double t_duration)
     if(m_impl->duration == t_duration)
         return;
     m_impl->duration = t_duration;
+
+
+    for(auto subChannel : m_impl->subChannels)
+        subChannel->setDuration(t_duration);
+
     emit channelUpdated(this);
 }
 
@@ -136,6 +207,9 @@ void Channel::setStartTime(double t_start)
     if(m_impl->startTime == t_start)
         return;
     m_impl->startTime = t_start;
+    for(auto subChannel : m_impl->subChannels)
+        subChannel->setStartTime(t_start);
+
     emit channelUpdated(this);
 }
 
@@ -208,28 +282,65 @@ void Channel::moveEffect(ChannelEffect *t_effect, int newPosition)
     emit effectMoved(t_effect);
 }
 
-double Channel::processDouble(double time)
+QVariant Channel::processValue(double time)
 {
-    double val = m_impl->info.defaultValue.toDouble();
+    QVariant val = m_impl->info.defaultValue;
 
-    /*
-    for(auto effect : m_impl->effects)
+    int subChannelCount = m_impl->subChannels.length();
+
+    float *values = new float[subChannelCount];
+    if(subChannelCount > 0)
     {
-        val = effect->process(val, time);
+        if(type() == ChannelInfo::ChannelTypePoint && subChannelCount == 2)
+        {
+            QPointF pt = val.toPointF();
+            values[0] = pt.x();
+            values[1] = pt.y();
+        }
+        else if(type() == ChannelInfo::ChannelTypeColor && m_impl->subChannels.length() == 4)
+        {
+            QColor color = val.value<QColor>();
+            color.getHslF(&values[0],&values[1],&values[2],&values[3]);
+        }
+        else
+        {
+            for(int i = 0; i < subChannelCount; ++i)
+            {
+                values[i] = 0;
+            }
+        }
     }
-    */
-    if(!m_impl->effects.isEmpty())
-        val = m_impl->effects.back()->process(val, time);
+    else
+    {
+        values[0] = val.toFloat();
+    }
 
-    return val;
-}
 
-QColor Channel::processColor(double time)
-{
-    QColor val = m_impl->info.defaultValue.value<QColor>();
 
     if(!m_impl->effects.isEmpty())
-        val = m_impl->effects.back()->processColor(val, time);
+        values = m_impl->effects.back()->process(values, subChannelCount, time);
+
+    if(subChannelCount > 0)
+    {
+        if(type() == ChannelInfo::ChannelTypePoint && subChannelCount == 2)
+        {
+            QPointF pt = val.toPointF();
+            pt.setX(values[0] * m_impl->subChannels[0]->processValue(time).toFloat());
+            pt.setX(values[1] * m_impl->subChannels[1]->processValue(time).toFloat());
+            return pt;
+        }
+        else if(type() == ChannelInfo::ChannelTypeColor && m_impl->subChannels.length() == 4)
+        {
+            QColor color = val.value<QColor>();
+            color.setHslF(color.hueF() * m_impl->subChannels[0]->processValue(time).toFloat(),
+                color.saturationF() * m_impl->subChannels[1]->processValue(time).toFloat(),
+                color.lightnessF() * m_impl->subChannels[2]->processValue(time).toFloat(),
+                color.alphaF() * m_impl->subChannels[3]->processValue(time).toFloat());
+            return color;
+        }
+    }
+
+
 
     return val;
 }
@@ -254,9 +365,13 @@ void Channel::restore(Project &t_project)
 {
     for(auto effect : m_impl->effects)
         effect->restore(t_project);
+
+
+    for(auto subChannel : m_impl->subChannels)
+        subChannel->restore(t_project);
 }
 
-void Channel::readFromJson(const QJsonObject &t_json, const LoadContext &)
+void Channel::readFromJson(const QJsonObject &t_json, const LoadContext &t_context)
 {
     m_impl->info.name = t_json.value("name").toString();
     m_impl->info.description = t_json.value("description").toString();
@@ -292,6 +407,20 @@ void Channel::readFromJson(const QJsonObject &t_json, const LoadContext &)
             }
         }
     }
+
+    if(t_json.contains("subChannels"))
+    {
+        auto subChannelArray = t_json.value("subChannels").toArray();
+
+        for(auto item : subChannelArray)
+        {
+            auto channelObj = item.toObject();
+
+            Channel *channel = new Channel(ChannelInfo(), startTime(), duration(), this);
+            channel->readFromJson(channelObj, t_context);
+            addSubChannel(channel);
+        }
+    }
 }
 
 void Channel::writeToJson(QJsonObject &t_json) const
@@ -314,6 +443,15 @@ void Channel::writeToJson(QJsonObject &t_json) const
     t_json.insert("parentUniqueId",QString::fromLatin1(m_impl->info.parentUniqueId));
     t_json.insert("defaultValue",m_impl->info.defaultValue.toJsonValue());
 
+    QJsonArray subChannelArray;
+    for(auto subChannel : m_impl->subChannels)
+    {
+        QJsonObject channelJson;
+        subChannel->writeToJson(channelJson);
+        subChannelArray.append(channelJson);
+    }
+    t_json.insert("subChannels", subChannelArray);
+
     switch(m_impl->info.type)
     {
     case photon::ChannelInfo::ChannelTypeIntegerStep:
@@ -327,6 +465,9 @@ void Channel::writeToJson(QJsonObject &t_json) const
         t_json.insert("defaultValue",m_impl->info.defaultValue.toDouble());
         break;
     case photon::ChannelInfo::ChannelTypeColor:
+        t_json.insert("defaultValue",m_impl->info.defaultValue.toJsonValue());
+        break;
+    case photon::ChannelInfo::ChannelTypePoint:
         t_json.insert("defaultValue",m_impl->info.defaultValue.toJsonValue());
         break;
 

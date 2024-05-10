@@ -71,17 +71,21 @@ void SawtoothEffect::setAmplitude(double t_value)
     updated();
 }
 
-double SawtoothEffect::process(double value, double time) const
+float *SawtoothEffect::process(float *t_value, uint t_size, double t_time) const
 {
     if(previousEffect())
     {
-        value = previousEffect()->process(value, time);
+        t_value = previousEffect()->process(t_value, t_size, t_time);
     }
 
     double period = m_frequency;
 
+    for(int i = 0; i < t_size; ++i)
+    {
+        t_value[i] = t_value[i] +  ((m_amplitude * 2.0) / period) * (period - abs(fmod(t_time, (2 * period)) - period)) - m_amplitude;
+    }
 
-    return value +  ((m_amplitude * 2.0) / period) * (period - abs(fmod(time, (2 * period)) - period)) - m_amplitude;
+    return t_value;
 }
 
 ChannelEffectEditor *SawtoothEffect::createEditor()

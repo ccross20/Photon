@@ -48,9 +48,9 @@ void DecimalParameter::setPrecision(uint t_precision)
 
 void DecimalParameter::setValue(const QVariant &t_value)
 {
-    double value = std::max(std::min(t_value.toDouble(), m_impl->maximum),m_impl->minimum);
+    double val = std::max(std::min(t_value.toDouble(), m_impl->maximum),m_impl->minimum);
 
-    Parameter::setValue(value);
+    Parameter::setValue(val);
 }
 
 QWidget *DecimalParameter::createWidget(NodeItem *item) const

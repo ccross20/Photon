@@ -141,7 +141,7 @@ void Clip::processChannels(ProcessContext &t_context)
 double Clip::strengthAtTime(double t_value) const
 {
     double outStart = duration() - m_impl->easeOutDuration;
-    double strengthValue = channelAtIndex(0)->processDouble(t_value) * m_impl->strength;
+    double strengthValue = channelAtIndex(0)->processValue(t_value).toDouble() * m_impl->strength;
 
     if(t_value > outStart)
     {
@@ -223,6 +223,9 @@ void Clip::restore(Project &t_project)
 {
     for(auto channel : m_impl->channels)
         channel->restore(t_project);
+
+    for(auto effect : m_impl->clipEffects)
+        effect->restore(t_project);
 }
 
 void Clip::clearChannels()

@@ -1,5 +1,6 @@
 #include "colorchannelparameter.h"
 #include "view/colorchannelparameterview.h"
+#include "util/utils.h"
 
 namespace photon {
 
@@ -28,6 +29,13 @@ ColorChannelParameter::~ColorChannelParameter()
     delete m_impl;
 }
 
+ChannelInfo ColorChannelParameter::channelInfo() const
+{
+    ChannelInfo info = ChannelParameter::channelInfo();
+    info.type = ChannelInfo::ChannelTypeColor;
+    return info;
+}
+
 QColor ColorChannelParameter::defaultValue() const
 {
     return m_impl->defaultValue;
@@ -52,25 +60,6 @@ ChannelParameterView *ColorChannelParameter::createView()
     return new ColorChannelParameterView(this);
 }
 
-QColor jsonToColor(const QJsonObject &t_json)
-{
-    return QColor::fromHslF(t_json.value("h").toDouble(), t_json.value("s").toDouble(),
-                            t_json.value("l").toDouble(),t_json.value("a").toDouble());
-}
-
-QJsonObject jsonFromColor(const QColor &t_color)
-{
-    float h,l,s,a;
-    t_color.getHslF(&h, &l, &s, &a);
-
-    QJsonObject obj;
-    obj.insert("h", h);
-    obj.insert("s", s);
-    obj.insert("l", l);
-    obj.insert("a", a);
-
-    return obj;
-}
 
 void ColorChannelParameter::readFromJson(const QJsonObject &t_json)
 {
@@ -82,8 +71,8 @@ void ColorChannelParameter::readFromJson(const QJsonObject &t_json)
 void ColorChannelParameter::writeToJson(QJsonObject &t_json) const
 {
     ChannelParameter::writeToJson(t_json);
-    t_json.insert("default", jsonFromColor(m_impl->defaultValue));
-    t_json.insert("value", jsonFromColor(value().value<QColor>()));
+    t_json.insert("default", colorToJson(m_impl->defaultValue));
+    t_json.insert("value", colorToJson(value().value<QColor>()));
 }
 
 

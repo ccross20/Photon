@@ -77,6 +77,7 @@ void NodeItem::Impl::layoutNode()
 NodeItem::NodeItem(Node *t_node) : QGraphicsWidget(),m_impl(new Impl(this))
 {
     m_impl->node = t_node;
+    m_impl->width = t_node->width();
     updatePosition();
     setFlag(QGraphicsItem::ItemIsSelectable);
     setFlag(QGraphicsItem::ItemIsMovable);

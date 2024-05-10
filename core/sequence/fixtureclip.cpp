@@ -64,11 +64,7 @@ void FixtureClip::Impl::processFixture(Fixture *t_fixture, StateEvaluationContex
 
     for(const auto &channel : facade->channels())
     {
-        if(channel->type() == ChannelInfo::ChannelTypeColor)
-            t_context.channelValues.insert(channel->uniqueId(), channel->processColor(t_context.relativeTime));
-        else
-            t_context.channelValues.insert(channel->uniqueId(), channel->processDouble(t_context.relativeTime));
-
+        t_context.channelValues.insert(channel->uniqueId(), channel->processValue(t_context.relativeTime));
     }
 
     //t_context.strength = facade->channelAtIndex(0)->processDouble(t_context.relativeTime);

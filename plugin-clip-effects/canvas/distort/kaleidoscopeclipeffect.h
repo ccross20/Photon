@@ -18,8 +18,6 @@ public:
 
 private:
     OpenGLShader *m_shader = nullptr;
-    OpenGLShader *m_basicShader = nullptr;
-    OpenGLPlane *m_plane = nullptr;
     OpenGLTexture *m_texture = nullptr;
 };
 

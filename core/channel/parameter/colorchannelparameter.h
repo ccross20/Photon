@@ -14,6 +14,7 @@ public:
     ~ColorChannelParameter();
 
     QColor defaultValue() const;
+    ChannelInfo channelInfo() const override;
 
     ChannelParameterView *createView() override;
 

@@ -3,6 +3,7 @@
 
 #include "clipeffect.h"
 #include "opengl/openglframebuffer.h"
+#include "opengl/openglresources.h"
 
 namespace photon {
 
@@ -13,6 +14,7 @@ public:
 
     QOpenGLContext *openglContext = nullptr;
     OpenGLFrameBuffer *buffer = nullptr;
+    OpenGLResources *resources = nullptr;
     Canvas *canvas = nullptr;
 };
 

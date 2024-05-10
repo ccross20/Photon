@@ -71,6 +71,7 @@ class MasterLayer;
 class OpenGLShader;
 class OpenGLPlane;
 class OpenGLTexture;
+class OpenGLResources;
 class Panel;
 class PatchBay;
 class PhotonCore;

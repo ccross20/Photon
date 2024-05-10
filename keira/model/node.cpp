@@ -21,6 +21,16 @@ Node::~Node()
     delete m_impl;
 }
 
+void Node::setWidth(double t_value)
+{
+    m_impl->width = t_value;
+}
+
+double Node::width() const
+{
+    return m_impl->width;
+}
+
 void Node::setName(const QString &t_name)
 {
     m_impl->name = t_name;
@@ -126,6 +136,16 @@ QByteArray Node::uniqueId() const
     return m_impl->uniqueId;
 }
 
+void Node::setIsAlwaysDirty(bool t_value)
+{
+    m_impl->isAlwaysDirty = t_value;
+}
+
+bool Node::isAlwaysDirty() const
+{
+    return m_impl->isAlwaysDirty;
+}
+
 void Node::evaluate(EvaluationContext *) const
 {
 
@@ -156,7 +176,7 @@ void Node::markClean()
 
 bool Node::isDirty() const
 {
-    return m_impl->isDirty;
+    return m_impl->isAlwaysDirty || m_impl->isDirty;
 }
 
 void Node::inputParameterConnected(Parameter* t_param)

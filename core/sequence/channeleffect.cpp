@@ -68,14 +68,9 @@ ChannelEffect *ChannelEffect::previousEffect() const
     return m_impl->previousEffect;
 }
 
-double ChannelEffect::process(double, double) const
+float * ChannelEffect::process(float *t_input, uint size, double) const
 {
-    return 0.0;
-}
-
-QColor ChannelEffect::processColor(QColor, double) const
-{
-    return QColor();
+    return t_input;
 }
 
 void ChannelEffect::restore(Project &)

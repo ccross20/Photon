@@ -23,8 +23,11 @@
 #include "routine/node/fixturewriternode.h"
 #include "routine/node/globalsnode.h"
 #include "routine/node/numberinputnode.h"
+#include "routine/node/pointinputnode.h"
 #include "routine/node/colorinputnode.h"
 #include "routine/node/fixtureinfonode.h"
+#include "routine/node/canvaswriternode.h"
+#include "routine/node/createtexturenode.h"
 #include "graph/node/math/trigonometrynode.h"
 #include "graph/node/math/arithmeticnode.h"
 
@@ -45,9 +48,12 @@
 #include "graph/parameter/fixtureparameter.h"
 #include "graph/parameter/pathparameter.h"
 #include "graph/parameter/vector3dparameter.h"
+#include "graph/parameter/textureparameter.h"
+#include "graph/parameter/point2dparameter.h"
 
 #include "sequence/fixtureclip.h"
 #include "sequence/canvasclip.h"
+#include "sequence/canvasroutineclipeffect.h"
 
 namespace photon {
 
@@ -167,7 +173,10 @@ void PluginFactory::init()
     registerNode(SequenceNode::info());
     registerNode(NumberInputNode::info());
     registerNode(ColorInputNode::info());
+    registerNode(PointInputNode::info());
     registerNode(FixtureInfoNode::info());
+    registerNode(CanvasWriterNode::info());
+    registerNode(CreateTextureNode::info());
 
     registerFalloffEffect(ConstantFalloffEffect::info());
 
@@ -175,6 +184,8 @@ void PluginFactory::init()
     registerChannelEffect(GradientChannelEffect::info());
     registerChannelEffect(MasterLayerChannelEffect::info());
     registerChannelEffect(SplineChannelEffect::info());
+
+    registerClipEffect(CanvasRoutineClipEffect::info());
 
     registerClip(FixtureClip::info());
     registerClip(CanvasClip::info());
@@ -190,6 +201,8 @@ void PluginFactory::init()
     m_impl->nodeLibrary.registerParameter(FixtureParameter::ParameterId,[](){return new FixtureParameter();});
     m_impl->nodeLibrary.registerParameter(PathParameter::ParameterId,[](){return new PathParameter();});
     m_impl->nodeLibrary.registerParameter(Vector3DParameter::ParameterId,[](){return new Vector3DParameter();});
+    m_impl->nodeLibrary.registerParameter(TextureParameter::ParameterId,[](){return new TextureParameter();});
+    m_impl->nodeLibrary.registerParameter(Point2DParameter::ParameterId,[](){return new Point2DParameter();});
 
     //qDebug() << "Node Count:" << m_impl->nodeHash.size();
 }

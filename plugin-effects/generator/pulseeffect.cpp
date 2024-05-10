@@ -307,7 +307,7 @@ void PulseEffect::setEaseOutType(QEasingCurve::Type t_value)
     updated();
 }
 
-double PulseEffect::process(double value, double time) const
+QVariant PulseEffect::process(QVariant value, double time) const
 {
     if(previousEffect())
     {
@@ -336,14 +336,16 @@ double PulseEffect::process(double value, double time) const
         outDuration = (m_easeOutDuration / totalDuration) * gap;
     }
 
+    double doubleVal = value.toDouble();
+
     if(adjustedTime > gap - inDuration)
     {
-        return (m_easingIn.valueForProgress((adjustedTime - (gap - inDuration))/ inDuration) * (m_amplitude - value)) + value;
+        return (m_easingIn.valueForProgress((adjustedTime - (gap - inDuration))/ inDuration) * (m_amplitude - doubleVal)) + doubleVal;
     }
 
     if(adjustedTime < outDuration && loopCount > 0)
     {
-        return (m_easingOut.valueForProgress(1.0 - (adjustedTime / outDuration)) * (m_amplitude - value)) + value;
+        return (m_easingOut.valueForProgress(1.0 - (adjustedTime / outDuration)) * (m_amplitude - doubleVal)) + doubleVal;
     }
 
     return value;

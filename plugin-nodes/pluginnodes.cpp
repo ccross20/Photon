@@ -16,6 +16,8 @@
 #include "canvas/fadecanvas.h"
 #include "canvas/renderpath.h"
 #include "canvas/renderstroke.h"
+#include "canvas/masknode.h"
+#include "canvas/transform/transformtexturenode.h"
 #include "color/colorfromhsv.h"
 #include "math/circlenode.h"
 #include "math/noisenode.h"
@@ -39,16 +41,17 @@ bool PluginNodes::initialize(const PluginContext &context)
     photonApp->plugins()->registerNode(SetFixtureSlot::info());
     photonApp->plugins()->registerNode(SetFixtureStrobe::info());
     photonApp->plugins()->registerNode(CanvasReader::info());
-    photonApp->plugins()->registerNode(CanvasWriter::info());
+    //photonApp->plugins()->registerNode(CanvasWriter::info());
     photonApp->plugins()->registerNode(DrawRectangle::info());
     photonApp->plugins()->registerNode(DrawEllipse::info());
-    photonApp->plugins()->registerNode(FadeCanvas::info());
     photonApp->plugins()->registerNode(RenderPath::info());
     photonApp->plugins()->registerNode(RenderStroke::info());
     photonApp->plugins()->registerNode(LookAtTarget::info());
     photonApp->plugins()->registerNode(CircleNode::info());
     photonApp->plugins()->registerNode(NoiseNode::info());
     photonApp->plugins()->registerNode(ColorFromHSV::info());
+    photonApp->plugins()->registerNode(MaskNode::info());
+    photonApp->plugins()->registerNode(TransformTextureNode::info());
 
 
     return true;

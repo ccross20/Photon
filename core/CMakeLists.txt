@@ -450,7 +450,15 @@ add_library(photon-core SHARED ${PROJECT_SOURCES}
     channel/parameter/channelparametercontainer.h channel/parameter/channelparametercontainer.cpp
     channel/parameter/fileparameter.h channel/parameter/fileparameter.cpp
     channel/parameter/view/filechannelparameterview.h channel/parameter/view/filechannelparameterview.cpp
-    opengl/distancetransform.cpp opengl/distancetransform.h)
+    opengl/distancetransform.cpp opengl/distancetransform.h
+    graph/parameter/textureparameter.h graph/parameter/textureparameter.cpp
+    sequence/canvasroutineclipeffect.h sequence/canvasroutineclipeffect.cpp
+    routine/node/canvaswriternode.h routine/node/canvaswriternode.cpp
+    routine/node/createtexturenode.h routine/node/createtexturenode.cpp
+    routine/node/baseroutinenode.h routine/node/baseroutinenode.cpp
+    opengl/openglresources.h opengl/openglresources.cpp
+    graph/parameter/point2dparameter.h graph/parameter/point2dparameter.cpp
+    routine/node/pointinputnode.h routine/node/pointinputnode.cpp)
 
 target_include_directories(photon-core PUBLIC ../core)
 target_include_directories(photon-core PUBLIC ../keira)

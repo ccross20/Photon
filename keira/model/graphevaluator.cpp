@@ -63,7 +63,7 @@ void GraphEvaluator::setGraph(keira::Graph* t_graph)
     if(m_impl->graph)
     {
         connect(m_impl->graph, &Graph::dirtyStateChanged, this, &GraphEvaluator::graphUpdated);
-        if(t_graph->isDirty())
+        if(m_impl->enabled && t_graph->isDirty())
         {
             EvaluationContext context;
             t_graph->evaluate(&context);

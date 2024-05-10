@@ -14,7 +14,8 @@ struct PHOTONCORE_EXPORT ChannelInfo
         ChannelTypeInteger,
         ChannelTypeIntegerStep,
         ChannelTypeBool,
-        ChannelTypeColor
+        ChannelTypeColor,
+        ChannelTypePoint
     };
 
     ChannelInfo(ChannelType type = ChannelTypeNumber, const QString &name = QString{}, const QString &description = QString{}, const QVariant &defaultValue = QVariant{}):
@@ -40,6 +41,7 @@ struct PHOTONCORE_EXPORT ChannelInfo
     void readFromJson(const QJsonObject &);
     void writeToJson(QJsonObject &) const;
 
+    QStringList subChannelNames;
     QStringList options;
     QString name;
     QString description;
@@ -58,6 +60,11 @@ public:
     Channel(const ChannelInfo &info, double startTime, double duration, QObject *parent = nullptr);
     ~Channel();
 
+    void addSubChannel(Channel *);
+    void removeSubChannel(Channel *);
+    const QVector<Channel*> &subChannels() const;
+    int subChannelCount() const;
+
     QByteArray uniqueId() const;
     ChannelInfo info() const;
     ChannelInfo::ChannelType type() const;
@@ -66,8 +73,7 @@ public:
     void removeEffect(ChannelEffect *);
     void moveEffect(ChannelEffect *, int newPosition);
 
-    double processDouble(double time);
-    QColor processColor(double time);
+    QVariant processValue(double time);
 
     void setDuration(double);
     double duration() const;

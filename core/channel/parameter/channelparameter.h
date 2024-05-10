@@ -2,6 +2,7 @@
 #define PHOTON_CHANNELPARAMETER_H
 
 #include "photon-global.h"
+#include "sequence/channel.h"
 
 namespace photon {
 
@@ -30,6 +31,7 @@ public:
     bool isReadOnly() const;
     void setIsReadOnly(bool);
     ChannelParameterType type() const;
+    virtual ChannelInfo channelInfo() const;
 
     virtual ChannelParameterView *createView() = 0;
     virtual QVariant channelsToVariant(const QVector<double> &) const;

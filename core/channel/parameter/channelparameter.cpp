@@ -27,6 +27,11 @@ ChannelParameter::~ChannelParameter()
     delete m_impl;
 }
 
+ChannelInfo ChannelParameter::channelInfo() const
+{
+    return ChannelInfo{m_impl->uniqueId,ChannelInfo::ChannelTypeNumber,m_impl->name};
+}
+
 QString ChannelParameter::name() const
 {
     return m_impl->name;

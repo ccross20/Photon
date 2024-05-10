@@ -17,8 +17,10 @@ public:
     QByteArray id;
     QByteArray uniqueId;
     Graph *graph;
+    double width = 200;
     bool isDirty = true;
     bool visited = false;
+    bool isAlwaysDirty = false;
 };
 
 }

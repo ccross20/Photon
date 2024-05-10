@@ -38,6 +38,7 @@ void FadeCanvas::createParameters()
 
 void FadeCanvas::evaluate(keira::EvaluationContext *t_context) const
 {
+    /*
     RoutineEvaluationContext *context = static_cast<RoutineEvaluationContext*>(t_context);
     if(context->canvasImage)
     {
@@ -54,7 +55,7 @@ void FadeCanvas::evaluate(keira::EvaluationContext *t_context) const
         m_canvasOutputParam->setValue(image);
 
     }
-
+*/
 
 
 }

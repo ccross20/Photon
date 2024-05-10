@@ -25,12 +25,9 @@ void KaleidoscopeClipEffect::init()
 
 void KaleidoscopeClipEffect::initializeContext(QOpenGLContext *t_context, Canvas *t_canvas)
 {
-    m_plane = new OpenGLPlane(t_context, bounds_d{-1,-1,1,1}, false);
     m_shader = new OpenGLShader(t_context, ":/resources/shader/BasicTextureVertex.vert",
                                 ":/clip-effect-resources/shader/distort/kaleidoscope.frag");
 
-    m_basicShader = new OpenGLShader(t_context, ":/resources/shader/BasicTextureVertex.vert",
-                                     ":/resources/shader/texture.frag");
     m_shader->bind(t_context);
 
     m_texture = new OpenGLTexture;
@@ -61,7 +58,7 @@ void KaleidoscopeClipEffect::evaluate(CanvasClipEffectEvaluationContext &t_conte
     m_shader->setFloat("value1",val1);
     m_shader->setFloat("value2",val2);
 
-    m_plane->draw();
+    t_context.resources->drawPlane();
 
     t_context.buffer->bind();
 
@@ -69,9 +66,8 @@ void KaleidoscopeClipEffect::evaluate(CanvasClipEffectEvaluationContext &t_conte
     t_context.openglContext->functions()->glClearColor(.0f,.0f,.0f,.0f);
     t_context.openglContext->functions()->glClear(GL_COLOR_BUFFER_BIT);
 
-    m_basicShader->bind(t_context.openglContext);
-    m_basicShader->setTexture("tex",m_texture->handle());
-    m_plane->draw();
+    t_context.resources->bindBasicShader(m_texture->handle());
+    t_context.resources->drawPlane();
 
 }
 

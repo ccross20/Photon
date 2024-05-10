@@ -38,14 +38,16 @@ void DrawEllipse::createParameters()
 
 void DrawEllipse::evaluate(keira::EvaluationContext *t_context) const
 {
+
     RoutineEvaluationContext *context = static_cast<RoutineEvaluationContext*>(t_context);
 
     QPainterPath path;
 
-    if(context->canvasImage)
-        path.addEllipse(QPointF(0,0), context->canvasImage->width() * m_widthParam->value().toDouble(), context->canvasImage->height() * m_heightParam->value().toDouble());
+
+    path.addEllipse(QPointF(0,0), m_widthParam->value().toDouble(),m_heightParam->value().toDouble());
 
     m_pathOutputParam->setValue(QVariant::fromValue(path));
+
 }
 
 } // namespace photon

@@ -3,6 +3,7 @@
 #include "colorparameter.h"
 #include "view/nodeitem.h"
 #include "gui/color/colorwheelswatch.h"
+#include "util/utils.h"
 
 namespace photon {
 
@@ -95,11 +96,15 @@ void ColorParameter::readFromJson(const QJsonObject &t_json)
 {
     Parameter::readFromJson(t_json);
 
+    setValue(jsonToColor(t_json.value("value").toObject()));
+
 }
 
 void ColorParameter::writeToJson(QJsonObject &t_json) const
 {
     Parameter::writeToJson(t_json);
+
+    t_json.insert("value", colorToJson(value().value<QColor>()));
 
 }
 

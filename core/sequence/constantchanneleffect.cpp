@@ -117,7 +117,7 @@ void ConstantChannelEffect::setRate(double t_value)
     updated();
 }
 
-double ConstantChannelEffect::process(double value, double time) const
+QVariant ConstantChannelEffect::process(QVariant value, double time) const
 {
 
     return m_value + (m_rate * time);

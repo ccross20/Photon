@@ -22,6 +22,7 @@
 #include "cliplayer.h"
 #include "canvasclip.h"
 #include "canvasclipeffect.h"
+#include "opengl/openglresources.h"
 
 namespace photon {
 
@@ -109,17 +110,40 @@ void CanvasLayerGroupEditor::openAddPixelLayout()
 
 void CanvasLayerGroupEditor::removeSelectedLayout()
 {
+    QByteArrayList ids;
+    for(auto item : m_impl->pixelLayoutList->selectedItems())
+    {
+        ids << item->data(Qt::ItemDataRole::UserRole).toByteArray();
+    }
+
+    for(const auto &id : ids)
+    {
+        for(auto layout : m_impl->canvasGroup->pixelLayouts())
+        {
+            if(layout->uniqueId() == id)
+                m_impl->canvasGroup->removePixelLayout(layout);
+        }
+    }
 
 }
 
 void CanvasLayerGroupEditor::pixelLayoutAdded(photon::PixelLayout *t_layout)
 {
-    m_impl->pixelLayoutList->addItem(t_layout->name());
+    auto item = new QListWidgetItem(t_layout->name());
+    item->setData(Qt::ItemDataRole::UserRole, t_layout->uniqueId());
+    m_impl->pixelLayoutList->addItem(item);
 }
 
 void CanvasLayerGroupEditor::pixelLayoutRemoved(photon::PixelLayout *t_layout)
 {
-
+    for(int i = 0; i < m_impl->pixelLayoutList->count(); ++i)
+    {
+        auto item = m_impl->pixelLayoutList->item(i);
+        if(item->data(Qt::ItemDataRole::UserRole).toByteArray() == t_layout->uniqueId())
+        {
+            delete item;
+        }
+    }
 }
 
 
@@ -230,6 +254,8 @@ void CanvasLayerGroup::processChannels(ProcessContext &t_context)
     t_context.openglContext = m_impl->context;
     OpenGLFrameBuffer buffer(m_impl->canvas->texture(), m_impl->context);
     t_context.frameBuffer = &buffer;
+    t_context.resources = photonApp->openGLResources();
+    t_context.resources->bind(t_context.openglContext);
 
     auto f = m_impl->context->functions();
 
@@ -238,7 +264,8 @@ void CanvasLayerGroup::processChannels(ProcessContext &t_context)
     f->glClear(GL_COLOR_BUFFER_BIT);
     f->glEnable(GL_BLEND);
     f->glBlendEquation (GL_FUNC_ADD);
-    f->glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA,GL_ONE,GL_ONE_MINUS_SRC_ALPHA);
+    //f->glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA,GL_ONE,GL_ONE_MINUS_SRC_ALPHA);
+    f->glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 
 
     /*
@@ -329,6 +356,7 @@ void CanvasLayerGroup::restore(Project &t_project)
 {
     if(m_impl->canvasIndex >= 0)
         setCanvas(t_project.canvases()->canvasAtIndex(m_impl->canvasIndex));
+    LayerGroup::restore(t_project);
 }
 
 void CanvasLayerGroup::readFromJson(const QJsonObject &t_json, const LoadContext &t_context)

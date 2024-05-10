@@ -163,6 +163,8 @@ const QVariant &Parameter::value() const
 
 void Parameter::setValue(const QVariant &t_value)
 {
+    if(m_impl->testValueForChange && t_value == m_impl->value)
+        return;
     m_impl->value = t_value;
     markDirty();
 
@@ -171,6 +173,15 @@ void Parameter::setValue(const QVariant &t_value)
         param->setValue(t_value);
 }
 
+bool Parameter::testValueForChange() const
+{
+    return m_impl->testValueForChange;
+}
+
+void Parameter::setTestValueForChange(bool t_value)
+{
+    m_impl->testValueForChange = t_value;
+}
 
 bool Parameter::isDirty() const
 {
@@ -218,6 +229,7 @@ void Parameter::readFromJson(const QJsonObject &t_json)
     m_impl->name = t_json.value("name").toString();
     m_impl->description = t_json.value("description").toString();
     m_impl->value = t_json.value("value");
+    m_impl->testValueForChange = t_json.value("testValueForChange").toBool(true);
     m_impl->defaultValue = t_json.value("defaultValue");
     m_impl->layoutOptions = t_json.value("layoutOptions").toInt();
     m_impl->connectionOptions = t_json.value("connectionOptions").toInt();
@@ -233,6 +245,7 @@ void Parameter::writeToJson(QJsonObject &t_json) const
     t_json.insert("defaultValue", m_impl->defaultValue.toJsonValue());
     t_json.insert("layoutOptions", m_impl->layoutOptions);
     t_json.insert("connectionOptions", m_impl->connectionOptions);
+    t_json.insert("testValueForChange", m_impl->testValueForChange);
 }
 
 

@@ -83,11 +83,20 @@ void ColorInputNode::createParameters()
     addParameter(m_impl->defaultValueParam);
 }
 
+void ColorInputNode::setValue(const QByteArray &t_id, const QVariant &t_value)
+{
+    keira::Node::setValue(t_id, t_value);
+
+    if(t_id == ColorInputNode::Name || t_id == ColorInputNode::DefaultValue)
+        static_cast<Routine*>(graph())->updateChannel(channelIndex(), channelInfo());
+
+}
+
 void ColorInputNode::evaluate(keira::EvaluationContext *t_context) const
 {
-    RoutineEvaluationContext *context = static_cast<RoutineEvaluationContext*>(t_context);
+    //RoutineEvaluationContext *context = static_cast<RoutineEvaluationContext*>(t_context);
 
-    m_impl->valueParam->setValue(context->channelValues.value(uniqueId(),m_impl->defaultValueParam->value()));
+    //m_impl->valueParam->setValue(context->channelValues.value(uniqueId(),m_impl->defaultValueParam->value()));
 
     //qDebug() << context->strength << context->relativeTime;
 }

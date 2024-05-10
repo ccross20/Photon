@@ -4,7 +4,10 @@
 #include "photon-global.h"
 #include "data/dmxmatrix.h"
 #include "model/node.h"
+
+class QOpenGLContext;
 namespace photon {
+class OpenGLFrameBuffer;
 
 struct RoutineEvaluationContext : keira::EvaluationContext
 {
@@ -12,8 +15,10 @@ struct RoutineEvaluationContext : keira::EvaluationContext
     DMXMatrix &dmxMatrix;
     Project *project = nullptr;
     Fixture *fixture = nullptr;
-    QImage *canvasImage = nullptr;
-    QImage *previousCanvasImage = nullptr;
+    OpenGLFrameBuffer *frameBuffer = nullptr;
+    QOpenGLContext *openglContext = nullptr;
+    OpenGLResources *resources = nullptr;
+    Canvas *canvas = nullptr;
     QHash<QByteArray,QVariant> channelValues;
     double relativeTime = 0.0;
     double globalTime = 0.0;

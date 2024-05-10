@@ -30,6 +30,11 @@ void DrawRectangle::createParameters()
     m_heightParam->setMaximum(1);
     addParameter(m_heightParam);
 
+    m_radiusParam = new keira::DecimalParameter("radiusInput","Radius", .25);
+    m_radiusParam->setMinimum(0);
+    m_radiusParam->setMaximum(1);
+    addParameter(m_radiusParam);
+
     m_pathOutputParam = new PathParameter("pathOutput","Path Out", QPainterPath{});
     addParameter(m_pathOutputParam);
 
@@ -37,22 +42,21 @@ void DrawRectangle::createParameters()
 
 void DrawRectangle::evaluate(keira::EvaluationContext *t_context) const
 {
-    /*
-    QImage image = m_canvasInputParam->value().value<QImage>();
-    QPainter painter{&image};
-
-    painter.setOpacity(m_alphaParam->value().toDouble());
-    painter.fillRect(0,0, image.width() * m_widthParam->value().toDouble(), image.height() * m_heightParam->value().toDouble(), m_colorParam->value().value<QColor>());
-    */
-
-    RoutineEvaluationContext *context = static_cast<RoutineEvaluationContext*>(t_context);
 
     QPainterPath path;
 
-    if(context->canvasImage)
-        path.addRect(0,0, context->canvasImage->width() * m_widthParam->value().toDouble(), context->canvasImage->height() * m_heightParam->value().toDouble());
+    double w = m_widthParam->value().toDouble();
+    double h = m_heightParam->value().toDouble();
+    double r = m_radiusParam->value().toDouble();
+    r = std::min(std::min(r,w/2.0),h/2.0);
+
+    if(r <= 0.0)
+        path.addRect(-w/2.0, -h/2.0, w, h);
+    else
+        path.addRoundedRect(-w/2.0, -h/2.0, w, h, r,r);
 
     m_pathOutputParam->setValue(QVariant::fromValue(path));
+
 }
 
 } // namespace photon

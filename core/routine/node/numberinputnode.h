@@ -26,6 +26,7 @@ public:
     ChannelInfo channelInfo() const;
 
     static keira::NodeInformation info();
+    void setValue(const QByteArray &t_id, const QVariant &t_value) override;
 
 
     void markDirty() override;

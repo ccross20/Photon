@@ -28,13 +28,7 @@ void CanvasWriter::createParameters()
 
 void CanvasWriter::evaluate(keira::EvaluationContext *t_context) const
 {
-    RoutineEvaluationContext *context = static_cast<RoutineEvaluationContext*>(t_context);
-    if(context->canvasImage)
-    {
-        QImage other = m_canvasParam->value().value<QImage>();
-        context->canvasImage->swap(other);
 
-    }
 
 }
 

@@ -9,6 +9,7 @@ class Channel::Impl
 public:
     ChannelInfo info;
     QVector<ChannelEffect*> effects;
+    QVector<Channel*> subChannels;
     QByteArray uniqueId;
     QString parentName;
     double startTime = 0;

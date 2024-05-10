@@ -2,6 +2,7 @@
 #include <QFileDialog>
 #include <QSettings>
 #include <QInputDialog>
+#include <QOpenGLContext>
 #include "photoncore.h"
 #include "gui/guimanager.h"
 #include "plugin/pluginfactory.h"
@@ -14,6 +15,8 @@
 #include "settings/settings.h"
 #include "sequence/sequencecollection.h"
 #include "sequence/sequence.h"
+#include "opengl/openglresources.h"
+#include "graph/parameter/textureparameter.h"
 
 inline void initPluginResource() { Q_INIT_RESOURCE(resources); }
 
@@ -37,6 +40,8 @@ public:
     SequencePanel *activeSequencePanel = nullptr;
     QVersionNumber version;
     QOffscreenSurface *surface = nullptr;
+    OpenGLResources *openGLResources = nullptr;
+    QOpenGLContext *context = nullptr;
 };
 
 PhotonCore::Impl::Impl(PhotonCore *t_core):
@@ -50,6 +55,11 @@ PhotonCore::Impl::Impl(PhotonCore *t_core):
 
 PhotonCore::Impl::~Impl()
 {
+
+    context->makeCurrent(surface);
+    openGLResources->destroy(context);
+    delete openGLResources;
+
     delete gui;
     delete plugins;
     delete timekeeper;
@@ -61,6 +71,7 @@ PhotonCore::Impl::~Impl()
 PhotonCore::PhotonCore(int &argc, char **argv) : QApplication(argc, argv),
     m_impl(new Impl(this))
 {
+    qRegisterMetaType<TextureData>();
     connect(m_impl->resources,&ResourceManager::resourceAdded, this, &PhotonCore::resourceAdded);
     connect(m_impl->settings, &Settings::settingsChanged, this, &PhotonCore::settingsChanged);
 }
@@ -106,6 +117,7 @@ void PhotonCore::init()
     connect(m_impl->timekeeper, &Timekeeper::tick, m_impl->busEvaluator, &BusEvaluator::evaluate);
 
     initSurface();
+    initOpenGLResources();
 }
 
 Settings *PhotonCore::settings() const
@@ -132,6 +144,22 @@ void PhotonCore::initSurface()
 
     m_impl->surface = new QOffscreenSurface;
     m_impl->surface->create();
+}
+
+void PhotonCore::initOpenGLResources()
+{
+    m_impl->context = new QOpenGLContext;
+    m_impl->context->setShareContext(QOpenGLContext::globalShareContext());
+    m_impl->context->create();
+    m_impl->context->makeCurrent(m_impl->surface);
+
+    m_impl->openGLResources = new OpenGLResources;
+    m_impl->openGLResources->init(m_impl->context);
+}
+
+OpenGLResources *PhotonCore::openGLResources() const
+{
+    return m_impl->openGLResources;
 }
 
 QOffscreenSurface *PhotonCore::surface() const

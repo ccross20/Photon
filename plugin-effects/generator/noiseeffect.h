@@ -51,7 +51,7 @@ public:
     double amplitude() const{return m_amplitude;}
     int seed() const{return m_seed;}
     int type() const{return m_noiseType;}
-    double process(double value, double time) const override;
+    QVariant process(QVariant value, double time) const override;
     ChannelEffectEditor *createEditor() override;
 
     void readFromJson(const QJsonObject &) override;

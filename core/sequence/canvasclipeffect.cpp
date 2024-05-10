@@ -46,6 +46,8 @@ void CanvasClipEffect::processChannels(ProcessContext &t_context)
     localContext.openglContext = t_context.openglContext;
     localContext.canvas = t_context.canvas;
     localContext.buffer = t_context.frameBuffer;
+    localContext.resources = t_context.resources;
+
 
     localContext.relativeTime = initialRelativeTime;
     if(localContext.relativeTime < 0)

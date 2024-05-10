@@ -20,6 +20,7 @@ public:
     QHash<QByteArray,QVariant> channelValues;
     Canvas *canvas = nullptr;
     QOpenGLContext *openglContext;
+    OpenGLResources *resources = nullptr;
     QImage *image;
     DMXMatrix &dmxMatrix;
     double globalTime;

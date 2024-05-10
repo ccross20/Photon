@@ -27,12 +27,14 @@ void CanvasReader::createParameters()
 
 void CanvasReader::evaluate(keira::EvaluationContext *t_context) const
 {
+    /*
     RoutineEvaluationContext *context = static_cast<RoutineEvaluationContext*>(t_context);
     if(context->canvasImage)
     {
         m_canvasParam->setValue(*context->canvasImage);
 
     }
+*/
 
 }
 

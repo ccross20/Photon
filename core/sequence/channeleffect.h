@@ -45,8 +45,7 @@ public:
 
     Channel *channel() const;
     int index() const;
-    virtual double process(double value, double time) const;
-    virtual QColor processColor(QColor value, double time) const;
+    virtual float * process(float *value, uint size, double time) const;
     virtual ChannelEffectEditor *createEditor() {return new ChannelEffectEditor(this);}
     void updated();
 

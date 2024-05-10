@@ -40,13 +40,17 @@ public:
     void setId(const QByteArray &);
     QByteArray id() const;
     QByteArray uniqueId() const;
+    void setIsAlwaysDirty(bool);
+    bool isAlwaysDirty() const;
+    void setWidth(double);
+    double width() const;
     void addParameter(Parameter *);
     void removeParameter(Parameter *);
     void updateParameter(Parameter *);
     Parameter *findParameter(const QByteArray &) const;
     const QVector<Parameter*> &parameters() const;
 
-    void setValue(const QByteArray &t_id, const QVariant &t_value);
+    virtual void setValue(const QByteArray &t_id, const QVariant &t_value);
     const QVariant &value(const QByteArray &t_id) const;
 
     QPointF position() const;

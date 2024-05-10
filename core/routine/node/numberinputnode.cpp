@@ -49,6 +49,15 @@ void NumberInputNode::markDirty()
         static_cast<Routine*>(graph())->updateChannel(m_impl->index, channelInfo());
 }
 
+void NumberInputNode::setValue(const QByteArray &t_id, const QVariant &t_value)
+{
+    keira::Node::setValue(t_id, t_value);
+
+    if(t_id == NumberInputNode::Name || t_id == NumberInputNode::DefaultValue)
+        static_cast<Routine*>(graph())->updateChannel(channelIndex(), channelInfo());
+
+}
+
 ChannelInfo NumberInputNode::channelInfo() const
 {
     ChannelInfo info;
@@ -85,9 +94,9 @@ void NumberInputNode::createParameters()
 
 void NumberInputNode::evaluate(keira::EvaluationContext *t_context) const
 {
-    RoutineEvaluationContext *context = static_cast<RoutineEvaluationContext*>(t_context);
+    //RoutineEvaluationContext *context = static_cast<RoutineEvaluationContext*>(t_context);
 
-    m_impl->valueParam->setValue(context->channelValues.value(uniqueId(),m_impl->defaultValueParam->value()));
+    //m_impl->valueParam->setValue(context->channelValues.value(uniqueId(),m_impl->defaultValueParam->value()));
 }
 
 void NumberInputNode::readFromJson(const QJsonObject &t_object, keira::NodeLibrary *t_library)

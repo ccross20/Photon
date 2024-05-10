@@ -32,6 +32,8 @@ public:
     SequenceCollection *sequences() const;
     QOffscreenSurface *surface() const;
     void initSurface();
+    void initOpenGLResources();
+    OpenGLResources *openGLResources() const;
 
 
     QString appDataPath() const;

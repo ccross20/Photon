@@ -1,0 +1,6 @@
+<RCC>
+    <qresource prefix="/">
+        <file>nodes-resources/shader/texture/inverted_mask.frag</file>
+        <file>nodes-resources/shader/texture/mask.frag</file>
+    </qresource>
+</RCC>

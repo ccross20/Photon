@@ -41,6 +41,13 @@ ChannelParameterWidget::ChannelParameterWidget(QVector<ChannelParameter*> t_para
 
 
         }
+        else if(param->type() == ChannelParameter::ChannelParameterPoint)
+        {
+            connect(channelButton, &QPushButton::clicked,this,[this,param,channelButton](){
+                channelButton->setEnabled(false);
+                emit addChannel(param, ChannelInfo::ChannelTypePoint);
+            });
+        }
         else
         {
             connect(channelButton, &QPushButton::clicked,this,[this,param,channelButton](){

@@ -40,7 +40,7 @@ public:
     double value() const{return m_value;}
     void setRate(double);
     double rate() const{return m_rate;}
-    double process(double value, double time) const override;
+    QVariant process(QVariant value, double time) const override;
     ChannelEffectEditor *createEditor() override;
 
     void readFromJson(const QJsonObject &) override;

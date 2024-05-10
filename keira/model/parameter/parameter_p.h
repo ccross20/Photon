@@ -25,6 +25,7 @@ namespace keira
         QVariant defaultValue;
         int layoutOptions = LayoutNone;
         bool isDirty = true;
+        bool testValueForChange = true;
         Parameter *facade = nullptr;
 
     };

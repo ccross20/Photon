@@ -30,6 +30,9 @@ public:
     bool allowOutput() const;
     bool isReadOnly() const;
 
+    bool testValueForChange() const;
+    void setTestValueForChange(bool);
+
     int layoutOptions() const;
     void setLayoutOptions(int);
 

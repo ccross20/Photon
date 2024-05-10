@@ -135,13 +135,19 @@ void SineEffect::setAmplitude(double t_value)
     updated();
 }
 
-double SineEffect::process(double value, double time) const
+float *SineEffect::process(float *t_value, uint t_size, double t_time) const
 {
     if(previousEffect())
     {
-        value = previousEffect()->process(value, time);
+        t_value = previousEffect()->process(t_value, t_size, t_time);
     }
-    return value + (std::sin(2 * M_PI * time * (1.0/m_frequency))*(m_amplitude));
+
+    for(int i = 0; i < t_size; ++i)
+    {
+        t_value[i] = t_value[i] + (std::sin(2 * M_PI * t_time * (1.0/m_frequency))*(m_amplitude));
+    }
+
+    return t_value;
 }
 
 ChannelEffectEditor *SineEffect::createEditor()

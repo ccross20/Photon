@@ -20,6 +20,7 @@ private:
     PathParameter *m_pathOutputParam;
     keira::DecimalParameter *m_widthParam;
     keira::DecimalParameter *m_heightParam;
+    keira::DecimalParameter *m_radiusParam;
 };
 
 } // namespace photon
