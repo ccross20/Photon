@@ -47,9 +47,14 @@ void SplineChannelEffect::setValue(const Spline &t_spline)
     updated();
 }
 
-double SplineChannelEffect::process(double value, double time) const
+float * SplineChannelEffect::process(float *value, uint size, double time) const
 {
-    return m_spline.value(time, true);
+    auto val = m_spline.value(time, true);
+    for(int i = 0; i < size; ++i)
+    {
+        value[i] = val;
+    }
+    return value;
 }
 
 ChannelEffectEditor *SplineChannelEffect::createEditor()

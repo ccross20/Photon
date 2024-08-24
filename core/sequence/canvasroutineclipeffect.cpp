@@ -169,10 +169,10 @@ void CanvasRoutineClipEffect::evaluate(CanvasClipEffectEvaluationContext &t_cont
     for(const auto &channel : channels())
     {
         if(ChannelInfo::ChannelType::ChannelTypeNumber == channel->type())
-            localContext.channelValues.insert(channel->uniqueId(), channel->processDouble(t_context.relativeTime));
+            localContext.channelValues.insert(channel->uniqueId(), channel->processValue(t_context.relativeTime));
 
         else if(ChannelInfo::ChannelType::ChannelTypeColor == channel->type())
-            localContext.channelValues.insert(channel->uniqueId(), channel->processColor(t_context.relativeTime));
+            localContext.channelValues.insert(channel->uniqueId(), channel->processValue(t_context.relativeTime));
     }
 
     for(auto param : m_impl->inputs)

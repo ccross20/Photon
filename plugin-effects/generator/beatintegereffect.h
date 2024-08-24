@@ -47,7 +47,7 @@ public:
     BeatIntegerMode mode() const;
 
 
-    double process(double value, double time) const override;
+    float * process(float *value, uint size, double time) const override;
     ChannelEffectEditor *createEditor() override;
 
     void readFromJson(const QJsonObject &) override;

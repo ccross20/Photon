@@ -127,7 +127,9 @@ Channel::Channel(const ChannelInfo &t_info, double t_startTime, double t_duratio
         static_cast<ConstantChannelEffect*>(effect)->setValue(t_info.defaultValue.toDouble());
         m_impl->effects.append(effect);
     }
-    m_impl->effects.back()->m_impl->channel = this;
+
+    if(!m_impl->effects.isEmpty())
+        m_impl->effects.back()->m_impl->channel = this;
 }
 
 Channel::~Channel()
@@ -287,8 +289,9 @@ QVariant Channel::processValue(double time)
     QVariant val = m_impl->info.defaultValue;
 
     int subChannelCount = m_impl->subChannels.length();
+    int valuesSize = std::max(1,subChannelCount);
 
-    float *values = new float[subChannelCount];
+    float *values = new float[valuesSize];
     if(subChannelCount > 0)
     {
         if(type() == ChannelInfo::ChannelTypePoint && subChannelCount == 2)
@@ -318,31 +321,33 @@ QVariant Channel::processValue(double time)
 
 
     if(!m_impl->effects.isEmpty())
-        values = m_impl->effects.back()->process(values, subChannelCount, time);
+        values = m_impl->effects.back()->process(values, valuesSize, time);
 
     if(subChannelCount > 0)
     {
         if(type() == ChannelInfo::ChannelTypePoint && subChannelCount == 2)
         {
             QPointF pt = val.toPointF();
-            pt.setX(values[0] * m_impl->subChannels[0]->processValue(time).toFloat());
-            pt.setX(values[1] * m_impl->subChannels[1]->processValue(time).toFloat());
+            pt.setX(values[0] + m_impl->subChannels[0]->processValue(time).toFloat());
+            pt.setY(values[1] + m_impl->subChannels[1]->processValue(time).toFloat());
+            delete[] values;
             return pt;
         }
         else if(type() == ChannelInfo::ChannelTypeColor && m_impl->subChannels.length() == 4)
         {
             QColor color = val.value<QColor>();
-            color.setHslF(color.hueF() * m_impl->subChannels[0]->processValue(time).toFloat(),
-                color.saturationF() * m_impl->subChannels[1]->processValue(time).toFloat(),
-                color.lightnessF() * m_impl->subChannels[2]->processValue(time).toFloat(),
-                color.alphaF() * m_impl->subChannels[3]->processValue(time).toFloat());
+            color.setHslF(color.hueF() + m_impl->subChannels[0]->processValue(time).toFloat(),
+                color.saturationF() + m_impl->subChannels[1]->processValue(time).toFloat(),
+                color.lightnessF() + m_impl->subChannels[2]->processValue(time).toFloat(),
+                color.alphaF() + m_impl->subChannels[3]->processValue(time).toFloat());
+            delete[] values;
             return color;
         }
     }
 
-
-
-    return val;
+    double v = values[0];
+    delete[] values;
+    return v;
 }
 
 void Channel::effectUpdated(ChannelEffect *t_effect)

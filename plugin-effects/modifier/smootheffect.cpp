@@ -74,23 +74,29 @@ void SmoothEffect::setSpread(double t_value)
     updated();
 }
 
-double SmoothEffect::process(double value, double time) const
+float * SmoothEffect::process(float *value, uint size, double time) const
 {
 
     if(previousEffect())
     {
-
         double interval = m_spread / (m_samples-1);
         double halfSpread = m_spread / 2.0;
-        double total = 0.0;
 
-        for(int i = 0; i < m_samples; ++i)
+        for(int k = 0; k < size; ++k)
         {
-            total += previousEffect()->process(value, time - halfSpread + (interval * i));
+
+            double total = 0.0;
+
+            for(int i = 0; i < m_samples; ++i)
+            {
+                total += previousEffect()->process(value, size, time - halfSpread + (interval * i))[k];
+            }
+
+
+            value[k] = total / static_cast<double>(m_samples);
         }
 
 
-        return total / static_cast<double>(m_samples);
     }
 
 

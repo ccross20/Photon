@@ -151,6 +151,7 @@ private slots:
 
 private:
     Channel *m_channel;
+    FolderData *m_subChannelFolder;
 };
 
 

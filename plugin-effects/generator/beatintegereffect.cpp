@@ -98,18 +98,27 @@ void BeatIntegerEffect::addedToChannel()
     rebuildCells();
 }
 
-double BeatIntegerEffect::process(double value, double t_time) const
+float * BeatIntegerEffect::process(float *value, uint size, double t_time) const
 {
-    if(m_cells.isEmpty())
-        return m_min;
-    float globalTime = t_time + channel()->startTime();
+    for(int i = 0; i < size; ++i)
+    {
+        if(m_cells.isEmpty())
+        {
+            value[i] = m_min;
+            continue;
+        }
+        float globalTime = t_time + channel()->startTime();
 
-    BeatCell t;
-    t.time  = globalTime;
+        BeatCell t;
+        t.time  = globalTime;
 
-    auto it = std::lower_bound(m_cells.cbegin(), m_cells.cend(), t,[](const BeatCell &a, const BeatCell &b){return a.time < b.time;});
+        auto it = std::lower_bound(m_cells.cbegin(), m_cells.cend(), t,[](const BeatCell &a, const BeatCell &b){return a.time < b.time;});
 
-    return (*it).value;
+        value[i] = (*it).value;
+    }
+
+    return value;
+
 }
 
 void BeatIntegerEffect::rebuildCells()

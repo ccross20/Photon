@@ -69,7 +69,7 @@ void LoopEffect::setMirror(bool t_value)
     updated();
 }
 
-double LoopEffect::process(double value, double time) const
+float * LoopEffect::process(float *value, uint size, double time) const
 {
     if(previousEffect())
     {
@@ -87,7 +87,7 @@ double LoopEffect::process(double value, double time) const
         }
 
 
-        value = previousEffect()->process(value, loopedTime);
+        value = previousEffect()->process(value, size, loopedTime);
     }
     return value;
 }

@@ -301,12 +301,6 @@ void Project::readFromJson(const QJsonObject &json)
             m_impl->canvases.addCanvas(c);
         }
     }
-
-
-
-
-
-
 }
 
 void Project::writeToJson(QJsonObject &json) const

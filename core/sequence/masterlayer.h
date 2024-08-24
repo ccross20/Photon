@@ -15,7 +15,7 @@ public:
 
     Channel *channel() const;
 
-    double process(double time) const;
+    QVariant process(double time) const;
     virtual void processChannels(ProcessContext &) override;
     virtual void readFromJson(const QJsonObject &, const LoadContext &) override;
     virtual void writeToJson(QJsonObject &) const override;

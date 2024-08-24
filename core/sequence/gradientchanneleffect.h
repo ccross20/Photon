@@ -85,7 +85,7 @@ public:
 
     GradientChannelEffect();
 
-    QColor processColor(QColor value, double time) const override;
+    float * process(float *value, uint size, double time) const override;
     ChannelEffectEditor *createEditor() override;
     const QVector<GradientData> &colors() const;
     void setColors(const QVector<GradientData> &);

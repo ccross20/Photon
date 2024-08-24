@@ -117,10 +117,14 @@ void ConstantChannelEffect::setRate(double t_value)
     updated();
 }
 
-QVariant ConstantChannelEffect::process(QVariant value, double time) const
+float * ConstantChannelEffect::process(float *value, uint size, double time) const
 {
 
-    return m_value + (m_rate * time);
+    for(int i = 0; i < size; ++i)
+    {
+        value[i] = m_value + (m_rate * time);
+    }
+    return value;
 }
 
 ChannelEffectEditor *ConstantChannelEffect::createEditor()

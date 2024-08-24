@@ -115,9 +115,10 @@ void EffectEditorViewer::drawBackgroundColor(QPainter *painter, const QRectF &re
     double startX = m_transform.map(QPointF(std::max(startTime, m_sceneBounds.left()),0.0)).x();
     double endX = m_transform.map(QPointF(std::min(endTime, m_sceneBounds.right()),0.0)).x();
     auto invTrans = m_transform.inverted();
-
+/*
     for(int x = startX; x < endX; ++x)
     {
+        m_effect->process()
         auto c = m_effect->processColor(Qt::red, invTrans.map(QPointF(x,0)).x() - startTime).rgba();
         painter->fillRect(x,0,1,50, c);
     }
@@ -291,15 +292,25 @@ void EffectEditorViewer::fitY()
 
     //qDebug() << left << right << (right - left) / interval;
 
+    auto subChannelCount = std::max(m_effect->channel()->subChannelCount(),1);
+    float *values = new float[subChannelCount];
+
     double d = startTime;
     while( d < endTime )
     {
         d += interval;
-        double val = m_effect->process(initialValue, d - startTime);
-        if(val < minValue)
-            minValue = val;
-        if(val > maxValue)
-            maxValue = val;
+        values = m_effect->process(values, subChannelCount, d - startTime);
+
+        for(int i = 0; i < subChannelCount; ++i)
+        {
+            float val = values[i];
+            if(val < minValue)
+                minValue = val;
+            if(val > maxValue)
+                maxValue = val;
+        }
+
+
 
     }
 
@@ -493,7 +504,7 @@ void EffectEditorViewer::rebuildColors()
         double right = std::min(m_sceneBounds.right(), m_effect->channel()->endTime());
 
         double interval = (right - left)/width();
-
+/*
 
         m_colors << m_effect->processColor(initialValue, left - startTime).rgba();
 
@@ -506,7 +517,7 @@ void EffectEditorViewer::rebuildColors()
             m_colors << m_effect->processColor(initialValue, d - startTime).rgba();
         }
 
-
+*/
 
     }
 }
@@ -531,29 +542,49 @@ void EffectEditorViewer::rebuildPaths()
 
         double interval = (right - left)/width();
 
+        auto subChannelCount = std::max(m_effect->channel()->subChannelCount(),1);
+        float *values = new float[subChannelCount];
 
-        m_path.moveTo(left,m_effect->process(initialValue, left - startTime));
+/*
+        values = m_effect->process(values,subChannelCount,left-startTime);
 
-        //qDebug() << left << right << (right - left) / interval;
-
-        double d = left;
-        while( d < right )
+        for(int i; i < subChannelCount; ++i)
         {
-            d += interval;
-            m_path.lineTo(d, m_effect->process(initialValue, d - startTime));
+            m_path.moveTo(left,m_effect->process(initialValue, left - startTime));
+
+            //qDebug() << left << right << (right - left) / interval;
+
+            double d = left;
+            while( d < right )
+            {
+                d += interval;
+                m_path.lineTo(d, m_effect->process(initialValue, d - startTime));
+            }
+
+
         }
+*/
 
         auto channel = m_effect->channel();
+        auto channelType = channel->info().type;
 
-        interval = (right - left)/width();
-        m_channelPath.moveTo(left,channel->processDouble(left - startTime));
-
-        d = left;
-        while( d < right )
+        if(channelType == ChannelInfo::ChannelTypeBool ||
+            channelType == ChannelInfo::ChannelTypeInteger ||
+            channelType == ChannelInfo::ChannelTypeIntegerStep ||
+            channelType == ChannelInfo::ChannelTypeNumber)
         {
-            d += interval;
-            m_channelPath.lineTo(d, channel->processDouble(d - startTime));
+            interval = (right - left)/width();
+            m_channelPath.moveTo(left,channel->processValue(left - startTime).toDouble());
+
+            double d = left;
+            while( d < right )
+            {
+                d += interval;
+                m_channelPath.lineTo(d, channel->processValue(d - startTime).toDouble());
+            }
         }
+
+
 
     }
 }

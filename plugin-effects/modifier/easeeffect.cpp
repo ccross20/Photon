@@ -204,24 +204,27 @@ void EaseEffect::setEaseOutType(QEasingCurve::Type t_value)
     updated();
 }
 
-double EaseEffect::process(double value, double time) const
+float * EaseEffect::process(float *value, uint size, double time) const
 {
     if(previousEffect())
     {
-        value = previousEffect()->process(value, time);
+        value = previousEffect()->process(value, size, time);
     }
 
     double duration = channel()->duration();
     double outStart = duration - m_easeOutDuration;
 
-    if(time > outStart)
+    for(int i = 0; i < size; ++i)
     {
-        return m_easingOut.valueForProgress(1 - ((time - outStart) / m_easeOutDuration)) * value;
-    }
+        if(time > outStart)
+        {
+            value[i] = m_easingOut.valueForProgress(1 - ((time - outStart) / m_easeOutDuration)) * value[i];
+        }
 
-    if(time < m_easeInDuration)
-    {
-        return m_easingIn.valueForProgress(time / m_easeInDuration) * value;
+        if(time < m_easeInDuration)
+        {
+            value[i] = m_easingIn.valueForProgress(time / m_easeInDuration) * value[i];
+        }
     }
 
     return value;

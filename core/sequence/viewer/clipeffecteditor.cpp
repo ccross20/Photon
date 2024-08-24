@@ -77,10 +77,10 @@ void CurveViewport::rebuildPaths()
 
         double left = std::max(m_sceneBounds.left(), startTime);
         double right = std::min(m_sceneBounds.right(), m_effect->channel()->endTime());
-
+/*
 
         double interval = 1.0/m_scale;
-        m_path.moveTo(left,m_effect->process(initialValue, left - startTime));
+        m_path.moveTo(left,*m_effect->process(initialValue, left - startTime));
 
         double d = left;
         while( d < right )
@@ -100,7 +100,7 @@ void CurveViewport::rebuildPaths()
             d += interval;
             m_channelPath.lineTo(d, channel->processDouble(d - startTime));
         }
-
+*/
     }
 }
 

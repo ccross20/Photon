@@ -23,11 +23,16 @@ QVector<double> ChannelParameterContainer::Impl::valuesForChannel(const QByteArr
     for(auto channel : t_channels)
     {
         if(channel->uniqueId() == t_uniqueId)
-            return QVector<double>{channel->processDouble(t_time)};
-        if(channel->parentUniqueId() == t_uniqueId)
         {
-            results.resize(channel->subChannelIndex() + 1);
-            results[channel->subChannelIndex()] = channel->processDouble(t_time);
+            if(channel->subChannelCount() > 0)
+                results.resize(channel->subChannelCount());
+            for(auto sub : channel->subChannels())
+            {
+                results[sub->subChannelIndex()] = sub->processValue(t_time).toDouble();
+            }
+            if(!results.isEmpty())
+                return results;
+            return QVector<double>{channel->processValue(t_time).toDouble()};
         }
     }
     return results;
@@ -40,7 +45,7 @@ QColor ChannelParameterContainer::Impl::colorForChannel(ChannelParameter *t_para
         if(channel->uniqueId() == t_param->uniqueId())
         {
 
-            return channel->processColor(t_time);
+            return channel->processValue(t_time).value<QColor>();
         }
     }
 
@@ -81,7 +86,9 @@ QHash<QByteArray,QVariant> ChannelParameterContainer::valuesFromChannels(const Q
         auto values = m_impl->valuesForChannel(channelParam->uniqueId(), t_time, t_channels);
 
         if(values.length() == channelParam->channels())
+        {
             results.insert(channelParam->uniqueId(), channelParam->channelsToVariant(values));
+        }
         else
         {
             if(channelParam->type() == ChannelParameter::ChannelParameterColor)
@@ -89,7 +96,9 @@ QHash<QByteArray,QVariant> ChannelParameterContainer::valuesFromChannels(const Q
                 results.insert(channelParam->uniqueId(), m_impl->colorForChannel(channelParam, t_time,t_channels));
             }
             else
+            {
                 results.insert(channelParam->uniqueId(), channelParam->value());
+            }
         }
     }
 

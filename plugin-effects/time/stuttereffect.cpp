@@ -117,7 +117,7 @@ void StutterEffect::setGap(double t_value)
     updated();
 }
 
-double StutterEffect::process(double value, double time) const
+float * StutterEffect::process(float *value, uint size, double time) const
 {
 
     if(previousEffect())
@@ -135,7 +135,7 @@ double StutterEffect::process(double value, double time) const
         else
             offset += m_duration;
 
-        return previousEffect()->process(value, offset);
+        return previousEffect()->process(value, size, offset);
     }
 
 

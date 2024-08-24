@@ -63,7 +63,7 @@ public:
     double easeOutDuration() const{return m_easeOutDuration;}
     QEasingCurve::Type easeInType() const{return m_easeInType;}
     QEasingCurve::Type easeOutType() const{return m_easeOutType;}
-    QVariant process(QVariant value, double time) const override;
+    float * process(float *value, uint size, double time) const override;
     ChannelEffectEditor *createEditor() override;
 
     void readFromJson(const QJsonObject &) override;

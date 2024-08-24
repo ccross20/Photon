@@ -91,11 +91,14 @@ void MasterLayerChannelEffect::setLayer(MasterLayer *t_layer)
 
 }
 
-double MasterLayerChannelEffect::process(double value, double time) const
+float * MasterLayerChannelEffect::process(float *value, uint size, double time) const
 {
+    /*
     if(m_layer)
-        return m_layer->process(channel()->startTime() + time);
+        return m_layer->process(value, size, channel()->startTime() + time);
     return m_value;
+*/
+    return value;
 }
 
 ChannelEffectEditor *MasterLayerChannelEffect::createEditor()

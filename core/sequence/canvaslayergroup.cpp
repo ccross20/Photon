@@ -175,6 +175,14 @@ CanvasLayerGroup::CanvasLayerGroup(QObject *t_parent):LayerGroup("CanvasGroup", 
 CanvasLayerGroup::CanvasLayerGroup(Canvas *t_canvas, const QString &t_name):LayerGroup(t_name,"CanvasGroup"),m_impl(new Impl)
 {
     m_impl->canvas = t_canvas;
+
+    QOffscreenSurface *surface = photonApp->surface();
+
+    m_impl->context = new QOpenGLContext();
+
+    m_impl->context->setShareContext(QOpenGLContext::globalShareContext());
+    m_impl->context->create();
+    m_impl->context->makeCurrent(surface);
 }
 
 CanvasLayerGroup::~CanvasLayerGroup()

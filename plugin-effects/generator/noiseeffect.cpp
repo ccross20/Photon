@@ -175,15 +175,19 @@ void NoiseEffect::setType(int t_value)
     updated();
 }
 
-double NoiseEffect::process(double value, double time) const
+float * NoiseEffect::process(float *value, uint size, double time) const
 {
     if(previousEffect())
     {
-        value = previousEffect()->process(value, time);
+        value = previousEffect()->process(value, size, time);
     }
 
+    for(int i = 0; i < size; ++i)
+    {
+        value[i] += m_noise.noise1D(time * (1000.0/m_frequency),0,m_amplitude);
+    }
 
-    return value + m_noise.noise1D(time * (1000.0/m_frequency),0,m_amplitude);
+    return value;
 
 }
 

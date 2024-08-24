@@ -32,9 +32,9 @@ Channel *MasterLayer::channel() const
     return m_impl->channel;
 }
 
-double MasterLayer::process(double time) const
+QVariant MasterLayer::process(double time) const
 {
-    return m_impl->channel->processDouble(time);
+    return m_impl->channel->processValue(time);
 }
 
 void MasterLayer::processChannels(ProcessContext &t_context)

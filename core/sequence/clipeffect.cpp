@@ -18,11 +18,11 @@ QVector<double> ClipEffect::Impl::valuesForChannel(const QByteArray &t_uniqueId,
     for(auto channel : channels)
     {
         if(channel->uniqueId() == t_uniqueId)
-            return QVector<double>{channel->processDouble(t_time)};
+            return QVector<double>{channel->processValue(t_time).toDouble()};
         if(channel->parentUniqueId() == t_uniqueId)
         {
             results.resize(channel->subChannelIndex() + 1);
-            results[channel->subChannelIndex()] = channel->processDouble(t_time);
+            results[channel->subChannelIndex()] = channel->processValue(t_time).toDouble();
         }
     }
     return results;
@@ -35,7 +35,7 @@ QColor ClipEffect::Impl::colorForChannel(ChannelParameter *t_param, double t_tim
         if(channel->uniqueId() == t_param->uniqueId())
         {
 
-            return channel->processColor(t_time);
+            return channel->processValue(t_time).value<QColor>();
         }
     }
 
@@ -83,6 +83,7 @@ void ClipEffect::prepareContext(ClipEffectEvaluationContext &t_context) const
     t_context.channelValues = m_impl->parameters->valuesFromChannels(m_impl->channels, t_context.relativeTime);
 
 
+
 }
 
 double ClipEffect::getNumberAtTime(const QByteArray &t_id, double t_time) const
@@ -90,7 +91,7 @@ double ClipEffect::getNumberAtTime(const QByteArray &t_id, double t_time) const
     for(const auto &channel : m_impl->channels)
     {
         if(channel->uniqueId() == t_id)
-            return channel->processDouble(t_time);
+            return channel->processValue(t_time).toDouble();
     }
     return 0;
 }
@@ -100,7 +101,7 @@ QColor ClipEffect::getColorAtTime(const QByteArray &t_id, double t_time) const
     for(const auto &channel : m_impl->channels)
     {
         if(channel->uniqueId() == t_id)
-            return channel->processColor(t_time);
+            return channel->processValue(t_time).value<QColor>();
     }
     return Qt::white;
 }

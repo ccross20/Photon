@@ -307,11 +307,11 @@ void PulseEffect::setEaseOutType(QEasingCurve::Type t_value)
     updated();
 }
 
-QVariant PulseEffect::process(QVariant value, double time) const
+float * PulseEffect::process(float *value, uint size, double time) const
 {
     if(previousEffect())
     {
-        value = previousEffect()->process(value, time);
+        value = previousEffect()->process(value, size, time);
     }
 
 
@@ -323,30 +323,41 @@ QVariant PulseEffect::process(QVariant value, double time) const
     if(time < m_offset)
         return value;
 
-    if(adjustedTime > gap)
-        return m_amplitude;
 
-    double inDuration = m_easeInDuration;
-    double outDuration = m_easeOutDuration;
-    double totalDuration = inDuration + outDuration;
-
-    if(totalDuration > gap)
+    for(int i = 0; i < size; ++i)
     {
-        inDuration = (m_easeInDuration / totalDuration) * gap;
-        outDuration = (m_easeOutDuration / totalDuration) * gap;
+        if(adjustedTime > gap)
+        {
+            value[i] = m_amplitude;
+            continue;
+        }
+
+        double inDuration = m_easeInDuration;
+        double outDuration = m_easeOutDuration;
+        double totalDuration = inDuration + outDuration;
+
+        if(totalDuration > gap)
+        {
+            inDuration = (m_easeInDuration / totalDuration) * gap;
+            outDuration = (m_easeOutDuration / totalDuration) * gap;
+        }
+
+        double doubleVal = value[i];
+
+        if(adjustedTime > gap - inDuration)
+        {
+            value[i] = (m_easingIn.valueForProgress((adjustedTime - (gap - inDuration))/ inDuration) * (m_amplitude - doubleVal)) + doubleVal;
+            continue;
+        }
+
+        if(adjustedTime < outDuration && loopCount > 0)
+        {
+            value[i] = (m_easingOut.valueForProgress(1.0 - (adjustedTime / outDuration)) * (m_amplitude - doubleVal)) + doubleVal;
+            continue;
+        }
+
     }
 
-    double doubleVal = value.toDouble();
-
-    if(adjustedTime > gap - inDuration)
-    {
-        return (m_easingIn.valueForProgress((adjustedTime - (gap - inDuration))/ inDuration) * (m_amplitude - doubleVal)) + doubleVal;
-    }
-
-    if(adjustedTime < outDuration && loopCount > 0)
-    {
-        return (m_easingOut.valueForProgress(1.0 - (adjustedTime / outDuration)) * (m_amplitude - doubleVal)) + doubleVal;
-    }
 
     return value;
 }

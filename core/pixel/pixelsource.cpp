@@ -251,12 +251,19 @@ void PixelSource::process(ProcessContext &t_context, const QTransform &t_transfo
 
         auto qc = QColor::fromRgb(color);
 
+        t_context.dmxMatrix.setValue(u, channel++, qc.red());
+        t_context.dmxMatrix.setValue(u, channel++, qc.green());
+        t_context.dmxMatrix.setValue(u, channel++, qc.blue());
+
+        /*
+
         auto rgbw = m_impl->GetRgbwFromRgb(tRGB{qc.red(), qc.green(), qc.blue()},2700);
 
         t_context.dmxMatrix.setValue(u, channel++, rgbw.r);
         t_context.dmxMatrix.setValue(u, channel++, rgbw.g);
         t_context.dmxMatrix.setValue(u, channel++, rgbw.b);
         t_context.dmxMatrix.setValue(u, channel++, rgbw.w);
+*/
     }
 }
 

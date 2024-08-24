@@ -212,11 +212,17 @@ GradientChannelEffect::GradientChannelEffect()
 
 }
 
+float * colorToValues(const QColor &t_color, float *value, uint size)
+{
+    t_color.getHsvF(&value[0],&value[1],&value[2]);
+    return value;
+}
 
-QColor GradientChannelEffect::processColor(QColor value, double time) const
+
+float * GradientChannelEffect::process(float *value, uint size, double time) const
 {
     if(m_colors.isEmpty())
-        return Qt::black;
+        return colorToValues(Qt::black, value, size);
 
     QColor lastColor = m_colors.front().color;
     double lastPosition = m_colors.front().time;
@@ -224,7 +230,7 @@ QColor GradientChannelEffect::processColor(QColor value, double time) const
 
 
     if(time < lastPosition)
-        return lastColor;
+        return colorToValues(lastColor, value, size);
 
 
     for(auto it = m_colors.begin(); it != m_colors.end(); ++it)
@@ -234,12 +240,12 @@ QColor GradientChannelEffect::processColor(QColor value, double time) const
 
             double f = (time-lastPosition)/((*it).time - lastPosition);
 
-            return  blendColors(lastColor, (*it).color,f);
+            return colorToValues(blendColors(lastColor, (*it).color,f), value, size);
         }
         lastColor = (*it).color;
         lastPosition = (*it).time;
     }
-    return lastColor;
+    return colorToValues(lastColor, value, size);
 
     //return QColor::fromHslF(.5 + (std::sin(2 * M_PI * time * (1.0/5))*(.5)),1.0,.5,1.0);
 }

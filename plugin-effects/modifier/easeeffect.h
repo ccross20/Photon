@@ -45,7 +45,7 @@ public:
     void setEaseInType(QEasingCurve::Type);
     void setEaseOutType(QEasingCurve::Type);
 
-    double process(double value, double time) const override;
+    float * process(float *value, uint size, double time) const override;
     ChannelEffectEditor *createEditor() override;
     double easeInDuration() const{return m_easeInDuration;}
     double easeOutDuration() const{return m_easeOutDuration;}

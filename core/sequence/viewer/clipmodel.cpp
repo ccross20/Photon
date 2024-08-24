@@ -117,6 +117,19 @@ ChannelData::ChannelData(Channel *t_channel):AbstractTreeData(t_channel->info().
     connect(t_channel, &Channel::effectMoved, this, &ChannelData::effectMoved);
     connect(t_channel, &Channel::channelUpdated, this, &ChannelData::channelUpdated);
 
+
+    if(t_channel->subChannelCount() > 0)
+    {
+        m_subChannelFolder = new FolderData("Sub-Channels", DataChannel, false);
+        addChild(m_subChannelFolder);
+        for(int i = 0; i < t_channel->subChannelCount(); ++i)
+        {
+            auto channelData = new ChannelData(t_channel->subChannels()[i]);
+            m_subChannelFolder->addChild(channelData);
+        }
+    }
+
+
     for(int i = 0; i < t_channel->effectCount(); ++i)
     {
         auto effectData = new ChannelEffectData(t_channel->effectAtIndex(i));
