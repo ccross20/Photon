@@ -51,16 +51,15 @@ void CloudTunnel::evaluate(CanvasClipEffectEvaluationContext &t_context)
     QPointF pos = t_context.channelValues["center"].value<QPointF>();
 
 
+    t_context.openglContext->functions()->glClearColor(.0f,.0f,.0f,.0f);
+    t_context.openglContext->functions()->glClear(GL_COLOR_BUFFER_BIT);
+
     m_shader->bind(t_context.openglContext);
 
 
-
-
-
-
     m_shader->setFloat2("iResolution", t_context.canvas->width(), t_context.canvas->height());
-    m_shader->setFloat("iTime", t_context.relativeTime);
-    m_shader->setFloat2("centerPt", pos.x(), pos.y());
+    //m_shader->setFloat("iTime", t_context.relativeTime);
+    //m_shader->setFloat2("centerPt", pos.x(), pos.y());
 
 
     m_plane->draw(t_context.openglContext);

@@ -41,6 +41,23 @@ QColor ColorChannelParameter::defaultValue() const
     return m_impl->defaultValue;
 }
 
+
+QColor ColorChannelParameter::channelsToColor(const float* t_channels)
+{
+    return QColor::fromHslF(t_channels[0], t_channels[1], t_channels[2], t_channels[3]);
+}
+
+void ColorChannelParameter::colorToChannels(const QColor &t_value, float* values)
+{
+    float h,l,s,a;
+    t_value.getHslF(&h, &s, &l, &a);
+    values[0] = h;
+    values[1] = s;
+    values[2] = l;
+    values[3] = a;
+
+}
+
 QVariant ColorChannelParameter::channelsToVariant(const QVector<double> &t_channels) const
 {
     return QColor::fromHslF(t_channels[0], t_channels[1], t_channels[2], t_channels[3]);

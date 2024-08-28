@@ -7,6 +7,7 @@
 #include "sequence/channel.h"
 #include "sequence/clip.h"
 #include "sequence/viewer/stackedparameterwidget.h"
+#include "channel/parameter/colorchannelparameter.h"
 
 namespace photon {
 
@@ -103,10 +104,13 @@ void EffectEditorViewer::drawBackground(QPainter *painter, const QRectF &rect)
 void EffectEditorViewer::drawBackgroundColor(QPainter *painter, const QRectF &rect)
 {
     painter->fillRect(rect, QColor(50,50,50));
+
+    /*
     if(m_pathsDirty)
         rebuildColors();
 
     m_colorsDirty = false;
+*/
     painter->resetTransform();
 
     double startTime = m_effect->channel()->startTime();
@@ -115,15 +119,24 @@ void EffectEditorViewer::drawBackgroundColor(QPainter *painter, const QRectF &re
     double startX = m_transform.map(QPointF(std::max(startTime, m_sceneBounds.left()),0.0)).x();
     double endX = m_transform.map(QPointF(std::min(endTime, m_sceneBounds.right()),0.0)).x();
     auto invTrans = m_transform.inverted();
-/*
+
+    QColor initialValue = m_effect->channel()->info().defaultValue.value<QColor>();
+
+    float *values = new float[4];
+
     for(int x = startX; x < endX; ++x)
     {
-        m_effect->process()
-        auto c = m_effect->processColor(Qt::red, invTrans.map(QPointF(x,0)).x() - startTime).rgba();
+        ColorChannelParameter::colorToChannels(initialValue, values);
+        values = m_effect->process(values, 4, invTrans.map(QPointF(x,0)).x() - startTime);
+
+        auto c = ColorChannelParameter::channelsToColor(values);
+
         painter->fillRect(x,0,1,50, c);
     }
-    /*
 
+
+    delete [] values;
+/*
     int x = 0;
     for(auto it = m_colors.cbegin(); it != m_colors.cend(); ++it)
     {
@@ -131,7 +144,8 @@ void EffectEditorViewer::drawBackgroundColor(QPainter *painter, const QRectF &re
         if(x > m_xScale)
             return;
     }
-    */
+
+*/
 }
 
 void EffectEditorViewer::drawBackgroundNumber(QPainter *painter, const QRectF &rect)
@@ -504,20 +518,30 @@ void EffectEditorViewer::rebuildColors()
         double right = std::min(m_sceneBounds.right(), m_effect->channel()->endTime());
 
         double interval = (right - left)/width();
-/*
 
-        m_colors << m_effect->processColor(initialValue, left - startTime).rgba();
+        float *values = new float[4];
+
+        ColorChannelParameter::colorToChannels(initialValue, values);
+
+        values = m_effect->process(values, 4, left - startTime);
+
+        m_colors << ColorChannelParameter::channelsToColor(values).rgba();
 
         //qDebug() << left << right << (right - left) / interval;
 
         double d = left;
         while( d < right )
         {
+
+            ColorChannelParameter::colorToChannels(initialValue, values);
             d += interval;
-            m_colors << m_effect->processColor(initialValue, d - startTime).rgba();
+
+            values = m_effect->process(values, 4, d - startTime);
+            m_colors << ColorChannelParameter::channelsToColor(values).rgba();
         }
 
-*/
+
+        delete[] values;
 
     }
 }
@@ -543,27 +567,63 @@ void EffectEditorViewer::rebuildPaths()
         double interval = (right - left)/width();
 
         auto subChannelCount = std::max(m_effect->channel()->subChannelCount(),1);
-        float *values = new float[subChannelCount];
 
-/*
-        values = m_effect->process(values,subChannelCount,left-startTime);
-
-        for(int i; i < subChannelCount; ++i)
+        if(subChannelCount > 0)
         {
-            m_path.moveTo(left,m_effect->process(initialValue, left - startTime));
+            float *tempValues = new float[subChannelCount];
+            std::vector<std::vector<float>> values(width()+5,std::vector<float>(subChannelCount));
 
-            //qDebug() << left << right << (right - left) / interval;
-
-            double d = left;
-            while( d < right )
+            for(int v = 0; v < subChannelCount; ++v)
             {
-                d += interval;
-                m_path.lineTo(d, m_effect->process(initialValue, d - startTime));
+                tempValues[v] = initialValue;
+            }
+
+            tempValues = m_effect->process(tempValues,subChannelCount,left-startTime);
+
+            for(int v = 0; v < subChannelCount; ++v)
+            {
+                values[0][v] = tempValues[v];
             }
 
 
+            //qDebug() << left << right << (right - left) / interval;
+            int counter = 1;
+            double d = left;
+            while( d < right )
+            {
+                for(int v = 0; v < subChannelCount; ++v)
+                {
+                    tempValues[v] = initialValue;
+                }
+
+                d += interval;
+                tempValues = m_effect->process(tempValues,subChannelCount, d - startTime);
+
+                for(int v = 0; v < subChannelCount; ++v)
+                {
+                    values[counter][v] = tempValues[v];
+                }
+                counter++;
+            }
+
+            delete[] tempValues;
+
+
+            for(int k = 0; k < subChannelCount; ++k)
+            {
+                m_path.moveTo(left,values[0][k]);
+                for(int i = 1; i < width(); ++i)
+                {
+
+                    m_path.lineTo(left,values[i][k]);
+
+
+                }
+            }
         }
-*/
+
+
+
 
         auto channel = m_effect->channel();
         auto channelType = channel->info().type;
@@ -583,9 +643,6 @@ void EffectEditorViewer::rebuildPaths()
                 m_channelPath.lineTo(d, channel->processValue(d - startTime).toDouble());
             }
         }
-
-
-
     }
 }
 

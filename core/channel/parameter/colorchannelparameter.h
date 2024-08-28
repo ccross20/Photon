@@ -18,6 +18,10 @@ public:
 
     ChannelParameterView *createView() override;
 
+
+    static QColor channelsToColor(const float*);
+    static void colorToChannels(const QColor &, float*);
+
     QVariant channelsToVariant(const QVector<double> &) const override;
     QVector<double> variantToChannels(const QVariant &) const override;
 

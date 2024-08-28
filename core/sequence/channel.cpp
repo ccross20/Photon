@@ -91,18 +91,27 @@ Channel::Channel(const ChannelInfo &t_info, double t_startTime, double t_duratio
 
     if(t_info.type == ChannelInfo::ChannelTypeColor)
     {
+        QColor c = t_info.defaultValue.value<QColor>();
+
+        float h,l,s,a;
+        c.getHslF(&h, &s, &l, &a);
+
         ChannelInfo subInfo;
         subInfo.parentUniqueId = t_info.uniqueId;
         subInfo.subChannelIndex = 0;
         subInfo.name = t_info.name + ".hue";
+        subInfo.defaultValue = h;
         addSubChannel(new Channel{subInfo,t_startTime, t_duration});
         subInfo.name = t_info.name + ".saturation";
+        subInfo.defaultValue = s;
         subInfo.subChannelIndex = 1;
         addSubChannel(new Channel{subInfo,t_startTime, t_duration});
         subInfo.name = t_info.name + ".lightness";
+        subInfo.defaultValue = l;
         subInfo.subChannelIndex = 2;
         addSubChannel(new Channel{subInfo,t_startTime, t_duration});
         subInfo.name = t_info.name + ".alpha";
+        subInfo.defaultValue = a;
         subInfo.subChannelIndex = 3;
         addSubChannel(new Channel{subInfo,t_startTime, t_duration});
 
@@ -110,13 +119,18 @@ Channel::Channel(const ChannelInfo &t_info, double t_startTime, double t_duratio
     }
     else if(t_info.type == ChannelInfo::ChannelTypePoint)
     {
+
+        QPointF pt = t_info.defaultValue.toPointF();
+
         ChannelInfo subInfo;
         subInfo.parentUniqueId = t_info.uniqueId;
         subInfo.name = t_info.name + ".x";
         subInfo.subChannelIndex = 0;
+        subInfo.defaultValue = pt.x();
         addSubChannel(new Channel{subInfo,t_startTime, t_duration});
         subInfo.name = t_info.name + ".y";
         subInfo.subChannelIndex = 1;
+        subInfo.defaultValue = pt.y();
         addSubChannel(new Channel{subInfo,t_startTime, t_duration});
 
 
@@ -336,10 +350,22 @@ QVariant Channel::processValue(double time)
         else if(type() == ChannelInfo::ChannelTypeColor && m_impl->subChannels.length() == 4)
         {
             QColor color = val.value<QColor>();
-            color.setHslF(color.hueF() + m_impl->subChannels[0]->processValue(time).toFloat(),
-                color.saturationF() + m_impl->subChannels[1]->processValue(time).toFloat(),
-                color.lightnessF() + m_impl->subChannels[2]->processValue(time).toFloat(),
-                color.alphaF() + m_impl->subChannels[3]->processValue(time).toFloat());
+
+            if(m_impl->effects.isEmpty())
+            {
+                color.setHslF(m_impl->subChannels[0]->processValue(time).toFloat(),
+                              m_impl->subChannels[1]->processValue(time).toFloat(),
+                              m_impl->subChannels[2]->processValue(time).toFloat(),
+                              m_impl->subChannels[3]->processValue(time).toFloat());
+            }
+            else{
+                color.setHslF(values[0],
+                              values[1],
+                              values[2],
+                              values[3]);
+            }
+
+
             delete[] values;
             return color;
         }

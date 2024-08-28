@@ -9,6 +9,7 @@ class ChannelParameterContainer::Impl
 public:
     QColor colorForChannel(ChannelParameter *t_param, double t_time, const QVector<Channel*> &t_channels);
     QVector<double> valuesForChannel(const QByteArray &t_uniqueId, double t_time, const QVector<Channel*> &t_channels);
+    QVariant variantForChannel(const QByteArray &t_uniqueId, double t_time, const QVector<Channel*> &t_channels);
     ChannelParameter *findChannelParameter(const QByteArray &);
     QVector<ChannelParameter*> channelParameters;
 
@@ -24,6 +25,8 @@ QVector<double> ChannelParameterContainer::Impl::valuesForChannel(const QByteArr
     {
         if(channel->uniqueId() == t_uniqueId)
         {
+            auto val = channel->processValue(t_time);
+            /*
             if(channel->subChannelCount() > 0)
                 results.resize(channel->subChannelCount());
             for(auto sub : channel->subChannels())
@@ -32,10 +35,30 @@ QVector<double> ChannelParameterContainer::Impl::valuesForChannel(const QByteArr
             }
             if(!results.isEmpty())
                 return results;
+*/
+
+            if(channel->info().type == ChannelInfo::ChannelTypeColor)
+            {
+
+            }
             return QVector<double>{channel->processValue(t_time).toDouble()};
         }
     }
     return results;
+}
+
+
+QVariant ChannelParameterContainer::Impl::variantForChannel(const QByteArray &t_uniqueId, double t_time, const QVector<Channel*> &t_channels)
+{
+
+    for(auto channel : t_channels)
+    {
+        if(channel->uniqueId() == t_uniqueId)
+        {
+            return channel->processValue(t_time);
+        }
+    }
+    return QVariant{};
 }
 
 QColor ChannelParameterContainer::Impl::colorForChannel(ChannelParameter *t_param, double t_time, const QVector<Channel*> &t_channels)

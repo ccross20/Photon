@@ -214,7 +214,7 @@ GradientChannelEffect::GradientChannelEffect()
 
 float * colorToValues(const QColor &t_color, float *value, uint size)
 {
-    t_color.getHsvF(&value[0],&value[1],&value[2]);
+    t_color.getHslF(&value[0],&value[1],&value[2]);
     return value;
 }
 
