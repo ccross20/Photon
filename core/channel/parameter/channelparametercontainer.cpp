@@ -25,22 +25,46 @@ QVector<double> ChannelParameterContainer::Impl::valuesForChannel(const QByteArr
     {
         if(channel->uniqueId() == t_uniqueId)
         {
-            auto val = channel->processValue(t_time);
-            /*
+
             if(channel->subChannelCount() > 0)
                 results.resize(channel->subChannelCount());
-            for(auto sub : channel->subChannels())
+
+
+            if(channel->info().type == ChannelInfo::ChannelTypeColor && channel->effectCount() > 0)
             {
-                results[sub->subChannelIndex()] = sub->processValue(t_time).toDouble();
+                auto val = channel->processValue(t_time);
+
+                auto color = val.value<QColor>();
+
+                for(auto sub : channel->subChannels())
+                {
+                    results[sub->subChannelIndex()] = sub->processValue(t_time).toDouble();
+                }
+
+                float h,l,s,a;
+
+                color.getHslF(&h,&l,&s,&a);
+
+                results[0] = h;
+                results[1] = l;
+                results[2] = s;
+                results[3] = a;
             }
+            else
+            {
+                for(auto sub : channel->subChannels())
+                {
+                    results[sub->subChannelIndex()] = sub->processValue(t_time).toDouble();
+                }
+            }
+
+
+
+
             if(!results.isEmpty())
                 return results;
-*/
 
-            if(channel->info().type == ChannelInfo::ChannelTypeColor)
-            {
 
-            }
             return QVector<double>{channel->processValue(t_time).toDouble()};
         }
     }

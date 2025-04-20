@@ -17,7 +17,7 @@ namespace photon {
 class FixtureClip::Impl
 {
 public:
-    Impl();
+    Impl(FixtureClip *t_facade);
     ~Impl();
     double falloff(Fixture *);
     void processFixture(Fixture *, StateEvaluationContext &, double);
@@ -28,10 +28,11 @@ public:
     double defaultFalloff = 0;
 };
 
-FixtureClip::Impl::Impl()
+FixtureClip::Impl::Impl(FixtureClip *t_facade)
 {
     falloffEffects.append(photonApp->plugins()->createFalloffEffect(ConstantFalloffEffect::info().effectId));
-    falloffEffects.back()->m_impl->clip = facade;
+    falloffEffects.back()->m_impl->clip = t_facade;
+    facade = t_facade;
 
 }
 
@@ -72,17 +73,15 @@ void FixtureClip::Impl::processFixture(Fixture *t_fixture, StateEvaluationContex
     state->evaluate(t_context);
 }
 
-FixtureClip::FixtureClip(QObject *t_parent) : Clip(t_parent),m_impl(new Impl)
+FixtureClip::FixtureClip(QObject *t_parent) : Clip(t_parent),m_impl(new Impl(this))
 {
-    m_impl->facade = this;
     m_impl->state = new State;
     setType("fixture");
     setId("fixtureclip");
 }
 
-FixtureClip::FixtureClip(double t_start, double t_duration, QObject *t_parent) : Clip(t_start, t_duration, t_parent),m_impl(new Impl)
+FixtureClip::FixtureClip(double t_start, double t_duration, QObject *t_parent) : Clip(t_start, t_duration, t_parent),m_impl(new Impl(this))
 {
-    m_impl->facade = this;
     m_impl->state = new State;
     setType("fixture");
     setId("fixtureclip");
