@@ -5,7 +5,6 @@
 #include "photon-global.h"
 #include "pixelsource.h"
 #include "scene/sceneobject.h"
-#include "fixture/dmxreceiver.h"
 
 namespace photon {
 

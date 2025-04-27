@@ -364,20 +364,25 @@ void Fixture::readFromOpenFixtureJson(const QJsonObject &t_json)
 
             if(fixtureChannel->capabilityType() == Capability_Cyan ||
                     fixtureChannel->capabilityType() == Capability_Magenta ||
-                    fixtureChannel->capabilityType() == Capability_Yellow)
+                    fixtureChannel->capabilityType() == Capability_Yellow ||
+                fixtureChannel->capabilityType() == Capability_Red ||
+                fixtureChannel->capabilityType() == Capability_Green ||
+                fixtureChannel->capabilityType() == Capability_Blue ||
+                fixtureChannel->capabilityType() == Capability_Amber ||
+                fixtureChannel->capabilityType() == Capability_Indigo ||
+                fixtureChannel->capabilityType() == Capability_White ||
+                fixtureChannel->capabilityType() == Capability_UV)
             {
                 colorChannels.append(fixtureChannel);
+            } 
+        }
 
-                if(colorChannels.length() == 3)
-                {
-                    auto vChannel = new FixtureVirtualChannel(colorChannels);
-                    vChannel->setFixture(this);
-                    m_impl->virtualChannels.append(vChannel);
-                    colorChannels.clear();
-                }
-            }
-
-
+        if(colorChannels.length() > 0)
+        {
+            auto vChannel = new FixtureVirtualChannel(colorChannels);
+            vChannel->setFixture(this);
+            m_impl->virtualChannels.append(vChannel);
+            colorChannels.clear();
         }
 
     }

@@ -174,6 +174,12 @@ void Project::save(const QString &path) const
     saveFile.write(QJsonDocument(jsonObj).toJson());
 
     qDebug() << "Saved to: " << saveFile.fileName();
+
+    qsettings.beginGroup("app");
+    qsettings.setValue("loadpath", QFileInfo(savePath).path());
+    qsettings.setValue("lastproject", savePath);
+    qsettings.endGroup();
+
 }
 
 void Project::load(const QString &path)
@@ -192,10 +198,6 @@ void Project::load(const QString &path)
 
         if(loadPath.isNull())
             return;
-        qsettings.beginGroup("app");
-        qsettings.setValue("loadpath", QFileInfo(loadPath).path());
-        qsettings.setValue("lastproject", loadPath);
-        qsettings.endGroup();
 
     }
 

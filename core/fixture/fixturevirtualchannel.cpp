@@ -29,6 +29,7 @@ FixtureVirtualChannel::FixtureVirtualChannel(const QVector<FixtureChannel*> &t_c
         }
     }
 
+
     ColorCapability *colorCap = new ColorCapability(colors);
 
 

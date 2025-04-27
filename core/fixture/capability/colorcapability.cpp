@@ -23,6 +23,7 @@ ColorCapability::~ColorCapability()
 
 void ColorCapability::setColor(const QColor &t_color, DMXMatrix &t_matrix, double t_blend) const
 {
+    /*
     QColor c = t_color.toCmyk();
     for(auto channel : m_impl->channels)
     {
@@ -41,11 +42,32 @@ void ColorCapability::setColor(const QColor &t_color, DMXMatrix &t_matrix, doubl
         }
 
     }
+*/
+
+    QColor c = t_color.toRgb();
+    for(auto channel : m_impl->channels)
+    {
+        switch (channel->type()) {
+        case Capability_Red:
+            channel->setPercent(c.redF(), t_matrix, t_blend);
+            break;
+        case Capability_Green:
+            channel->setPercent(c.greenF(), t_matrix, t_blend);
+            break;
+        case Capability_Blue:
+            channel->setPercent(c.blueF(), t_matrix, t_blend);
+            break;
+        default:
+            break;
+        }
+
+    }
 
 }
 
 QColor ColorCapability::getColor(const DMXMatrix &t_matrix) const
 {
+    /*
     QColor color;
     float c = 1.0f,m = 1.0f,y= 1.0f, k = 0.0f;
 
@@ -67,6 +89,30 @@ QColor ColorCapability::getColor(const DMXMatrix &t_matrix) const
 
     }
     color.setCmykF(c,m,y,k);
+    return color;
+*/
+
+    QColor color;
+    float r = 1.0f,g = 1.0f,b= 1.0f;
+
+    for(auto channel : m_impl->channels)
+    {
+        switch (channel->type()) {
+        case Capability_Red:
+            r = channel->getPercent(t_matrix);
+            break;
+        case Capability_Green:
+            g = channel->getPercent(t_matrix);
+            break;
+        case Capability_Blue:
+            b = channel->getPercent(t_matrix);
+            break;
+        default:
+            break;
+        }
+
+    }
+    color.setRgbF(r,g,b);
     return color;
 }
 

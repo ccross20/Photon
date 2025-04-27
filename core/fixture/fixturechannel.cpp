@@ -45,6 +45,18 @@ void FixtureChannel::Impl::addCapability(const QJsonObject &t_json)
             capability = new ColorIntensityCapability(Capability_Magenta);
         else if(colorString == "yellow")
             capability = new ColorIntensityCapability(Capability_Yellow);
+        else if(colorString == "red")
+            capability = new ColorIntensityCapability(Capability_Red);
+        else if(colorString == "green")
+            capability = new ColorIntensityCapability(Capability_Green);
+        else if(colorString == "blue")
+            capability = new ColorIntensityCapability(Capability_Blue);
+        else if(colorString == "amber")
+            capability = new ColorIntensityCapability(Capability_Amber);
+        else if(colorString == "indigo")
+            capability = new ColorIntensityCapability(Capability_Indigo);
+        else if(colorString == "uv")
+            capability = new ColorIntensityCapability(Capability_UV);
     }
 
     if(capability)

@@ -13,6 +13,9 @@
 #include "scene/sceneiterator.h"
 #include "photoncore.h"
 #include "project/project.h"
+#include "fixture/fixture.h"
+#include "fixture/capability/colorcapability.h"
+#include "fixture/capability/fixturecapability.h"
 
 namespace photon {
 
@@ -276,7 +279,21 @@ void PixelLayoutEditorSidePanel::addClicked()
 {
     auto sources = SceneIterator::FindMany(photonApp->project()->sceneRoot(),[](SceneObject *obj, bool *keepGoing){
             *keepGoing = true;
-       return dynamic_cast<PixelSource*>(obj);
+        auto fixture = dynamic_cast<Fixture*>(obj);
+
+        if(fixture)
+        {
+            if(!fixture->findCapability(Capability_Color).isEmpty()){
+                    return dynamic_cast<SceneObject*>(obj);
+                }
+        }
+        else
+            {
+            if(dynamic_cast<PixelSource*>(obj))
+                return dynamic_cast<SceneObject*>(obj);
+        }
+        return static_cast<SceneObject*>(nullptr);
+
     });
 
 
