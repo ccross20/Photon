@@ -349,6 +349,7 @@ void Fixture::readFromOpenFixtureJson(const QJsonObject &t_json)
             fixtureChannel->readFromOpenFixtureJson(channelObj);
             fixtureChannel->m_impl->channelNumber = -1;
             fixtureChannel->m_impl->globalChannelNumber = 0;
+            fixtureChannel->setFixture(this);
             m_impl->channels.append(fixtureChannel);
 
             for(const auto &alias : fixtureChannel->m_impl->fineChannelsAliases)
@@ -357,6 +358,7 @@ void Fixture::readFromOpenFixtureJson(const QJsonObject &t_json)
                 fineChannel->setFixture(this);
                 fineChannel->m_impl->channelNumber = -1;
                 fineChannel->m_impl->globalChannelNumber = 0;
+                fineChannel->setFixture(this);
                 m_impl->channels.append(fineChannel);
                 fixtureChannel->m_impl->fineChannels.append(fineChannel);
             }

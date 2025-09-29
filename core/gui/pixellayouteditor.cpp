@@ -16,6 +16,7 @@
 #include "fixture/fixture.h"
 #include "fixture/capability/colorcapability.h"
 #include "fixture/capability/fixturecapability.h"
+#include "pixel/fixturepixelsource.h"
 
 namespace photon {
 
@@ -262,8 +263,14 @@ PixelLayoutEditorSidePanel::PixelLayoutEditorSidePanel(PixelLayout *t_layout) : 
     auto sources = pixelLayout->sources();
     for(auto src : sources)
     {
+
         auto sourceObj = dynamic_cast<SceneObject*>(src);
-        layoutList->addItem(sourceObj ? sourceObj->name() : "Unnamed");
+        if(dynamic_cast<FixturePixelSource*>(src))
+        {
+            layoutList->addItem(static_cast<FixturePixelSource*>(src)->fixture()->name());
+        }
+        else if(sourceObj)
+            layoutList->addItem(src ? sourceObj->name() : "Unnamed");
     }
 
 }
@@ -302,7 +309,19 @@ void PixelLayoutEditorSidePanel::addClicked()
     QMenu menu;
     for(auto src : sources)
     {
-        auto action = menu.addAction(src->name(),[src, this](){addSource(dynamic_cast<PixelSource*>(src));});
+        auto action = menu.addAction(src->name(),[src, this](){
+            auto fixture = dynamic_cast<Fixture*>(src);
+
+            if(fixture)
+            {
+                if(!fixture->findCapability(Capability_Color).isEmpty()){
+                    auto capabilities = fixture->findCapability(Capability_Color);
+                    addSource(new FixturePixelSource(capabilities[0]));
+                }
+            }
+            else
+                addSource(dynamic_cast<PixelSource*>(src));
+        });
         action->setEnabled(!currentSources.contains(dynamic_cast<PixelSource*>(src)));
     }
 
@@ -317,7 +336,12 @@ void PixelLayoutEditorSidePanel::addSource(photon::PixelSource *t_source)
 
     auto sourceObj = dynamic_cast<SceneObject*>(t_source);
 
-    layoutList->addItem(sourceObj ? sourceObj->name() : "Unnamed");
+    if(dynamic_cast<FixturePixelSource*>(t_source))
+    {
+        layoutList->addItem(static_cast<FixturePixelSource*>(t_source)->fixture()->name());
+    }
+    else
+        layoutList->addItem(sourceObj ? sourceObj->name() : "Unnamed");
 }
 
 PixelLayoutEditor::PixelLayoutEditor(PixelLayout *t_layout, QWidget *t_parent) : QWidget(t_parent),m_impl(new Impl)

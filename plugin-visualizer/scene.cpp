@@ -160,7 +160,7 @@ void Scene::rebuild(QOpenGLContext *t_context)
         return;
 
     if(!m_buffer)
-        m_buffer = static_cast<byte*>(malloc(m_bufferSize * sizeof(byte)));
+        m_buffer = static_cast<std::byte*>(malloc(m_bufferSize * sizeof(std::byte)));
 
     auto bufferStart = m_buffer;
     uint chunkSize = 4;

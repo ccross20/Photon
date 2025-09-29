@@ -14,14 +14,19 @@ FalloffEffect::~FalloffEffect()
     delete m_impl;
 }
 
-FixtureClip *FalloffEffect::clip() const
-{
-    return m_impl->clip;
-}
-
 int FalloffEffect::index() const
 {
     return 0;
+}
+
+QObject *FalloffEffect::parent() const
+{
+    return m_impl->parent;
+}
+
+void FalloffEffect::setParent(QObject *t_parent)
+{
+    m_impl->parent = t_parent;
 }
 
 void FalloffEffect::setId(const QByteArray &t_id)
@@ -51,8 +56,12 @@ QString FalloffEffect::name() const
 
 void FalloffEffect::updated()
 {
-    if(m_impl->clip)
-        m_impl->clip->falloffUpdatedSlot(this);
+    if(m_impl->parent)
+    {
+        FixtureClip *clip = dynamic_cast<FixtureClip*>(m_impl->parent);
+        if(clip)
+            clip->falloffUpdatedSlot(this);
+    }
 }
 
 FalloffEffect *FalloffEffect::previousEffect() const

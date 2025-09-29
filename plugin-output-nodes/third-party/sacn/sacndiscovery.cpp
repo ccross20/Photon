@@ -1,5 +1,6 @@
 #include <cmath>
 #include <QNetworkInterface>
+#include <QDebug>
 #include "sacndiscovery.h"
 #include "defpack.h"
 #include "VHD.h"

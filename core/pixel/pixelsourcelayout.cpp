@@ -3,6 +3,10 @@
 #include "util/utils.h"
 #include "scene/sceneiterator.h"
 #include "project/project.h"
+#include "fixture/fixture.h"
+#include "fixture/capability/colorcapability.h"
+#include "fixture/capability/fixturecapability.h"
+#include "pixel/fixturepixelsource.h"
 
 namespace photon {
 
@@ -145,7 +149,23 @@ void PixelSourceLayout::readFromJson(const QJsonObject &t_json, const LoadContex
     if(sourceObj)
     {
         m_impl->source = dynamic_cast<PixelSource*>(sourceObj);
+        if(!m_impl->source)
+        {
+            auto fixture = dynamic_cast<Fixture*>(sourceObj);
+
+            if(fixture)
+            {
+                if(!fixture->findCapability(Capability_Color).isEmpty()){
+                    auto capabilities = fixture->findCapability(Capability_Color);
+                    m_impl->source = new FixturePixelSource(capabilities[0]);
+                }
+            }
+        }
         m_impl->rebuildBounds();
+    }
+    else
+    {
+        qDebug() << "could not find source:" << m_impl->name;
     }
 
 }

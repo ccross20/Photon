@@ -12,7 +12,7 @@ public:
     QByteArray id;
     QByteArray uniqueId;
     MaskEffect *previousEffect = nullptr;
-    FixtureClip *clip = nullptr;
+    QObject *parent = nullptr;
     QVector<Fixture*> fixtures;
 };
 

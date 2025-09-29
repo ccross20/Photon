@@ -22,6 +22,12 @@ find_package(Qt6 REQUIRED COMPONENTS
     3DAnimation
     MultimediaWidgets
 )
+find_package(Qt6 REQUIRED COMPONENTS Core)
+find_package(Qt6 REQUIRED COMPONENTS Core)
+find_package(Qt6 REQUIRED COMPONENTS Widgets)
+find_package(Qt6 REQUIRED COMPONENTS Core)
+find_package(Qt6 REQUIRED COMPONENTS Widgets)
+find_package(Qt6 REQUIRED COMPONENTS Widgets)
 
 set(PROJECT_SOURCES
         photon-global.h
@@ -458,7 +464,25 @@ add_library(photon-core SHARED ${PROJECT_SOURCES}
     routine/node/baseroutinenode.h routine/node/baseroutinenode.cpp
     opengl/openglresources.h opengl/openglresources.cpp
     graph/parameter/point2dparameter.h graph/parameter/point2dparameter.cpp
-    routine/node/pointinputnode.h routine/node/pointinputnode.cpp)
+    routine/node/pointinputnode.h routine/node/pointinputnode.cpp
+    pixel/fixturepixellayout.h pixel/fixturepixellayout.cpp
+    pixel/fixturepixelsource.h pixel/fixturepixelsource.cpp
+    graph/bus/surfacenode.h graph/bus/surfacenode.cpp
+    surface/surface.h surface/surface.cpp
+    processcontext.h
+    surface/surface_p.h
+    surface/surfacegizmo.h surface/surfacegizmo.cpp
+    surface/fixturegizmo.h surface/fixturegizmo.cpp
+    surface/surfacegizmo_p.h
+    surface/viewer/surfacewidget.h surface/viewer/surfacewidget.cpp
+    gui/panel/surfacepanel.h gui/panel/surfacepanel.cpp
+    surface/surfacecollection.h surface/surfacecollection.cpp
+    surface/togglegizmo.h surface/togglegizmo.cpp
+    surface/surfacegizmocontainer.h surface/surfacegizmocontainer.cpp
+    surface/surfacegraph.h surface/surfacegraph.cpp
+    surface/viewer/surfacegizmocontainerwidget.h surface/viewer/surfacegizmocontainerwidget.cpp
+    surface/viewer/surfacegizmowidget.h surface/viewer/surfacegizmowidget.cpp
+    surface/viewer/togglegizmowidget.h surface/viewer/togglegizmowidget.cpp)
 
 target_include_directories(photon-core PUBLIC ../core)
 target_include_directories(photon-core PUBLIC ../keira)
@@ -478,6 +502,12 @@ target_link_libraries(photon-core PRIVATE
     Qt6::OpenGLWidgets
     Qt6::OpenGL
 )
+target_link_libraries(photon-core PRIVATE Qt6::Core)
+target_link_libraries(photon-core PRIVATE Qt6::Core)
+target_link_libraries(photon-core PRIVATE Qt6::Widgets)
+target_link_libraries(photon-core PRIVATE Qt6::Core)
+target_link_libraries(photon-core PRIVATE Qt6::Widgets)
+target_link_libraries(photon-core PRIVATE Qt6::Widgets)
 
 target_compile_definitions(photon-core PRIVATE PHOTONCORE_LIBRARY)
 

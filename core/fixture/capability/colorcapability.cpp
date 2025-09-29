@@ -14,6 +14,7 @@ public:
 ColorCapability::ColorCapability(const QVector<ColorIntensityCapability*> &t_channels) : FixtureCapability(DMXRange(),Capability_Color),m_impl(new Impl)
 {
     m_impl->channels = t_channels;
+    setChannel(t_channels[0]->channel());
 }
 
 ColorCapability::~ColorCapability()

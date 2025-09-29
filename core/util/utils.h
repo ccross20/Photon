@@ -6,6 +6,9 @@
 #include <QJsonArray>
 #include <QPoint>
 #include <QPointF>
+#include <QLayout>
+#include <QFormLayout>
+#include <QWidget>
 
 namespace photon {
 
@@ -120,10 +123,44 @@ static QPointF jsonToPointF(const QJsonObject &t_obj)
     return QPointF{t_obj.value("x").toDouble(), t_obj.value("y").toDouble()};
 }
 
+static void clearLayout(QLayout *layout)
+{
+    while (layout->count()>0) {
+        auto item = layout->takeAt(0);
+        delete item->widget();
+        if(item->layout())
+            clearLayout(item->layout());
+    }
+}
+static void clearFormLayout(QFormLayout *layout)
+{
+    while (layout->rowCount()>0) {
+        layout->removeRow(0);
+    }
+}
+
+static void removeAllFromLayout(QLayout *layout)
+{
+    while (layout->count()>0) {
+        auto item = layout->takeAt(0);
+        if(item->layout())
+            removeAllFromLayout(item->layout());
+    }
+}
+
+static void clearWidget(QWidget *widget)
+{
+    for(QObject *obj : widget->children())
+        delete obj;
+}
+
 class Utils
 {
 public:
     Utils();
+
+
+
 };
 
 } // namespace photon

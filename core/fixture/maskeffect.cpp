@@ -46,15 +46,19 @@ QString MaskEffect::name() const
     return m_impl->name;
 }
 
-FixtureClip *MaskEffect::clip() const
+QObject *MaskEffect::parent() const
 {
-    return m_impl->clip;
+    return m_impl->parent;
 }
 
 void MaskEffect::updated()
 {
-    if(m_impl->clip)
-        m_impl->clip->maskUpdatedSlot(this);
+    if(m_impl->parent)
+    {
+        FixtureClip* clip = dynamic_cast<FixtureClip*>(m_impl->parent);
+        if(clip)
+            clip->maskUpdatedSlot(this);
+    }
 }
 
 MaskEffect *MaskEffect::previousEffect() const

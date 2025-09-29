@@ -15,6 +15,7 @@
 #include "settings/settings.h"
 #include "sequence/sequencecollection.h"
 #include "sequence/sequence.h"
+#include "surface/surfacecollection.h"
 #include "opengl/openglresources.h"
 #include "graph/parameter/textureparameter.h"
 
@@ -29,6 +30,7 @@ public:
     ~Impl();
 
     SequenceCollection *sequences;
+    SurfaceCollection *surfaces;
     ResourceManager *resources;
     Settings *settings;
     PluginFactory *plugins;
@@ -46,6 +48,7 @@ public:
 
 PhotonCore::Impl::Impl(PhotonCore *t_core):
     sequences(new SequenceCollection),
+    surfaces(new SurfaceCollection),
     resources(new ResourceManager()),
     settings(new Settings(t_core)),
     plugins(new PluginFactory(t_core)),gui(new GuiManager),timekeeper(new Timekeeper),busEvaluator(new BusEvaluator)
@@ -66,6 +69,7 @@ PhotonCore::Impl::~Impl()
     delete settings;
     delete resources;
     delete sequences;
+    delete surfaces;
 }
 
 PhotonCore::PhotonCore(int &argc, char **argv) : QApplication(argc, argv),
@@ -128,6 +132,11 @@ Settings *PhotonCore::settings() const
 SequenceCollection *PhotonCore::sequences() const
 {
     return m_impl->sequences;
+}
+
+SurfaceCollection *PhotonCore::surfaces() const
+{
+    return m_impl->surfaces;
 }
 
 ResourceManager *PhotonCore::resources() const

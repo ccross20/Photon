@@ -31,7 +31,7 @@ public:
 FixtureClip::Impl::Impl(FixtureClip *t_facade)
 {
     falloffEffects.append(photonApp->plugins()->createFalloffEffect(ConstantFalloffEffect::info().effectId));
-    falloffEffects.back()->m_impl->clip = t_facade;
+    falloffEffects.back()->m_impl->parent = t_facade;
     facade = t_facade;
 
 }
@@ -121,7 +121,7 @@ void FixtureClip::addFalloffEffect(FalloffEffect *t_effect)
     if(!m_impl->falloffEffects.isEmpty())
         t_effect->m_impl->previousEffect = m_impl->falloffEffects.back();
     m_impl->falloffEffects.append(t_effect);
-    t_effect->m_impl->clip = this;
+    t_effect->m_impl->parent = this;
 
     emit falloffEffectAdded(t_effect);
     markChanged();
@@ -131,7 +131,7 @@ void FixtureClip::removeFalloffEffect(FalloffEffect *t_effect)
 {
     if(m_impl->falloffEffects.removeOne(t_effect))
     {
-        t_effect->m_impl->clip = nullptr;
+        t_effect->m_impl->parent = nullptr;
         for(uint i = 1; i < m_impl->falloffEffects.length(); ++i)
         {
             m_impl->falloffEffects[i]->m_impl->previousEffect = m_impl->falloffEffects[i-1];
@@ -157,7 +157,7 @@ void FixtureClip::addMaskEffect(MaskEffect *t_effect)
     if(!m_impl->maskEffects.isEmpty())
         t_effect->m_impl->previousEffect = m_impl->maskEffects.back();
     m_impl->maskEffects.append(t_effect);
-    t_effect->m_impl->clip = this;
+    t_effect->m_impl->parent = this;
 
     emit maskAdded(t_effect);
     markChanged();
@@ -167,7 +167,7 @@ void FixtureClip::removeMaskEffect(MaskEffect *t_effect)
 {
     if(m_impl->maskEffects.removeOne(t_effect))
     {
-        t_effect->m_impl->clip = nullptr;
+        t_effect->m_impl->parent = nullptr;
         for(uint i = 1; i < m_impl->falloffEffects.length(); ++i)
         {
             m_impl->maskEffects[i]->m_impl->previousEffect = m_impl->maskEffects[i-1];
@@ -271,7 +271,7 @@ void FixtureClip::readFromJson(const QJsonObject &t_json, const LoadContext &t_c
                     effect->m_impl->previousEffect = m_impl->falloffEffects.back();
                 m_impl->falloffEffects.append(effect);
 
-                effect->m_impl->clip = this;
+                effect->m_impl->parent = this;
             }
         }
     }
@@ -293,7 +293,7 @@ void FixtureClip::readFromJson(const QJsonObject &t_json, const LoadContext &t_c
                     effect->m_impl->previousEffect = m_impl->maskEffects.back();
                 m_impl->maskEffects.append(effect);
 
-                effect->m_impl->clip = this;
+                effect->m_impl->parent = this;
             }
         }
     }

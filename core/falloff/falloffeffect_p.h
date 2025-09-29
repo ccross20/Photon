@@ -11,7 +11,7 @@ public:
     QString name;
     QByteArray id;
     QByteArray uniqueId;
-    FixtureClip *clip = nullptr;
+    QObject *parent = nullptr;
     FalloffEffect *previousEffect = nullptr;
 };
 

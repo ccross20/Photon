@@ -21,6 +21,11 @@ enum Axis {
     Axis_Z = 0x4
 };
 
+enum SurfaceMode{
+    Mode_Performance,
+    Mode_Edit
+};
+
 
 
 #if defined(PHOTONCORE_LIBRARY)
@@ -60,6 +65,7 @@ class FixtureCapability;
 class FixtureClip;
 class FixtureCollection;
 class FixtureFalloffMap;
+class FixtureGizmo;
 class FixtureMask;
 class FixtureWheel;
 class FixtureWheelSlot;
@@ -91,6 +97,14 @@ class Sequence;
 class SequenceCollection;
 class Settings;
 class SettingsPage;
+class Surface;
+class SurfaceCollection;
+class SurfaceGizmo;
+class SurfaceGizmoContainer;
+class SurfaceGizmoContainerWidget;
+class SurfaceGizmoWidget;
+class SurfaceGraph;
+class SurfaceView;
 class State;
 class StateCapability;
 class StateCollection;

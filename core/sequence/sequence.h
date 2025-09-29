@@ -2,30 +2,10 @@
 #define PHOTON_SEQUENCE_H
 
 #include "photon-global.h"
-#include "data/dmxmatrix.h"
+#include "processcontext.h"
 
-class QOpenGLContext;
 
 namespace photon {
-
-class OpenGLFrameBuffer;
-
-class ProcessContext
-{
-public:
-    ProcessContext(DMXMatrix &matrix):dmxMatrix(matrix){}
-    Fixture *fixture = nullptr;
-    Project *project = nullptr;
-    OpenGLFrameBuffer *frameBuffer = nullptr;
-    QHash<QByteArray,QVariant> channelValues;
-    Canvas *canvas = nullptr;
-    QOpenGLContext *openglContext;
-    OpenGLResources *resources = nullptr;
-    QImage *image;
-    DMXMatrix &dmxMatrix;
-    double globalTime;
-    double relativeTime;
-};
 
 class PHOTONCORE_EXPORT Sequence : public QObject
 {

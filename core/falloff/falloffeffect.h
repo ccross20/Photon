@@ -33,8 +33,9 @@ public:
     void setId(const QByteArray &);
     void setName(const QString &);
     QString name() const;
+    QObject *parent() const;
+    void setParent(QObject *);
 
-    FixtureClip *clip() const;
     int index() const;
     virtual double falloff(Fixture *) const = 0;
     virtual QWidget *createEditor() {return new QWidget();}
@@ -48,6 +49,7 @@ public:
 
 private:
     friend class FixtureClip;
+    friend class FixtureGizmo;
     class Impl;
     Impl *m_impl;
 };

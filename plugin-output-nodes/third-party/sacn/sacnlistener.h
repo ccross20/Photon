@@ -19,9 +19,11 @@
 #include <QObject>
 #include <QThread>
 #include <vector>
+#include <QSet>
 #include <list>
 #include <QTimer>
 #include <QElapsedTimer>
+#include <QMultiMap>
 #include <QPoint>
 #include "consts.h"
 #include "streamingacn.h"

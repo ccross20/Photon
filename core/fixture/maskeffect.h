@@ -32,7 +32,7 @@ public:
     void setId(const QByteArray &);
     void setName(const QString &);
     QString name() const;
-    FixtureClip *clip() const;
+    QObject *parent() const;
 
     int index() const;
     virtual QVector<Fixture*> process(const QVector<Fixture*> fixtures) const;
@@ -47,6 +47,8 @@ public:
 
 private:
     friend FixtureClip;
+    friend FixtureGizmo;
+
     class Impl;
     Impl *m_impl;
 };

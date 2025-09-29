@@ -53,7 +53,7 @@ private:
     QElapsedTimer m_timer;
     uint m_lightBlock = 0;
     int m_bufferSize = 0;
-    byte *m_buffer = nullptr;
+    std::byte *m_buffer = nullptr;
 };
 
 } // namespace photon

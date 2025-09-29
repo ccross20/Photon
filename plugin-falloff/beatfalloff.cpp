@@ -27,8 +27,12 @@ void BeatFalloff::rebuildCache()
 
 double BeatFalloff::falloff(Fixture *t_fixture) const
 {
+    FixtureClip *clip = dynamic_cast<FixtureClip*>(parent());
 
-    const auto &layers = clip()->sequence()->beatLayers();
+    if(!clip)
+        return 0.0;
+
+    const auto &layers = clip->sequence()->beatLayers();
     if(layers.empty())
         return 0.0;
 
@@ -36,7 +40,7 @@ double BeatFalloff::falloff(Fixture *t_fixture) const
     QHash<Fixture*, double> m_map;
 
     m_offsets.clear();
-    auto fixtures = clip()->maskedFixtures();
+    auto fixtures = clip->maskedFixtures();
 
     for(auto fix : fixtures)
     {
@@ -47,7 +51,7 @@ double BeatFalloff::falloff(Fixture *t_fixture) const
     m_map.clear();
 
     const auto &layer = layers.front();
-    double start = clip()->startTime();
+    double start = clip->startTime();
 
     auto fixIt = fixtures.cbegin();
     for(auto it = layer->beats().constBegin(); it != layer->beats().constEnd() && fixIt != fixtures.cend(); ++it)

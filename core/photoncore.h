@@ -30,6 +30,7 @@ public:
     Timekeeper *timekeeper() const;
 
     SequenceCollection *sequences() const;
+    SurfaceCollection *surfaces() const;
     QOffscreenSurface *surface() const;
     void initSurface();
     void initOpenGLResources();

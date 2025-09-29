@@ -180,7 +180,7 @@ void ClipTreeView::mousePressEvent(QMouseEvent *event)
 
                 QMenu itemMenu;
                 itemMenu.addAction("Remove",[falloffItem](){
-                    falloffItem->effect()->clip()->removeFalloffEffect(falloffItem->effect());
+                    dynamic_cast<FixtureClip*>(falloffItem->effect()->parent())->removeFalloffEffect(falloffItem->effect());
                 });
 
                 itemMenu.exec(event->globalPosition().toPoint());
