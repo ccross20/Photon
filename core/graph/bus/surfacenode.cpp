@@ -66,7 +66,7 @@ void SurfaceNode::evaluate(keira::EvaluationContext *) const
 */
     m_impl->surface->processChannels(context,0);
 
-    m_impl->dmxOutParam->setValue(matrix);
+    m_impl->dmxOutParam->setValue(context.dmxMatrix);
 }
 
 void SurfaceNode::buttonClicked(const keira::Parameter *)

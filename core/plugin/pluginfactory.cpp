@@ -20,6 +20,7 @@
 
 #include "graph/bus/dmxgeneratematrixnode.h"
 #include "graph/bus/dmxwriternode.h"
+#include "graph/bus/dmxreadernode.h"
 #include "graph/bus/sequencenode.h"
 #include "graph/bus/surfacenode.h"
 #include "routine/node/fixturewriternode.h"
@@ -32,6 +33,7 @@
 #include "routine/node/createtexturenode.h"
 #include "graph/node/math/trigonometrynode.h"
 #include "graph/node/math/arithmeticnode.h"
+#include "graph/node/writedmxchannelnode.h"
 
 #include "falloff/constantfalloffeffect.h"
 #include "sequence/constantchanneleffect.h"
@@ -172,6 +174,7 @@ void PluginFactory::init()
     registerNode(TrigonometryNode::info());
     registerNode(ArithmeticNode::info());
     registerNode(DMXWriterNode::info());
+    registerNode(DMXReaderNode::info());
     registerNode(DMXGenerateMatrixNode::info());
     registerNode(SequenceNode::info());
     registerNode(SurfaceNode::info());
@@ -181,6 +184,7 @@ void PluginFactory::init()
     registerNode(FixtureInfoNode::info());
     registerNode(CanvasWriterNode::info());
     registerNode(CreateTextureNode::info());
+    registerNode(WriteDMXChannelNode::info());
 
     registerFalloffEffect(ConstantFalloffEffect::info());
 

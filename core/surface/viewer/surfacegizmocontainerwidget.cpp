@@ -6,6 +6,9 @@
 #include "surface/surfacegizmo.h"
 #include "surfacegizmowidget.h"
 #include "surface/togglegizmo.h"
+#include "surfacegraphwidget.h"
+#include "photoncore.h"
+#include "gui/guimanager.h"
 
 namespace photon {
 
@@ -34,7 +37,15 @@ SurfaceGizmoContainerWidget::SurfaceGizmoContainerWidget(SurfaceGizmoContainer *
         editButton->setMaximumHeight(1000);
         hLayout->addWidget(editButton);
 
+        connect(editButton, &QPushButton::clicked, [container](){
+            SurfaceGraphWidget *graphWidget = new SurfaceGraphWidget(container->graph());
+            photonApp->gui()->showPopoverWidget(graphWidget);
+        });
+
         vLayout->addLayout(hLayout);
+
+
+
     }
 
     setLayout(vLayout);

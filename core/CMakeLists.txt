@@ -28,6 +28,7 @@ find_package(Qt6 REQUIRED COMPONENTS Widgets)
 find_package(Qt6 REQUIRED COMPONENTS Core)
 find_package(Qt6 REQUIRED COMPONENTS Widgets)
 find_package(Qt6 REQUIRED COMPONENTS Widgets)
+find_package(Qt6 REQUIRED COMPONENTS Widgets)
 
 set(PROJECT_SOURCES
         photon-global.h
@@ -482,7 +483,10 @@ add_library(photon-core SHARED ${PROJECT_SOURCES}
     surface/surfacegraph.h surface/surfacegraph.cpp
     surface/viewer/surfacegizmocontainerwidget.h surface/viewer/surfacegizmocontainerwidget.cpp
     surface/viewer/surfacegizmowidget.h surface/viewer/surfacegizmowidget.cpp
-    surface/viewer/togglegizmowidget.h surface/viewer/togglegizmowidget.cpp)
+    surface/viewer/togglegizmowidget.h surface/viewer/togglegizmowidget.cpp
+    surface/viewer/surfacegraphwidget.h surface/viewer/surfacegraphwidget.cpp
+    graph/bus/dmxreadernode.h graph/bus/dmxreadernode.cpp
+    graph/node/writedmxchannelnode.h graph/node/writedmxchannelnode.cpp)
 
 target_include_directories(photon-core PUBLIC ../core)
 target_include_directories(photon-core PUBLIC ../keira)
@@ -506,6 +510,7 @@ target_link_libraries(photon-core PRIVATE Qt6::Core)
 target_link_libraries(photon-core PRIVATE Qt6::Core)
 target_link_libraries(photon-core PRIVATE Qt6::Widgets)
 target_link_libraries(photon-core PRIVATE Qt6::Core)
+target_link_libraries(photon-core PRIVATE Qt6::Widgets)
 target_link_libraries(photon-core PRIVATE Qt6::Widgets)
 target_link_libraries(photon-core PRIVATE Qt6::Widgets)
 

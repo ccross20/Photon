@@ -93,21 +93,9 @@ void Surface::removeGizmoContainer(photon::SurfaceGizmoContainer *t_gizmo)
 
 void Surface::processChannels(ProcessContext &t_context, double lastTime)
 {
-    StateEvaluationContext localContext(t_context.dmxMatrix);
-    localContext.globalTime = t_context.globalTime;
-    localContext.relativeTime = t_context.globalTime;
-
-
-
-    for(auto fixture : t_context.project->fixtures()->fixtures())
+    for(auto container : m_impl->gizmos)
     {
-        localContext.fixture = fixture;
-        auto defState = fixture->defaultState();
-        if(defState)
-        {
-            defState->initializeValues(localContext);
-            defState->evaluate(localContext);
-        }
+        container->processChannels(t_context, lastTime);
     }
 
     /*
