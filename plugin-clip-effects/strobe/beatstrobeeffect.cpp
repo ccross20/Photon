@@ -44,6 +44,7 @@ public:
 
 void BeatStrobeEffect::Impl::setGroupCount(int t_value)
 {
+    /*
     if(groupCount == t_value)
         return;
 
@@ -139,9 +140,10 @@ void BeatStrobeEffect::Impl::setGroupCount(int t_value)
     }
 
     qDebug() << beatCells.count();
+*/
 }
 
-BeatStrobeEffect::BeatStrobeEffect():FixtureClipEffect(),m_impl(new Impl)
+BeatStrobeEffect::BeatStrobeEffect():FixtureEffect(),m_impl(new Impl)
 {
     m_impl->facade = this;
 }
@@ -161,7 +163,7 @@ void BeatStrobeEffect::init()
     addChannelParameter(new NumberChannelParameter("pulseDuration",.1));
 }
 
-void BeatStrobeEffect::evaluate(FixtureClipEffectEvaluationContext &t_context)
+void BeatStrobeEffect::evaluate(FixtureEffectEvaluationContext &t_context)
 {
     m_impl->minPan = t_context.channelValues["minPan"].toDouble();
     m_impl->maxPan = t_context.channelValues["maxPan"].toDouble();
@@ -172,7 +174,7 @@ void BeatStrobeEffect::evaluate(FixtureClipEffectEvaluationContext &t_context)
     double pulseDuration = t_context.channelValues["pulseDuration"].toDouble();
 
     float globalTime = t_context.globalTime;
-    double initialRelativeTime = t_context.globalTime - clip()->startTime();
+    double initialRelativeTime = t_context.globalTime - effectParent()->startTime();
 
     Impl::BeatCell t;
     t.time  = globalTime;
@@ -201,16 +203,16 @@ void BeatStrobeEffect::evaluate(FixtureClipEffectEvaluationContext &t_context)
 
             auto dimmers = fix.fixture->findCapability(Capability_Dimmer);
             if(!dimmers.isEmpty())
-                static_cast<DimmerCapability*>(dimmers.front())->setPercent(0, t_context.dmxMatrix, clip()->strengthAtTime(relTime));
+                static_cast<DimmerCapability*>(dimmers.front())->setPercent(0, t_context.dmxMatrix, effectParent()->strengthAtTime(relTime));
 
 
             auto pans = fix.fixture->findCapability(Capability_Pan);
             if(!pans.isEmpty())
-                static_cast<AngleCapability*>(pans.front())->setAnglePercentCentered(fix.pan, t_context.dmxMatrix, clip()->strengthAtTime(relTime));
+                static_cast<AngleCapability*>(pans.front())->setAnglePercentCentered(fix.pan, t_context.dmxMatrix, effectParent()->strengthAtTime(relTime));
 
             auto tilts = fix.fixture->findCapability(Capability_Tilt);
             if(!tilts.isEmpty())
-                static_cast<AngleCapability*>(tilts.front())->setAnglePercentCentered(fix.tilt, t_context.dmxMatrix, clip()->strengthAtTime(relTime));
+                static_cast<AngleCapability*>(tilts.front())->setAnglePercentCentered(fix.tilt, t_context.dmxMatrix, effectParent()->strengthAtTime(relTime));
 
         }
     }
@@ -223,16 +225,16 @@ void BeatStrobeEffect::evaluate(FixtureClipEffectEvaluationContext &t_context)
 
             auto dimmers = fix.fixture->findCapability(Capability_Dimmer);
             if(!dimmers.isEmpty())
-                static_cast<DimmerCapability*>(dimmers.front())->setPercent(fix.dimmer, t_context.dmxMatrix, clip()->strengthAtTime(relTime));
+                static_cast<DimmerCapability*>(dimmers.front())->setPercent(fix.dimmer, t_context.dmxMatrix, effectParent()->strengthAtTime(relTime));
 
 
             auto pans = fix.fixture->findCapability(Capability_Pan);
             if(!pans.isEmpty())
-                static_cast<AngleCapability*>(pans.front())->setAnglePercentCentered(fix.pan, t_context.dmxMatrix, clip()->strengthAtTime(relTime));
+                static_cast<AngleCapability*>(pans.front())->setAnglePercentCentered(fix.pan, t_context.dmxMatrix, effectParent()->strengthAtTime(relTime));
 
             auto tilts = fix.fixture->findCapability(Capability_Tilt);
             if(!tilts.isEmpty())
-                static_cast<AngleCapability*>(tilts.front())->setAnglePercentCentered(fix.tilt, t_context.dmxMatrix, clip()->strengthAtTime(relTime));
+                static_cast<AngleCapability*>(tilts.front())->setAnglePercentCentered(fix.tilt, t_context.dmxMatrix, effectParent()->strengthAtTime(relTime));
 
         }
     }

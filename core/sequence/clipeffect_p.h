@@ -1,14 +1,14 @@
 #ifndef CLIPEFFECT_P_H
 #define CLIPEFFECT_P_H
 
-#include "clipeffect.h"
+#include "baseeffect.h"
 
 namespace photon {
 
-class ClipEffect::Impl
+class BaseEffect::Impl
 {
 public:
-    void processContext(ClipEffectEvaluationContext &, double);
+    void processContext(BaseEffectEvaluationContext &, double);
     QVector<double> valuesForChannel(const QByteArray &, double);
     QColor colorForChannel(ChannelParameter *, double);
     QVector<Channel*> channels;
@@ -16,7 +16,8 @@ public:
     QString name;
     QByteArray id;
     QByteArray uniqueId;
-    Clip *clip = nullptr;
+
+    BaseEffectParent *effectParent = nullptr;
 };
 
 }

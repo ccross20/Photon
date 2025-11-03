@@ -74,14 +74,19 @@ void SurfaceCollection::editSurface(Surface *t_surface)
 
 void SurfaceCollection::panelDestroyed(QObject *t_object)
 {
+
     for(auto it = m_impl->panels.constBegin(); it != m_impl->panels.constEnd(); ++it)
     {
         if(it.value() == static_cast<SurfacePanel*>(t_object))
         {
-            removeSurface(it.key());
+            //removeSurface(it.key());
+            m_impl->panels.remove(it.key());
             break;
         }
     }
+
+
+    setActiveSurfacePanel(nullptr);
 
 }
 
@@ -106,6 +111,16 @@ int SurfaceCollection::surfaceCount() const
 Surface *SurfaceCollection::surfaceAtIndex(uint t_index) const
 {
     return m_impl->surfaces.at(t_index);
+}
+
+Surface *SurfaceCollection::findSurfaceWithId(const QByteArray &t_id) const
+{
+    for(auto seq : m_impl->surfaces)
+    {
+        if(seq->uniqueId() == t_id)
+            return seq;
+    }
+    return nullptr;
 }
 
 void SurfaceCollection::addSurface(photon::Surface *t_surface)

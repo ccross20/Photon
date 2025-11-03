@@ -15,6 +15,7 @@ namespace photon {
 
 Surface::Impl::Impl(Surface *t_facade):facade(t_facade)
 {
+    uniqueId = QUuid::createUuid().toByteArray(QUuid::WithoutBraces);
 
 }
 
@@ -33,6 +34,11 @@ Surface::~Surface()
 void Surface::init()
 {
 
+}
+
+QByteArray Surface::uniqueId() const
+{
+    return m_impl->uniqueId;
 }
 
 const QVector<SurfaceGizmoContainer*> &Surface::containers() const
@@ -113,13 +119,37 @@ void Surface::restore(Project &t_project)
 void Surface::readFromJson(const QJsonObject &t_json, const LoadContext &t_context)
 {
     m_impl->name = t_json.value("name").toString();
+    m_impl->uniqueId = t_json["uniqueId"].toString().toLatin1();
 
+    if(t_json.contains("gizmos"))
+    {
+        QJsonArray gizmoArray = t_json.value("gizmos").toArray();
+        for(const auto &gizmo : gizmoArray)
+        {
+            const QJsonObject &gizmoObj = gizmo.toObject();
 
+            SurfaceGizmoContainer *c = new SurfaceGizmoContainer;
+            c->readFromJson(gizmoObj, t_context);
+            m_impl->gizmos.append(c);
+
+            connect(c, &SurfaceGizmoContainer::gizmoWasAdded,this, &Surface::surfaceWasModified);
+        }
+    }
 }
 
 void Surface::writeToJson(QJsonObject &t_json) const
 {
     t_json.insert("name", m_impl->name);
+    t_json.insert("uniqueId", QString(m_impl->uniqueId));
+
+    QJsonArray gizmoArray;
+    for(const auto &gizmo : m_impl->gizmos)
+    {
+        QJsonObject gizmoObj;
+        gizmo->writeToJson(gizmoObj);
+        gizmoArray.append(gizmoObj);
+    }
+    t_json.insert("gizmos", gizmoArray);
 }
 
 

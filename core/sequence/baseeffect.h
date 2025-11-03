@@ -12,25 +12,25 @@ struct ClipEffectInformation
 {
 
     ClipEffectInformation(){}
-    ClipEffectInformation(std::function<ClipEffect*()> _callback):callback(_callback){}
+    ClipEffectInformation(std::function<BaseEffect*()> _callback):callback(_callback){}
 
     QByteArray id;
     QByteArray translateId;
     QByteArray iconId;
     QString name;
     bool isCanvas = false;
-    std::function<ClipEffect*()> callback;
+    std::function<BaseEffect*()> callback;
 
     CategoryList categories;
 };
 
-class PHOTONCORE_EXPORT ClipEffectEvaluationContext
+class PHOTONCORE_EXPORT BaseEffectEvaluationContext
 {
 public:
-    ClipEffectEvaluationContext(ProcessContext &context):dmxMatrix(context.dmxMatrix),
+    BaseEffectEvaluationContext(ProcessContext &context):dmxMatrix(context.dmxMatrix),
         project(context.project),
         globalTime(context.globalTime){}
-    virtual ~ClipEffectEvaluationContext(){}
+    virtual ~BaseEffectEvaluationContext(){}
 
     DMXMatrix &dmxMatrix;
     Project *project = nullptr;
@@ -41,12 +41,13 @@ public:
     double strength = 1.0;
 };
 
-class PHOTONCORE_EXPORT ClipEffect : public QObject
+
+class PHOTONCORE_EXPORT BaseEffect : public QObject
 {
     Q_OBJECT
 public:
-    ClipEffect(const QByteArray &t_id = QByteArray());
-    virtual ~ClipEffect();
+    BaseEffect(const QByteArray &t_id = QByteArray());
+    virtual ~BaseEffect();
 
     virtual void init();
     virtual void processChannels(ProcessContext &);
@@ -65,6 +66,7 @@ public:
     Channel *channelAtIndex(int index) const;
     int channelCount() const;
     void clearChannels();
+    BaseEffectParent *effectParent() const;
     const QVector<Channel*> channels() const;
     const QVector<Channel*> channelsForParameter(ChannelParameter *) const;
 
@@ -72,17 +74,16 @@ public:
     void addChannelParameter(ChannelParameter *);
     void removeChannelParameter(ChannelParameter *);
 
-    Clip *clip() const;
     virtual void restore(Project &);
     virtual void readFromJson(const QJsonObject &, const LoadContext &);
     virtual void writeToJson(QJsonObject &) const;
 
 protected:
-    virtual void addedToClip(Clip*);
+    virtual void addedToParent(BaseEffectParent*);
     virtual void layerChanged(Layer*);
     virtual void startTimeUpdated(double);
     virtual void durationUpdated(double);
-    void prepareContext(ClipEffectEvaluationContext &) const;
+    void prepareContext(BaseEffectEvaluationContext &) const;
 
 public slots:
     photon::Channel *addChannel(const photon::ChannelInfo &info = ChannelInfo{}, int index = -1);
@@ -100,6 +101,7 @@ signals:
 
 private:
     friend class Clip;
+    friend class SurfaceAction;
     friend class CanvasLayerGroup;
     class Impl;
     Impl *m_impl;

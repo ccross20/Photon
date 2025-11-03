@@ -11,15 +11,37 @@ namespace photon {
 class FixturePixelSource::Impl
 {
 public:
-    FixtureCapability *capability;
+    QVector<FixtureCapability *>capabilities;
     QVector<QPointF> positions;
     QByteArray uniqueId;
 };
 
-FixturePixelSource::FixturePixelSource(FixtureCapability *t_capability) : PixelSource(),m_impl(new Impl) {
-    m_impl->capability = t_capability;
+FixturePixelSource::FixturePixelSource(const QVector<FixtureCapability *> &t_capabilities) : PixelSource(),m_impl(new Impl) {
+    m_impl->capabilities = t_capabilities;
     m_impl->uniqueId = QUuid::createUuid().toByteArray();
-    m_impl->positions.append(QPointF());
+
+    double length = .9;
+    int pixelCount = t_capabilities.length();
+    double delta = length / (pixelCount - 1);
+    double center = .5;
+    double angle = 0;
+
+    QTransform t;
+    t.translate(length * center, 0);
+    t.rotate(angle);
+    t.translate(length * -center, 0);
+
+    m_impl->positions.resize(pixelCount);
+    double position = 0;
+    for(auto it = m_impl->positions.begin(); it != m_impl->positions.end(); ++it)
+    {
+        auto &pt = *it;
+        auto transformedPt = t.map(QPointF(position, 0.0));
+
+        pt.setX(transformedPt.x());
+        pt.setY(transformedPt.y());
+        position += delta;
+    }
 }
 
 FixturePixelSource::~FixturePixelSource()
@@ -27,19 +49,23 @@ FixturePixelSource::~FixturePixelSource()
     delete m_impl;
 }
 
-FixtureCapability *FixturePixelSource::capability() const
+const QVector<FixtureCapability *> &FixturePixelSource::capabilities() const
 {
-    return m_impl->capability;
+    return m_impl->capabilities;
 }
 
 Fixture *FixturePixelSource::fixture() const
 {
-    return m_impl->capability->fixture();
+    if(m_impl->capabilities.isEmpty())
+        return nullptr;
+    return m_impl->capabilities[0]->fixture();
 }
 
 int FixturePixelSource::dmxOffset() const
 {
-    return m_impl->capability->fixture()->dmxOffset() + m_impl->capability->range().start;
+    if(m_impl->capabilities.isEmpty())
+        return 0;
+    return m_impl->capabilities[0]->fixture()->dmxOffset() + m_impl->capabilities[0]->range().start;
 }
 
 int FixturePixelSource::dmxSize() const
@@ -49,7 +75,7 @@ int FixturePixelSource::dmxSize() const
 
 int FixturePixelSource::universe() const
 {
-    return m_impl->capability->fixture()->universe();
+    return m_impl->capabilities[0]->fixture()->universe();
 }
 
 const QVector<QPointF> &FixturePixelSource::positions() const
@@ -59,32 +85,40 @@ const QVector<QPointF> &FixturePixelSource::positions() const
 
 void FixturePixelSource::process(ProcessContext &t_context, const QTransform &t_transform) const
 {
-    ColorCapability *colorCap = dynamic_cast<ColorCapability*>(m_impl->capability);
-    if(colorCap)
-    {
+    auto capIt = m_impl->capabilities.cbegin();
+
+
         if(!t_context.image)
             return;
 
-        for(auto it = positions().cbegin(); it != positions().cend(); it++)
+        for(auto it = positions().cbegin(); it != positions().cend() && capIt != m_impl->capabilities.cend(); it++, capIt++)
         {
-            auto ptF = t_transform.map((*it));
-            ptF.setX(ptF.x() * t_context.canvas->width());
-            ptF.setY(ptF.y() * t_context.canvas->height());
 
-            auto pt = ptF.toPoint();
-            QRgb color;
-            if(pt.x() < 0 || pt.x() >= t_context.canvas->width() || pt.y() < 0 || pt.y() >= t_context.canvas->height())
+            ColorCapability *colorCap = dynamic_cast<ColorCapability*>(*capIt);
+            if(colorCap)
             {
-                color = 0;
-            }
-            else
-            {
-                color = t_context.image->pixel(pt);
+
+
+                auto ptF = t_transform.map((*it));
+                ptF.setX(ptF.x() * t_context.canvas->width());
+                ptF.setY(ptF.y() * t_context.canvas->height());
+
+                auto pt = ptF.toPoint();
+                QRgb color;
+                if(pt.x() < 0 || pt.x() >= t_context.canvas->width() || pt.y() < 0 || pt.y() >= t_context.canvas->height())
+                {
+                    color = 0;
+                }
+                else
+                {
+                    color = t_context.image->pixel(pt);
+                }
+
+                auto qc = QColor::fromRgb(color);
+
+                colorCap->setColor(qc, t_context.dmxMatrix);
             }
 
-            auto qc = QColor::fromRgb(color);
-
-            colorCap->setColor(qc, t_context.dmxMatrix);
 
             /*
 
@@ -96,7 +130,7 @@ void FixturePixelSource::process(ProcessContext &t_context, const QTransform &t_
         t_context.dmxMatrix.setValue(u, channel++, rgbw.w);
 */
         }
-    }
+
 
 
     //PixelSource::process(t_context, t_transform);
@@ -116,7 +150,7 @@ void FixturePixelSource::writeToJson(QJsonObject &) const
 
 QByteArray FixturePixelSource::sourceUniqueId() const
 {
-    return m_impl->capability->fixture()->uniqueId();
+    return m_impl->capabilities[0]->fixture()->uniqueId();
 }
 
 

@@ -1,18 +1,18 @@
 #ifndef PHOTON_BEATSTROBEEFFECT_H
 #define PHOTON_BEATSTROBEEFFECT_H
 
-#include "sequence/fixtureclipeffect.h"
+#include "sequence/fixtureeffect.h"
 
 namespace photon {
 
-class BeatStrobeEffect : public FixtureClipEffect
+class BeatStrobeEffect : public FixtureEffect
 {
 public:
     BeatStrobeEffect();
     ~BeatStrobeEffect();
 
     void init() override;
-    void evaluate(FixtureClipEffectEvaluationContext &) override;
+    void evaluate(FixtureEffectEvaluationContext &) override;
     static ClipEffectInformation info();
 
 private:

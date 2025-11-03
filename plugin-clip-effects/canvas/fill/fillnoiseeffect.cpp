@@ -48,7 +48,7 @@ void FillNoiseEffect::canvasResized(QOpenGLContext *t_context, Canvas *t_canvas)
     m_texture->resize(t_context, QImage::Format::Format_ARGB32_Premultiplied, t_canvas->width(), t_canvas->height());
 }
 
-void FillNoiseEffect::evaluate(CanvasClipEffectEvaluationContext &t_context)
+void FillNoiseEffect::evaluate(CanvasEffectEvaluationContext &t_context)
 {
     //m_noise.noise()
     //t_context.canvasImage

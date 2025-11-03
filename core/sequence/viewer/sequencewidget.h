@@ -42,7 +42,7 @@ private slots:
     void selectMask(photon::MaskEffect *);
     void selectClipParameter(photon::Clip *);
     void selectFalloff(photon::FalloffEffect *);
-    void selectClipEffect(photon::ClipEffect *);
+    void selectClipEffect(photon::BaseEffect *);
     void selectState(photon::State *);
     void clearEditor();
 

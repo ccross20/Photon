@@ -69,6 +69,11 @@ int StateCapability::getChannelInteger(const StateEvaluationContext &t_context, 
     return 0.0f;
 }
 
+QString StateCapability::getChannelString(const StateEvaluationContext &t_context, uint t_index) const
+{
+   return t_context.channelValues[channelId(t_index)].toString();
+}
+
 bool StateCapability::getChannelBool(const StateEvaluationContext &t_context, uint t_index) const
 {
     return t_context.channelValues[channelId(t_index)].toBool();

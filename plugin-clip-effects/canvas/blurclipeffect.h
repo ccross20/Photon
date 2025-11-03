@@ -1,11 +1,11 @@
 #ifndef PHOTON_BLURCLIPEFFECT_H
 #define PHOTON_BLURCLIPEFFECT_H
 
-#include "sequence/canvasclipeffect.h"
+#include "sequence/canvaseffect.h"
 
 namespace photon {
 
-class BlurClipEffect : public CanvasClipEffect
+class BlurClipEffect : public CanvasEffect
 {
 public:
     BlurClipEffect();
@@ -13,7 +13,7 @@ public:
     void init() override;
     void initializeContext(QOpenGLContext *, Canvas *) override;
     void canvasResized(QOpenGLContext *, Canvas *) override;
-    void evaluate(CanvasClipEffectEvaluationContext &) override;
+    void evaluate(CanvasEffectEvaluationContext &) override;
     static ClipEffectInformation info();
 
 

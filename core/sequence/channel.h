@@ -15,7 +15,8 @@ struct PHOTONCORE_EXPORT ChannelInfo
         ChannelTypeIntegerStep,
         ChannelTypeBool,
         ChannelTypeColor,
-        ChannelTypePoint
+        ChannelTypePoint,
+        ChannelTypeString
     };
 
     ChannelInfo(ChannelType type = ChannelTypeNumber, const QString &name = QString{}, const QString &description = QString{}, const QVariant &defaultValue = QVariant{}):
@@ -94,6 +95,7 @@ public:
     ChannelEffect *effectAtIndex(int index) const;
 
     Sequence *sequence() const;
+    SurfaceGizmoContainer *gizmoContainer() const;
 
     void effectUpdated(ChannelEffect *);
 

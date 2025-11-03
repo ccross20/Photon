@@ -37,7 +37,7 @@ signals:
     void selectFalloff(photon::FalloffEffect *);
     void selectMask(photon::MaskEffect *);
     void selectState(photon::State *);
-    void selectClipEffect(photon::ClipEffect *);
+    void selectClipEffect(photon::BaseEffect *);
     void selectClipParameter(photon::Clip*);
     void selectPixelLayout(photon::PixelLayout *);
     void clearSelection();

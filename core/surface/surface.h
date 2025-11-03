@@ -13,6 +13,7 @@ public:
     Surface(const QString &t_name = QString{}, QObject *parent = nullptr);
     ~Surface();
     void init();
+    QByteArray uniqueId() const;
     QString name() const;
     void setName(const QString &);
     Project *project() const;

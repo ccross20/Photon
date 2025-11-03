@@ -10,8 +10,8 @@
 #include "sequence.h"
 #include "channel/parameter/numberchannelparameter.h"
 #include "channel/parameter/point2channelparameter.h"
-#include "clipeffect.h"
-#include "canvasclipeffect.h"
+#include "baseeffect.h"
+#include "canvaseffect.h"
 #include "canvaslayergroup.h"
 
 namespace photon {
@@ -67,7 +67,7 @@ void CanvasClip::initializeContext(QOpenGLContext *t_context, Canvas *t_canvas)
 
     for(auto clipEffect : clipEffects())
     {
-        auto canvasEffect = dynamic_cast<CanvasClipEffect*>(clipEffect);
+        auto canvasEffect = dynamic_cast<CanvasEffect*>(clipEffect);
         if(canvasEffect)
             canvasEffect->initializeContext(t_context, t_canvas);
     }
@@ -95,7 +95,7 @@ void CanvasClip::canvasResized(QOpenGLContext *t_context, Canvas *t_canvas)
 {
     for(auto clipEffect : clipEffects())
     {
-        auto canvasEffect = dynamic_cast<CanvasClipEffect*>(clipEffect);
+        auto canvasEffect = dynamic_cast<CanvasEffect*>(clipEffect);
         if(canvasEffect)
             canvasEffect->canvasResized(t_context, t_canvas);
     }

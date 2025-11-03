@@ -212,13 +212,6 @@ GradientChannelEffect::GradientChannelEffect()
 
 }
 
-float * colorToValues(const QColor &t_color, float *value, uint size)
-{
-    t_color.getHslF(&value[0],&value[1],&value[2]);
-    return value;
-}
-
-
 float * GradientChannelEffect::process(float *value, uint size, double time) const
 {
     if(m_colors.isEmpty())

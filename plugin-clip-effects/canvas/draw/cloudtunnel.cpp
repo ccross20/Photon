@@ -42,7 +42,7 @@ void CloudTunnel::canvasResized(QOpenGLContext *, Canvas *)
 
 }
 
-void CloudTunnel::evaluate(CanvasClipEffectEvaluationContext &t_context)
+void CloudTunnel::evaluate(CanvasEffectEvaluationContext &t_context)
 {
     //float w = static_cast<float>(t_context.canvasImage->width());
     //float h = static_cast<float>(t_context.canvasImage->height());

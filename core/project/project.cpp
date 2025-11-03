@@ -23,6 +23,8 @@
 #include "scene/scenemanager.h"
 #include "state/statecollection.h"
 #include "state/state.h"
+#include "surface/surfacecollection.h"
+#include "surface/surface.h"
 #include "tag/tagcollection.h"
 
 namespace photon {
@@ -36,6 +38,7 @@ public:
     PixelLayoutCollection pixelLayouts;
     FixtureCollection fixtures;
     RoutineCollection routines;
+    SurfaceCollection surfaces;
     TagCollection tags;
     StateCollection states;
     BusGraph *bus;
@@ -130,6 +133,11 @@ TagCollection *Project::tags() const
 CanvasCollection *Project::canvases() const
 {
     return &m_impl->canvases;
+}
+
+SurfaceCollection *Project::surfaces() const
+{
+    return &m_impl->surfaces;
 }
 
 PixelLayoutCollection *Project::pixelLayouts() const
@@ -258,12 +266,7 @@ void Project::readFromJson(const QJsonObject &json)
         m_impl->sceneManager->readFromJson(sceneObj, context);
     }
 
-    m_impl->bus = new BusGraph;
-    if(json.contains("bus"))
-    {
-        QJsonObject busObj = json.value("bus").toObject();
-        m_impl->bus->readFromJson(busObj, photonApp->plugins()->nodeLibrary());
-    }
+
 
     if(json.contains("pixelLayouts"))
     {
@@ -302,6 +305,26 @@ void Project::readFromJson(const QJsonObject &json)
             c->readFromJson(canvasObj, context);
             m_impl->canvases.addCanvas(c);
         }
+    }
+
+    if(json.contains("surfaces"))
+    {
+        QJsonArray surfaceArray = json.value("surfaces").toArray();
+        for(const auto &surf : surfaceArray)
+        {
+            const QJsonObject &surfaceObj = surf.toObject();
+
+            Surface *surface = new Surface;
+            surface->readFromJson(surfaceObj, context);
+            m_impl->surfaces.addSurface(surface);
+        }
+    }
+
+    m_impl->bus = new BusGraph;
+    if(json.contains("bus"))
+    {
+        QJsonObject busObj = json.value("bus").toObject();
+        m_impl->bus->readFromJson(busObj, photonApp->plugins()->nodeLibrary());
     }
 }
 
@@ -357,6 +380,15 @@ void Project::writeToJson(QJsonObject &json) const
     QJsonObject sceneObj;
     m_impl->sceneManager->writeToJson(sceneObj);
     json.insert("sceneManager", sceneObj);
+
+    QJsonArray surfacesArray;
+    for(auto surface : m_impl->surfaces.surfaces())
+    {
+        QJsonObject surfaceObj;
+        surface->writeToJson(surfaceObj);
+        surfacesArray.append(surfaceObj);
+    }
+    json.insert("surfaces", surfacesArray);
 
 }
 

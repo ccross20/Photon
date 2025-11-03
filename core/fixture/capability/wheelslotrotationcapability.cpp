@@ -36,6 +36,14 @@ double WheelSlotRotationCapability::speedEnd() const
     return m_impl->speedStop;
 }
 
+double WheelSlotRotationCapability::maxSpeed() const
+{
+    if(m_impl->speedStop >= 0)
+        return fmax(m_impl->speedStart, m_impl->speedStop);
+    else
+        return fmin(m_impl->speedStart, m_impl->speedStop);
+}
+
 bool WheelSlotRotationCapability::supportsAngle() const
 {
     return m_impl->supportsAngle;
@@ -79,9 +87,12 @@ void WheelSlotRotationCapability::readFromOpenFixtureJson(const QJsonObject &t_j
 {
     FixtureCapability::readFromOpenFixtureJson(t_json);
 
-
-    FixtureCapability::constantPercent(t_json.value("speedStart").toString(), &m_impl->speedStart);
-    FixtureCapability::constantPercent(t_json.value("speedStop").toString(), &m_impl->speedStop);
+    if(t_json.contains("speedStart"))
+        FixtureCapability::constantPercent(t_json.value("speedStart").toString(), &m_impl->speedStart);
+    if(t_json.contains("speedStop"))
+        FixtureCapability::constantPercent(t_json.value("speedStop").toString(), &m_impl->speedStop);
+    if(t_json.contains("speedEnd"))
+        FixtureCapability::constantPercent(t_json.value("speedEnd").toString(), &m_impl->speedStop);
 
     FixtureCapability::rotationAngle(t_json.value("angleStart").toString(), &m_impl->angleStart);
     FixtureCapability::rotationAngle(t_json.value("angleEnd").toString(), &m_impl->angleStop);

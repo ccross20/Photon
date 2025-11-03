@@ -31,6 +31,7 @@ protected:
     void setType(const QByteArray t_type);
 
 signals:
+    void gizmoUpdated();
 
 private:
     class Impl;

@@ -29,6 +29,15 @@ find_package(Qt6 REQUIRED COMPONENTS Core)
 find_package(Qt6 REQUIRED COMPONENTS Widgets)
 find_package(Qt6 REQUIRED COMPONENTS Widgets)
 find_package(Qt6 REQUIRED COMPONENTS Widgets)
+find_package(Qt6 REQUIRED COMPONENTS Core)
+find_package(Qt6 REQUIRED COMPONENTS Core)
+find_package(Qt6 REQUIRED COMPONENTS Widgets)
+find_package(Qt6 REQUIRED COMPONENTS Widgets)
+find_package(Qt6 REQUIRED COMPONENTS Widgets)
+find_package(Qt6 REQUIRED COMPONENTS Widgets)
+find_package(Qt6 REQUIRED COMPONENTS Widgets)
+find_package(Qt6 REQUIRED COMPONENTS Widgets)
+find_package(Qt6 REQUIRED COMPONENTS Widgets)
 
 set(PROJECT_SOURCES
         photon-global.h
@@ -36,8 +45,6 @@ set(PROJECT_SOURCES
         audio/audioprocessor.cpp
         parametereditor.h
         parametereditor.cpp
-        canvas/canvaseffect.h
-        canvas/canvaseffect.cpp
         channel/parameter/boolchannelparameter.h
         channel/parameter/boolchannelparameter.cpp
         channel/parameter/channelparameter.h
@@ -283,8 +290,8 @@ set(PROJECT_SOURCES
         sequence/beatlayer.cpp
         sequence/canvasclip.h
         sequence/canvasclip.cpp
-        sequence/canvasclipeffect.h
-        sequence/canvasclipeffect.cpp
+        sequence/canvaseffect.h
+        sequence/canvaseffect.cpp
         sequence/canvaslayergroup.h
         sequence/canvaslayergroup.cpp
         sequence/channel.h
@@ -296,9 +303,9 @@ set(PROJECT_SOURCES
         sequence/clip.h
         sequence/clip_p.h
         sequence/clip.cpp
-        sequence/clipeffect.h
+        sequence/baseeffect.h
         sequence/clipeffect_p.h
-        sequence/clipeffect.cpp
+        sequence/baseeffect.cpp
         sequence/cliplayer.h
         sequence/cliplayer_p.h
         sequence/cliplayer.cpp
@@ -306,8 +313,8 @@ set(PROJECT_SOURCES
         sequence/constantchanneleffect.cpp
         sequence/fixtureclip.h
         sequence/fixtureclip.cpp
-        sequence/fixtureclipeffect.h
-        sequence/fixtureclipeffect.cpp
+        sequence/fixtureeffect.h
+        sequence/fixtureeffect.cpp
         sequence/gradientchanneleffect.h
         sequence/gradientchanneleffect.cpp
         sequence/layer.h
@@ -486,7 +493,31 @@ add_library(photon-core SHARED ${PROJECT_SOURCES}
     surface/viewer/togglegizmowidget.h surface/viewer/togglegizmowidget.cpp
     surface/viewer/surfacegraphwidget.h surface/viewer/surfacegraphwidget.cpp
     graph/bus/dmxreadernode.h graph/bus/dmxreadernode.cpp
-    graph/node/writedmxchannelnode.h graph/node/writedmxchannelnode.cpp)
+    graph/node/writedmxchannelnode.h graph/node/writedmxchannelnode.cpp
+    graph/node/fixture/fixturetreeselection.h graph/node/fixture/fixturetreeselection.cpp
+    graph/node/fixture/allfixturesnode.h graph/node/fixture/allfixturesnode.cpp
+    sequence/baseeffectparent.h
+    surface/surfaceaction.h surface/surfaceaction.cpp
+    surface/surfaceaction_p.h
+    surface/fixtureaction.h surface/fixtureaction.cpp
+    surface/viewer/actionmodel.h surface/viewer/actionmodel.cpp
+    data/commonmodel.h data/commonmodel.cpp
+    surface/viewer/actionstructureviewer.h surface/viewer/actionstructureviewer.cpp
+    surface/viewer/actioneditwidget.h surface/viewer/actioneditwidget.cpp
+    channel/togglegizmochanneleffect.h channel/togglegizmochanneleffect.cpp
+    channel/gizmoretimechanneleffect.h channel/gizmoretimechanneleffect.cpp
+    state/wheelslotanglestate.h state/wheelslotanglestate.cpp
+    gui/panel/surfacecollectionpanel.h gui/panel/surfacecollectionpanel.cpp
+    gui/panel/surfacecollectionpanel_p.h
+    surface/gizmofactory.h surface/gizmofactory.cpp
+    surface/viewer/togglegizmoeditor.h surface/viewer/togglegizmoeditor.cpp
+    gui/color/colorpalettewidget.h gui/color/colorpalettewidget.cpp
+    surface/palettegizmo.h surface/palettegizmo.cpp
+    surface/viewer/palettegizmowidget.h surface/viewer/palettegizmowidget.cpp
+    surface/viewer/palettegizmoeditor.h surface/viewer/palettegizmoeditor.cpp
+    channel/palettegizmochanneleffect.h channel/palettegizmochanneleffect.cpp
+    surface/gizmochanneleffect.h surface/gizmochanneleffect.cpp
+    surface/viewer/actionsettingswidget.h surface/viewer/actionsettingswidget.cpp)
 
 target_include_directories(photon-core PUBLIC ../core)
 target_include_directories(photon-core PUBLIC ../keira)
@@ -510,6 +541,15 @@ target_link_libraries(photon-core PRIVATE Qt6::Core)
 target_link_libraries(photon-core PRIVATE Qt6::Core)
 target_link_libraries(photon-core PRIVATE Qt6::Widgets)
 target_link_libraries(photon-core PRIVATE Qt6::Core)
+target_link_libraries(photon-core PRIVATE Qt6::Widgets)
+target_link_libraries(photon-core PRIVATE Qt6::Widgets)
+target_link_libraries(photon-core PRIVATE Qt6::Widgets)
+target_link_libraries(photon-core PRIVATE Qt6::Core)
+target_link_libraries(photon-core PRIVATE Qt6::Core)
+target_link_libraries(photon-core PRIVATE Qt6::Widgets)
+target_link_libraries(photon-core PRIVATE Qt6::Widgets)
+target_link_libraries(photon-core PRIVATE Qt6::Widgets)
+target_link_libraries(photon-core PRIVATE Qt6::Widgets)
 target_link_libraries(photon-core PRIVATE Qt6::Widgets)
 target_link_libraries(photon-core PRIVATE Qt6::Widgets)
 target_link_libraries(photon-core PRIVATE Qt6::Widgets)

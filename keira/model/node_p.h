@@ -20,6 +20,7 @@ public:
     double width = 200;
     bool isDirty = true;
     bool visited = false;
+    bool isLoopable = false;
     bool isAlwaysDirty = false;
 };
 

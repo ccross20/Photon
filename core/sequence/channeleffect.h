@@ -46,6 +46,7 @@ public:
     Channel *channel() const;
     int index() const;
     virtual float * process(float *value, uint size, double time) const;
+    virtual double processTime(double time) const;
     virtual ChannelEffectEditor *createEditor() {return new ChannelEffectEditor(this);}
     void updated();
 

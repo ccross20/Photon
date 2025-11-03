@@ -32,7 +32,7 @@
 #include "gui/waveformwidget.h"
 #include "sequence/viewer/stateeditor.h"
 #include "sequence/fixtureclip.h"
-#include "sequence/clipeffect.h"
+#include "sequence/baseeffect.h"
 #include "fixture/maskeffect.h"
 #include "sequencewaveformeditor.h"
 
@@ -286,7 +286,7 @@ void SequenceWidget::selectFalloff(photon::FalloffEffect *t_effect)
 
 }
 
-void SequenceWidget::selectClipEffect(photon::ClipEffect *t_effect)
+void SequenceWidget::selectClipEffect(photon::BaseEffect *t_effect)
 {
     clearEditor();
     QHBoxLayout *layout = new QHBoxLayout;
@@ -332,7 +332,7 @@ void SequenceWidget::selectState(photon::State *t_state)
     {
         auto clip = dynamic_cast<FixtureClip *>(m_impl->selectedClips[0]->clip());
         if(clip)
-            editor->setClip(clip);
+            editor->setBaseEffectParent(clip);
     }
 
     layout->addWidget(editor);

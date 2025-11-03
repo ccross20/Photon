@@ -6,4 +6,10 @@ SurfaceGizmoWidget::SurfaceGizmoWidget(SurfaceGizmo *gizmo, SurfaceMode mode, QW
     : QWidget{parent}
 {}
 
+
+void SurfaceGizmoWidget::updateGizmo()
+{
+
+}
+
 } // namespace photon

@@ -316,7 +316,7 @@ void PixelLayoutEditorSidePanel::addClicked()
             {
                 if(!fixture->findCapability(Capability_Color).isEmpty()){
                     auto capabilities = fixture->findCapability(Capability_Color);
-                    addSource(new FixturePixelSource(capabilities[0]));
+                    addSource(new FixturePixelSource(capabilities));
                 }
             }
             else

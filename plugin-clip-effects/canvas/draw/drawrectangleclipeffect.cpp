@@ -22,7 +22,7 @@ void DrawRectangleClipEffect::init()
     addChannelParameter(new ColorChannelParameter("color", Qt::red));
 }
 
-void DrawRectangleClipEffect::evaluate(CanvasClipEffectEvaluationContext &t_context)
+void DrawRectangleClipEffect::evaluate(CanvasEffectEvaluationContext &t_context)
 {
     /*
     QPainter painter{t_context.canvasImage};
@@ -75,12 +75,12 @@ ClipEffectInformation DrawRectangleClipEffect::info()
 
 void DrawRectangleClipEffect::readFromJson(const QJsonObject &t_json, const LoadContext &t_context)
 {
-    ClipEffect::readFromJson(t_json, t_context);
+    BaseEffect::readFromJson(t_json, t_context);
 }
 
 void DrawRectangleClipEffect::writeToJson(QJsonObject &t_json) const
 {
-    ClipEffect::writeToJson(t_json);
+    BaseEffect::writeToJson(t_json);
 }
 
 

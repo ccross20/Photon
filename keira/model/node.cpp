@@ -41,6 +41,21 @@ QString Node::name() const
     return m_impl->name;
 }
 
+bool Node::isLoopable() const
+{
+    return m_impl->isLoopable;
+}
+
+void Node::setIsLoopable(bool t_value)
+{
+    m_impl->isLoopable = t_value;
+}
+
+uint Node::loopCount() const
+{
+    return 0;
+}
+
 void Node::setId(const QByteArray &t_id)
 {
     m_impl->id = t_id;
@@ -156,6 +171,16 @@ void Node::buttonClicked(const Parameter *)
 
 }
 
+void Node::startLoop()
+{
+
+}
+
+void Node::endLoop()
+{
+
+}
+
 void Node::markDirty()
 {
     if(m_impl->isDirty)
@@ -213,6 +238,7 @@ void Node::readFromJson(const QJsonObject &t_json, NodeLibrary *library)
     QJsonObject positionObject = t_json.value("position").toObject();
     m_impl->position = QPointF{positionObject.value("x").toDouble(), positionObject.value("y").toDouble()};
     m_impl->name = t_json.value("name").toString();
+    m_impl->isLoopable = t_json.value("isLoopable").toBool();
 
     auto parameterArray = t_json.value("parameters").toArray();
     for(const auto &paramJson : parameterArray)
@@ -238,6 +264,7 @@ void Node::writeToJson(QJsonObject &t_json) const
 {
     t_json.insert("id", QString(m_impl->id));
     t_json.insert("uniqueId", QString(m_impl->uniqueId));
+    t_json.insert("isLoopable", m_impl->isLoopable);
 
     QJsonObject positionObject;
     positionObject.insert("x", m_impl->position.x());

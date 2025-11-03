@@ -97,7 +97,7 @@ EaseEffectEditor::EaseEffectEditor(EaseEffect *t_effect):ChannelEffectEditor(t_e
     paramWidget->addWidget(easeOutDurationSpin, "Ease Out Duration");
     paramWidget->addWidget(easeOutCombo, "Ease Out");
 
-    addWidget(paramWidget, "Pulse");
+    addWidget(paramWidget, "Ease");
 
 
     m_parentItem = new QGraphicsRectItem(0,0,0,0);
@@ -212,6 +212,8 @@ float * EaseEffect::process(float *value, uint size, double time) const
     }
 
     double duration = channel()->duration();
+    if(duration <= 0.0)
+        duration = m_easeInDuration + m_easeOutDuration;
     double outStart = duration - m_easeOutDuration;
 
     for(int i = 0; i < size; ++i)

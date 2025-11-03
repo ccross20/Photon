@@ -62,7 +62,7 @@ TracePathClip::TracePathClip()
 
 void TracePathClip::init()
 {
-    ClipEffect::init();
+    BaseEffect::init();
     addChannel(ChannelInfo{"radius",ChannelInfo::ChannelTypeNumber,"Radius","Size of the shape",1.0});
     addChannel(ChannelInfo{"offset",ChannelInfo::ChannelTypeNumber,"Offset","Offset from start",0.0});
 }
@@ -140,7 +140,7 @@ QPainterPath TracePathClip::generatePath(double t_time) const
     return path;
 }
 
-void TracePathClip::evaluate(FixtureClipEffectEvaluationContext &t_context)
+void TracePathClip::evaluate(FixtureEffectEvaluationContext &t_context)
 {
     int currentIndex = 0;
     for(int i = 0; i < fixtures.length(); ++i)
@@ -164,7 +164,7 @@ void TracePathClip::evaluate(FixtureClipEffectEvaluationContext &t_context)
 
     auto fixture = t_context.fixture;
 
-    double initialRelativeTime = t_context.globalTime - clip()->startTime();
+    double initialRelativeTime = t_context.globalTime - effectParent()->startTime();
 
     currentLength += off;
 
@@ -198,7 +198,7 @@ void TracePathClip::evaluate(FixtureClipEffectEvaluationContext &t_context)
 
     auto pans = fixture->findCapability(Capability_Pan);
     if(!pans.isEmpty())
-        static_cast<AngleCapability*>(pans.front())->setAngleDegreesCentered(panDeg, t_context.dmxMatrix, clip()->strengthAtTime(initialRelativeTime));
+        static_cast<AngleCapability*>(pans.front())->setAngleDegreesCentered(panDeg, t_context.dmxMatrix, effectParent()->strengthAtTime(initialRelativeTime));
 
     QMatrix4x4 tiltMat;
     tiltMat.translate(0,.4,0);
@@ -211,14 +211,14 @@ void TracePathClip::evaluate(FixtureClipEffectEvaluationContext &t_context)
 
     auto tilts = fixture->findCapability(Capability_Tilt);
     if(!tilts.isEmpty())
-        static_cast<AngleCapability*>(tilts.front())->setAngleDegreesCentered(tiltDeg, t_context.dmxMatrix, clip()->strengthAtTime(initialRelativeTime));
+        static_cast<AngleCapability*>(tilts.front())->setAngleDegreesCentered(tiltDeg, t_context.dmxMatrix, effectParent()->strengthAtTime(initialRelativeTime));
 
 }
 
 
 void TracePathClip::readFromJson(const QJsonObject &t_json, const LoadContext &t_context)
 {
-    ClipEffect::readFromJson(t_json, t_context);
+    BaseEffect::readFromJson(t_json, t_context);
 
     fixtures.clear();
     auto fixtureArray = t_json.value("fixtures").toArray();
@@ -233,7 +233,7 @@ void TracePathClip::readFromJson(const QJsonObject &t_json, const LoadContext &t
 
 void TracePathClip::writeToJson(QJsonObject &t_json) const
 {
-    ClipEffect::writeToJson(t_json);
+    BaseEffect::writeToJson(t_json);
 
     QJsonArray fixtureArray;
 

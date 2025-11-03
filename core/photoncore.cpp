@@ -30,7 +30,6 @@ public:
     ~Impl();
 
     SequenceCollection *sequences;
-    SurfaceCollection *surfaces;
     ResourceManager *resources;
     Settings *settings;
     PluginFactory *plugins;
@@ -48,7 +47,6 @@ public:
 
 PhotonCore::Impl::Impl(PhotonCore *t_core):
     sequences(new SequenceCollection),
-    surfaces(new SurfaceCollection),
     resources(new ResourceManager()),
     settings(new Settings(t_core)),
     plugins(new PluginFactory(t_core)),gui(new GuiManager),timekeeper(new Timekeeper),busEvaluator(new BusEvaluator)
@@ -69,7 +67,6 @@ PhotonCore::Impl::~Impl()
     delete settings;
     delete resources;
     delete sequences;
-    delete surfaces;
 }
 
 PhotonCore::PhotonCore(int &argc, char **argv) : QApplication(argc, argv),
@@ -136,7 +133,9 @@ SequenceCollection *PhotonCore::sequences() const
 
 SurfaceCollection *PhotonCore::surfaces() const
 {
-    return m_impl->surfaces;
+    if(m_impl->project)
+        return m_impl->project->surfaces();
+    return nullptr;
 }
 
 ResourceManager *PhotonCore::resources() const

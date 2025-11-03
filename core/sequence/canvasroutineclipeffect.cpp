@@ -46,7 +46,7 @@ public:
     QVector<keira::Parameter*> inputs;
 };
 
-CanvasRoutineClipEffect::CanvasRoutineClipEffect():CanvasClipEffect(),m_impl(new Impl)
+CanvasRoutineClipEffect::CanvasRoutineClipEffect():CanvasEffect(),m_impl(new Impl)
 {
     m_impl->routine = new Routine;
 
@@ -101,7 +101,7 @@ void CanvasRoutineClipEffect::channelRemovedSlot(int t_index)
 
 void CanvasRoutineClipEffect::initializeContext(QOpenGLContext *t_context, Canvas *t_canvas)
 {
-    CanvasClipEffect::initializeContext(t_context, t_canvas);
+    CanvasEffect::initializeContext(t_context, t_canvas);
 
     if(m_impl->routine)
         m_impl->routine->initializeContext(t_context, t_canvas);
@@ -109,7 +109,7 @@ void CanvasRoutineClipEffect::initializeContext(QOpenGLContext *t_context, Canva
 
 void CanvasRoutineClipEffect::canvasResized(QOpenGLContext *t_context, Canvas *t_canvas)
 {
-    CanvasClipEffect::canvasResized(t_context, t_canvas);
+    CanvasEffect::canvasResized(t_context, t_canvas);
 
     if(m_impl->routine)
         m_impl->routine->canvasResized(t_context, t_canvas);
@@ -145,9 +145,9 @@ QWidget *CanvasRoutineClipEffect::createEditor()
     return new RoutineEditor(m_impl->routine);
 }
 
-void CanvasRoutineClipEffect::evaluate(CanvasClipEffectEvaluationContext &t_context)
+void CanvasRoutineClipEffect::evaluate(CanvasEffectEvaluationContext &t_context)
 {
-    double initialRelativeTime = t_context.globalTime - clip()->startTime();
+    double initialRelativeTime = t_context.globalTime - effectParent()->startTime();
 
     RoutineEvaluationContext localContext(t_context.dmxMatrix);
     localContext.globalTime = t_context.globalTime;
@@ -163,7 +163,7 @@ void CanvasRoutineClipEffect::evaluate(CanvasClipEffectEvaluationContext &t_cont
     if(t_context.relativeTime < 0)
         return;
 
-    t_context.strength = clip()->strengthAtTime(t_context.relativeTime);
+    t_context.strength = effectParent()->strengthAtTime(t_context.relativeTime);
 
     localContext.channelValues.clear();
     for(const auto &channel : channels())
@@ -186,7 +186,7 @@ void CanvasRoutineClipEffect::evaluate(CanvasClipEffectEvaluationContext &t_cont
 
 void CanvasRoutineClipEffect::restore(Project &t_project)
 {
-    CanvasClipEffect::restore(t_project);
+    CanvasEffect::restore(t_project);
 
 
     for(auto node : m_impl->routine->nodes())
@@ -203,7 +203,7 @@ void CanvasRoutineClipEffect::restore(Project &t_project)
 
 void CanvasRoutineClipEffect::readFromJson(const QJsonObject &t_json, const LoadContext &t_context)
 {
-    CanvasClipEffect::readFromJson(t_json, t_context);
+    CanvasEffect::readFromJson(t_json, t_context);
 
     auto routineObj = t_json.value("routine").toObject();
     m_impl->routine->readFromJson(routineObj, photonApp->plugins()->nodeLibrary());
@@ -211,7 +211,7 @@ void CanvasRoutineClipEffect::readFromJson(const QJsonObject &t_json, const Load
 
 void CanvasRoutineClipEffect::writeToJson(QJsonObject &t_json) const
 {
-    CanvasClipEffect::writeToJson(t_json);
+    CanvasEffect::writeToJson(t_json);
 
     QJsonObject routineObj;
     m_impl->routine->writeToJson(routineObj);

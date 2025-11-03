@@ -1,11 +1,11 @@
 #ifndef PHOTON_KALEIDOSCOPECLIPEFFECT_H
 #define PHOTON_KALEIDOSCOPECLIPEFFECT_H
 
-#include "sequence/canvasclipeffect.h"
+#include "sequence/canvaseffect.h"
 
 namespace photon {
 
-class KaleidoscopeClipEffect : public CanvasClipEffect
+class KaleidoscopeClipEffect : public CanvasEffect
 {
 public:
     KaleidoscopeClipEffect();
@@ -13,7 +13,7 @@ public:
     void init() override;
     void initializeContext(QOpenGLContext *, Canvas *) override;
     void canvasResized(QOpenGLContext *, Canvas *) override;
-    void evaluate(CanvasClipEffectEvaluationContext &) override;
+    void evaluate(CanvasEffectEvaluationContext &) override;
     static ClipEffectInformation info();
 
 private:

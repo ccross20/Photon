@@ -101,6 +101,7 @@ public:
     const QVector<FixtureWheel*> &wheels() const;
     FixtureWheel *findWheel(const QString &) const;
     QVector<FixtureCapability*> findCapability(CapabilityType type, int index = 0) const;
+    QVector<FixtureCapability*> findCapability(CapabilityType type, const QString &name) const;
 
     template<class V>
     QVector<V> findCapability() const

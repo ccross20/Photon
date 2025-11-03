@@ -58,6 +58,19 @@ void ColorCapability::setColor(const QColor &t_color, DMXMatrix &t_matrix, doubl
         case Capability_Blue:
             channel->setPercent(c.blueF(), t_matrix, t_blend);
             break;
+        case Capability_Lime:
+            //channel->setPercent(c.blueF(), t_matrix, t_blend);
+            break;
+        case Capability_Amber:
+        {
+            float amber = (((c.redF()*255.0f)*1.0f+(c.greenF()*255.0f)*.749f)/446.0f);
+
+            channel->setPercent(amber, t_matrix, t_blend);
+        }
+            break;
+        case Capability_UV:
+            channel->setPercent(c.blueF(), t_matrix, t_blend);
+            break;
         default:
             break;
         }

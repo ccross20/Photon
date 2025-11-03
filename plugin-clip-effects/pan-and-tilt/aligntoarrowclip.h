@@ -2,18 +2,18 @@
 #define PHOTON_ALIGNTOARROWCLIP_H
 
 #include <QWidget>
-#include "sequence/fixtureclipeffect.h"
+#include "sequence/fixtureeffect.h"
 #include "scene/scenearrow.h"
 
 namespace photon {
 
-class AlignToArrowClip : public FixtureClipEffect
+class AlignToArrowClip : public FixtureEffect
 {
 public:
     AlignToArrowClip();
 
     void init() override;
-    void evaluate(FixtureClipEffectEvaluationContext &) override;
+    void evaluate(FixtureEffectEvaluationContext &) override;
 
     static ClipEffectInformation info();
 

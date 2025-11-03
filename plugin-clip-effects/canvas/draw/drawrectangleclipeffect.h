@@ -2,17 +2,17 @@
 #define PHOTON_DRAWRECTANGLECLIPEFFECT_H
 
 #include <QWidget>
-#include "sequence/canvasclipeffect.h"
+#include "sequence/canvaseffect.h"
 
 namespace photon {
 
-class DrawRectangleClipEffect : public CanvasClipEffect
+class DrawRectangleClipEffect : public CanvasEffect
 {
 public:
     DrawRectangleClipEffect();
 
     void init() override;
-    void evaluate(CanvasClipEffectEvaluationContext &) override;
+    void evaluate(CanvasEffectEvaluationContext &) override;
     static ClipEffectInformation info();
 
     void readFromJson(const QJsonObject &, const LoadContext &) override;

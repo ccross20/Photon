@@ -8,172 +8,11 @@
 #include "sequence/routineclip.h"
 #include "sequence/fixtureclip.h"
 #include "sequence/canvasclip.h"
-#include "sequence/clipeffect.h"
+#include "sequence/baseeffect.h"
 #include "sequence/canvaslayergroup.h"
 #include "pixel/pixellayout.h"
 
 namespace photon {
-
-AbstractTreeData::AbstractTreeData(const QString &name, const QByteArray &id):QObject(),m_name(name),m_id(id)
-{
-
-}
-
-AbstractTreeData::~AbstractTreeData()
-{
-
-}
-
-QString AbstractTreeData::name()
-{
-    return m_name;
-}
-
-void AbstractTreeData::setName(const QString &t_name)
-{
-    m_name = t_name;
-    emit metadataUpdated(this);
-}
-
-AbstractTreeData *AbstractTreeData::findDataWithId(const QByteArray &t_id) const
-{
-    if(t_id == m_id)
-        return const_cast<AbstractTreeData*>(this);
-
-    for(auto child : m_children)
-    {
-        auto found = child->findDataWithId(t_id);
-        if(found)
-            return found;
-    }
-
-    return nullptr;
-}
-
-void AbstractTreeData::insertChild(AbstractTreeData* t_child, int index)
-{
-    t_child->m_index = index;
-    emit childWillBeAdded(this, t_child->index());
-    m_children.insert(index, t_child);
-    t_child->setParent(this);
-    int i = 0;
-    for(auto child : m_children)
-    {
-        child->m_index = i++;
-    }
-
-    emit childWasAdded(this);
-
-    connect(t_child, &AbstractTreeData::childWillBeAdded, this, &AbstractTreeData::childWillBeAdded);
-    connect(t_child, &AbstractTreeData::childWasAdded, this, &AbstractTreeData::childWasAdded);
-    connect(t_child, &AbstractTreeData::childWillBeRemoved, this, &AbstractTreeData::childWillBeRemoved);
-    connect(t_child, &AbstractTreeData::childWasRemoved, this, &AbstractTreeData::childWasRemoved);
-    connect(t_child, &AbstractTreeData::metadataUpdated, this, &AbstractTreeData::metadataUpdated);
-}
-
-void AbstractTreeData::addChild(AbstractTreeData* t_child)
-{
-    t_child->m_index = m_children.length();
-    emit childWillBeAdded(this, t_child->index());
-    m_children.append(t_child);
-    t_child->setParent(this);
-    emit childWasAdded(this);
-
-    connect(t_child, &AbstractTreeData::childWillBeAdded, this, &AbstractTreeData::childWillBeAdded);
-    connect(t_child, &AbstractTreeData::childWasAdded, this, &AbstractTreeData::childWasAdded);
-    connect(t_child, &AbstractTreeData::childWillBeRemoved, this, &AbstractTreeData::childWillBeRemoved);
-    connect(t_child, &AbstractTreeData::childWasRemoved, this, &AbstractTreeData::childWasRemoved);
-    connect(t_child, &AbstractTreeData::metadataUpdated, this, &AbstractTreeData::metadataUpdated);
-}
-
-void AbstractTreeData::removeChild(AbstractTreeData* t_child)
-{
-    disconnect(t_child, &AbstractTreeData::childWillBeAdded, this, &AbstractTreeData::childWillBeAdded);
-    disconnect(t_child, &AbstractTreeData::childWasAdded, this, &AbstractTreeData::childWasAdded);
-    disconnect(t_child, &AbstractTreeData::childWillBeRemoved, this, &AbstractTreeData::childWillBeRemoved);
-    disconnect(t_child, &AbstractTreeData::childWasRemoved, this, &AbstractTreeData::childWasRemoved);
-    disconnect(t_child, &AbstractTreeData::metadataUpdated, this, &AbstractTreeData::metadataUpdated);
-
-    emit childWillBeRemoved(this, t_child->index());
-    m_children.removeAt(t_child->index());
-
-    int i = 0;
-    for(auto child : m_children)
-    {
-        child->m_index = i++;
-    }
-    emit childWasRemoved(this);
-}
-
-RootData::RootData():AbstractTreeData("root","root")
-{
-
-}
-
-ChannelData::ChannelData(Channel *t_channel):AbstractTreeData(t_channel->info().name, t_channel->uniqueId()),m_channel(t_channel)
-{
-    connect(t_channel, &Channel::effectAdded, this, &ChannelData::effectAdded);
-    connect(t_channel, &Channel::effectRemoved, this, &ChannelData::effectRemoved);
-    connect(t_channel, &Channel::effectMoved, this, &ChannelData::effectMoved);
-    connect(t_channel, &Channel::channelUpdated, this, &ChannelData::channelUpdated);
-
-
-    if(t_channel->subChannelCount() > 0)
-    {
-        m_subChannelFolder = new FolderData("Sub-Channels", DataChannel, false);
-        addChild(m_subChannelFolder);
-        for(int i = 0; i < t_channel->subChannelCount(); ++i)
-        {
-            auto channelData = new ChannelData(t_channel->subChannels()[i]);
-            m_subChannelFolder->addChild(channelData);
-        }
-    }
-
-
-    for(int i = 0; i < t_channel->effectCount(); ++i)
-    {
-        auto effectData = new ChannelEffectData(t_channel->effectAtIndex(i));
-        addChild(effectData);
-    }
-    addChild(new CreateData("Add Effect..."));
-}
-
-ChannelEffectData *ChannelData::findEffectData(ChannelEffect *t_effect)
-{
-    for(auto child : children())
-    {
-        ChannelEffectData *childData = dynamic_cast<ChannelEffectData*>(child);
-        if(childData && childData->effect() == t_effect)
-        {
-            return childData;
-        }
-    }
-    return nullptr;
-}
-
-void ChannelData::channelUpdated()
-{
-    setName(m_channel->info().name);
-}
-
-void ChannelData::effectAdded(photon::ChannelEffect *t_effect)
-{
-    auto effectData = new ChannelEffectData(t_effect);
-    insertChild(effectData, childCount() - 1);
-}
-
-void ChannelData::effectRemoved(photon::ChannelEffect *t_effect)
-{
-    auto effectData = findEffectData(t_effect);
-
-    if(effectData)
-        removeChild(effectData);
-}
-
-void ChannelData::effectMoved(photon::ChannelEffect *t_effect)
-{
-
-}
 
 
 MasterLayerData::MasterLayerData(MasterLayer *t_layer) : AbstractTreeData(t_layer->name(), t_layer->uniqueId()),m_layer(t_layer)
@@ -202,9 +41,9 @@ ClipData::ClipData(Clip *t_clip) : AbstractTreeData(t_clip->name(), t_clip->uniq
 
     if(fixtureClip)
     {
-        addChild(new StateData(fixtureClip));
-        m_maskFolder = new MaskData(fixtureClip);
-        m_falloffData = new FalloffData(fixtureClip);
+        addChild(new ClipStateData(fixtureClip));
+        m_maskFolder = new ClipMaskData(fixtureClip);
+        m_falloffData = new ClipFalloffData(fixtureClip);
     }
 
     if(fixtureClip || canvasClip)
@@ -266,25 +105,7 @@ void ClipData::channelMoved(photon::Channel *)
 }
 
 
-FolderData::FolderData(const QString &name, TreeDataType allowedTypes, bool showCreateItem): AbstractTreeData(name),m_showCreate(showCreateItem),m_allowedTypes(allowedTypes)
-{
-    if(showCreateItem)
-    {
-        addChild(new CreateData("Add..."));
-    }
-}
 
-ChannelEffectData::ChannelEffectData(ChannelEffect *t_effect):AbstractTreeData(t_effect->name(), t_effect->uniqueId()),m_effect(t_effect)
-{
-
-}
-
-
-
-FalloffEffectData::FalloffEffectData(FalloffEffect *t_effect):AbstractTreeData(t_effect->name(), t_effect->uniqueId()),m_effect(t_effect)
-{
-
-}
 
 ClipParameterData::ClipParameterData(Clip *t_clip): AbstractTreeData("Parameters","parameters"),m_clip(t_clip)
 {
@@ -299,17 +120,17 @@ ClipEffectFolderData::ClipEffectFolderData(Clip *t_clip): AbstractTreeData("Effe
     qDebug() << "Effect count" << t_clip->clipEffectCount();
     for(int i = 0; i < t_clip->clipEffectCount(); ++i)
     {
-        auto effectData = new ClipEffectData(m_clip->clipEffectAtIndex(i));
+        auto effectData = new BaseEffectData(m_clip->clipEffectAtIndex(i));
         addChild(effectData);
     }
     addChild(new CreateData("Add Effect..."));
 }
 
-ClipEffectData *ClipEffectFolderData::findEffectData(ClipEffect *t_effect)
+BaseEffectData *ClipEffectFolderData::findEffectData(BaseEffect *t_effect)
 {
     for(auto child : children())
     {
-        ClipEffectData *childData = dynamic_cast<ClipEffectData*>(child);
+        BaseEffectData *childData = dynamic_cast<BaseEffectData*>(child);
         if(childData && childData->effect() == t_effect)
         {
             return childData;
@@ -318,13 +139,13 @@ ClipEffectData *ClipEffectFolderData::findEffectData(ClipEffect *t_effect)
     return nullptr;
 }
 
-void ClipEffectFolderData::effectAdded(photon::ClipEffect *t_effect)
+void ClipEffectFolderData::effectAdded(photon::BaseEffect *t_effect)
 {
-    auto effectData = new ClipEffectData(t_effect);
+    auto effectData = new BaseEffectData(t_effect);
     insertChild(effectData, childCount() - 1);
 }
 
-void ClipEffectFolderData::effectRemoved(photon::ClipEffect *t_effect)
+void ClipEffectFolderData::effectRemoved(photon::BaseEffect *t_effect)
 {
     auto effect = findEffectData(t_effect);
 
@@ -332,44 +153,7 @@ void ClipEffectFolderData::effectRemoved(photon::ClipEffect *t_effect)
         removeChild(effect);
 }
 
-void ClipEffectFolderData::effectMoved(photon::ClipEffect *t_effect)
-{
-
-}
-
-ClipEffectData::ClipEffectData(ClipEffect *t_effect):AbstractTreeData(t_effect->name(), t_effect->uniqueId()),m_effect(t_effect)
-{
-    connect(t_effect, &ClipEffect::channelAdded, this, &ClipEffectData::channelAdded);
-    connect(t_effect, &ClipEffect::channelRemoved, this, &ClipEffectData::channelRemoved);
-
-    for(int i = 0; i < t_effect->channelCount(); ++i)
-    {
-        auto channelData = new ChannelData(t_effect->channelAtIndex(i));
-        addChild(channelData);
-    }
-}
-
-void ClipEffectData::channelAdded(photon::Channel *t_channel)
-{
-    qDebug() << "Added";
-    auto channelData = new ChannelData(t_channel);
-    addChild(channelData);
-}
-
-void ClipEffectData::channelRemoved(photon::Channel *t_channel)
-{
-    for(auto child : children())
-    {
-        auto channelChild = dynamic_cast<ChannelData*>(child);
-        if(channelChild && channelChild->channel() == t_channel)
-        {
-            removeChild(child);
-            return;
-        }
-    }
-}
-
-void ClipEffectData::channelMoved(photon::Channel *)
+void ClipEffectFolderData::effectMoved(photon::BaseEffect *t_effect)
 {
 
 }
@@ -419,25 +203,20 @@ void PixelLayoutFolderData::pixelLayoutRemoved(photon::PixelLayout *t_layout)
         removeChild(effect);
 }
 
-StateData::StateData(FixtureClip *t_clip):AbstractTreeData("State", t_clip->state()->uniqueId()),m_clip(t_clip)
+ClipStateData::ClipStateData(FixtureClip *t_clip):AbstractTreeData("State", t_clip->state()->uniqueId()),m_clip(t_clip)
 {
 
 }
 
-State *StateData::state() const
+State *ClipStateData::state() const
 {
     return m_clip->state();
 }
 
-CreateData::CreateData(const QString &name): AbstractTreeData(name)
+ClipFalloffData::ClipFalloffData(FixtureClip *t_clip): AbstractTreeData("Falloff","falloff"),m_clip(t_clip)
 {
-
-}
-
-FalloffData::FalloffData(FixtureClip *t_clip): AbstractTreeData("Falloff","falloff"),m_clip(t_clip)
-{
-    connect(m_clip, &FixtureClip::falloffEffectAdded, this, &FalloffData::effectAdded);
-    connect(m_clip, &FixtureClip::falloffEffectRemoved, this, &FalloffData::effectRemoved);
+    connect(m_clip, &FixtureClip::falloffEffectAdded, this, &ClipFalloffData::effectAdded);
+    connect(m_clip, &FixtureClip::falloffEffectRemoved, this, &ClipFalloffData::effectRemoved);
 
     for(int i = 0; i < t_clip->falloffEffectCount(); ++i)
     {
@@ -447,7 +226,7 @@ FalloffData::FalloffData(FixtureClip *t_clip): AbstractTreeData("Falloff","fallo
     addChild(new CreateData("Add Effect..."));
 }
 
-FalloffEffectData *FalloffData::findEffectData(FalloffEffect *t_effect)
+FalloffEffectData *ClipFalloffData::findEffectData(FalloffEffect *t_effect)
 {
     for(auto child : children())
     {
@@ -460,13 +239,13 @@ FalloffEffectData *FalloffData::findEffectData(FalloffEffect *t_effect)
     return nullptr;
 }
 
-void FalloffData::effectAdded(photon::FalloffEffect *t_effect)
+void ClipFalloffData::effectAdded(photon::FalloffEffect *t_effect)
 {
     auto effectData = new FalloffEffectData(t_effect);
     insertChild(effectData, childCount() - 1);
 }
 
-void FalloffData::effectRemoved(photon::FalloffEffect *t_effect)
+void ClipFalloffData::effectRemoved(photon::FalloffEffect *t_effect)
 {
     auto effect = findEffectData(t_effect);
 
@@ -474,15 +253,15 @@ void FalloffData::effectRemoved(photon::FalloffEffect *t_effect)
         removeChild(effect);
 }
 
-void FalloffData::effectMoved(photon::FalloffEffect *t_effect)
+void ClipFalloffData::effectMoved(photon::FalloffEffect *t_effect)
 {
 
 }
 
-MaskData::MaskData(FixtureClip *t_clip): AbstractTreeData("Selection Mask","mask"),m_clip(t_clip)
+ClipMaskData::ClipMaskData(FixtureClip *t_clip): AbstractTreeData("Selection Mask","mask"),m_clip(t_clip)
 {
-    connect(m_clip, &FixtureClip::maskAdded, this, &MaskData::effectAdded);
-    connect(m_clip, &FixtureClip::maskRemoved, this, &MaskData::effectRemoved);
+    connect(m_clip, &FixtureClip::maskAdded, this, &ClipMaskData::effectAdded);
+    connect(m_clip, &FixtureClip::maskRemoved, this, &ClipMaskData::effectRemoved);
 
     for(int i = 0; i < t_clip->maskEffectCount(); ++i)
     {
@@ -492,7 +271,7 @@ MaskData::MaskData(FixtureClip *t_clip): AbstractTreeData("Selection Mask","mask
     addChild(new CreateData("Add Effect..."));
 }
 
-MaskEffectData *MaskData::findEffectData(MaskEffect *t_effect)
+MaskEffectData *ClipMaskData::findEffectData(MaskEffect *t_effect)
 {
     for(auto child : children())
     {
@@ -505,13 +284,13 @@ MaskEffectData *MaskData::findEffectData(MaskEffect *t_effect)
     return nullptr;
 }
 
-void MaskData::effectAdded(photon::MaskEffect *t_effect)
+void ClipMaskData::effectAdded(photon::MaskEffect *t_effect)
 {
     auto effectData = new MaskEffectData(t_effect);
     insertChild(effectData, childCount() - 1);
 }
 
-void MaskData::effectRemoved(photon::MaskEffect *t_effect)
+void ClipMaskData::effectRemoved(photon::MaskEffect *t_effect)
 {
     auto effect = findEffectData(t_effect);
 
@@ -519,12 +298,7 @@ void MaskData::effectRemoved(photon::MaskEffect *t_effect)
         removeChild(effect);
 }
 
-void MaskData::effectMoved(photon::MaskEffect *t_effect)
-{
-
-}
-
-MaskEffectData::MaskEffectData(MaskEffect *t_effect):AbstractTreeData(t_effect->name(), t_effect->uniqueId()), m_effect(t_effect)
+void ClipMaskData::effectMoved(photon::MaskEffect *t_effect)
 {
 
 }

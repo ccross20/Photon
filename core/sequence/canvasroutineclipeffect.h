@@ -2,7 +2,7 @@
 #define PHOTON_CANVASROUTINECLIPEFFECT_H
 
 #include <QWidget>
-#include "canvasclipeffect.h"
+#include "canvaseffect.h"
 #include "view/viewer.h"
 #include "view/scene.h"
 
@@ -21,7 +21,7 @@ private:
 
 
 
-class PHOTONCORE_EXPORT CanvasRoutineClipEffect : public CanvasClipEffect
+class PHOTONCORE_EXPORT CanvasRoutineClipEffect : public CanvasEffect
 {
     Q_OBJECT
 public:
@@ -31,7 +31,7 @@ public:
     void initializeContext(QOpenGLContext *, Canvas *) override;
     void canvasResized(QOpenGLContext *, Canvas *) override;
     Routine *routine() const;
-    void evaluate(CanvasClipEffectEvaluationContext &) override;
+    void evaluate(CanvasEffectEvaluationContext &) override;
     QWidget *createEditor() override;
     static ClipEffectInformation info();
 

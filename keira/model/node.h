@@ -25,6 +25,7 @@ struct KEIRA_EXPORT NodeInformation
 struct KEIRA_EXPORT EvaluationContext
 {
     virtual ~EvaluationContext(){}
+    uint loopCount = 0;
 };
 
 class KEIRA_EXPORT Node
@@ -61,6 +62,10 @@ public:
     virtual void markDirty();
     void markClean();
     bool isDirty() const;
+    bool isLoopable() const;
+    virtual uint loopCount() const;
+    virtual void startLoop();
+    virtual void endLoop();
 
     virtual void readFromJson(const QJsonObject &, NodeLibrary *library);
     virtual void writeToJson(QJsonObject &) const;
@@ -70,6 +75,7 @@ protected:
     virtual void outputParameterConnected(Parameter*);
     virtual void inputParameterDisconnected(Parameter*);
     virtual void outputParameterDisconnected(Parameter*);
+    void setIsLoopable(bool);
 
 private:
     friend class GraphSorter;

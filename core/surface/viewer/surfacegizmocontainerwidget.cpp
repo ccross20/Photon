@@ -1,11 +1,14 @@
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QPushButton>
+#include <QMenu>
 #include "surfacegizmocontainerwidget.h"
 #include "surface/surfacegizmocontainer.h"
 #include "surface/surfacegizmo.h"
 #include "surfacegizmowidget.h"
+#include "actioneditwidget.h"
 #include "surface/togglegizmo.h"
+#include "surface/palettegizmo.h"
 #include "surfacegraphwidget.h"
 #include "photoncore.h"
 #include "gui/guimanager.h"
@@ -22,24 +25,38 @@ SurfaceGizmoContainerWidget::SurfaceGizmoContainerWidget(SurfaceGizmoContainer *
         vLayout->addWidget(gizmo->createWidget(mode));
     }
 
+    qDebug() << "Layout";
+
     if(mode == Mode_Edit)
     {
         QHBoxLayout *hLayout = new QHBoxLayout;
         hLayout->setContentsMargins(0,0,0,0);
         auto addButton = new QPushButton("Add to Container");
 
-        connect(addButton, &QPushButton::clicked, [container](){
-            container->addGizmo(new ToggleGizmo);
+
+
+
+
+
+        connect(addButton, &QPushButton::clicked, [container, addButton](){
+
+            QMenu menu;
+            menu.addAction("Toggle",[container](){container->addGizmo(new ToggleGizmo);});
+            menu.addAction("Palette",[container](){container->addGizmo(new PaletteGizmo);});
+
+            menu.exec(addButton->mapToGlobal(addButton->rect().bottomLeft()));
+
         });
         hLayout->addWidget(addButton);
 
-        QPushButton *editButton = new QPushButton("Edit Graph");
+        QPushButton *editButton = new QPushButton("Edit Actions");
         editButton->setMaximumHeight(1000);
         hLayout->addWidget(editButton);
 
         connect(editButton, &QPushButton::clicked, [container](){
-            SurfaceGraphWidget *graphWidget = new SurfaceGraphWidget(container->graph());
-            photonApp->gui()->showPopoverWidget(graphWidget);
+            ActionEditWidget *editWidget = new ActionEditWidget();
+            editWidget->setContainer(container);
+            photonApp->gui()->showPopoverWidget(editWidget);
         });
 
         vLayout->addLayout(hLayout);

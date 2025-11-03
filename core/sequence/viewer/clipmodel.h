@@ -5,79 +5,19 @@
 #include <QModelIndex>
 #include <QVariant>
 #include "photon-global.h"
+#include "data/commonmodel.h"
 
 namespace photon {
 
-class FalloffData;
-class ClipEffectData;
+class ClipFalloffData;
+class BaseEffectData;
 class ClipEffectFolderData;
 class ClipParameterData;
 class PixelLayoutFolderData;
-class MaskData;
+class ClipMaskData;
 class FixtureClip;
-class StateData;
+class ClipStateData;
 
-class AbstractTreeData : public QObject
-{
-    Q_OBJECT
-public:
-
-    enum TreeDataType
-    {
-        DataAny,
-        DataChannel,
-        DataFalloff,
-        DataSelection,
-        DataState
-    };
-
-    AbstractTreeData(const QString &name, const QByteArray &id = QByteArray{});
-    virtual ~AbstractTreeData();
-    QString name();
-    void setName(const QString &name);
-    QByteArray id() const{return m_id;}
-    void setId(const QByteArray &t_id){m_id = t_id;}
-
-    void addChild(AbstractTreeData*);
-    void insertChild(AbstractTreeData*, int index);
-    void removeChild(AbstractTreeData*);
-    const QVector<AbstractTreeData*> &children() const{return m_children;}
-    AbstractTreeData *childAtIndex(int i){return m_children.at(i);}
-    int childCount() const{return m_children.length();}
-    int index() const{return m_index;}
-    AbstractTreeData *findDataWithId(const QByteArray &) const;
-
-signals:
-    void childWillBeAdded(photon::AbstractTreeData*, int);
-    void childWasAdded(photon::AbstractTreeData*);
-    void childWillBeRemoved(photon::AbstractTreeData*, int);
-    void childWasRemoved(photon::AbstractTreeData*);
-    void metadataUpdated(photon::AbstractTreeData*);
-
-private:
-    QVector<AbstractTreeData*> m_children;
-    QString m_name;
-    QByteArray m_id;
-    int m_index;
-};
-
-class RootData : public AbstractTreeData
-{
-public:
-    RootData();
-};
-
-class FolderData : public AbstractTreeData
-{
-public:
-    FolderData(const QString &name, TreeDataType allowedTypes, bool showCreateItem = true);
-
-    TreeDataType allowedTypes() const{return m_allowedTypes;}
-
-private:
-    bool m_showCreate;
-    TreeDataType m_allowedTypes;
-};
 
 class ClipData : public AbstractTreeData
 {
@@ -92,10 +32,10 @@ private slots:
     void channelMoved(photon::Channel *);
 
 private:
-    MaskData *m_maskFolder;
-    FalloffData *m_falloffData;
+    ClipMaskData *m_maskFolder;
+    ClipFalloffData *m_falloffData;
     FolderData *m_channelFolder;
-    StateData *m_stateData;
+    ClipStateData *m_stateData;
     ClipParameterData *m_parameterData;
     PixelLayoutFolderData *m_pixelLayoutData;
     ClipEffectFolderData *m_clipEffectData;
@@ -116,60 +56,11 @@ private:
 
 };
 
-class CreateData : public AbstractTreeData
-{
-public:
-    CreateData(const QString &name);
-
-};
-
-
-class ChannelEffectData : public AbstractTreeData
-{
-public:
-    ChannelEffectData(ChannelEffect*);
-    ChannelEffect *effect() const{return m_effect;}
-
-private:
-    ChannelEffect *m_effect;
-};
-
-class ChannelData : public AbstractTreeData
+class ClipFalloffData : public AbstractTreeData
 {
     Q_OBJECT
 public:
-    ChannelData(Channel*);
-    ChannelEffectData *findEffectData(ChannelEffect *);
-
-    Channel *channel() const{return m_channel;}
-
-private slots:
-    void effectAdded(photon::ChannelEffect*);
-    void effectRemoved(photon::ChannelEffect*);
-    void effectMoved(photon::ChannelEffect*);
-    void channelUpdated();
-
-private:
-    Channel *m_channel;
-    FolderData *m_subChannelFolder;
-};
-
-
-class FalloffEffectData : public AbstractTreeData
-{
-public:
-    FalloffEffectData(FalloffEffect*);
-    FalloffEffect *effect() const{return m_effect;}
-
-private:
-    FalloffEffect *m_effect;
-};
-
-class FalloffData : public AbstractTreeData
-{
-    Q_OBJECT
-public:
-    FalloffData(FixtureClip*);
+    ClipFalloffData(FixtureClip*);
     FalloffEffectData *findEffectData(FalloffEffect *);
 
     FixtureClip *clip() const{return m_clip;}
@@ -211,30 +102,19 @@ private:
     CanvasLayerGroup *m_layer;
 };
 
-class MaskEffectData : public AbstractTreeData
-{
-public:
-    MaskEffectData(MaskEffect*);
-    MaskEffect *effect() const{return m_effect;}
-
-private:
-    MaskEffect *m_effect;
-
-};
-
 class ClipEffectFolderData : public AbstractTreeData
 {
     Q_OBJECT
 public:
     ClipEffectFolderData(Clip*);
-    ClipEffectData *findEffectData(ClipEffect *);
+    BaseEffectData *findEffectData(BaseEffect *);
 
     Clip *clip() const{return m_clip;}
 
 private slots:
-    void effectAdded(photon::ClipEffect*);
-    void effectRemoved(photon::ClipEffect*);
-    void effectMoved(photon::ClipEffect*);
+    void effectAdded(photon::BaseEffect*);
+    void effectRemoved(photon::BaseEffect*);
+    void effectMoved(photon::BaseEffect*);
 
 private:
     Clip *m_clip;
@@ -252,29 +132,12 @@ private:
     Clip *m_clip;
 };
 
-class ClipEffectData : public AbstractTreeData
+
+class ClipMaskData : public AbstractTreeData
 {
     Q_OBJECT
 public:
-    ClipEffectData(ClipEffect*);
-    ClipEffect *effect() const{return m_effect;}
-
-private slots:
-    void channelAdded(photon::Channel *);
-    void channelRemoved(photon::Channel *);
-    void channelMoved(photon::Channel *);
-
-private:
-    ClipEffect *m_effect;
-
-};
-
-
-class MaskData : public AbstractTreeData
-{
-    Q_OBJECT
-public:
-    MaskData(FixtureClip*);
+    ClipMaskData(FixtureClip*);
     MaskEffectData *findEffectData(MaskEffect *);
 
     FixtureClip *clip() const{return m_clip;}
@@ -291,10 +154,10 @@ private:
 
 
 
-class StateData : public AbstractTreeData
+class ClipStateData : public AbstractTreeData
 {
 public:
-    StateData(FixtureClip*);
+    ClipStateData(FixtureClip*);
 
     State *state() const;
     FixtureClip *clip() const{return m_clip;}

@@ -50,6 +50,7 @@ enum CapabilityType{
     Capability_Red,
     Capability_Green,
     Capability_Blue,
+    Capability_Lime,
     Capability_White,
     Capability_Amber,
     Capability_Indigo,

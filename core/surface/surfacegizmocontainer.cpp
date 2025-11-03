@@ -1,10 +1,11 @@
 #include "surfacegizmocontainer.h"
-#include "surfacegraph.h"
 #include "viewer/surfacegizmocontainerwidget.h"
 #include "model/node.h"
-#include "graph/bus/dmxwriternode.h"
-#include "graph/bus/dmxreadernode.h"
 #include "model/parameter/parameter.h"
+#include "fixtureaction.h"
+#include "surfacegizmo.h"
+#include "surfaceaction.h"
+#include "gizmofactory.h"
 
 namespace photon {
 
@@ -15,65 +16,38 @@ public:
     ~Impl();
 
     QVector<SurfaceGizmo*> gizmos;
-    SurfaceGraph *graph;
+    QVector<SurfaceAction*> actions;
 };
 
 SurfaceGizmoContainer::Impl::Impl()
 {
-    graph = new SurfaceGraph();
 
-    DMXReaderNode *readerNode = new DMXReaderNode;
-    readerNode->setName("output");
-    readerNode->createParameters();
-    readerNode->setPosition(QPointF(0,0));
-
-    DMXWriterNode *writerNode = new DMXWriterNode;
-    writerNode->setName("input");
-    writerNode->createParameters();
-    writerNode->setPosition(QPointF(800,0));
-
-
-    graph->addNode(readerNode);
-    graph->addNode(writerNode);
-
-
-    graph->connectParameters(readerNode->findParameter(DMXReaderNode::OutputDMX), writerNode->findParameter(DMXWriterNode::InputDMX));
 
 }
 
 SurfaceGizmoContainer::Impl::~Impl()
 {
-    delete graph;
+
 }
 
-SurfaceGizmoContainer::SurfaceGizmoContainer(QObject *parent):QObject(parent),m_impl(new Impl) {}
+SurfaceGizmoContainer::SurfaceGizmoContainer(QObject *parent):QObject(parent),m_impl(new Impl)
+{
+    m_impl->actions.append(new FixtureAction(this));
+}
 
 SurfaceGizmoContainer::~SurfaceGizmoContainer()
 {
     delete m_impl;
 }
 
-
 void SurfaceGizmoContainer::processChannels(ProcessContext &t_context, double t_lastTime)
 {
-    keira::EvaluationContext context;
-
     //m_impl->elapsed = m_impl->timer.elapsed() / 1000.0;
 
-    auto inputNode = m_impl->graph->findNode("output");
-    auto outputNode = m_impl->graph->findNode("input");
-
-    if(inputNode && outputNode)
+    for(auto action : m_impl->actions)
     {
-        inputNode->findParameter(DMXReaderNode::OutputDMX)->setValue(t_context.dmxMatrix);
-
-        m_impl->graph->evaluate(&context);
-        t_context.dmxMatrix = outputNode->findParameter(DMXWriterNode::InputDMX)->value().value<DMXMatrix>();
-
+        action->processChannels(t_context);
     }
-
-
-
 }
 
 const QVector<SurfaceGizmo*> &SurfaceGizmoContainer::gizmos() const
@@ -81,9 +55,52 @@ const QVector<SurfaceGizmo*> &SurfaceGizmoContainer::gizmos() const
     return m_impl->gizmos;
 }
 
-SurfaceGraph *SurfaceGizmoContainer::graph() const
+QVector<SurfaceGizmo*> SurfaceGizmoContainer::gizmosByType(const QByteArray &t_type) const
 {
-    return m_impl->graph;
+    QVector<SurfaceGizmo*> results;
+
+    for(auto gizmo : m_impl->gizmos)
+    {
+        if(gizmo->type() == t_type)
+        {
+            results.append(gizmo);
+        }
+    }
+
+    return results;
+}
+
+SurfaceGizmo *SurfaceGizmoContainer::findGizmoWithId(const QByteArray &t_id) const
+{
+    if(t_id.isEmpty())
+        return nullptr;
+    for(auto gizmo : m_impl->gizmos)
+    {
+        if(gizmo->id() == t_id)
+        {
+            return gizmo;
+        }
+    }
+    return nullptr;
+}
+
+SurfaceGizmo *SurfaceGizmoContainer::findGizmoWithUniqueId(const QByteArray &t_id) const
+{
+    if(t_id.isEmpty())
+        return nullptr;
+    for(auto gizmo : m_impl->gizmos)
+    {
+        if(gizmo->uniqueId() == t_id)
+        {
+            return gizmo;
+        }
+    }
+    return nullptr;
+}
+
+const QVector<SurfaceAction*> &SurfaceGizmoContainer::actions() const
+{
+    return m_impl->actions;
 }
 
 SurfaceGizmoContainerWidget *SurfaceGizmoContainer::createWidget(SurfaceMode mode)
@@ -97,6 +114,8 @@ void SurfaceGizmoContainer::addGizmo(photon::SurfaceGizmo *t_gizmo)
         return;
     emit gizmoWillBeAdded(t_gizmo, m_impl->gizmos.length());
     m_impl->gizmos.append(t_gizmo);
+    t_gizmo->setId("Gizmo "  + QByteArray::number(m_impl->gizmos.length()));
+    t_gizmo->setParent(this);
     emit gizmoWasAdded(t_gizmo, m_impl->gizmos.length()-1);
 }
 
@@ -118,6 +137,101 @@ void SurfaceGizmoContainer::removeGizmo(photon::SurfaceGizmo *t_gizmo)
     emit gizmoWillBeRemoved(t_gizmo, index);
     m_impl->gizmos.removeOne(t_gizmo);
     emit gizmoWasRemoved(t_gizmo, index);
+}
+
+void SurfaceGizmoContainer::addAction(photon::SurfaceAction *t_action)
+{
+    if(m_impl->actions.contains(t_action))
+        return;
+    emit actionWillBeAdded(t_action, m_impl->actions.length());
+    m_impl->actions.append(t_action);
+    t_action->setId("Action "  + QByteArray::number(m_impl->actions.length()));
+    t_action->setParent(this);
+    emit actionWasAdded(t_action, m_impl->actions.length()-1);
+}
+
+void SurfaceGizmoContainer::removeAction(photon::SurfaceAction *t_action)
+{
+    if(!m_impl->actions.contains(t_action))
+        return;
+
+    int index = 0;
+    for(auto seq : m_impl->actions)
+    {
+        if(seq == t_action)
+            break;
+        ++index;
+    }
+
+    //m_impl->panels.remove(t_sequence);
+
+    emit actionWillBeRemoved(t_action, index);
+    m_impl->actions.removeOne(t_action);
+    emit actionWasRemoved(t_action, index);
+}
+
+
+
+void SurfaceGizmoContainer::readFromJson(const QJsonObject &t_json, const LoadContext &t_context)
+{
+    if(t_json.contains("gizmos"))
+    {
+        m_impl->gizmos.clear();
+        auto sourceArray = t_json.value("gizmos").toArray();
+        for(const auto source : std::as_const(sourceArray))
+        {
+            auto sourceObj = source.toObject();
+            auto newGizmo = GizmoFactory::createGizmo(sourceObj.value("type").toString().toLatin1());
+            if(newGizmo)
+            {
+                newGizmo->readFromJson(sourceObj, t_context);
+
+                m_impl->gizmos.append(newGizmo);
+                newGizmo->setParent(this);
+            }
+
+        }
+    }
+
+    if(t_json.contains("actions"))
+    {
+        m_impl->actions.clear();
+        auto sourceArray = t_json.value("actions").toArray();
+        for(const auto source : std::as_const(sourceArray))
+        {
+            auto sourceObj = source.toObject();
+            SurfaceAction *newAction = nullptr;
+            if(sourceObj.value("id").toString() == "fixtureaction")
+                newAction = new FixtureAction(this);
+            else
+                newAction = new SurfaceAction(this);
+            newAction->readFromJson(sourceObj, t_context);
+
+            m_impl->actions.append(newAction);
+        }
+    }
+}
+
+void SurfaceGizmoContainer::writeToJson(QJsonObject &t_json) const
+{
+    QJsonArray gizmoArray;
+    for(auto source : std::as_const(m_impl->gizmos))
+    {
+        QJsonObject sourceObj;
+        source->writeToJson(sourceObj);
+        gizmoArray.append(sourceObj);
+    }
+    t_json.insert("gizmos", gizmoArray);
+
+    QJsonArray actionArray;
+    for(auto source : std::as_const(m_impl->actions))
+    {
+        QJsonObject sourceObj;
+        source->writeToJson(sourceObj);
+        actionArray.append(sourceObj);
+    }
+    t_json.insert("actions", actionArray);
+
 }
 
 } // namespace photon

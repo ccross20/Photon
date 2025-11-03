@@ -62,6 +62,17 @@ const QVector<Node*> &Graph::nodes() const
     return m_impl->nodes;
 }
 
+const QVector<Node*> Graph::LoopNodes() const
+{
+    QVector<Node*> toReturn;
+    for(Node *node : m_impl->nodes)
+    {
+        if(node->isLoopable())
+            toReturn.append(node);
+    }
+    return toReturn;
+}
+
 void Graph::updateNodePosition(Node *t_node)
 {
     emit nodePositionUpdated(t_node);

@@ -2,7 +2,7 @@
 #define PHOTON_TRACEPATHCLIP_H
 
 #include <QWidget>
-#include "sequence/fixtureclipeffect.h"
+#include "sequence/fixtureeffect.h"
 
 namespace photon {
 
@@ -22,13 +22,13 @@ private:
     TracePathClip *m_effect;
 };
 
-class TracePathClip : public FixtureClipEffect
+class TracePathClip : public FixtureEffect
 {
 public:
     TracePathClip();
 
     void init() override;
-    void evaluate(FixtureClipEffectEvaluationContext &) override;
+    void evaluate(FixtureEffectEvaluationContext &) override;
     QWidget *createEditor() override;
     static ClipEffectInformation info();
     void autoAssignFixtures(double);

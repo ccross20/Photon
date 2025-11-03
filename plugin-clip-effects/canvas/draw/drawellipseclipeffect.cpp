@@ -54,7 +54,7 @@ void DrawEllipseClipEffect::canvasResized(QOpenGLContext *, Canvas *)
 
 }
 
-void DrawEllipseClipEffect::evaluate(CanvasClipEffectEvaluationContext &t_context)
+void DrawEllipseClipEffect::evaluate(CanvasEffectEvaluationContext &t_context)
 {
     //float w = static_cast<float>(t_context.canvasImage->width());
     //float h = static_cast<float>(t_context.canvasImage->height());

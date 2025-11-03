@@ -17,6 +17,7 @@
 #include "gui/panel/tagcollectionpanel.h"
 #include "gui/panel/pixellayoutcollectionpanel.h"
 #include "gui/panel/surfacepanel.h"
+#include "gui/panel/surfacecollectionpanel.h"
 
 #include "graph/bus/dmxgeneratematrixnode.h"
 #include "graph/bus/dmxwriternode.h"
@@ -40,6 +41,9 @@
 #include "sequence/gradientchanneleffect.h"
 #include "sequence/masterlayerchanneleffect.h"
 #include "channel/splinechanneleffect.h"
+#include "channel/togglegizmochanneleffect.h"
+#include "channel/palettegizmochanneleffect.h"
+#include "channel/gizmoretimechanneleffect.h"
 
 #include "model/parameter/decimalparameter.h"
 #include "model/parameter/integerparameter.h"
@@ -160,6 +164,7 @@ void PluginFactory::init()
     registerPluginPanel("photon.sequence",[](){return new SequencePanel;});
     registerPluginPanel("photon.routine-collection",[](){return new RoutineCollectionPanel;});
     registerPluginPanel("photon.sequence-collection",[](){return new SequenceCollectionPanel;});
+    registerPluginPanel("photon.surface-collection",[](){return new SurfaceCollectionPanel;});
     registerPluginPanel("photon.surface",[](){return new SurfacePanel;});
     registerPluginPanel("photon.fixture-collection",[](){return new FixtureCollectionPanel;});
     registerPluginPanel("photon.canvas-collection",[](){return new CanvasCollectionPanel;});
@@ -192,6 +197,9 @@ void PluginFactory::init()
     registerChannelEffect(GradientChannelEffect::info());
     registerChannelEffect(MasterLayerChannelEffect::info());
     registerChannelEffect(SplineChannelEffect::info());
+    registerChannelEffect(ToggleGizmoChannelEffect::info());
+    registerChannelEffect(GizmoRetimeChannelEffect::info());
+    registerChannelEffect(PaletteGizmoChannelEffect::info());
 
     registerClipEffect(CanvasRoutineClipEffect::info());
 
@@ -378,7 +386,7 @@ QVector<ClipEffectInformation> PluginFactory::clipEffects() const
     return m_impl->clipEffects.values();
 }
 
-ClipEffect *PluginFactory::createClipEffect(const QByteArray &effectId) const
+BaseEffect *PluginFactory::createClipEffect(const QByteArray &effectId) const
 {
     auto info = m_impl->clipEffects[effectId];
     if(info.id == effectId)

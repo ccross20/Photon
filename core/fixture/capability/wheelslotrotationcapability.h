@@ -16,6 +16,7 @@ public:
     double angleEnd() const;
     double speedStart() const;
     double speedEnd() const;
+    double maxSpeed() const;
     QString wheel() const;
 
     void setSpeed(double value, DMXMatrix &t_matrix, double blend = 1.0);

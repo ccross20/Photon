@@ -21,14 +21,14 @@ signals:
 
 public slots:
     void openAddMenu();
-    void setClip(photon::FixtureClip* );
+    void setBaseEffectParent(photon::BaseEffectParent* );
     void selectState(photon::State *);
     void capabilityAdded(photon::StateCapability *);
     void capabilityRemoved(photon::StateCapability *);
     void clearSelection();
 
 private:
-    FixtureClip *m_clip = nullptr;
+    BaseEffectParent *m_baseEffectParent = nullptr;
     State *m_state = nullptr;
     QPushButton *m_addButton = nullptr;
     QVBoxLayout *m_layout;

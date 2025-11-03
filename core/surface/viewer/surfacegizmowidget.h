@@ -12,6 +12,8 @@ class PHOTONCORE_EXPORT SurfaceGizmoWidget : public QWidget
 public:
     explicit SurfaceGizmoWidget(SurfaceGizmo *gizmo, SurfaceMode mode, QWidget *parent = nullptr);
 
+    virtual void updateGizmo();
+
 signals:
 };
 

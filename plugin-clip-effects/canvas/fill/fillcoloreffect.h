@@ -1,17 +1,17 @@
 #ifndef PHOTON_FILLCOLOREFFECT_H
 #define PHOTON_FILLCOLOREFFECT_H
 
-#include "sequence/canvasclipeffect.h"
+#include "sequence/canvaseffect.h"
 
 namespace photon {
 
-class FillColorEffect : public CanvasClipEffect
+class FillColorEffect : public CanvasEffect
 {
 public:
     FillColorEffect();
 
     void init() override;
-    void evaluate(CanvasClipEffectEvaluationContext &) override;
+    void evaluate(CanvasEffectEvaluationContext &) override;
     static ClipEffectInformation info();
 };
 

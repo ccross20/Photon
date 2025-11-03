@@ -47,7 +47,7 @@ void BlurClipEffect::canvasResized(QOpenGLContext *t_context, Canvas *t_canvas)
     //m_texture->resize(t_context, QImage::Format::Format_ARGB32_Premultiplied, t_canvas->width(), t_canvas->height());
 }
 
-void BlurClipEffect::evaluate(CanvasClipEffectEvaluationContext &t_context)
+void BlurClipEffect::evaluate(CanvasEffectEvaluationContext &t_context)
 {
     //float w = static_cast<float>(t_context.canvasImage->width());
     //float h = static_cast<float>(t_context.canvasImage->height());

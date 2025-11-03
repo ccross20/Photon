@@ -1,23 +1,23 @@
-#include "canvasclipeffect.h"
+#include "canvaseffect.h"
 #include "canvasclip.h"
 #include "canvaslayergroup.h"
 #include "photoncore.h"
 
 namespace photon {
 
-CanvasClipEffect::CanvasClipEffect(const QByteArray &t_id) : ClipEffect(t_id)
+CanvasEffect::CanvasEffect(const QByteArray &t_id) : BaseEffect(t_id)
 {
 
 }
 
-CanvasClipEffect::~CanvasClipEffect()
+CanvasEffect::~CanvasEffect()
 {
 
 }
 
-void CanvasClipEffect::layerChanged(Layer *t_layer)
+void CanvasEffect::layerChanged(Layer *t_layer)
 {
-    ClipEffect::layerChanged(t_layer);
+    BaseEffect::layerChanged(t_layer);
 
     auto group = dynamic_cast<CanvasLayerGroup*>(t_layer->parentGroup());
     if(group)
@@ -27,21 +27,21 @@ void CanvasClipEffect::layerChanged(Layer *t_layer)
     }
 }
 
-void CanvasClipEffect::initializeContext(QOpenGLContext *, Canvas *)
+void CanvasEffect::initializeContext(QOpenGLContext *, Canvas *)
 {
 
 }
 
-void CanvasClipEffect::canvasResized(QOpenGLContext *, Canvas *)
+void CanvasEffect::canvasResized(QOpenGLContext *, Canvas *)
 {
 
 }
 
-void CanvasClipEffect::processChannels(ProcessContext &t_context)
+void CanvasEffect::processChannels(ProcessContext &t_context)
 {
-    double initialRelativeTime = t_context.globalTime - clip()->startTime();
+    double initialRelativeTime = t_context.globalTime - effectParent()->startTime();
 
-    CanvasClipEffectEvaluationContext localContext(t_context);
+    CanvasEffectEvaluationContext localContext(t_context);
     localContext.relativeTime = initialRelativeTime;
     localContext.openglContext = t_context.openglContext;
     localContext.canvas = t_context.canvas;

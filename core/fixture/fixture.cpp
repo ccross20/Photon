@@ -127,6 +127,37 @@ QVector<FixtureCapability*> Fixture::findCapability(CapabilityType t_type, int t
     return results;
 }
 
+
+QVector<FixtureCapability*> Fixture::findCapability(CapabilityType type, const QString &t_name) const
+{
+
+    QVector<FixtureCapability*> results;
+
+    for(auto it = m_impl->channels.cbegin(); it != m_impl->channels.cend(); ++it)
+    {
+        auto channel = *it;
+
+        for(auto capabilityIt = channel->capabilities().cbegin(); capabilityIt != channel->capabilities().cend(); ++capabilityIt)
+        {
+            if((*capabilityIt)->channel()->name() == t_name)
+                results.append(*capabilityIt);
+        }
+    }
+
+    for(auto it = m_impl->virtualChannels.cbegin(); it != m_impl->virtualChannels.cend(); ++it)
+    {
+        auto channel = *it;
+
+        for(auto capabilityIt = channel->capabilities().cbegin(); capabilityIt != channel->capabilities().cend(); ++capabilityIt)
+        {
+            if((*capabilityIt)->channel()->name() == t_name)
+                results.append(*capabilityIt);
+        }
+    }
+
+    return results;
+}
+
 void Fixture::setDefaultState(State *t_state)
 {
     m_impl->defaultState = t_state;
@@ -337,8 +368,6 @@ void Fixture::readFromOpenFixtureJson(const QJsonObject &t_json)
     if(t_json.contains("availableChannels"))
     {
         auto channels = t_json.value("availableChannels").toObject();
-        QVector<FixtureChannel*> colorChannels;
-
 
         for(auto it = channels.constBegin(); it != channels.constEnd(); ++it)
         {
@@ -363,7 +392,7 @@ void Fixture::readFromOpenFixtureJson(const QJsonObject &t_json)
                 fixtureChannel->m_impl->fineChannels.append(fineChannel);
             }
 
-
+/*
             if(fixtureChannel->capabilityType() == Capability_Cyan ||
                     fixtureChannel->capabilityType() == Capability_Magenta ||
                     fixtureChannel->capabilityType() == Capability_Yellow ||
@@ -376,17 +405,42 @@ void Fixture::readFromOpenFixtureJson(const QJsonObject &t_json)
                 fixtureChannel->capabilityType() == Capability_UV)
             {
                 colorChannels.append(fixtureChannel);
-            } 
+            }
+*/
         }
 
-        if(colorChannels.length() > 0)
+
+    }
+
+    if(t_json.contains("virtual"))
+    {
+        auto virtualArray = t_json.value("virtual").toArray();
+
+        for(auto it = virtualArray.constBegin(); it != virtualArray.constEnd(); ++it)
         {
+            //qDebug() << "add wheel" << it.key();
+            auto virtualObj = (*it).toObject();
+
+            //auto name = virtualObj.value("name").toString();
+            auto vArray = virtualObj.value("channels").toArray();
+
+            QVector<FixtureChannel*> colorChannels;
+
+            for(auto capIt = vArray.constBegin(); capIt != vArray.constEnd(); ++capIt)
+            {
+                auto foundChannel = findChannelWithName((*capIt).toString());
+
+                if(foundChannel)
+                    colorChannels.append(foundChannel);
+                else
+                    qDebug() << "[Virtual Channel] Could not find channel: " << (*capIt).toString();
+            }
+
             auto vChannel = new FixtureVirtualChannel(colorChannels);
             vChannel->setFixture(this);
             m_impl->virtualChannels.append(vChannel);
-            colorChannels.clear();
+            qDebug() << "Create Virtual channel";
         }
-
     }
 
     if(t_json.contains("modes"))

@@ -18,6 +18,7 @@ public:
     Node *findNode(const QByteArray &) const;
     Parameter *findParameter(const QByteArray &);
     const QVector<Node*> &nodes() const;
+    const QVector<Node*> LoopNodes() const;
 
     virtual void evaluate(EvaluationContext *) const;
     virtual void evaluateAll(EvaluationContext *) const;

@@ -39,7 +39,7 @@ void StrokeClipEffect::canvasResized(QOpenGLContext *, Canvas *)
 
 }
 
-void StrokeClipEffect::evaluate(CanvasClipEffectEvaluationContext &t_context)
+void StrokeClipEffect::evaluate(CanvasEffectEvaluationContext &t_context)
 {
     bool strokeOnly = t_context.channelValues["StrokeOnly"].toBool();
     double thickness = t_context.channelValues["Thickness"].toDouble();

@@ -21,7 +21,7 @@
 #include "opengl/openglframebuffer.h"
 #include "cliplayer.h"
 #include "canvasclip.h"
-#include "canvasclipeffect.h"
+#include "canvaseffect.h"
 #include "opengl/openglresources.h"
 
 namespace photon {

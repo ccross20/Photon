@@ -7,6 +7,7 @@
 #include "photoncore.h"
 #include "plugin/pluginfactory.h"
 #include "sequence/constantchanneleffect.h"
+#include "surface/surfacegizmocontainer.h"
 
 namespace photon {
 
@@ -190,6 +191,21 @@ Sequence *Channel::sequence() const
     return nullptr;
 }
 
+SurfaceGizmoContainer *Channel::gizmoContainer() const
+{
+    QObject *par = parent();
+
+    while(par)
+    {
+        SurfaceGizmoContainer *seq = dynamic_cast<SurfaceGizmoContainer *>(par);
+        if(seq)
+            return seq;
+        par = par->parent();
+    }
+
+    return nullptr;
+}
+
 void Channel::setParentName(const QString &t_name)
 {
     m_impl->parentName = t_name;
@@ -333,9 +349,24 @@ QVariant Channel::processValue(double time)
     }
 
 
+    if(subChannelCount > 0)
+    {
+        for(int i = 0; i < subChannelCount; ++i)
+        {
+            values[i] = m_impl->subChannels[i]->processValue(time).toFloat();
+        }
+
+
+    }
+
+
 
     if(!m_impl->effects.isEmpty())
+    {
+        time = m_impl->effects.back()->processTime(time);
         values = m_impl->effects.back()->process(values, valuesSize, time);
+    }
+
 
     if(subChannelCount > 0)
     {
@@ -351,19 +382,11 @@ QVariant Channel::processValue(double time)
         {
             QColor color = val.value<QColor>();
 
-            if(m_impl->effects.isEmpty())
-            {
-                color.setHslF(m_impl->subChannels[0]->processValue(time).toFloat(),
-                              m_impl->subChannels[1]->processValue(time).toFloat(),
-                              m_impl->subChannels[2]->processValue(time).toFloat(),
-                              m_impl->subChannels[3]->processValue(time).toFloat());
-            }
-            else{
+
                 color.setHslF(values[0],
                               values[1],
                               values[2],
                               values[3]);
-            }
 
 
             delete[] values;

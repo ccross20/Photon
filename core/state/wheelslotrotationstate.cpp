@@ -1,6 +1,5 @@
 #include "wheelslotrotationstate.h"
 #include "fixture/capability/wheelslotrotationcapability.h"
-#include "fixture/fixturewheel.h"
 #include "fixture/fixture.h"
 
 namespace photon {
@@ -9,36 +8,49 @@ WheelSlotRotationState::WheelSlotRotationState() : StateCapability(CapabilityTyp
 {
     setName("Wheel Slot Rotation");
 
-    addAvailableChannel(ChannelInfo(ChannelInfo::ChannelTypeInteger, "Wheel Index","Which Wheel",0));
-    addAvailableChannel(ChannelInfo(ChannelInfo::ChannelTypeNumber, "Rotation","How fast to rotate the gobo",0));
+    addAvailableChannel(ChannelInfo(ChannelInfo::ChannelTypeString, "Name","Name of the capability",""));
+    addAvailableChannel(ChannelInfo(ChannelInfo::ChannelTypeNumber, "Speed","How fast to rotate the gobo",0));
+    addAvailableChannel(ChannelInfo(ChannelInfo::ChannelTypeBool, "Use Angle","Use angle instead of speed",false));
 
 }
 
 void WheelSlotRotationState::evaluate(const StateEvaluationContext &t_context) const
 {
 
-    int wheelIndex = getChannelInteger(t_context,0);
     float rotationAmount = getChannelFloat(t_context,1);
 
-    if(wheelIndex < 0 || wheelIndex >= t_context.fixture->wheels().length())
-        return;
+    bool useAngle = getChannelBool(t_context,2);
+    QString name = getChannelString(t_context,0);
 
-    QString wheelName = t_context.fixture->wheels()[wheelIndex]->name();
-    wheelName = wheelName.toLower();
-
-
-    auto allCapabilities = t_context.fixture->findCapability(CapabilityType::Capability_WheelSlotRotation);
-
-    for(auto capability : allCapabilities)
+    if(!name.isEmpty())
     {
-        auto wheelSlot = static_cast<WheelSlotRotationCapability*>(capability);
+        auto allCapabilities = t_context.fixture->findCapability(CapabilityType::Capability_WheelSlotRotation, name);
 
-        if(wheelSlot->wheel().toLower() == wheelName)
+        for(auto capability : allCapabilities)
         {
-            wheelSlot->setSpeed(rotationAmount,t_context.dmxMatrix,1.0);
-            return;
+            auto wheelSlot = static_cast<WheelSlotRotationCapability*>(capability);
+
+            if(wheelSlot->supportsAngle() && useAngle)
+            {
+                wheelSlot->setAngleDegrees(rotationAmount,t_context.dmxMatrix,1.0);
+                return;
+            }
+            else
+            {
+                if(rotationAmount > 0 && wheelSlot->maxSpeed() > 0)
+                {
+                    wheelSlot->setSpeed(rotationAmount,t_context.dmxMatrix,1.0);
+                    return;
+                }
+                else if(rotationAmount < 0 && wheelSlot->maxSpeed() < 0)
+                {
+                    wheelSlot->setSpeed(rotationAmount,t_context.dmxMatrix,1.0);
+                    return;
+                }
+            }
         }
     }
+
 }
 
 } // namespace photon

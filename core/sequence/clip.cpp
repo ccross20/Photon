@@ -388,41 +388,47 @@ void Clip::channelUpdatedSlot(Channel *t_channel)
     markChanged();
 }
 
-void Clip::clipEffectUpdatedSlot(photon::ClipEffect *t_effect)
+
+void Clip::effectUpdated(photon::BaseEffect *t_effect)
+{
+    effectUpdatedSlot(t_effect);
+}
+
+void Clip::effectUpdatedSlot(photon::BaseEffect *t_effect)
 {
     emit clipEffectUpdated(t_effect);
     markChanged();
 }
 
-const QVector<ClipEffect*> &Clip::clipEffects() const
+const QVector<BaseEffect*> &Clip::clipEffects() const
 {
     return m_impl->clipEffects;
 }
 
-void Clip::addClipEffect(ClipEffect *t_effect)
+void Clip::addClipEffect(BaseEffect *t_effect)
 {
     m_impl->clipEffects.append(t_effect);
     t_effect->setParent(this);
-    t_effect->m_impl->clip = this;
+    t_effect->m_impl->effectParent = this;
 
     emit clipEffectAdded(t_effect);
-    t_effect->addedToClip(this);
+    t_effect->addedToParent(this);
     if(layer())
         t_effect->layerChanged(layer());
     m_impl->markChanged();
 }
 
-void Clip::removeClipEffect(ClipEffect *t_effect)
+void Clip::removeClipEffect(BaseEffect *t_effect)
 {
     if(m_impl->clipEffects.removeOne(t_effect))
     {
-        t_effect->m_impl->clip = nullptr;
+        t_effect->m_impl->effectParent = nullptr;
 
         emit clipEffectRemoved(t_effect);
     }
 }
 
-ClipEffect *Clip::clipEffectAtIndex(int t_index) const
+BaseEffect *Clip::clipEffectAtIndex(int t_index) const
 {
     return m_impl->clipEffects[t_index];
 }
@@ -459,11 +465,11 @@ void Clip::readFromJson(const QJsonObject &t_json, const LoadContext &t_context)
             auto effect = photonApp->plugins()->createClipEffect(id.toLatin1());
 
             if(effect){
-                effect->m_impl->clip = this;
+                effect->m_impl->effectParent = this;
                 effect->readFromJson(effectObj, t_context);
                 effect->setParent(this);
                 m_impl->clipEffects.append(effect);
-                effect->addedToClip(this);
+                effect->addedToParent(this);
 
             }
             else

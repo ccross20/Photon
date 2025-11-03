@@ -211,14 +211,14 @@ void FixtureGizmo::restore(Project &)
 
 }
 
-void FixtureGizmo::readFromJson(const QJsonObject &, const LoadContext &)
+void FixtureGizmo::readFromJson(const QJsonObject &t_json, const LoadContext &t_context)
 {
-
+    SurfaceGizmo::readFromJson(t_json, t_context);
 }
 
-void FixtureGizmo::writeToJson(QJsonObject &) const
+void FixtureGizmo::writeToJson(QJsonObject &t_json) const
 {
-
+    SurfaceGizmo::writeToJson(t_json);
 }
 
 

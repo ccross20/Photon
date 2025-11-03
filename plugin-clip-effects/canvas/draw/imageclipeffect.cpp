@@ -44,7 +44,7 @@ void ImageClipEffect::canvasResized(QOpenGLContext *, Canvas *)
 
 }
 
-void ImageClipEffect::evaluate(CanvasClipEffectEvaluationContext &t_context)
+void ImageClipEffect::evaluate(CanvasEffectEvaluationContext &t_context)
 {
     //float w = static_cast<float>(t_context.canvasImage->width());
     //float h = static_cast<float>(t_context.canvasImage->height());

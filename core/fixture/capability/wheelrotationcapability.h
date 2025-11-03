@@ -14,6 +14,7 @@ public:
     QString wheelName() const;
     double speedStart() const;
     double speedEnd() const;
+    double maxSpeed() const;
 
     void setSpeed(double value, DMXMatrix &t_matrix, double t_blend);
     void readFromOpenFixtureJson(const QJsonObject &) override;

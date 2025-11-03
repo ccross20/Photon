@@ -27,6 +27,7 @@ public:
     void setName(const QString &);
     float getChannelFloat(const StateEvaluationContext &, uint index) const;
     int getChannelInteger(const StateEvaluationContext &, uint index) const;
+    QString getChannelString(const StateEvaluationContext &, uint index) const;
     bool getChannelBool(const StateEvaluationContext &, uint index) const;
     QColor getChannelColor(const StateEvaluationContext &, uint index) const;
     void setChannelValue(uint index, const QVariant &);

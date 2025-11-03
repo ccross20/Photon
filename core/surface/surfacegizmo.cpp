@@ -11,6 +11,7 @@ SurfaceGizmo::SurfaceGizmo(QByteArray t_type, QObject *parent)
     : QObject{parent}, m_impl(new Impl(this))
 {
     m_impl->type = t_type;
+    m_impl->uniqueId = QUuid::createUuid().toString().toLatin1();
 }
 
 SurfaceGizmo::~SurfaceGizmo()
@@ -42,6 +43,7 @@ QByteArray SurfaceGizmo::uniqueId() const
 void SurfaceGizmo::setId(const QByteArray &t_value)
 {
     m_impl->id = t_value;
+    markChanged();
 }
 
 QByteArray SurfaceGizmo::id() const
@@ -51,7 +53,7 @@ QByteArray SurfaceGizmo::id() const
 
 void SurfaceGizmo::markChanged()
 {
-
+    emit gizmoUpdated();
 }
 
 void SurfaceGizmo::processChannels(ProcessContext &t_context)
@@ -68,9 +70,14 @@ void SurfaceGizmo::readFromJson(const QJsonObject &t_json, const LoadContext &t_
 {
 
     m_impl->type = t_json.value("type").toString().toLatin1();
-    m_impl->uniqueId = t_json.value("uniqueId").toString(QUuid::createUuid().toString()).toLatin1();
+    m_impl->uniqueId = t_json.value("uniqueId").toString().toLatin1();
     m_impl->name = t_json.value("name").toString();
     m_impl->id = t_json.value("id").toString().toLatin1();
+
+    if(m_impl->uniqueId.isEmpty())
+        m_impl->uniqueId = QUuid::createUuid().toString().toLatin1();
+
+    qDebug() << "Load " << m_impl->uniqueId;
 }
 
 void SurfaceGizmo::writeToJson(QJsonObject &t_json) const

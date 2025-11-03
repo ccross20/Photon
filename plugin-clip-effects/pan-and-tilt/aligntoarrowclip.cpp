@@ -18,7 +18,7 @@ AlignToArrowClip::AlignToArrowClip()
 
 void AlignToArrowClip::init()
 {
-    ClipEffect::init();
+    BaseEffect::init();
     addChannelParameter(new NumberChannelParameter("tilt"));
     addChannelParameter(new NumberChannelParameter("pan"));
     auto arrowObj = SceneIterator::FindOne(photonApp->project()->sceneRoot(),[](SceneObject *obj){
@@ -28,7 +28,7 @@ void AlignToArrowClip::init()
     m_arrow = static_cast<SceneArrow*>(arrowObj);
 }
 
-void AlignToArrowClip::evaluate(FixtureClipEffectEvaluationContext &t_context)
+void AlignToArrowClip::evaluate(FixtureEffectEvaluationContext &t_context)
 {
     QMatrix4x4 matrix;
     //matrix.translate(fixture->globalPosition());
@@ -45,7 +45,7 @@ void AlignToArrowClip::evaluate(FixtureClipEffectEvaluationContext &t_context)
     float panOffset = t_context.channelValues["pan"].toDouble();
     float tiltOffset = t_context.channelValues["tilt"].toDouble();
 
-    double initialRelativeTime = t_context.globalTime - clip()->startTime();
+    double initialRelativeTime = t_context.globalTime - effectParent()->startTime();
 
     initialRelativeTime -= fixtureClip()->falloff(fixture);
 
@@ -82,7 +82,7 @@ void AlignToArrowClip::evaluate(FixtureClipEffectEvaluationContext &t_context)
 
     auto pans = fixture->findCapability(Capability_Pan);
     if(!pans.isEmpty())
-        static_cast<AngleCapability*>(pans.front())->setAngleDegreesCentered(panDeg, t_context.dmxMatrix, clip()->strengthAtTime(initialRelativeTime));
+        static_cast<AngleCapability*>(pans.front())->setAngleDegreesCentered(panDeg, t_context.dmxMatrix, effectParent()->strengthAtTime(initialRelativeTime));
 
     QMatrix4x4 tiltMat;
     tiltMat.translate(0,.4,0);
@@ -97,7 +97,7 @@ void AlignToArrowClip::evaluate(FixtureClipEffectEvaluationContext &t_context)
 
     auto tilts = fixture->findCapability(Capability_Tilt);
     if(!tilts.isEmpty())
-        static_cast<AngleCapability*>(tilts.front())->setAngleDegreesCentered(tiltDeg, t_context.dmxMatrix, clip()->strengthAtTime(initialRelativeTime));
+        static_cast<AngleCapability*>(tilts.front())->setAngleDegreesCentered(tiltDeg, t_context.dmxMatrix, effectParent()->strengthAtTime(initialRelativeTime));
 
 }
 

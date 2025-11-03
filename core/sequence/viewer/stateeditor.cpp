@@ -6,12 +6,14 @@
 #include <QPushButton>
 #include <QComboBox>
 #include <QLabel>
+#include <QLineEdit>
 #include <QMenu>
 #include "stateeditor.h"
 #include "state/state.h"
 #include "state/statecapability.h"
 #include "gui/guimanager.h"
 #include "sequence/fixtureclip.h"
+#include "surface/fixtureaction.h"
 #include "gui/color/colorwheelswatch.h"
 
 namespace photon {
@@ -23,10 +25,13 @@ StateEditor::StateEditor(QWidget *parent)
     setLayout(m_layout);
 }
 
-void StateEditor::setClip(photon::FixtureClip* t_clip)
+void StateEditor::setBaseEffectParent(photon::BaseEffectParent* t_effectParent)
 {
-    m_clip = t_clip;
-    selectState(m_clip->state());
+    m_baseEffectParent = t_effectParent;
+    if(dynamic_cast<FixtureClip*>(t_effectParent))
+        selectState(static_cast<FixtureClip*>(t_effectParent)->state());
+    else if(dynamic_cast<FixtureAction*>(t_effectParent))
+        selectState(static_cast<FixtureAction*>(t_effectParent)->state());
 }
 
 void StateEditor::selectState(State *t_state)
@@ -119,15 +124,34 @@ void StateEditor::selectState(State *t_state)
                 });
                 gridLayout->addWidget(swatch,row,3,Qt::AlignLeft | Qt::AlignTop);
             }
+            else if(channelInfo.type == ChannelInfo::ChannelTypeString)
+            {
+                QLineEdit *lineEdit = new QLineEdit;
+                lineEdit->setText(stateCapability->getChannelValue(index).toString());
+                connect(lineEdit, &QLineEdit::textEdited, this, [stateCapability, index](QString value){
+                    stateCapability->setChannelValue(index, value);
+                });
+                gridLayout->addWidget(lineEdit,row,3,Qt::AlignLeft | Qt::AlignTop);
+            }
 
-            QPushButton *channelButton = new QPushButton("Channel");
-            channelButton->setCheckable(true);
-            channelButton->setSizePolicy(QSizePolicy(QSizePolicy::Minimum, QSizePolicy::MinimumExpanding));
-            connect(channelButton, &QPushButton::toggled,this,[this, stateCapability, index](bool value){
-                if(value)
-                    m_clip->addChannel(stateCapability->availableChannels().at(index));
-            });
-            gridLayout->addWidget(channelButton,row,4,Qt::AlignLeft | Qt::AlignTop);
+            if(channelInfo.type != ChannelInfo::ChannelTypeString)
+            {
+                QPushButton *channelButton = new QPushButton("Channel");
+                channelButton->setCheckable(true);
+                channelButton->setSizePolicy(QSizePolicy(QSizePolicy::Minimum, QSizePolicy::MinimumExpanding));
+                connect(channelButton, &QPushButton::toggled,this,[this, stateCapability, index](bool value){
+                    if(value)
+                    {
+                        if(dynamic_cast<FixtureClip*>(m_baseEffectParent))
+                            static_cast<FixtureClip*>(m_baseEffectParent)->addChannel(stateCapability->availableChannels().at(index));
+                        else if(dynamic_cast<FixtureAction*>(m_baseEffectParent))
+                            static_cast<FixtureAction*>(m_baseEffectParent)->addChannel(stateCapability->availableChannels().at(index));
+                    }
+
+                });
+                gridLayout->addWidget(channelButton,row,4,Qt::AlignLeft | Qt::AlignTop);
+            }
+
 
             QPushButton *deleteButton = new QPushButton("Delete");
             deleteButton->setSizePolicy(QSizePolicy(QSizePolicy::Minimum, QSizePolicy::MinimumExpanding));

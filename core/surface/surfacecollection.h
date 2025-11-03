@@ -17,6 +17,7 @@ public:
     int surfaceCount() const;
     Surface *surfaceAtIndex(uint) const;
     const QVector<Surface*> &surfaces() const;
+    Surface *findSurfaceWithId(const QByteArray &) const;
 
     void editSurface(Surface *);
     void setActiveSurfacePanel(SurfacePanel *panel);

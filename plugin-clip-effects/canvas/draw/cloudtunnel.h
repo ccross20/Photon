@@ -2,11 +2,11 @@
 #define PHOTON_CLOUDTUNNEL_H
 
 #include <QWidget>
-#include "sequence/canvasclipeffect.h"
+#include "sequence/canvaseffect.h"
 
 namespace photon {
 
-class CloudTunnel : public CanvasClipEffect
+class CloudTunnel : public CanvasEffect
 {
 public:
     CloudTunnel();
@@ -14,7 +14,7 @@ public:
     void init() override;
     void initializeContext(QOpenGLContext *, Canvas *) override;
     void canvasResized(QOpenGLContext *, Canvas *) override;
-    void evaluate(CanvasClipEffectEvaluationContext &) override;
+    void evaluate(CanvasEffectEvaluationContext &) override;
     static ClipEffectInformation info();
 
 private:

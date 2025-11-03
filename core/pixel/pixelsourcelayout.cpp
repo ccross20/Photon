@@ -157,7 +157,7 @@ void PixelSourceLayout::readFromJson(const QJsonObject &t_json, const LoadContex
             {
                 if(!fixture->findCapability(Capability_Color).isEmpty()){
                     auto capabilities = fixture->findCapability(Capability_Color);
-                    m_impl->source = new FixturePixelSource(capabilities[0]);
+                    m_impl->source = new FixturePixelSource(capabilities);
                 }
             }
         }

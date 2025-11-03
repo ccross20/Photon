@@ -21,6 +21,10 @@ public:
 
     static keira::NodeInformation info();
 
+
+    void readFromJson(const QJsonObject &, keira::NodeLibrary *library) override;
+    void writeToJson(QJsonObject &) const override;
+
 private:
     class Impl;
     Impl *m_impl;

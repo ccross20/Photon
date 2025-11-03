@@ -52,6 +52,7 @@ signals:
     void maskMoved(photon::MaskEffect *);
     void falloffMapChanged(photon::FixtureFalloffMap *);
     void falloffUpdated(photon::FalloffEffect *);
+
 private:
     class Impl;
     Impl *m_impl;

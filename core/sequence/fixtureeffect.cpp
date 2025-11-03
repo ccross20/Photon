@@ -1,29 +1,29 @@
-#include "fixtureclipeffect.h"
+#include "fixtureeffect.h"
 #include "sequence.h"
 #include "fixtureclip.h"
 
 namespace photon {
 
-FixtureClipEffect::FixtureClipEffect(const QByteArray &t_id) : ClipEffect(t_id)
+FixtureEffect::FixtureEffect(const QByteArray &t_id) : BaseEffect(t_id)
 {
 
 }
 
-FixtureClipEffect::~FixtureClipEffect()
+FixtureEffect::~FixtureEffect()
 {
 
 }
 
-FixtureClip *FixtureClipEffect::fixtureClip() const
+FixtureClip *FixtureEffect::fixtureClip() const
 {
-    return static_cast<FixtureClip*>(clip());
+    return static_cast<FixtureClip*>(effectParent());
 }
 
-void FixtureClipEffect::processChannels(ProcessContext &t_context)
+void FixtureEffect::processChannels(ProcessContext &t_context)
 {
-    double initialRelativeTime = t_context.globalTime - clip()->startTime();
+    double initialRelativeTime = t_context.globalTime - effectParent()->startTime();
 
-    FixtureClipEffectEvaluationContext localContext(t_context);
+    FixtureEffectEvaluationContext localContext(t_context);
     localContext.relativeTime = initialRelativeTime;
     localContext.fixtureTotal = fixtureClip()->maskedFixtures().length();
     int index = 0;

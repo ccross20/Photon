@@ -73,6 +73,13 @@ float * ChannelEffect::process(float *t_input, uint size, double) const
     return t_input;
 }
 
+double ChannelEffect::processTime(double t_time) const
+{
+    if(m_impl->previousEffect)
+        return m_impl->previousEffect->processTime(t_time);
+    return t_time;
+}
+
 void ChannelEffect::restore(Project &)
 {
 

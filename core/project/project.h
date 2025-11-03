@@ -23,6 +23,7 @@ public:
     SceneObject *sceneRoot() const;
     SceneManager *scene() const;
     TagCollection *tags() const;
+    SurfaceCollection *surfaces() const;
 
     void save(const QString &path = QString{}) const;
     void load(const QString &path = QString{});

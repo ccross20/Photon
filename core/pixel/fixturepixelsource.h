@@ -8,10 +8,10 @@ namespace photon {
 class PHOTONCORE_EXPORT FixturePixelSource : public PixelSource
 {
 public:
-    FixturePixelSource(FixtureCapability *);
+    FixturePixelSource(const QVector<FixtureCapability *> &);
     virtual ~FixturePixelSource();
 
-    FixtureCapability *capability() const;
+    const QVector<FixtureCapability *> &capabilities() const;
     Fixture *fixture() const;
     virtual int dmxOffset() const override;
     virtual int dmxSize() const override;

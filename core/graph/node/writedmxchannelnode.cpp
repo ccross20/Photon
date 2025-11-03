@@ -73,7 +73,7 @@ void WriteDMXChannelNode::evaluate(keira::EvaluationContext *) const
 
     QByteArray fixtureId = m_impl->fixtureParam->value().toByteArray();
     fixtureId = "test";
-    if(!fixtureId.isEmpty())
+    if(!fixtureId.isEmpty() && !photonApp->project()->fixtures()->fixtures().isEmpty())
     {
 
         //auto fixture = FixtureCollection::fixtureById(fixtureId);
