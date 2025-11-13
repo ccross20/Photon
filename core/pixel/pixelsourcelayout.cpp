@@ -125,10 +125,10 @@ void PixelSourceLayout::setSource(PixelSource *t_source)
     m_impl->rebuildBounds();
 }
 
-void PixelSourceLayout::process(ProcessContext &t_context) const
+void PixelSourceLayout::process(ProcessContext &t_context, double t_blend) const
 {
     if(m_impl->source)
-        m_impl->source->process(t_context, transform());
+        m_impl->source->process(t_context, transform(),t_blend);
 }
 
 void PixelSourceLayout::readFromJson(const QJsonObject &t_json, const LoadContext &t_context)

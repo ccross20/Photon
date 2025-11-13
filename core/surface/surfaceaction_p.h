@@ -18,6 +18,7 @@ public:
     QByteArray uniqueId;
     QString name = "Action";
     QByteArray id;
+    QByteArray enableOnGizmo;
     double strength = 1.0;
     double duration = 0.0;
     SurfaceAction *facade;

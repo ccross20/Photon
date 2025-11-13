@@ -40,7 +40,8 @@ set(SOURCES
 )
 
 add_library(plugin-effects SHARED ${SOURCES}
-    mask/tagmaskeffect.h mask/tagmaskeffect.cpp)
+    mask/tagmaskeffect.h mask/tagmaskeffect.cpp
+    generator/stepeffect.h generator/stepeffect.cpp)
 
 
 

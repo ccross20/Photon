@@ -128,7 +128,7 @@ QVector<FixtureCapability*> Fixture::findCapability(CapabilityType t_type, int t
 }
 
 
-QVector<FixtureCapability*> Fixture::findCapability(CapabilityType type, const QString &t_name) const
+QVector<FixtureCapability*> Fixture::findCapability(CapabilityType t_type, const QString &t_name) const
 {
 
     QVector<FixtureCapability*> results;
@@ -137,22 +137,30 @@ QVector<FixtureCapability*> Fixture::findCapability(CapabilityType type, const Q
     {
         auto channel = *it;
 
-        for(auto capabilityIt = channel->capabilities().cbegin(); capabilityIt != channel->capabilities().cend(); ++capabilityIt)
+        if(channel->name() == t_name)
         {
-            if((*capabilityIt)->channel()->name() == t_name)
-                results.append(*capabilityIt);
+            for(auto capabilityIt = channel->capabilities().cbegin(); capabilityIt != channel->capabilities().cend(); ++capabilityIt)
+            {
+                if((*capabilityIt)->type() == t_type)
+                    results.append(*capabilityIt);
+            }
         }
+
     }
 
     for(auto it = m_impl->virtualChannels.cbegin(); it != m_impl->virtualChannels.cend(); ++it)
     {
         auto channel = *it;
 
-        for(auto capabilityIt = channel->capabilities().cbegin(); capabilityIt != channel->capabilities().cend(); ++capabilityIt)
+        if(channel->name().toLower() == t_name.toLower())
         {
-            if((*capabilityIt)->channel()->name() == t_name)
-                results.append(*capabilityIt);
+            for(auto capabilityIt = channel->capabilities().cbegin(); capabilityIt != channel->capabilities().cend(); ++capabilityIt)
+            {
+                if((*capabilityIt)->type() == t_type)
+                    results.append(*capabilityIt);
+            }
         }
+
     }
 
     return results;
@@ -257,6 +265,25 @@ FixtureChannel* Fixture::findChannelWithName(const QString &t_name) const
 Fixture::Physical Fixture::physical() const
 {
     return m_impl->physical;
+}
+
+bool extractRange(QString text, int *start, int *end, QString *prefix)
+{
+    int startIndex = text.indexOf("[");
+    int endIndex = text.indexOf("]")-1;
+    *prefix = text;
+    bool hasRange = startIndex >= 0 && endIndex >= 0;
+
+    if(hasRange)
+    {
+        *prefix = text.left(startIndex);
+        QString range = text.mid(startIndex+1,endIndex - startIndex);
+        auto rangeList = range.split("-");
+        *start = rangeList[0].toInt();
+        *end = rangeList[1].toInt();
+        return true;
+    }
+    return false;
 }
 
 void Fixture::loadFixtureDefinition(const QString &t_path)
@@ -372,25 +399,39 @@ void Fixture::readFromOpenFixtureJson(const QJsonObject &t_json)
         for(auto it = channels.constBegin(); it != channels.constEnd(); ++it)
         {
             auto channelObj = it.value().toObject();
+            auto key = it.key();
+            int rangeStart = 0;
+            int rangeEnd = 0;
+            QString prefix = key;
+            bool hasRange = extractRange(key, &rangeStart, &rangeEnd, &prefix);
 
-            FixtureChannel *fixtureChannel = new FixtureChannel(it.key(), 0);
-            fixtureChannel->setFixture(this);
-            fixtureChannel->readFromOpenFixtureJson(channelObj);
-            fixtureChannel->m_impl->channelNumber = -1;
-            fixtureChannel->m_impl->globalChannelNumber = 0;
-            fixtureChannel->setFixture(this);
-            m_impl->channels.append(fixtureChannel);
-
-            for(const auto &alias : fixtureChannel->m_impl->fineChannelsAliases)
+            for(int i = rangeStart; i <= rangeEnd; ++i)
             {
-                FixtureChannel *fineChannel = new FixtureChannel(alias, 0);
-                fineChannel->setFixture(this);
-                fineChannel->m_impl->channelNumber = -1;
-                fineChannel->m_impl->globalChannelNumber = 0;
-                fineChannel->setFixture(this);
-                m_impl->channels.append(fineChannel);
-                fixtureChannel->m_impl->fineChannels.append(fineChannel);
+                QString channelName = prefix;
+                if(hasRange)
+                    channelName = prefix + QString::number(i);
+
+                FixtureChannel *fixtureChannel = new FixtureChannel(channelName, 0);
+                fixtureChannel->setFixture(this);
+                fixtureChannel->readFromOpenFixtureJson(channelObj);
+                fixtureChannel->m_impl->channelNumber = -1;
+                fixtureChannel->m_impl->globalChannelNumber = 0;
+                fixtureChannel->setFixture(this);
+                m_impl->channels.append(fixtureChannel);
+
+                for(const auto &alias : fixtureChannel->m_impl->fineChannelsAliases)
+                {
+                    FixtureChannel *fineChannel = new FixtureChannel(alias, 0);
+                    fineChannel->setFixture(this);
+                    fineChannel->m_impl->channelNumber = -1;
+                    fineChannel->m_impl->globalChannelNumber = 0;
+                    fineChannel->setFixture(this);
+                    m_impl->channels.append(fineChannel);
+                    fixtureChannel->m_impl->fineChannels.append(fineChannel);
+                }
             }
+
+
 
 /*
             if(fixtureChannel->capabilityType() == Capability_Cyan ||
@@ -421,25 +462,58 @@ void Fixture::readFromOpenFixtureJson(const QJsonObject &t_json)
             //qDebug() << "add wheel" << it.key();
             auto virtualObj = (*it).toObject();
 
-            //auto name = virtualObj.value("name").toString();
+            auto name = virtualObj.value("name").toString();
             auto vArray = virtualObj.value("channels").toArray();
 
-            QVector<FixtureChannel*> colorChannels;
 
-            for(auto capIt = vArray.constBegin(); capIt != vArray.constEnd(); ++capIt)
+            int rangeStart = 0;
+            int rangeEnd = 0;
+            QString prefix = name;
+            bool hasRange = extractRange(name, &rangeStart, &rangeEnd, &prefix);
+            if(hasRange)
             {
-                auto foundChannel = findChannelWithName((*capIt).toString());
+                for(int i = rangeStart; i<= rangeEnd; ++i)
+                {
+                    QVector<FixtureChannel*> colorChannels;
 
-                if(foundChannel)
-                    colorChannels.append(foundChannel);
-                else
-                    qDebug() << "[Virtual Channel] Could not find channel: " << (*capIt).toString();
+                    for(auto capIt = vArray.constBegin(); capIt != vArray.constEnd(); ++capIt)
+                    {
+                        auto foundChannel = findChannelWithName((*capIt).toString() + QString::number(i));
+
+                        if(foundChannel)
+                            colorChannels.append(foundChannel);
+                        else
+                            qDebug() << "[Virtual Channel] Could not find channel: " << (*capIt).toString() + QString::number(i);
+                    }
+
+                    auto vChannel = new FixtureVirtualChannel(colorChannels, prefix + QString::number(i));
+                    vChannel->setFixture(this);
+                    m_impl->virtualChannels.append(vChannel);
+                    qDebug() << "Create Virtual channel";
+                }
+
+            }
+            else
+            {
+                QVector<FixtureChannel*> colorChannels;
+
+                for(auto capIt = vArray.constBegin(); capIt != vArray.constEnd(); ++capIt)
+                {
+                    auto foundChannel = findChannelWithName((*capIt).toString());
+
+                    if(foundChannel)
+                        colorChannels.append(foundChannel);
+                    else
+                        qDebug() << "[Virtual Channel] Could not find channel: " << (*capIt).toString();
+                }
+
+                auto vChannel = new FixtureVirtualChannel(colorChannels, name);
+                vChannel->setFixture(this);
+                m_impl->virtualChannels.append(vChannel);
+                qDebug() << "Create Virtual channel";
             }
 
-            auto vChannel = new FixtureVirtualChannel(colorChannels);
-            vChannel->setFixture(this);
-            m_impl->virtualChannels.append(vChannel);
-            qDebug() << "Create Virtual channel";
+
         }
     }
 

@@ -5,7 +5,9 @@
 #include "fixtureaction.h"
 #include "surfacegizmo.h"
 #include "surfaceaction.h"
+#include "canvasaction.h"
 #include "gizmofactory.h"
+#include "togglegizmo.h"
 
 namespace photon {
 
@@ -46,6 +48,14 @@ void SurfaceGizmoContainer::processChannels(ProcessContext &t_context, double t_
 
     for(auto action : m_impl->actions)
     {
+        if(!action->enableOnGizmoId().isEmpty())
+        {
+            auto enableOn = findGizmoWithUniqueId(action->enableOnGizmoId());
+
+            auto enableOnToggle = dynamic_cast<ToggleGizmo*>(enableOn);
+            if(enableOnToggle && !enableOnToggle->isPressed())
+                continue;
+        }
         action->processChannels(t_context);
     }
 }
@@ -170,7 +180,19 @@ void SurfaceGizmoContainer::removeAction(photon::SurfaceAction *t_action)
     emit actionWasRemoved(t_action, index);
 }
 
+void SurfaceGizmoContainer::restore(Project &t_project)
+{
+    for(auto source : std::as_const(m_impl->gizmos))
+    {
+        source->restore(t_project);
+    }
 
+    QJsonArray actionArray;
+    for(auto source : std::as_const(m_impl->actions))
+    {
+        source->restore(t_project);
+    }
+}
 
 void SurfaceGizmoContainer::readFromJson(const QJsonObject &t_json, const LoadContext &t_context)
 {
@@ -201,8 +223,10 @@ void SurfaceGizmoContainer::readFromJson(const QJsonObject &t_json, const LoadCo
         {
             auto sourceObj = source.toObject();
             SurfaceAction *newAction = nullptr;
-            if(sourceObj.value("id").toString() == "fixtureaction")
+            if(sourceObj.value("type").toString() == "fixture")
                 newAction = new FixtureAction(this);
+            else if(sourceObj.value("type").toString() == "canvas")
+                newAction = new CanvasAction(this);
             else
                 newAction = new SurfaceAction(this);
             newAction->readFromJson(sourceObj, t_context);

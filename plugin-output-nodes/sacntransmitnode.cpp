@@ -84,6 +84,32 @@ void SACNTransmitNode::evaluate(keira::EvaluationContext *) const
 
     const DMXMatrix &matrix = m_impl->dmxParam->value().value<DMXMatrix>();
 
+/*
+    float val1 = matrix.value(0,43);
+    float val2 = matrix.value(0,44);
+    float val3 = matrix.value(0,45);
+
+    if(val1 == 0)
+        val1 = 1;
+    if(val2 == 0)
+        val2 = 1;
+    if(val3 == 0)
+        val3 = 1;
+
+    float val4 = matrix.value(0,47);
+    float val5 = matrix.value(0,48);
+    float val6 = matrix.value(0,49);
+
+    if(val4 == 0)
+        val4 = 1;
+    if(val5 == 0)
+        val5 = 1;
+    if(val6 == 0)
+        val6 = 1;
+*/
+
+    //qDebug() << QString::number(val1/val2, 'g',3) << QString::number(val2/val3, 'g',3) << QString::number(val4/val5, 'g',3) << QString::number(val5/val6, 'g',3);
+
     m_impl->sender->setLevel(matrix.channels[0].data(), 512,0);
 
 

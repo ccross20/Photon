@@ -8,6 +8,7 @@
 #include "channel/parameter/channelparametercontainer.h"
 #include "channel/parameter/channelparameter.h"
 #include "viewer/actionsettingswidget.h"
+#include "surfacegizmocontainer.h"
 
 namespace photon {
 
@@ -27,6 +28,21 @@ SurfaceAction::~SurfaceAction()
 {
     delete m_impl->parameters;
     delete m_impl;
+}
+
+SurfaceGizmoContainer *SurfaceAction::parentContainer() const
+{
+    return static_cast<SurfaceGizmoContainer*>(parent());
+}
+
+QByteArray SurfaceAction::enableOnGizmoId() const
+{
+    return m_impl->enableOnGizmo;
+}
+
+void SurfaceAction::setEnableOnGizmoId(const QByteArray &t_gizmoId)
+{
+    m_impl->enableOnGizmo = t_gizmoId;
 }
 
 QByteArray SurfaceAction::type() const
@@ -285,6 +301,7 @@ void SurfaceAction::readFromJson(const QJsonObject &t_json, const LoadContext &t
     m_impl->uniqueId = t_json.value("uniqueId").toString(QUuid::createUuid().toString()).toLatin1();
     m_impl->name = t_json.value("name").toString();
     m_impl->id = t_json.value("id").toString().toLatin1();
+    m_impl->enableOnGizmo = t_json.value("enableOnGizmo").toString().toLatin1();
 
     if(t_json.contains("clipEffects"))
     {
@@ -339,6 +356,7 @@ void SurfaceAction::writeToJson(QJsonObject &t_json) const
     t_json.insert("uniqueId", QString(m_impl->uniqueId));
     t_json.insert("id", QString(m_impl->id));
     t_json.insert("name", QString(m_impl->name));
+    t_json.insert("enableOnGizmo", QString(m_impl->enableOnGizmo));
 
     QJsonArray clipEffectArray;
     for(auto effect : m_impl->clipEffects)

@@ -113,7 +113,10 @@ void Surface::processChannels(ProcessContext &t_context, double lastTime)
 
 void Surface::restore(Project &t_project)
 {
-
+    for(auto container : m_impl->gizmos)
+    {
+        container->restore(t_project);
+    }
 }
 
 void Surface::readFromJson(const QJsonObject &t_json, const LoadContext &t_context)

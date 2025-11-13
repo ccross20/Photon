@@ -8,20 +8,16 @@ namespace photon {
 
 ColorWheelState::ColorWheelState() : StateCapability(CapabilityType::Capability_ColorWheelSlot)
 {
-    wheelOptions = QStringList{"Color Wheel", "Index"};
-
 
     setName("Color Wheel");
 
-    auto info = ChannelInfo(ChannelInfo::ChannelTypeIntegerStep, "Mode","The state of the shutter",FixtureWheelSlot::Slot_Open);
+
+    addAvailableChannel(ChannelInfo(ChannelInfo::ChannelTypeString, "Name","Name of the wheel",""));
+
+    auto info = ChannelInfo(ChannelInfo::ChannelTypeIntegerStep, "Color","The state of the shutter",FixtureWheelSlot::Slot_Open);
     info.options = {"Open","Red","Cyan","Green","Blue","Yellow","Magenta"};
     addAvailableChannel(info);
 
-    auto wheelInfo = ChannelInfo(ChannelInfo::ChannelTypeIntegerStep, "Wheel","Which wheel to use","Color Wheel");
-    wheelInfo.options = wheelOptions;
-    addAvailableChannel(wheelInfo);
-
-    addAvailableChannel(ChannelInfo(ChannelInfo::ChannelTypeInteger, "Wheel Index","Which Color Wheel",1));
 }
 
 QVector3D colorToVector(const QColor &t_color)
@@ -34,38 +30,21 @@ QVector3D colorToVector(const QColor &t_color)
 void ColorWheelState::evaluate(const StateEvaluationContext &t_context) const
 {
     auto allSlots = t_context.fixture->findCapability(Capability_WheelSlot);
-    int color = getChannelInteger(t_context,0);
-    int wheelType = getChannelInteger(t_context,1);
-    int wheelIndex = getChannelInteger(t_context,2)-1;
-
-    QString wheelName;
-
-    if(wheelType < wheelOptions.length()-1)
-    {
-        auto wheel = t_context.fixture->findWheel(wheelOptions[wheelType]);
-        if(!wheel)
-            return;
-        wheelName = wheel->name();
-    }
-    else
-    {
-        if(wheelIndex < 0 || wheelIndex >= t_context.fixture->wheels().length())
-            return;
-    }
 
 
-    wheelName = t_context.fixture->wheels()[wheelIndex]->name();
-    wheelName = wheelName.toLower();
+    QString name = getChannelString(t_context,0);
+    int color = getChannelInteger(t_context,1);
+
 
     QVector<WheelSlotCapability*> colorSlots;
-
-    for(auto curSlot : allSlots)
+    if(!name.isEmpty())
     {
-        auto wheelSlot = static_cast<WheelSlotCapability*>(curSlot);
+        auto allCapabilities = t_context.fixture->findCapability(CapabilityType::Capability_WheelSlot, name);
 
-
-        if(wheelSlot->wheelName().toLower() == wheelName)
+        for(auto capability : allCapabilities)
         {
+            auto wheelSlot = static_cast<WheelSlotCapability*>(capability);
+
             if(color == 0 && wheelSlot->wheelSlot()->type() == FixtureWheelSlot::Slot_Open)
             {
                 wheelSlot->selectSlot(t_context.dmxMatrix);
@@ -76,8 +55,11 @@ void ColorWheelState::evaluate(const StateEvaluationContext &t_context) const
             {
                 colorSlots.append(wheelSlot);
             }
-
         }
+    }
+    else
+    {
+        return;
     }
 
     QColor findColor;

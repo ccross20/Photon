@@ -69,7 +69,7 @@ public:
     int dmxSize() const override;
     int universe() const override;
 
-    void process(ProcessContext &, const QTransform &) const override;
+    void process(ProcessContext &, const QTransform &, double blend=1.0) const override;
 
     void readFromJson(const QJsonObject &, const LoadContext &) override;
     void writeToJson(QJsonObject &) const override;

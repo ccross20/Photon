@@ -53,14 +53,20 @@ void PaletteGizmoWidget::updateGizmo()
             m_gizmo->setIsPressed(true);
         });
 
+
         connect(colorButton, &QAbstractButton::released, [this, colorButton](){
+
             if(m_gizmo->isSticky())
                 m_gizmo->setIsPressed(colorButton->isChecked());
             else
             {
-                m_gizmo->selectColor(-1);
                 m_gizmo->setIsPressed(false);
             }
+        });
+
+
+        connect(m_gizmo, &SurfaceGizmo::gizmoUpdated, colorButton, [this, colorButton](){
+            colorButton->setChecked(m_gizmo->selectedColorIndex() == colorButton->property("index").toInt());
         });
 
     }

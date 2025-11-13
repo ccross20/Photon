@@ -39,7 +39,8 @@ add_library(plugin-clip-effects SHARED ${SOURCES}
     canvas/distort/kaleidoscopeclipeffect.h canvas/distort/kaleidoscopeclipeffect.cpp
     canvas/draw/cloudtunnel.h canvas/draw/cloudtunnel.cpp
     canvas/draw/imageclipeffect.h canvas/draw/imageclipeffect.cpp
-    canvas/style/strokeclipeffect.h canvas/style/strokeclipeffect.cpp)
+    canvas/style/strokeclipeffect.h canvas/style/strokeclipeffect.cpp
+    color/colorsparkle.h color/colorsparkle.cpp)
 
 
 

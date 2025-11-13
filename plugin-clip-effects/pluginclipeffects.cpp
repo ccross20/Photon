@@ -16,6 +16,8 @@
 
 #include "strobe/beatstrobeeffect.h"
 
+#include "color/colorsparkle.h"
+
 namespace photon {
 
 bool PluginClipEffects::initialize(const PluginContext &context)
@@ -35,6 +37,7 @@ bool PluginClipEffects::initialize(const PluginContext &context)
     photonApp->plugins()->registerClipEffect(KaleidoscopeClipEffect::info());
     photonApp->plugins()->registerClipEffect(ImageClipEffect::info());
     photonApp->plugins()->registerClipEffect(StrokeClipEffect::info());
+    photonApp->plugins()->registerClipEffect(ColorSparkle::info());
 
     return true;
 }

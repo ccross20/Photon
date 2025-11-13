@@ -323,9 +323,9 @@ int PixelStrip::universe() const
     return m_impl->universe;
 }
 
-void PixelStrip::process(ProcessContext &t_context, const QTransform &t_transform) const
+void PixelStrip::process(ProcessContext &t_context, const QTransform &t_transform, double t_blend) const
 {
-    PixelSource::process(t_context, t_transform);
+    PixelSource::process(t_context, t_transform, t_blend);
 }
 
 void PixelStrip::readFromJson(const QJsonObject &t_json, const LoadContext &t_context)

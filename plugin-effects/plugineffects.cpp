@@ -5,6 +5,7 @@
 #include "generator/sineeffect.h"
 #include "generator/pulseeffect.h"
 #include "generator/sawtootheffect.h"
+#include "generator/stepeffect.h"
 #include "time/stuttereffect.h"
 #include "time/loopeffect.h"
 #include "modifier/smootheffect.h"
@@ -25,6 +26,7 @@ bool PluginEffects::initialize(const PluginContext &context)
     photonApp->plugins()->registerChannelEffect(PulseEffect::info());
     photonApp->plugins()->registerChannelEffect(SineEffect::info());
     photonApp->plugins()->registerChannelEffect(SawtoothEffect::info());
+    photonApp->plugins()->registerChannelEffect(StepEffect::info());
     photonApp->plugins()->registerChannelEffect(StutterEffect::info());
     photonApp->plugins()->registerChannelEffect(LoopEffect::info());
     photonApp->plugins()->registerChannelEffect(SmoothEffect::info());

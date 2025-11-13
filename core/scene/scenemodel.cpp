@@ -258,7 +258,7 @@ QVariant SceneModel::data(const QModelIndex &index, int role) const
                         case 1:
                             return fixture->universe();
                         case 2:
-                            return QString::number(fixture->dmxOffset()) + "-" + QString::number(fixture->dmxOffset() + fixture->dmxSize());
+                            return QString::number(fixture->dmxOffset()+1) + "-" + QString::number(fixture->dmxOffset() + fixture->dmxSize()+1);
                         case 3:
                             return fixture->dmxSize();
                         case 4:

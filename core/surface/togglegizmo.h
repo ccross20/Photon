@@ -34,6 +34,9 @@ public:
 
     SurfaceGizmoWidget *createWidget(SurfaceMode mode) override;
 
+    void readFromJson(const QJsonObject &, const LoadContext &) override;
+    void writeToJson(QJsonObject &) const override;
+
 private:
     double m_pressTime;
     bool m_isPressed = false;

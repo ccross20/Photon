@@ -223,7 +223,7 @@ int PixelSource::universe() const
 
 
 
-void PixelSource::process(ProcessContext &t_context, const QTransform &t_transform) const
+void PixelSource::process(ProcessContext &t_context, const QTransform &t_transform, double t_blend) const
 {
     int u = universe()-1;
     int channel = dmxOffset();
@@ -251,9 +251,9 @@ void PixelSource::process(ProcessContext &t_context, const QTransform &t_transfo
 
         auto qc = QColor::fromRgb(color);
 
-        t_context.dmxMatrix.setValue(u, channel++, qc.red());
-        t_context.dmxMatrix.setValue(u, channel++, qc.green());
-        t_context.dmxMatrix.setValue(u, channel++, qc.blue());
+        t_context.dmxMatrix.setValue(u, channel++, qc.red(),t_blend);
+        t_context.dmxMatrix.setValue(u, channel++, qc.green(),t_blend);
+        t_context.dmxMatrix.setValue(u, channel++, qc.blue(),t_blend);
 
         /*
 

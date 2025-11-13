@@ -70,11 +70,11 @@ void PixelLayout::setName(const QString &t_name)
 }
 
 
-void PixelLayout::process(ProcessContext &t_context) const
+void PixelLayout::process(ProcessContext &t_context, double t_blend) const
 {
     for(auto source : m_impl->sources)
     {
-        source->process(t_context);
+        source->process(t_context, t_blend);
     }
 }
 

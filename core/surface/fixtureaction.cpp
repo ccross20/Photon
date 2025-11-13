@@ -52,7 +52,7 @@ double FixtureAction::Impl::falloff(Fixture *t_fixture)
 
 void FixtureAction::Impl::processFixture(Fixture *t_fixture, StateEvaluationContext &t_context, double initialRelativeTime)
 {
-    //t_context.relativeTime = initialRelativeTime - facade->falloff(t_fixture);
+    t_context.relativeTime = initialRelativeTime - facade->falloff(t_fixture);
 
     t_context.fixture = t_fixture;
     t_context.strength = facade->strengthAtTime(t_context.relativeTime);

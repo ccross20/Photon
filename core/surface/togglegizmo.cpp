@@ -94,4 +94,24 @@ SurfaceGizmoWidget *ToggleGizmo::createWidget(SurfaceMode mode)
     return widget;
 }
 
+void ToggleGizmo::readFromJson(const QJsonObject &t_json, const LoadContext &t_context)
+{
+    SurfaceGizmo::readFromJson(t_json, t_context);
+    m_onColor = QColor::fromString(t_json.value("onColor").toString());
+    m_offColor = QColor::fromString(t_json.value("offColor").toString());
+    m_isSticky = t_json.value("isSticky").toBool();
+    m_isPressed = t_json.value("isPressed").toBool();
+}
+
+void ToggleGizmo::writeToJson(QJsonObject &t_json) const
+{
+    SurfaceGizmo::writeToJson(t_json);
+    t_json.insert("isSticky", m_isSticky);
+    t_json.insert("onColor", m_onColor.name());
+    t_json.insert("offColor", m_offColor.name());
+
+    if(m_isSticky)
+        t_json.insert("isPressed", m_isPressed);
+}
+
 } // namespace photon

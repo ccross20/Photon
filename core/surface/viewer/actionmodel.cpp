@@ -10,6 +10,7 @@
 #include "sequence/baseeffect.h"
 #include "pixel/pixellayout.h"
 #include "surface/surfacegizmocontainer.h"
+#include "surface/canvasaction.h"
 
 namespace photon {
 
@@ -24,7 +25,7 @@ ActionData::ActionData(SurfaceAction *t_clip) : AbstractTreeData(t_clip->name(),
     addChild(m_parameterData);
 
     auto fixtureClip = dynamic_cast<FixtureAction*>(t_clip);
-    //auto canvasClip = dynamic_cast<CanvasClip*>(t_clip);
+    auto canvasClip = dynamic_cast<CanvasAction*>(t_clip);
 
 
     if(fixtureClip)
@@ -34,7 +35,7 @@ ActionData::ActionData(SurfaceAction *t_clip) : AbstractTreeData(t_clip->name(),
         m_falloffData = new ActionFalloffData(fixtureClip);
     }
 
-    if(fixtureClip)// || canvasClip)
+    if(fixtureClip || canvasClip)
         addChild(m_actionEffectData);
 
     if(fixtureClip)

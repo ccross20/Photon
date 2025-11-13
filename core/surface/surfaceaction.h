@@ -46,6 +46,10 @@ public:
     double strength() const;
     void setStrength(double);
     void setDuration(double);
+    QByteArray enableOnGizmoId() const;
+    void setEnableOnGizmoId(const QByteArray &);
+
+    SurfaceGizmoContainer *parentContainer() const;
 
     Channel *channelAtIndex(int index) const;
     int channelCount() const;

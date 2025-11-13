@@ -21,6 +21,10 @@ public:
     double blendDouble(double t_current, double t_target, double t_blend)
     {
         double current = t_current;
+        if(t_blend > 1.0)
+            t_blend = 1.0;
+        else if (t_blend < 0.0)
+            t_blend = 0.0;
         return ((t_target - current) * t_blend) + current;
     }
 

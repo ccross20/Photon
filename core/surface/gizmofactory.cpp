@@ -1,5 +1,6 @@
 #include "gizmofactory.h"
 #include "togglegizmo.h"
+#include "palettegizmo.h"
 
 namespace photon {
 
@@ -18,6 +19,8 @@ SurfaceGizmo *GizmoFactory::createGizmo(const QByteArray &t_id)
 {
     if(t_id == ToggleGizmo::GizmoId)
         return new ToggleGizmo();
+    if(t_id == PaletteGizmo::GizmoId)
+        return new PaletteGizmo();
 
     qDebug() << "[Gizmo Factory] could not find gizmo with id: " << t_id;
     return nullptr;

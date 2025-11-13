@@ -25,6 +25,7 @@ public:
     SurfaceGizmo *findGizmoWithId(const QByteArray &) const;
     SurfaceGizmo *findGizmoWithUniqueId(const QByteArray &) const;
 
+    virtual void restore(Project &);
     virtual void readFromJson(const QJsonObject &, const LoadContext &);
     virtual void writeToJson(QJsonObject &) const;
 

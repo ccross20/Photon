@@ -35,6 +35,7 @@ public:
 
 protected:
 
+    virtual void addedToParent(BaseEffectParent*) override;
     virtual void layerChanged(Layer*) override;
 };
 

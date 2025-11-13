@@ -19,12 +19,17 @@ public:
     QColor selectedColor() const;
     bool hasSelectedColor() const;
     void selectColor(int);
+    int selectedColorIndex() const;
     void setPalette(const ColorPalette &);
 
     const ColorPalette &palette() const{return m_palette;}
 
 
     SurfaceGizmoWidget *createWidget(SurfaceMode mode) override;
+
+    void readFromJson(const QJsonObject &, const LoadContext &) override;
+    void writeToJson(QJsonObject &) const override;
+
 
 private:
     ColorPalette m_palette;

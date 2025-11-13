@@ -2,6 +2,7 @@
 #include "canvasclip.h"
 #include "canvaslayergroup.h"
 #include "photoncore.h"
+#include "surface/canvasaction.h"
 
 namespace photon {
 
@@ -35,6 +36,18 @@ void CanvasEffect::initializeContext(QOpenGLContext *, Canvas *)
 void CanvasEffect::canvasResized(QOpenGLContext *, Canvas *)
 {
 
+}
+
+void CanvasEffect::addedToParent(BaseEffectParent* t_parent)
+{
+    BaseEffect::addedToParent(t_parent);
+
+    CanvasAction *canvasAction = dynamic_cast<CanvasAction*>(t_parent);
+    if(canvasAction)
+    {
+        canvasAction->openGLContext()->makeCurrent(photonApp->surface());
+        initializeContext(canvasAction->openGLContext(), canvasAction->canvas());
+    }
 }
 
 void CanvasEffect::processChannels(ProcessContext &t_context)

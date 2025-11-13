@@ -9,11 +9,12 @@ namespace photon {
 class PHOTONCORE_EXPORT FixtureVirtualChannel
 {
 public:
-    FixtureVirtualChannel(const QVector<FixtureChannel*> &);
+    FixtureVirtualChannel(const QVector<FixtureChannel*> &, const QString &name = "");
     ~FixtureVirtualChannel();
 
     const QVector<FixtureChannel*> &channels() const;
     bool isValid() const;
+    QString name() const;
 
     CapabilityType capabilityType() const;
     const QVector<FixtureCapability*> &capabilities() const;

@@ -83,7 +83,7 @@ const QVector<QPointF> &FixturePixelSource::positions() const
     return m_impl->positions;
 }
 
-void FixturePixelSource::process(ProcessContext &t_context, const QTransform &t_transform) const
+void FixturePixelSource::process(ProcessContext &t_context, const QTransform &t_transform, double t_blend) const
 {
     auto capIt = m_impl->capabilities.cbegin();
 
@@ -116,7 +116,7 @@ void FixturePixelSource::process(ProcessContext &t_context, const QTransform &t_
 
                 auto qc = QColor::fromRgb(color);
 
-                colorCap->setColor(qc, t_context.dmxMatrix);
+                colorCap->setColor(qc, t_context.dmxMatrix,t_blend);
             }
 
 

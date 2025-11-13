@@ -229,7 +229,10 @@ void Project::load(const QString &path)
 
 void Project::restore(Project &t_project)
 {
-
+    for(auto surface : m_impl->surfaces.surfaces())
+    {
+        surface->restore(t_project);
+    }
 }
 
 void Project::readFromJson(const QJsonObject &json)

@@ -61,9 +61,17 @@ void WheelSlotCapability::readFromOpenFixtureJson(const QJsonObject &t_json)
     {
         if(wheel->name().toLower() == m_impl->wheelName.toLower())
         {
+            //qDebug() << "Assign slot " << wheel->slotCount();
             m_impl->wheelSlot = wheel->slot(m_impl->slotNumber-1);
             break;
         }
+    }
+
+    if(!m_impl->wheelSlot)
+    {
+        qDebug() << "No slot assigned " << m_impl->slotNumber << m_impl->wheelName;
+
+
     }
 }
 

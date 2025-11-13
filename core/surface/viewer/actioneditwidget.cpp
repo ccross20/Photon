@@ -12,6 +12,7 @@
 #include <QAudioDevice>
 #include <QAudioOutput>
 #include <QPushButton>
+#include <QMenu>
 #include "ActionEditWidget.h"
 #include "ActionEditWidget.h"
 #include "photoncore.h"
@@ -28,6 +29,10 @@
 #include "surface/fixtureaction.h"
 #include "surface/surfacegizmocontainer.h"
 #include "surface/surfaceaction.h"
+#include "surface/canvasaction.h"
+#include "project/project.h"
+#include "pixel/canvas.h"
+#include "pixel/canvascollection.h"
 
 namespace photon {
 
@@ -269,7 +274,20 @@ void ActionEditWidget::selectionChanged()
 
 void ActionEditWidget::addAction()
 {
-    m_impl->container->addAction(new FixtureAction);
+    QMenu menu;
+    menu.addAction("Fixture",[this](){m_impl->container->addAction(new FixtureAction);});
+    menu.addAction("Canvas",[this](){
+
+        auto action = new CanvasAction;
+        if(photonApp->project()->canvases()->canvasCount() != 0)
+            action->setCanvas(photonApp->project()->canvases()->canvases()[0]);
+        m_impl->container->addAction(action);
+    });
+
+    menu.exec(m_impl->addButton->mapToGlobal(m_impl->addButton->rect().bottomLeft()));
+
+
+
 }
 
 void ActionEditWidget::removeAction()

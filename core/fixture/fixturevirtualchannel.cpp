@@ -10,12 +10,14 @@ public:
     QVector<FixtureChannel*> channels;
     QVector<FixtureCapability*> capabilities;
     Fixture *fixture;
+    QString name;
     CapabilityType type;
 };
 
-FixtureVirtualChannel::FixtureVirtualChannel(const QVector<FixtureChannel*> &t_channels):m_impl(new Impl)
+FixtureVirtualChannel::FixtureVirtualChannel(const QVector<FixtureChannel*> &t_channels, const QString &t_name):m_impl(new Impl)
 {
     m_impl->channels = t_channels;
+    m_impl->name = t_name;
 
 
     QVector<ColorIntensityCapability*> colors;
@@ -56,6 +58,11 @@ bool FixtureVirtualChannel::isValid() const
     }
 
     return !m_impl->channels.isEmpty();
+}
+
+QString FixtureVirtualChannel::name() const
+{
+    return m_impl->name;
 }
 
 CapabilityType FixtureVirtualChannel::capabilityType() const

@@ -38,6 +38,7 @@ find_package(Qt6 REQUIRED COMPONENTS Widgets)
 find_package(Qt6 REQUIRED COMPONENTS Widgets)
 find_package(Qt6 REQUIRED COMPONENTS Widgets)
 find_package(Qt6 REQUIRED COMPONENTS Widgets)
+find_package(Qt6 REQUIRED COMPONENTS Widgets)
 
 set(PROJECT_SOURCES
         photon-global.h
@@ -517,7 +518,9 @@ add_library(photon-core SHARED ${PROJECT_SOURCES}
     surface/viewer/palettegizmoeditor.h surface/viewer/palettegizmoeditor.cpp
     channel/palettegizmochanneleffect.h channel/palettegizmochanneleffect.cpp
     surface/gizmochanneleffect.h surface/gizmochanneleffect.cpp
-    surface/viewer/actionsettingswidget.h surface/viewer/actionsettingswidget.cpp)
+    surface/viewer/actionsettingswidget.h surface/viewer/actionsettingswidget.cpp
+    surface/canvasaction.h surface/canvasaction.cpp
+    surface/viewer/canvasactionsettingswidget.h surface/viewer/canvasactionsettingswidget.cpp)
 
 target_include_directories(photon-core PUBLIC ../core)
 target_include_directories(photon-core PUBLIC ../keira)
@@ -546,6 +549,7 @@ target_link_libraries(photon-core PRIVATE Qt6::Widgets)
 target_link_libraries(photon-core PRIVATE Qt6::Widgets)
 target_link_libraries(photon-core PRIVATE Qt6::Core)
 target_link_libraries(photon-core PRIVATE Qt6::Core)
+target_link_libraries(photon-core PRIVATE Qt6::Widgets)
 target_link_libraries(photon-core PRIVATE Qt6::Widgets)
 target_link_libraries(photon-core PRIVATE Qt6::Widgets)
 target_link_libraries(photon-core PRIVATE Qt6::Widgets)

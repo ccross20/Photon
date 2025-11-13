@@ -19,7 +19,7 @@ public:
 
     const QVector<QPointF> &positions() const override;
 
-    virtual void process(ProcessContext &, const QTransform &) const override;
+    virtual void process(ProcessContext &, const QTransform &, double blend = 1.0) const override;
 
     virtual void readFromJson(const QJsonObject &, const LoadContext &) override;
     virtual void writeToJson(QJsonObject &) const override;

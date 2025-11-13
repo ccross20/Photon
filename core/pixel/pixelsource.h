@@ -31,7 +31,7 @@ public:
     virtual int dmxSize() const override;
     virtual int universe() const override;
 
-    virtual void process(ProcessContext &, const QTransform &) const;
+    virtual void process(ProcessContext &, const QTransform &, double blend = 1.0) const;
 
     virtual void readFromJson(const QJsonObject &, const LoadContext &);
     virtual void writeToJson(QJsonObject &) const;
