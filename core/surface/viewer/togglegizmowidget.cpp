@@ -18,15 +18,24 @@ ToggleGizmoWidget::ToggleGizmoWidget(ToggleGizmo *t_gizmo, SurfaceMode t_mode):S
     m_button->setSizePolicy(QSizePolicy(QSizePolicy::MinimumExpanding,QSizePolicy::MinimumExpanding));
     m_button->setMaximumHeight(1000);
 
-    connect(m_button, &QAbstractButton::pressed, [t_gizmo](){
+    connect(m_button, &QAbstractButton::pressed, [t_gizmo, this](){
         t_gizmo->setIsPressed(true);
+        t_gizmo->addHistoryEvent(ToggleGizmo::GizmoPressId);
+        if(m_button->isChecked())
+            t_gizmo->addHistoryEvent(ToggleGizmo::GizmoToggleOnId);
     });
 
     connect(m_button, &QAbstractButton::released, [t_gizmo, this](){
         if(t_gizmo->isSticky())
+
             t_gizmo->setIsPressed(m_button->isChecked());
         else
+        {
+            t_gizmo->addHistoryEvent(ToggleGizmo::GizmoToggleOffId);
             t_gizmo->setIsPressed(false);
+        }
+
+        t_gizmo->addHistoryEvent(ToggleGizmo::GizmoReleaseId);
     });
 
 

@@ -1,0 +1,586 @@
+{
+  "$schema": "https://raw.githubusercontent.com/OpenLightingProject/open-fixture-library/master/schemas/fixture.json",
+  "name": "Betopper Bee Eye",
+  "categories": ["Moving Head", "Color Changer"],
+  "meta": {
+    "authors": ["CCross"],
+    "createDate": "2019-05-21",
+    "lastModifyDate": "2019-05-21"
+  },
+  "links": {
+    "manual": [
+      "https://cdb.s3.amazonaws.com/ItemRelatedFiles/10677/Elation%20Proteus%20Hybrid%20-%20Proteus%20Hybrid%20WMG%20-%20User%20Manual.pdf"
+    ],
+    "productPage": [
+      "https://www.elationlighting.com/proteus-hybrid"
+    ],
+    "video": [
+      "https://www.youtube.com/watch?v=w_GtudSQ8BU",
+      "https://www.youtube.com/watch?v=TPU1p4mMNlo&t=20",
+      "https://www.youtube.com/watch?v=v8iZYjFaTDA"
+    ]
+  },
+  "rdm": {
+    "modelId": 22
+  },
+  "physical": {
+    "dimensions": [465, 650, 571],
+    "weight": 38.0,
+    "power": 750,
+    "DMXconnector": "5-pin XLR IP65",
+    "bulb": {
+      "type": "Philips MSD Platinum 21R 470W",
+      "colorTemperature": 8000,
+      "lumens": 23000
+    },
+    "lens": {
+      "degreesMinMax": [2, 40]
+    }
+  },
+  "wheels": {
+    "Gobo Wheel": {
+      "slots": [
+        {
+          "type": "Open"
+        }
+      ]
+    }
+  },
+  "availableChannels": {
+    "Pan": {
+      "fineChannelAliases": ["Pan fine"],
+      "capability": {
+        "type": "Pan",
+        "angleStart": "0deg",
+        "angleEnd": "540deg"
+      }
+    },
+    "Tilt": {
+      "fineChannelAliases": ["Tilt fine"],
+      "capability": {
+        "type": "Tilt",
+        "angleStart": "0deg",
+        "angleEnd": "205deg"
+      }
+    },
+    "Pan / Tilt Speed": {
+      "defaultValue": 0,
+      "capabilities": [
+        {
+          "type": "PanTiltSpeed",
+          "speedStart": "fast",
+          "speedEnd": "slow"
+        }
+      ]
+    },
+    "Zoom": {
+      "capability": {
+        "type": "Zoom",
+        "angleStart": "narrow",
+        "angleEnd": "wide"
+      }
+    },
+    "Gobo Rotation": {
+      "capabilities": [
+        {
+          "dmxRange": [0, 7],
+          "type": "WheelSlotRotation",
+          "wheel": "Gobo Wheel",
+          "speed": "stop"
+        },
+        {
+          "dmxRange": [8, 127],
+          "type": "WheelSlotRotation",
+          "wheel": "Gobo Wheel",
+          "angleStart": "0deg",
+          "angleEnd": "60deg"
+        },
+        {
+          "dmxRange": [128, 190],
+          "type": "WheelSlotRotation",
+          "wheel": "Gobo Wheel",
+          "speedStart": "fast CW",
+          "speedEnd": "slow CW"
+        },
+        {
+          "dmxRange": [191, 192],
+          "type": "WheelSlotRotation",
+          "wheel": "Gobo Wheel",
+          "speed": "stop"
+        },
+        {
+          "dmxRange": [193, 255],
+          "type": "WheelSlotRotation",
+          "wheel": "Gobo Wheel",
+          "speedStart": "slow CCW",
+          "speedEnd": "fast CCW"
+        }
+      ]
+    },
+    "Dimmer": {
+      "capability": {
+        "type": "Intensity"
+      }
+    },
+    "Shutter / Strobe": {
+      "capabilities": [
+        {
+          "dmxRange": [0, 3],
+          "type": "ShutterStrobe",
+          "shutterEffect": "Closed"
+        },
+        {
+          "dmxRange": [4, 103],
+          "type": "ShutterStrobe",
+          "shutterEffect": "Strobe",
+          "speedStart": "slow",
+          "speedEnd": "fast"
+        },
+        {
+          "dmxRange": [104, 212],
+          "type": "ShutterStrobe",
+          "shutterEffect": "Closed"
+        },
+        {
+          "dmxRange": [213, 251],
+          "type": "ShutterStrobe",
+          "shutterEffect": "Strobe",
+          "speedStart": "slow",
+          "speedEnd": "fast",
+          "randomTiming": true
+        },
+        {
+          "dmxRange": [252, 255],
+          "type": "ShutterStrobe",
+          "shutterEffect": "Open"
+        }
+      ]
+    },
+    "Red": {
+      "capability": {
+        "type": "ColorIntensity",
+        "color": "Red"
+      }
+    },
+    "Green": {
+      "capability": {
+        "type": "ColorIntensity",
+        "color": "Green"
+      }
+    },
+    "Blue": {
+      "capability": {
+        "type": "ColorIntensity",
+        "color": "Blue"
+      }
+    },
+    "White": {
+      "capability": {
+        "type": "ColorIntensity",
+        "color": "White"
+      }
+    },
+    "CTO": {
+      "capability": {
+        "type": "ColorTemperature",
+        "colorTemperatureStart": "default",
+        "colorTemperatureEnd": "CTO"
+      }
+    },
+    "Built-In Color": {
+      "defaultValue": 0,
+      "capabilities": [
+        {
+          "dmxRange": [0, 31],
+          "type": "NoFunction"
+        },
+        {
+          "dmxRange": [32, 39],
+          "type": "ColorPreset",
+          "comment": "Macro 1"
+        },
+        {
+          "dmxRange": [40, 47],
+          "type": "ColorPreset",
+          "comment": "Macro 2"
+        }
+      ]
+    },
+    "Static Effect": {
+      "defaultValue": 0,
+      "capabilities": [
+        {
+          "dmxRange": [0, 31],
+          "type": "NoFunction"
+        },
+        {
+          "dmxRange": [32, 39],
+          "type": "ColorPreset",
+          "comment": "Macro 1"
+        },
+        {
+          "dmxRange": [40, 47],
+          "type": "ColorPreset",
+          "comment": "Macro 2"
+        }
+      ]
+    },
+    "Dynamic Effect 1": {
+      "defaultValue": 0,
+      "capabilities": [
+        {
+          "dmxRange": [0, 31],
+          "type": "NoFunction"
+        },
+        {
+          "dmxRange": [32, 39],
+          "type": "ColorPreset",
+          "comment": "Macro 1"
+        },
+        {
+          "dmxRange": [40, 47],
+          "type": "ColorPreset",
+          "comment": "Macro 2"
+        }
+      ]
+    },
+    "Dynamic Effect 2": {
+      "defaultValue": 0,
+      "capabilities": [
+        {
+          "dmxRange": [0, 31],
+          "type": "NoFunction"
+        },
+        {
+          "dmxRange": [32, 39],
+          "type": "ColorPreset",
+          "comment": "Macro 1"
+        },
+        {
+          "dmxRange": [40, 47],
+          "type": "ColorPreset",
+          "comment": "Macro 2"
+        }
+      ]
+    },
+    "Background Red": {
+      "capability": {
+        "type": "ColorIntensity",
+        "color": "Red"
+      }
+    },
+    "Background Green": {
+      "capability": {
+        "type": "ColorIntensity",
+        "color": "Green"
+      }
+    },
+    "Background Blue": {
+      "capability": {
+        "type": "ColorIntensity",
+        "color": "Blue"
+      }
+    },
+    "Background White": {
+      "capability": {
+        "type": "ColorIntensity",
+        "color": "White"
+      }
+    },
+    "Reset": {
+      "capabilities": [
+        {
+          "dmxRange": [0, 19],
+          "type": "Maintenance",
+          "comment": "Color wheel change normal"
+        },
+        {
+          "dmxRange": [20, 255],
+          "type": "Maintenance",
+          "comment": "Color wheel change to any position"
+        }
+      ]
+    },
+    "Red1": {
+      "capability": {
+        "type": "ColorIntensity",
+        "color": "Red"
+      }
+    },
+    "Green1": {
+      "capability": {
+        "type": "ColorIntensity",
+        "color": "Green"
+      }
+    },
+    "Blue1": {
+      "capability": {
+        "type": "ColorIntensity",
+        "color": "Blue"
+      }
+    },
+    "White1": {
+      "capability": {
+        "type": "ColorIntensity",
+        "color": "White"
+      }
+    },
+    "Red2": {
+      "capability": {
+        "type": "ColorIntensity",
+        "color": "Red"
+      }
+    },
+    "Green2": {
+      "capability": {
+        "type": "ColorIntensity",
+        "color": "Green"
+      }
+    },
+    "Blue2": {
+      "capability": {
+        "type": "ColorIntensity",
+        "color": "Blue"
+      }
+    },
+    "White2": {
+      "capability": {
+        "type": "ColorIntensity",
+        "color": "White"
+      }
+    },
+    "Red3": {
+      "capability": {
+        "type": "ColorIntensity",
+        "color": "Red"
+      }
+    },
+    "Green3": {
+      "capability": {
+        "type": "ColorIntensity",
+        "color": "Green"
+      }
+    },
+    "Blue3": {
+      "capability": {
+        "type": "ColorIntensity",
+        "color": "Blue"
+      }
+    },
+    "White3": {
+      "capability": {
+        "type": "ColorIntensity",
+        "color": "White"
+      }
+    },
+    "Red4": {
+      "capability": {
+        "type": "ColorIntensity",
+        "color": "Red"
+      }
+    },
+    "Green4": {
+      "capability": {
+        "type": "ColorIntensity",
+        "color": "Green"
+      }
+    },
+    "Blue4": {
+      "capability": {
+        "type": "ColorIntensity",
+        "color": "Blue"
+      }
+    },
+    "White4": {
+      "capability": {
+        "type": "ColorIntensity",
+        "color": "White"
+      }
+    },
+    "Red5": {
+      "capability": {
+        "type": "ColorIntensity",
+        "color": "Red"
+      }
+    },
+    "Green5": {
+      "capability": {
+        "type": "ColorIntensity",
+        "color": "Green"
+      }
+    },
+    "Blue5": {
+      "capability": {
+        "type": "ColorIntensity",
+        "color": "Blue"
+      }
+    },
+    "White5": {
+      "capability": {
+        "type": "ColorIntensity",
+        "color": "White"
+      }
+    },
+    "Red6": {
+      "capability": {
+        "type": "ColorIntensity",
+        "color": "Red"
+      }
+    },
+    "Green6": {
+      "capability": {
+        "type": "ColorIntensity",
+        "color": "Green"
+      }
+    },
+    "Blue6": {
+      "capability": {
+        "type": "ColorIntensity",
+        "color": "Blue"
+      }
+    },
+    "White6": {
+      "capability": {
+        "type": "ColorIntensity",
+        "color": "White"
+      }
+    },
+    "Red7": {
+      "capability": {
+        "type": "ColorIntensity",
+        "color": "Red"
+      }
+    },
+    "Green7": {
+      "capability": {
+        "type": "ColorIntensity",
+        "color": "Green"
+      }
+    },
+    "Blue7": {
+      "capability": {
+        "type": "ColorIntensity",
+        "color": "Blue"
+      }
+    },
+    "White7": {
+      "capability": {
+        "type": "ColorIntensity",
+        "color": "White"
+      }
+    }
+  },
+  "virtual": [
+    {
+      "name":"Led1",
+      "channels": ["Red1","Green1","Blue1","White1"]
+    },
+    {
+      "name":"Led2",
+      "channels": ["Red2","Green2","Blue2","White2"]
+    },
+    {
+      "name":"Led3",
+      "channels": ["Red3","Green3","Blue3","White3"]
+    },
+    {
+      "name":"Led4",
+      "channels": ["Red4","Green4","Blue4","White4"]
+    },
+    {
+      "name":"Led5",
+      "channels": ["Red5","Green5","Blue5","White5"]
+    },
+    {
+      "name":"Led6",
+      "channels": ["Red6","Green6","Blue6","White6"]
+    },
+    {
+      "name":"Led7",
+      "channels": ["Red7","Green7","Blue7","White7"]
+    }
+  ],
+  "modes": [
+    {
+      "name": "Standard",
+      "shortName": "std",
+      "channels": [
+        "Pan",
+        "Pan fine",
+        "Tilt",
+        "Tilt fine",
+        "Pan / Tilt Speed",
+        "Zoom",
+        "Gobo Rotation",
+        "Dimmer",
+        "Shutter / Strobe",
+        "Red",
+        "Green",
+        "Blue",
+        "White",
+        "CTO",
+        "Built-In Color",
+        "Static Effect",
+        "Dynamic Effect 1",
+        "Dynamic Effect 2"
+      ]
+    },
+    {
+      "name": "Pixel Mapped",
+      "shortName": "pxl",
+      "channels": [
+        "Pan",
+        "Pan fine",
+        "Tilt",
+        "Tilt fine",
+        "Pan / Tilt Speed",
+        "Zoom",
+        "Gobo Rotation",
+        "Dimmer",
+        "Shutter / Strobe",
+        "Red",
+        "Green",
+        "Blue",
+        "White",
+        "CTO",
+        "Built-In Color",
+        "Static Effect",
+        "Dynamic Effect 1",
+        "Dynamic Effect 2",
+        "Background Red",
+        "Background Green",
+        "Background Blue",
+        "Background White",
+        "Reset",
+        "Red1",
+        "Green1",
+        "Blue1",
+        "White1",
+        "Red2",
+        "Green2",
+        "Blue2",
+        "White2",
+        "Red3",
+        "Green3",
+        "Blue3",
+        "White3",
+        "Red4",
+        "Green4",
+        "Blue4",
+        "White4",
+        "Red5",
+        "Green5",
+        "Blue5",
+        "White5",
+        "Red6",
+        "Green6",
+        "Blue6",
+        "White6",
+        "Red7",
+        "Green7",
+        "Blue7",
+        "White7"
+      ]
+    }
+  ]
+}

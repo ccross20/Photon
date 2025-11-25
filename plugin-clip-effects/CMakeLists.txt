@@ -40,7 +40,8 @@ add_library(plugin-clip-effects SHARED ${SOURCES}
     canvas/draw/cloudtunnel.h canvas/draw/cloudtunnel.cpp
     canvas/draw/imageclipeffect.h canvas/draw/imageclipeffect.cpp
     canvas/style/strokeclipeffect.h canvas/style/strokeclipeffect.cpp
-    color/colorsparkle.h color/colorsparkle.cpp)
+    color/colorsparkle.h color/colorsparkle.cpp
+    pan-and-tilt/drawcirclepanandtilt.h pan-and-tilt/drawcirclepanandtilt.cpp)
 
 
 

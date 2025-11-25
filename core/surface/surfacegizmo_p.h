@@ -16,6 +16,7 @@ public:
     QString name;
     QByteArray id;
     SurfaceGizmo *facade;
+    QVector<SurfaceGizmo::GizmoHistoryEvent> histroy;
 };
 }
 

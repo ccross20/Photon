@@ -22,7 +22,9 @@ enable_testing(true)
 
 add_executable(photon-desktop
     ${PROJECT_SOURCES})
-
+if (WIN32)
+    set_target_properties(photon-desktop PROPERTIES WIN32_EXECUTABLE TRUE)
+endif()
 
 target_link_libraries(photon-desktop PRIVATE keira)
 target_link_libraries(photon-desktop PRIVATE photon-core)

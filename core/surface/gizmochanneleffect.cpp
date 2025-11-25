@@ -15,7 +15,12 @@ GizmoChannelEffectEditor::GizmoChannelEffectEditor(GizmoChannelEffect *t_effect)
 
     m_combo = new QComboBox;
 
-    auto gizmos = t_effect->container()->gizmosByType(t_effect->gizmoType());
+    QVector<SurfaceGizmo*> gizmos;
+
+    if(t_effect->gizmoType().isEmpty())
+        gizmos = t_effect->container()->gizmos();
+    else
+        gizmos = t_effect->container()->gizmosByType(t_effect->gizmoType());
     int counter = 0;
     int matchIndex = -1;
     for(auto gizmo : gizmos){

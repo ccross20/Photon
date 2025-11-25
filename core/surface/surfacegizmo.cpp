@@ -2,6 +2,9 @@
 
 namespace photon {
 
+const QByteArray SurfaceGizmo::GizmoPressId = "GizmoPress";
+const QByteArray SurfaceGizmo::GizmoReleaseId = "GizmoRelease";
+
 SurfaceGizmo::Impl::Impl(SurfaceGizmo *t_facade):facade(t_facade)
 {
 
@@ -24,6 +27,32 @@ SurfaceGizmoWidget *SurfaceGizmo::createWidget(SurfaceMode mode)
 {
     return nullptr;
 }
+
+void SurfaceGizmo::addHistoryEvent(const QByteArray &id, const QVariant &value)
+{
+    SurfaceGizmo::GizmoHistoryEvent event;
+    event.id = id;
+    event.value = value;
+    event.time = QDateTime::currentMSecsSinceEpoch()/1000.0;
+
+    m_impl->histroy.prepend(event);
+
+    if(m_impl->histroy.length() > 10)
+        m_impl->histroy.pop_back();
+}
+
+SurfaceGizmo::GizmoHistoryEvent SurfaceGizmo::lastHistoryEvent() const
+{
+    if(m_impl->histroy.isEmpty())
+        return SurfaceGizmo::GizmoHistoryEvent();
+    return m_impl->histroy.front();
+}
+
+QVector<SurfaceGizmo::GizmoHistoryEvent> SurfaceGizmo::historyEvents() const
+{
+    return m_impl->histroy;
+}
+
 
 QByteArray SurfaceGizmo::type() const
 {

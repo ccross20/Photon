@@ -1,0 +1,158 @@
+{
+  "$schema": "https://raw.githubusercontent.com/OpenLightingProject/open-fixture-library/schema-12.5.0/schemas/fixture.json",
+  "name": "Both Lighting Ir-4",
+  "categories": ["Color Changer"],
+  "meta": {
+    "authors": ["Carter C"],
+    "createDate": "2025-04-22",
+    "lastModifyDate": "2025-04-22"
+  },
+  "comment": "Battery Powered Uplight",
+  "links": {
+    "manual": [
+      "https://cdn.shopify.com/s/files/1/0716/8645/5572/files/BL_IR-4_BO-IR4.pdf?v=1679519527"
+    ]
+  },
+  "physical": {
+    "bulb": {
+      "type": "LED"
+    }
+  },
+  "availableChannels": {
+    "Dimmer": {
+      "capability": {
+        "type": "Intensity"
+      }
+    },
+    "Red": {
+      "capability": {
+        "type": "ColorIntensity",
+        "color": "Red"
+      }
+    },
+    "Green": {
+      "capability": {
+        "type": "ColorIntensity",
+        "color": "Green"
+      }
+    },
+    "Blue": {
+      "capability": {
+        "type": "ColorIntensity",
+        "color": "Blue"
+      }
+    },
+    "White": {
+      "capability": {
+        "type": "ColorIntensity",
+        "color": "White"
+      }
+    },
+    "Amber": {
+      "capability": {
+        "type": "ColorIntensity",
+        "color": "Amber"
+      }
+    },
+    "UV": {
+      "capability": {
+        "type": "ColorIntensity",
+        "color": "UV"
+      }
+    },
+    "Strobe": {
+      "capability": {
+        "type": "StrobeSpeed",
+        "speedStart": "1Hz",
+        "speedEnd": "60Hz"
+      }
+    },
+    "Program": {
+      "capabilities": [
+        {
+          "dmxRange": [0, 8],
+          "type": "Intensity"
+        },
+        {
+          "dmxRange": [9, 50],
+          "type": "ColorIntensity",
+          "color": "Indigo"
+        },
+        {
+          "dmxRange": [51, 100],
+          "type": "Generic",
+          "comment": "transition mode"
+        },
+        {
+          "dmxRange": [101, 150],
+          "type": "Generic",
+          "comment": "mutation mode"
+        },
+        {
+          "dmxRange": [151, 200],
+          "type": "Generic",
+          "comment": "Gradient Mode"
+        },
+        {
+          "dmxRange": [201, 220],
+          "type": "Generic",
+          "comment": "Sound control mode 1"
+        },
+        {
+          "dmxRange": [221, 240],
+          "type": "Generic",
+          "comment": "Sound control mode 2"
+        },
+        {
+          "dmxRange": [241, 255],
+          "type": "Generic",
+          "comment": "Sound control mode 3"
+        }
+      ]
+    },
+    "Program Speed": {
+      "capability": {
+        "type": "Speed",
+        "speedStart": "slow",
+        "speedEnd": "fast"
+      }
+    }
+  },
+  "virtual": [
+    {
+      "name":"Led1",
+      "channels": ["Red","Green","Blue","Amber","UV"]
+    }
+  ],
+  "modes": [
+    {
+      "name": "10 Channel",
+      "channels": [
+        "Dimmer",
+        "Red",
+        "Green",
+        "Blue",
+        "White",
+        "Amber",
+        "UV",
+        "Strobe",
+        "Program",
+        "Program Speed"
+      ]
+    },
+    {
+      "name": "6 Channel",
+      "channels": [
+        "Red",
+        "Green",
+        "Blue",
+        "White",
+        "Amber",
+        "UV"
+      ]
+    }
+  ],
+  "fixtureKey": "ir-4",
+  "manufacturerKey": "both-lighting",
+  "oflURL": "https://open-fixture-library.org/both-lighting/ir-4"
+}

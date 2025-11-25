@@ -291,9 +291,19 @@ void Fixture::loadFixtureDefinition(const QString &t_path)
     QFile loadFile(t_path);
 
     if (!loadFile.open(QIODevice::ReadOnly)) {
-             qWarning("Couldn't open load file.");
+
+        QFileInfo info(t_path);
+        loadFile.setFileName(QCoreApplication::applicationDirPath() + "/fixtures/" + info.fileName());
+
+        if (!loadFile.open(QIODevice::ReadOnly)) {
+
+             qWarning() << "Couldn't open fixture file " << t_path;
              return;
-         }
+        }
+     }
+
+
+
 
     QByteArray saveData = loadFile.readAll();
 

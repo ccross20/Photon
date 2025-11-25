@@ -3,6 +3,7 @@
 
 #include "pan-and-tilt/tracepathclip.h"
 #include "pan-and-tilt/aligntoarrowclip.h"
+#include "pan-and-tilt/drawcirclepanandtilt.h"
 
 #include "canvas/draw/drawellipseclipeffect.h"
 #include "canvas/draw/drawrectangleclipeffect.h"
@@ -38,6 +39,7 @@ bool PluginClipEffects::initialize(const PluginContext &context)
     photonApp->plugins()->registerClipEffect(ImageClipEffect::info());
     photonApp->plugins()->registerClipEffect(StrokeClipEffect::info());
     photonApp->plugins()->registerClipEffect(ColorSparkle::info());
+    photonApp->plugins()->registerClipEffect(DrawCirclePanAndTilt::info());
 
     return true;
 }

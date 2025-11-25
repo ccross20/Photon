@@ -10,12 +10,29 @@ class PHOTONCORE_EXPORT SurfaceGizmo : public QObject
 {
     Q_OBJECT
 public:
+
+    const static QByteArray GizmoPressId;
+    const static QByteArray GizmoReleaseId;
+
+   struct GizmoHistoryEvent
+    {
+        QByteArray id;
+        QVariant value;
+        double time;
+    };
+
+
+
     explicit SurfaceGizmo(QByteArray type, QObject *parent = nullptr);
     virtual ~SurfaceGizmo();
     void setId(const QByteArray&);
     QByteArray id() const;
     QByteArray uniqueId() const;
     QByteArray type() const;
+
+    void addHistoryEvent(const QByteArray &id, const QVariant &value = QVariant());
+    GizmoHistoryEvent lastHistoryEvent() const;
+    QVector<GizmoHistoryEvent> historyEvents() const;
 
     virtual void processChannels(ProcessContext &);
 

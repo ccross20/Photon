@@ -1,0 +1,413 @@
+{
+  "$schema": "https://raw.githubusercontent.com/OpenLightingProject/open-fixture-library/master/schemas/fixture.json",
+  "name": "Shehds 18 x 18",
+  "categories": ["Moving Head", "Color Changer"],
+  "meta": {
+    "authors": ["CCross"],
+    "createDate": "2019-05-21",
+    "lastModifyDate": "2019-05-21"
+  },
+  "links": {
+    "manual": [
+      "https://cdb.s3.amazonaws.com/ItemRelatedFiles/10677/Elation%20Proteus%20Hybrid%20-%20Proteus%20Hybrid%20WMG%20-%20User%20Manual.pdf"
+    ],
+    "productPage": [
+      "https://www.elationlighting.com/proteus-hybrid"
+    ],
+    "video": [
+      "https://www.youtube.com/watch?v=w_GtudSQ8BU",
+      "https://www.youtube.com/watch?v=TPU1p4mMNlo&t=20",
+      "https://www.youtube.com/watch?v=v8iZYjFaTDA"
+    ]
+  },
+  "rdm": {
+    "modelId": 22
+  },
+  "physical": {
+    "dimensions": [465, 650, 571],
+    "weight": 38.0,
+    "power": 750,
+    "DMXconnector": "5-pin XLR IP65",
+    "bulb": {
+      "type": "Philips MSD Platinum 21R 470W",
+      "colorTemperature": 8000,
+      "lumens": 23000
+    },
+    "lens": {
+      "degreesMinMax": [2, 40]
+    }
+  },
+  "availableChannels": {
+    "Dimmer": {
+      "capability": {
+        "type": "Intensity"
+      }
+    },
+    "Shutter / Strobe": {
+      "capabilities": [
+        {
+          "dmxRange": [0, 4],
+          "type": "ShutterStrobe",
+          "shutterEffect": "Open"
+        },
+        {
+          "dmxRange": [5, 255],
+          "type": "ShutterStrobe",
+          "shutterEffect": "Strobe",
+          "speedStart": "slow",
+          "speedEnd": "fast"
+        }
+      ]
+    },
+    "Red": {
+      "capability": {
+        "type": "ColorIntensity",
+        "color": "Red"
+      }
+    },
+    "Green": {
+      "capability": {
+        "type": "ColorIntensity",
+        "color": "Green"
+      }
+    },
+    "Blue": {
+      "capability": {
+        "type": "ColorIntensity",
+        "color": "Blue"
+      }
+    },
+    "White": {
+      "capability": {
+        "type": "ColorIntensity",
+        "color": "White"
+      }
+    },
+    "Amber": {
+      "capability": {
+        "type": "ColorIntensity",
+        "color": "Amber"
+      }
+    },
+    "Violet": {
+      "capability": {
+        "type": "ColorIntensity",
+        "color": "Violet"
+      }
+    },
+    "Color Speed": {
+      "capability": {
+        "type": "Effect Speed",
+        "speedStart": "fast",
+        "speedEnd": "slow"
+      }
+    },
+    "Function": {
+      "capabilities": [
+        {
+          "dmxRange": [0, 255],
+          "type": "NoFunction"
+        }
+      ]
+    },
+    "Speed": {
+      "capabilities": [
+        {
+          "dmxRange": [0, 255],
+          "type": "NoFunction"
+        }
+      ]
+    },
+    "BG Color": {
+      "capabilities": [
+        {
+          "dmxRange": [0, 255],
+          "type": "NoFunction"
+        }
+      ]
+    },
+    "Red[1-18]": {
+      "capability": {
+        "type": "ColorIntensity",
+        "color": "Red"
+      }
+    },
+    "Green[1-18]": {
+      "capability": {
+        "type": "ColorIntensity",
+        "color": "Green"
+      }
+    },
+    "Blue[1-18]": {
+      "capability": {
+        "type": "ColorIntensity",
+        "color": "Blue"
+      }
+    },
+    "White[1-18]": {
+      "capability": {
+        "type": "ColorIntensity",
+        "color": "White"
+      }
+    },
+    "Amber[1-18]": {
+      "capability": {
+        "type": "ColorIntensity",
+        "color": "Amber"
+      }
+    },
+    "Violet[1-18]": {
+      "capability": {
+        "type": "ColorIntensity",
+        "color": "Violet"
+      }
+    }
+  },
+  "virtual": [
+    {
+      "name":"Led[1-18]",
+      "channels": ["Red","Green","Blue","White","Amber","Violet"]
+    }
+  ],
+  "modes": [
+    {
+      "name": "119 Channel",
+      "shortName": "119",
+      "channels": [
+        "Dimmer",
+        "Shutter / Strobe",
+        "Function",
+        "Speed",
+        "BG Color",
+        "Red",
+        "Green",
+        "Blue",
+        "White",
+        "Amber",
+        "Violet",
+        "Red1",
+        "Green1",
+        "Blue1",
+        "White1",
+        "Amber1",
+        "Violet1",
+        "Red2",
+        "Green2",
+        "Blue2",
+        "White2",
+        "Amber2",
+        "Violet2",
+        "Red3",
+        "Green3",
+        "Blue3",
+        "White3",
+        "Amber3",
+        "Violet3",
+        "Red4",
+        "Green4",
+        "Blue4",
+        "White4",
+        "Amber4",
+        "Violet4",
+        "Red5",
+        "Green5",
+        "Blue5",
+        "White5",
+        "Amber5",
+        "Violet5",
+        "Red6",
+        "Green6",
+        "Blue6",
+        "White6",
+        "Amber6",
+        "Violet6",
+        "Red7",
+        "Green7",
+        "Blue7",
+        "White7",
+        "Amber7",
+        "Violet7",
+        "Red8",
+        "Green8",
+        "Blue8",
+        "White8",
+        "Amber8",
+        "Violet8",
+        "Red9",
+        "Green9",
+        "Blue9",
+        "White9",
+        "Amber9",
+        "Violet9",
+        "Red10",
+        "Green10",
+        "Blue10",
+        "White10",
+        "Amber10",
+        "Violet10",
+        "Red11",
+        "Green11",
+        "Blue11",
+        "White11",
+        "Amber11",
+        "Violet11",
+        "Red12",
+        "Green12",
+        "Blue12",
+        "White12",
+        "Amber12",
+        "Violet12",
+        "Red13",
+        "Green13",
+        "Blue13",
+        "White13",
+        "Amber13",
+        "Violet13",
+        "Red14",
+        "Green14",
+        "Blue14",
+        "White14",
+        "Amber14",
+        "Violet14",
+        "Red15",
+        "Green15",
+        "Blue15",
+        "White15",
+        "Amber15",
+        "Violet15",
+        "Red16",
+        "Green16",
+        "Blue16",
+        "White16",
+        "Amber16",
+        "Violet16",
+        "Red17",
+        "Green17",
+        "Blue17",
+        "White17",
+        "Amber17",
+        "Violet17",
+        "Red18",
+        "Green18",
+        "Blue18",
+        "White18",
+        "Amber18",
+        "Violet18"
+      ]
+    },
+    {
+      "name": "108 Channel",
+      "shortName": "108",
+      "channels": [
+        "Red1",
+        "Green1",
+        "Blue1",
+        "White1",
+        "Amber1",
+        "Violet1",
+        "Red2",
+        "Green2",
+        "Blue2",
+        "White2",
+        "Amber2",
+        "Violet2",
+        "Red3",
+        "Green3",
+        "Blue3",
+        "White3",
+        "Amber3",
+        "Violet3",
+        "Red4",
+        "Green4",
+        "Blue4",
+        "White4",
+        "Amber4",
+        "Violet4",
+        "Red5",
+        "Green5",
+        "Blue5",
+        "White5",
+        "Amber5",
+        "Violet5",
+        "Red6",
+        "Green6",
+        "Blue6",
+        "White6",
+        "Amber6",
+        "Violet6",
+        "Red7",
+        "Green7",
+        "Blue7",
+        "White7",
+        "Amber7",
+        "Violet7",
+        "Red8",
+        "Green8",
+        "Blue8",
+        "White8",
+        "Amber8",
+        "Violet8",
+        "Red9",
+        "Green9",
+        "Blue9",
+        "White9",
+        "Amber9",
+        "Violet9",
+        "Red10",
+        "Green10",
+        "Blue10",
+        "White10",
+        "Amber10",
+        "Violet10",
+        "Red11",
+        "Green11",
+        "Blue11",
+        "White11",
+        "Amber11",
+        "Violet11",
+        "Red12",
+        "Green12",
+        "Blue12",
+        "White12",
+        "Amber12",
+        "Violet12",
+        "Red13",
+        "Green13",
+        "Blue13",
+        "White13",
+        "Amber13",
+        "Violet13",
+        "Red14",
+        "Green14",
+        "Blue14",
+        "White14",
+        "Amber14",
+        "Violet14",
+        "Red15",
+        "Green15",
+        "Blue15",
+        "White15",
+        "Amber15",
+        "Violet15",
+        "Red16",
+        "Green16",
+        "Blue16",
+        "White16",
+        "Amber16",
+        "Violet16",
+        "Red17",
+        "Green17",
+        "Blue17",
+        "White17",
+        "Amber17",
+        "Violet17",
+        "Red18",
+        "Green18",
+        "Blue18",
+        "White18",
+        "Amber18",
+        "Violet18"
+      ]
+    }
+  ]
+}

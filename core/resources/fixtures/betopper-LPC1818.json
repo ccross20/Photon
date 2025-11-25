@@ -1,0 +1,199 @@
+{
+  "$schema": "https://raw.githubusercontent.com/OpenLightingProject/open-fixture-library/master/schemas/fixture.json",
+  "name": "Betopper LPC1818",
+  "categories": ["Moving Head", "Color Changer"],
+  "meta": {
+    "authors": ["CCross"],
+    "createDate": "2019-05-21",
+    "lastModifyDate": "2019-05-21"
+  },
+  "links": {
+    "manual": [
+      "https://cdb.s3.amazonaws.com/ItemRelatedFiles/10677/Elation%20Proteus%20Hybrid%20-%20Proteus%20Hybrid%20WMG%20-%20User%20Manual.pdf"
+    ],
+    "productPage": [
+      "https://www.elationlighting.com/proteus-hybrid"
+    ],
+    "video": [
+      "https://www.youtube.com/watch?v=w_GtudSQ8BU",
+      "https://www.youtube.com/watch?v=TPU1p4mMNlo&t=20",
+      "https://www.youtube.com/watch?v=v8iZYjFaTDA"
+    ]
+  },
+  "rdm": {
+    "modelId": 22
+  },
+  "physical": {
+    "dimensions": [465, 650, 571],
+    "weight": 38.0,
+    "power": 750,
+    "DMXconnector": "5-pin XLR IP65",
+    "bulb": {
+      "type": "Philips MSD Platinum 21R 470W",
+      "colorTemperature": 8000,
+      "lumens": 23000
+    },
+    "lens": {
+      "degreesMinMax": [2, 40]
+    }
+  },
+  "availableChannels": {
+    "Dimmer": {
+      "capability": {
+        "type": "Intensity"
+      }
+    },
+    "Shutter / Strobe": {
+      "capabilities": [
+        {
+          "dmxRange": [0, 4],
+          "type": "ShutterStrobe",
+          "shutterEffect": "Open"
+        },
+        {
+          "dmxRange": [5, 255],
+          "type": "ShutterStrobe",
+          "shutterEffect": "Strobe",
+          "speedStart": "slow",
+          "speedEnd": "fast"
+        }
+      ]
+    },
+    "Red": {
+      "capability": {
+        "type": "ColorIntensity",
+        "color": "Red"
+      }
+    },
+    "Green": {
+      "capability": {
+        "type": "ColorIntensity",
+        "color": "Green"
+      }
+    },
+    "Blue": {
+      "capability": {
+        "type": "ColorIntensity",
+        "color": "Blue"
+      }
+    },
+    "Lime": {
+      "capability": {
+        "type": "ColorIntensity",
+        "color": "Lime"
+      }
+    },
+    "Amber": {
+      "capability": {
+        "type": "ColorIntensity",
+        "color": "Amber"
+      }
+    },
+    "Violet": {
+      "capability": {
+        "type": "ColorIntensity",
+        "color": "Violet"
+      }
+    },
+    "Built-In Color": {
+      "defaultValue": 0,
+      "capabilities": [
+        {
+          "dmxRange": [0, 50],
+          "type": "NoFunction"
+        },
+        {
+          "dmxRange": [51, 100],
+          "type": "ColorPreset",
+          "comment": "Macro 1"
+        },
+        {
+          "dmxRange": [101, 150],
+          "type": "ColorPreset",
+          "comment": "Jump Change"
+        },
+        {
+          "dmxRange": [151, 200],
+          "type": "ColorPreset",
+          "comment": "Gradual Change"
+        },
+        {
+          "dmxRange": [201, 250],
+          "type": "ColorPreset",
+          "comment": "Pulse Change"
+        },
+        {
+          "dmxRange": [251, 255],
+          "type": "ColorPreset",
+          "comment": "Voice"
+        }
+      ]
+    },
+    "Color Speed": {
+      "capability": {
+        "type": "Effect Speed",
+        "speedStart": "fast",
+        "speedEnd": "slow"
+      }
+    },
+    "CTO": {
+      "capability": {
+        "type": "ColorTemperature",
+        "colorTemperatureStart": "default",
+        "colorTemperatureEnd": "CTO"
+      }
+    },
+    "Reset": {
+      "capabilities": [
+        {
+          "dmxRange": [0, 19],
+          "type": "Maintenance",
+          "comment": "Color wheel change normal"
+        },
+        {
+          "dmxRange": [20, 255],
+          "type": "Maintenance",
+          "comment": "Color wheel change to any position"
+        }
+      ]
+    }
+  },
+  "virtual": [
+    {
+      "name":"Led1",
+      "channels": ["Red","Green","Blue","Lime","Amber","Violet"]
+    }
+  ],
+  "modes": [
+    {
+      "name": "7 Channel",
+      "shortName": "7 Channel",
+      "channels": [
+        "Red",
+        "Green",
+        "Blue",
+        "Lime",
+        "Amber",
+        "Violet",
+        "CTO"
+      ]
+    },
+    {
+      "name": "11 Channel",
+      "shortName": "11 Channel",
+      "channels": [
+        "Dimmer",
+        "Red",
+        "Green",
+        "Blue",
+        "Lime",
+        "Amber",
+        "Violet",
+        "Shutter / Strobe",
+        "Built-In Color",
+        "Color Speed",
+        "CTO"
+      ]
+    }
+  ]
+}

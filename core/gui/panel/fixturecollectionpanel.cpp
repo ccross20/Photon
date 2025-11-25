@@ -102,7 +102,7 @@ void FixtureCollectionPanel::duplicateClicked()
         int end = static_cast<Fixture*>(fix)->dmxOffset() + static_cast<Fixture*>(fix)->dmxSize();
 
         if(end > nextDMX)
-            nextDMX = end;
+            nextDMX = end+1;
     }
 
 
@@ -129,7 +129,7 @@ void FixtureCollectionPanel::duplicateClicked()
         {
             auto fix = static_cast<Fixture*>(sceneObj);
             fix->setDMXOffset(nextDMX);
-            nextDMX += fix->dmxSize();
+            nextDMX += fix->dmxSize()+1;
         }
     }
 }
@@ -141,7 +141,7 @@ void FixtureCollectionPanel::addFixture()
     {
         QSettings qsettings;
         qsettings.beginGroup("app");
-        QString startPath = qsettings.value("definitionpath", QDir::homePath()).toString();
+        QString startPath = QCoreApplication::applicationDirPath() + "/fixtures/";
         qsettings.endGroup();
 
         loadPath = QFileDialog::getOpenFileName(nullptr, "Fixture Definition",

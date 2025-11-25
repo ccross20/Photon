@@ -9,7 +9,7 @@ namespace photon {
 class GizmoChannelEffect;
 class StackedParameterWidget;
 
-class GizmoChannelEffectEditor : public ChannelEffectEditor
+class PHOTONCORE_EXPORT GizmoChannelEffectEditor : public ChannelEffectEditor
 {
     Q_OBJECT
 public:
@@ -28,7 +28,7 @@ private:
 };
 
 
-class GizmoChannelEffect : public ChannelEffect
+class PHOTONCORE_EXPORT GizmoChannelEffect : public ChannelEffect
 {
 public:
     GizmoChannelEffect(const QByteArray &t_type);

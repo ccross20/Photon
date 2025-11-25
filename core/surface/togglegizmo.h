@@ -10,6 +10,8 @@ class PHOTONCORE_EXPORT ToggleGizmo : public SurfaceGizmo
 {
 public:
     const static QByteArray GizmoId;
+    const static QByteArray GizmoToggleOnId;
+    const static QByteArray GizmoToggleOffId;
 
     ToggleGizmo();
 

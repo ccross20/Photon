@@ -4,6 +4,9 @@
 namespace photon {
 
 const QByteArray ToggleGizmo::GizmoId = "Toggle";
+const QByteArray ToggleGizmo::GizmoToggleOnId = "ToggleOn";
+const QByteArray ToggleGizmo::GizmoToggleOffId = "ToggleOff";
+
 
 ToggleGizmo::ToggleGizmo():SurfaceGizmo("Toggle") {
 
@@ -101,6 +104,7 @@ void ToggleGizmo::readFromJson(const QJsonObject &t_json, const LoadContext &t_c
     m_offColor = QColor::fromString(t_json.value("offColor").toString());
     m_isSticky = t_json.value("isSticky").toBool();
     m_isPressed = t_json.value("isPressed").toBool();
+    m_text = t_json.value("text").toString("Toggle");
 }
 
 void ToggleGizmo::writeToJson(QJsonObject &t_json) const
@@ -109,6 +113,7 @@ void ToggleGizmo::writeToJson(QJsonObject &t_json) const
     t_json.insert("isSticky", m_isSticky);
     t_json.insert("onColor", m_onColor.name());
     t_json.insert("offColor", m_offColor.name());
+    t_json.insert("text", m_text);
 
     if(m_isSticky)
         t_json.insert("isPressed", m_isPressed);

@@ -520,7 +520,8 @@ add_library(photon-core SHARED ${PROJECT_SOURCES}
     surface/gizmochanneleffect.h surface/gizmochanneleffect.cpp
     surface/viewer/actionsettingswidget.h surface/viewer/actionsettingswidget.cpp
     surface/canvasaction.h surface/canvasaction.cpp
-    surface/viewer/canvasactionsettingswidget.h surface/viewer/canvasactionsettingswidget.cpp)
+    surface/viewer/canvasactionsettingswidget.h surface/viewer/canvasactionsettingswidget.cpp
+    resources/fixtures/betopper-bee-eye.json resources/fixtures/betopper-lb150.json resources/fixtures/betopper-LPC1818.json resources/fixtures/both-lighting-ir-4.json resources/fixtures/Chauvet-Pyxis.json resources/fixtures/proteus-hybrid.json resources/fixtures/shehds-jws-web.json resources/fixtures/shehds-led-18x18.json)
 
 target_include_directories(photon-core PUBLIC ../core)
 target_include_directories(photon-core PUBLIC ../keira)
@@ -560,4 +561,6 @@ target_link_libraries(photon-core PRIVATE Qt6::Widgets)
 
 target_compile_definitions(photon-core PRIVATE PHOTONCORE_LIBRARY)
 
-
+add_custom_command(TARGET photon-core POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/resources/fixtures" "${PROJECT_BINARY_DIR}/../photon-desktop/fixtures/"
+)

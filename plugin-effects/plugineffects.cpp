@@ -10,6 +10,7 @@
 #include "time/loopeffect.h"
 #include "modifier/smootheffect.h"
 #include "modifier/easeeffect.h"
+#include "modifier/gizmoeaseeffect.h"
 #include "mask/treemaskeffect.h"
 #include "mask/randommaskeffect.h"
 #include "mask/tagmaskeffect.h"
@@ -31,6 +32,7 @@ bool PluginEffects::initialize(const PluginContext &context)
     photonApp->plugins()->registerChannelEffect(LoopEffect::info());
     photonApp->plugins()->registerChannelEffect(SmoothEffect::info());
     photonApp->plugins()->registerChannelEffect(EaseEffect::info());
+    photonApp->plugins()->registerChannelEffect(GizmoEaseEffect::info());
     photonApp->plugins()->registerChannelEffect(NoiseEffect::info());
 
     photonApp->plugins()->registerMaskEffect(TreeMaskEffect::info());
