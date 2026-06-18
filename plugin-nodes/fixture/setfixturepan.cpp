@@ -11,6 +11,7 @@ keira::NodeInformation SetFixturePan::info()
     toReturn.name = "Set Fixture Pan";
     toReturn.nodeId = "photon.plugin.node.set-fixture-pan";
     toReturn.categories = {"Fixture"};
+    toReturn.graphs = QByteArrayList{"fixture"};
 
     return toReturn;
 }

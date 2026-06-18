@@ -16,7 +16,7 @@ public:
 
     void setMaxLength(int);
 
-    QWidget *createWidget(NodeItem *) const override;
+    QWidget *createWidget(NodeEditor *) const override;
     void updateWidget(QWidget *) const override;
     QVariant updateValue(QWidget *) const override;
 

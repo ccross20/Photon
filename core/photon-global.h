@@ -45,6 +45,7 @@ class BeatLayer;
 class BusEvaluator;
 class BusGraph;
 class DMXMatrix;
+class DMXTimeMachine;
 class Canvas;
 class CanvasClip;
 class CanvasEffect;
@@ -72,6 +73,7 @@ class FixtureGizmo;
 class FixtureMask;
 class FixtureWheel;
 class FixtureWheelSlot;
+class FixtureListParameter;
 class GuiManager;
 class Layer;
 class LayerGroup;
@@ -86,6 +88,7 @@ class PatchBay;
 class PhotonCore;
 class PixelLayout;
 class PixelLayoutCollection;
+class PixelListParameter;
 class PixelSource;
 class PixelSourceLayout;
 class PluginFactory;
@@ -115,6 +118,7 @@ class StateCollection;
 class TagCollection;
 class Timekeeper;
 class Timeline;
+class VirtualDJConnector;
 
 struct LoadContext
 {

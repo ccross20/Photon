@@ -31,7 +31,7 @@ void BusTest::readDMX()
     keira::EvaluationContext context;
     QBENCHMARK
     {
-        generateNode->markDirty();
+        generateNode->markDirty(keira::Dirty_Eval);
         bus->evaluate(&context);
         bus->markClean();
     }

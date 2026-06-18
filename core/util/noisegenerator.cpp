@@ -255,6 +255,12 @@ void NoiseGenerator::setFrequency(double frequency)
     m_impl->yNoise.SetFrequency(frequency);
 }
 
+void NoiseGenerator::setFrequency(QPointF frequency)
+{
+    m_impl->xNoise.SetFrequency(frequency.x());
+    m_impl->yNoise.SetFrequency(frequency.y());
+}
+
 double NoiseGenerator::frequency() const
 {
     return m_impl->xNoise.GetFrequency();

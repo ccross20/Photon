@@ -87,6 +87,7 @@ keira::NodeInformation MaskNode::info()
     keira::NodeInformation toReturn([](){return new MaskNode;});
     toReturn.name = "Mask";
     toReturn.nodeId = "photon.plugin.node.mask";
+    toReturn.graphs = QByteArrayList{"canvas"};
 
     return toReturn;
 }

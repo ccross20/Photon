@@ -11,6 +11,7 @@ keira::NodeInformation SetFixtureColor::info()
     toReturn.name = "Set Fixture Color";
     toReturn.nodeId = "photon.plugin.node.set-fixture-color";
     toReturn.categories = {"Fixture"};
+    toReturn.graphs = QByteArrayList{"fixture"};
 
     return toReturn;
 }
@@ -24,6 +25,9 @@ void SetFixtureColor::createParameters()
 {
     m_colorParam = new ColorParameter("colorInput","Color", Qt::white);
     addParameter(m_colorParam);
+
+    m_allCapabilitiesParam = new keira::BooleanParameter("allCapabilities", "All Capabilities", true);
+    addParameter(m_allCapabilitiesParam);
 
     m_capabilityParam = new keira::IntegerParameter("capabilityIndex","Capability", 0);
     m_capabilityParam->setMinimum(0);
@@ -41,13 +45,30 @@ void SetFixtureColor::evaluate(keira::EvaluationContext *t_context) const
     RoutineEvaluationContext *context = static_cast<RoutineEvaluationContext*>(t_context);
     if(context->fixture)
     {
+
+
+
         auto pans = context->fixture->findCapability(Capability_Color);
 
-        int index = m_capabilityParam->value().toInt();
-        if(index < pans.length())
+        if(m_allCapabilitiesParam->value().toBool())
         {
-            static_cast<ColorCapability*>(pans[index])->setColor(m_colorParam->value().value<QColor>(), context->dmxMatrix, context->strength * m_blendParam->value().toDouble());
+            for(auto colorCap : pans)
+            {
+                static_cast<ColorCapability*>(colorCap)->setColor(m_colorParam->value().value<QColor>(), context->dmxMatrix, context->strength * m_blendParam->value().toDouble(),context->timeMachine);
+            }
         }
+        else
+        {
+            int index = m_capabilityParam->value().toInt();
+            if(index < pans.length())
+            {
+                static_cast<ColorCapability*>(pans[index])->setColor(m_colorParam->value().value<QColor>(), context->dmxMatrix, context->strength * m_blendParam->value().toDouble(),context->timeMachine);
+            }
+        }
+
+
+
+
     }
 
 }

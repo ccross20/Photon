@@ -8,6 +8,7 @@ keira::NodeInformation CanvasWriter::info()
     keira::NodeInformation toReturn([](){return new CanvasWriter;});
     toReturn.name = "Canvas Writer";
     toReturn.nodeId = "photon.plugin.node.canvas-writer";
+    toReturn.graphs = QByteArrayList{"canvas"};
 
     return toReturn;
 }

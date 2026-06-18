@@ -7,6 +7,8 @@
 #include "model/node.h"
 #include "scene.h"
 #include "model/graph.h"
+#include "model/parameter/parameter.h"
+#include "model/subgraphnode.h"
 
 namespace keira {
 
@@ -29,12 +31,13 @@ public:
     QVector<NodePositionData> items;
     PortItem *startPort = nullptr;
     WireItem *draggingWire = nullptr;
+    NodeLibrary *library = nullptr;
     double currentZoom = 1.0;
 };
 
-Viewer::Viewer(QWidget *parent) : QGraphicsView{parent},m_impl(new Impl)
+Viewer::Viewer(NodeLibrary *t_library, QWidget *parent) : QGraphicsView{parent},m_impl(new Impl)
 {
-
+    m_impl->library = t_library;
     setSceneRect(QRect(-5000,-5000,10000,10000));
     setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
@@ -124,6 +127,22 @@ void Viewer::mousePressEvent(QMouseEvent *event)
 void Viewer::mouseDoubleClickEvent(QMouseEvent *event)
 {
     QGraphicsView::mouseDoubleClickEvent(event);
+
+    auto itemsUnderCursor = items(event->pos());
+    for(auto item : itemsUnderCursor)
+    {
+        auto nodeItem = dynamic_cast<NodeItem*>(item);
+        if(nodeItem)
+        {
+            if(nodeItem->node()->isContainer())
+            {
+                emit subGraphClicked(static_cast<SubGraphNode*>(nodeItem->node())->graph());
+
+                return;
+            }
+
+        }
+    }
 }
 
 void Viewer::mouseMoveEvent(QMouseEvent *event)
@@ -154,12 +173,19 @@ void Viewer::mouseMoveEvent(QMouseEvent *event)
                 auto nodeItem = dynamic_cast<NodeItem*>(item);
                 if(nodeItem)
                 {
-                    PortItem *port = nodeItem->snapToPort(nodeItem->mapFromScene(mapToScene(event->pos())), m_impl->startPort->direction() == Input ? Output : Input);
-                    if(port)
+                    if(nodeItem->node()->isContainer())
                     {
-                        m_impl->draggingWire->setPointB(port->scenePos());
-                        QGraphicsView::mouseMoveEvent(event);
-                        return;
+
+                    }
+                    else
+                    {
+                        PortItem *port = nodeItem->snapToPort(nodeItem->mapFromScene(mapToScene(event->pos())), m_impl->startPort->direction() == Input ? Output : Input);
+                        if(port)
+                        {
+                            m_impl->draggingWire->setPointB(port->scenePos());
+                            QGraphicsView::mouseMoveEvent(event);
+                            return;
+                        }
                     }
                 }
             }
@@ -201,15 +227,34 @@ void Viewer::mouseReleaseEvent(QMouseEvent *event)
                 auto nodeItem = dynamic_cast<NodeItem*>(item);
                 if(nodeItem)
                 {
-                    PortItem *port = nodeItem->snapToPort(nodeItem->mapFromScene(mapToScene(event->pos())), m_impl->startPort->direction() == Input ? Output : Input);
-                    if(port)
+                    if(nodeItem->node()->isContainer())
                     {
-                        if(port->direction() == Input)
-                            graph()->connectParameters(m_impl->startPort->parameter(), port->parameter());
+                        auto param = m_impl->startPort->parameter()->clone(m_impl->library);
+                        param->setId(QUuid::createUuid().toByteArray(QUuid::WithoutBraces));
+                        param->setConnectionOptions(keira::AllowSingleInput);
+                        param->setName(m_impl->startPort->parameter()->node()->name() + ":" + param->name());
+                        nodeItem->node()->addParameter(param);
+                        nodeItem->addPort();
+
+                        if(m_impl->startPort->direction() == Output)
+                            graph()->connectParameters(m_impl->startPort->parameter(), param);
                         else
-                            graph()->connectParameters(port->parameter(), m_impl->startPort->parameter());
+                            graph()->connectParameters(param, m_impl->startPort->parameter());
+
                         QGraphicsView::mouseReleaseEvent(event);
-                        return;
+                    }
+                    else
+                    {
+                        PortItem *port = nodeItem->snapToPort(nodeItem->mapFromScene(mapToScene(event->pos())), m_impl->startPort->direction() == Input ? Output : Input);
+                        if(port)
+                        {
+                            if(port->direction() == Input)
+                                graph()->connectParameters(m_impl->startPort->parameter(), port->parameter());
+                            else
+                                graph()->connectParameters(port->parameter(), m_impl->startPort->parameter());
+                            QGraphicsView::mouseReleaseEvent(event);
+                            return;
+                        }
                     }
                 }
             }

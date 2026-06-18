@@ -8,6 +8,8 @@
 
 namespace photon {
 
+class ColorCapability;
+
 struct FixtureMode
 {
     QString name;
@@ -94,6 +96,9 @@ public:
     void setUniverse(int universe);
     void setDefaultState(State *);
     State *defaultState() const;
+
+    int colorCount() const;
+    ColorCapability *colorAtIndex(int) const;
 
     const QVector<FixtureChannel*> &channels() const;
     FixtureChannel* findChannelWithName(const QString &name) const;

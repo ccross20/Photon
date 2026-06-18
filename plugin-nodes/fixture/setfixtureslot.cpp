@@ -12,6 +12,7 @@ keira::NodeInformation SetFixtureSlot::info()
     toReturn.name = "Set Fixture Slot";
     toReturn.nodeId = "photon.plugin.node.set-fixture-slot";
     toReturn.categories = {"Fixture"};
+    toReturn.graphs = QByteArrayList{"fixture"};
 
     return toReturn;
 }
@@ -26,6 +27,9 @@ void SetFixtureSlot::createParameters()
 
     m_modeParam = new keira::OptionParameter("mode","Mode",{"Name","Number"},0);
     addParameter(m_modeParam);
+
+    m_rotateModeParam = new keira::OptionParameter("rotateMode","Rotate Mode",{"Unknown","Indexed","Continuous"},0);
+    addParameter(m_rotateModeParam);
 
     m_wheelParam = new keira::IntegerParameter("wheelInput","Wheel Number", 1);
     m_wheelParam->setMinimum(1);
@@ -52,6 +56,8 @@ void SetFixtureSlot::evaluate(keira::EvaluationContext *t_context) const
         int wheelIndex = m_wheelParam->value().toInt() - 1;
         int slotNum = m_slotParam->value().toInt();
 
+        auto rotateMode = static_cast<WheelSlotCapability::RotateMode>(m_rotateModeParam->value().toInt());
+
         //qDebug() << "Slot " << slotNum << allSlots.length();
 
         QString wheelName = m_wheelNameParam->value().toString();
@@ -68,7 +74,7 @@ void SetFixtureSlot::evaluate(keira::EvaluationContext *t_context) const
 
             if(wheelSlot->wheelName().toLower() == wheelName)
             {
-                if(wheelSlot->slotNumber() == slotNum)
+                if(wheelSlot->slotNumber() == slotNum && wheelSlot->rotateMode() == rotateMode)
                 {
                     wheelSlot->selectSlot(context->dmxMatrix);
                     return;

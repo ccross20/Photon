@@ -1,7 +1,7 @@
 #include <QComboBox>
 #include <QLabel>
 #include "optionparameter.h"
-#include "view/nodeitem.h"
+#include "view/nodeeditor.h"
 
 namespace keira {
 
@@ -35,12 +35,12 @@ void OptionParameter::setOptions(const QStringList &t_options)
     m_impl->options = t_options;
 }
 
-const QStringList &OptionParameter::options() const
+QStringList OptionParameter::options() const
 {
     return m_impl->options;
 }
 
-QWidget *OptionParameter::createWidget(NodeItem *item) const
+QWidget *OptionParameter::createWidget(NodeEditor *item) const
 {
     if(isReadOnly())
     {
@@ -54,6 +54,7 @@ QWidget *OptionParameter::createWidget(NodeItem *item) const
     combo->addItems(m_impl->options);
     combo->setMaximumHeight(30);
     combo->setMinimumWidth(50);
+    combo->setCurrentIndex(value().toInt());
 
     combo->setSizePolicy(QSizePolicy(QSizePolicy::Maximum, QSizePolicy::Minimum));
 

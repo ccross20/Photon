@@ -13,13 +13,15 @@ struct RoutineEvaluationContext : keira::EvaluationContext
 {
     RoutineEvaluationContext(DMXMatrix &matrix):dmxMatrix(matrix){}
     DMXMatrix &dmxMatrix;
+    DMXTimeMachine *timeMachine = nullptr;
     Project *project = nullptr;
     Fixture *fixture = nullptr;
+    Surface *surface = nullptr;
     OpenGLFrameBuffer *frameBuffer = nullptr;
     QOpenGLContext *openglContext = nullptr;
     OpenGLResources *resources = nullptr;
     Canvas *canvas = nullptr;
-    QHash<QByteArray,QVariant> channelValues;
+    qlonglong frame = 0;
     double relativeTime = 0.0;
     double globalTime = 0.0;
     double delayTime = 0.0;

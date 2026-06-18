@@ -29,6 +29,7 @@ keira::NodeInformation PointInputNode::info()
     keira::NodeInformation toReturn([](){return new PointInputNode;});
     toReturn.name = "Point Input";
     toReturn.nodeId = "photon.routine.point-input";
+    toReturn.categories = {"Input"};
 
     return toReturn;
 }
@@ -44,9 +45,9 @@ PointInputNode::~PointInputNode()
     delete m_impl;
 }
 
-void PointInputNode::markDirty()
+void PointInputNode::markDirty(int t_dirty)
 {
-    Node::markDirty();
+    Node::markDirty(t_dirty);
 
     if(m_impl->defaultValueParam->isDirty() || m_impl->nameParam->isDirty())
         static_cast<Routine*>(graph())->updateChannel(m_impl->index, channelInfo());

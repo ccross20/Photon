@@ -18,7 +18,9 @@ public:
     double speedEnd() const;
     double maxSpeed() const;
     QString wheel() const;
+    bool isStop() const;
 
+    void selectCapability(DMXMatrix &t_matrix);
     void setSpeed(double value, DMXMatrix &t_matrix, double blend = 1.0);
     void setAngleDegrees(double value, DMXMatrix &t_matrix, double blend = 1.0);
     void readFromOpenFixtureJson(const QJsonObject &) override;

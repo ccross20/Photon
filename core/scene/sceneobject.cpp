@@ -2,6 +2,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QWidget>
+#include <QQuaternion>
 #include "sceneobject_p.h"
 #include "scenefactory.h"
 #include "sceneiterator.h"

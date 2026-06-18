@@ -26,6 +26,7 @@ public slots:
     void updateFromNodes();
 
 signals:
+    void graphUpdated(Graph*);
 
 protected:
     void contextMenuEvent(QGraphicsSceneContextMenuEvent *contextMenuEvent) override;

@@ -1,7 +1,7 @@
 #include <QDoubleSpinBox>
 #include <QLabel>
 #include "decimalparameter.h"
-#include "view/nodeitem.h"
+#include "view/nodeeditor.h"
 
 namespace keira {
 
@@ -53,7 +53,7 @@ void DecimalParameter::setValue(const QVariant &t_value)
     Parameter::setValue(val);
 }
 
-QWidget *DecimalParameter::createWidget(NodeItem *item) const
+QWidget *DecimalParameter::createWidget(NodeEditor *item) const
 {
     if(isReadOnly())
     {
@@ -69,6 +69,7 @@ QWidget *DecimalParameter::createWidget(NodeItem *item) const
     spin->setMinimum(m_impl->minimum);
     spin->setMinimumWidth(50);
     spin->setDecimals(m_impl->precision);
+    spin->setValue(value().toDouble());
 
     spin->setSizePolicy(QSizePolicy(QSizePolicy::Maximum, QSizePolicy::Minimum));
 

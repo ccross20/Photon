@@ -29,12 +29,15 @@ public:
     bool allowInput() const;
     bool allowOutput() const;
     bool isReadOnly() const;
+    void setConnectionOptions(int);
 
     bool testValueForChange() const;
     void setTestValueForChange(bool);
 
     int layoutOptions() const;
     void setLayoutOptions(int);
+    void setName(const QString &);
+    void setId(const QByteArray &);
 
     Node *node() const;
     bool canConvert(const QByteArray &) const;
@@ -50,10 +53,10 @@ public:
     int rowHeight() const;
     bool isDirty() const;
 
-    virtual QWidget *createWidget(NodeItem *) const;
+    Parameter *clone(NodeLibrary *library) const;
+    virtual QWidget *createWidget(NodeEditor *) const;
     virtual void updateWidget(QWidget *) const;
     virtual QVariant updateValue(QWidget *) const;
-
 
     virtual void readFromJson(const QJsonObject &);
     virtual void writeToJson(QJsonObject &) const;

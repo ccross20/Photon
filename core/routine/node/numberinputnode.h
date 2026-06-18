@@ -29,7 +29,7 @@ public:
     void setValue(const QByteArray &t_id, const QVariant &t_value) override;
 
 
-    void markDirty() override;
+    void markDirty(int) override;
 
 
     void readFromJson(const QJsonObject &, keira::NodeLibrary *library) override;

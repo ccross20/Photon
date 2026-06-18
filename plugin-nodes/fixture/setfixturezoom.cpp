@@ -11,6 +11,7 @@ keira::NodeInformation SetFixtureZoom::info()
     toReturn.name = "Set Fixture Zoom";
     toReturn.nodeId = "photon.plugin.node.set-fixture-zoom";
     toReturn.categories = {"Fixture"};
+    toReturn.graphs = QByteArrayList{"fixture"};
 
     return toReturn;
 }

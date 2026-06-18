@@ -9,6 +9,7 @@
 #include "actioneditwidget.h"
 #include "surface/togglegizmo.h"
 #include "surface/palettegizmo.h"
+#include "surface/slidergizmo.h"
 #include "surfacegraphwidget.h"
 #include "photoncore.h"
 #include "gui/guimanager.h"
@@ -43,6 +44,7 @@ SurfaceGizmoContainerWidget::SurfaceGizmoContainerWidget(SurfaceGizmoContainer *
             QMenu menu;
             menu.addAction("Toggle",[container](){container->addGizmo(new ToggleGizmo);});
             menu.addAction("Palette",[container](){container->addGizmo(new PaletteGizmo);});
+            menu.addAction("Slider",[container](){container->addGizmo(new SliderGizmo);});
 
             menu.exec(addButton->mapToGlobal(addButton->rect().bottomLeft()));
 

@@ -10,6 +10,7 @@ keira::NodeInformation DrawEllipse::info()
     keira::NodeInformation toReturn([](){return new DrawEllipse;});
     toReturn.name = "Draw Ellipse";
     toReturn.nodeId = "photon.plugin.node.draw-ellipse";
+    toReturn.graphs = QByteArrayList{"canvas"};
 
     return toReturn;
 }

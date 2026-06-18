@@ -32,12 +32,13 @@ void RoutineClip::Impl::processFixture(Fixture *t_fixture, RoutineEvaluationCont
     t_context.fixture = t_fixture;
     t_context.strength = facade->strengthAtTime(t_context.relativeTime);
 
+    /*
     t_context.channelValues.clear();
     for(const auto &channel : facade->channels())
     {
         t_context.channelValues.insert(channel->uniqueId(), channel->processValue(t_context.relativeTime));
     }
-
+*/
     routine->evaluate(&t_context);
     routine->markClean();
 }

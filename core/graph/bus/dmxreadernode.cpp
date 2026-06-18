@@ -1,5 +1,6 @@
 #include "dmxreadernode.h"
 #include "graph/parameter/dmxmatrixparameter.h"
+#include "graph/bus/busgraph.h"
 
 namespace photon {
 
@@ -17,6 +18,7 @@ keira::NodeInformation DMXReaderNode::info()
     keira::NodeInformation toReturn([](){return new DMXReaderNode;});
     toReturn.name = "DMX Reader";
     toReturn.nodeId = "photon.bus.dmx-reader";
+    toReturn.graphs = QByteArrayList{BusGraph::BusGraphId};
 
     return toReturn;
 }

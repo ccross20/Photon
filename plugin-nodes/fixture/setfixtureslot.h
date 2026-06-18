@@ -22,6 +22,7 @@ private:
     keira::IntegerParameter *m_wheelParam;
     keira::StringParameter *m_wheelNameParam;
     keira::OptionParameter *m_modeParam;
+    keira::OptionParameter *m_rotateModeParam;
     keira::IntegerParameter *m_slotParam;
 };
 

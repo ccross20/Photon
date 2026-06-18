@@ -2,8 +2,9 @@
 #include <QLabel>
 #include <QHBoxLayout>
 #include "point2dparameter.h"
-#include "view/nodeitem.h"
+#include "view/nodeeditor.h"
 #include "gui/pointedit.h"
+#include "util/utils.h"
 
 
 namespace photon {
@@ -22,7 +23,7 @@ Point2DParameter::Point2DParameter(const QByteArray &t_id, const QString &t_name
 }
 
 
-QWidget *Point2DParameter::createWidget(keira::NodeItem *item) const
+QWidget *Point2DParameter::createWidget(keira::NodeEditor *item) const
 {
 
     //const Point2DParameter *param = this;
@@ -31,6 +32,7 @@ QWidget *Point2DParameter::createWidget(keira::NodeItem *item) const
 
     const Point2DParameter *param = this;
     PointEdit::connect(pointEdit, &PointEdit::valueChanged, pointEdit,[item, pointEdit, param](){item->widgetUpdated(pointEdit, param);});
+    pointEdit->setValue(value().value<QPointF>());
 
 
     return pointEdit;
@@ -57,12 +59,14 @@ QVariant Point2DParameter::updateValue(QWidget *t_widget) const
 void Point2DParameter::readFromJson(const QJsonObject &t_json)
 {
     Parameter::readFromJson(t_json);
+    setValue(jsonToPointF(t_json.value("value").toObject()));
 
 }
 
 void Point2DParameter::writeToJson(QJsonObject &t_json) const
 {
     Parameter::writeToJson(t_json);
+    t_json.insert("value", pointToJson(value().value<QPointF>()));
 
 }
 

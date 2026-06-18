@@ -54,11 +54,21 @@ set(PROJECT_SOURCES
         view/wireitem.cpp
 )
 
-add_library(keira SHARED ${PROJECT_SOURCES})
+find_package(Qt6 REQUIRED COMPONENTS Widgets)
+find_package(Qt6 REQUIRED COMPONENTS Widgets)
+
+add_library(keira SHARED ${PROJECT_SOURCES}
+        view/graphwidget.h view/graphwidget.cpp
+        view/nodeeditor.h view/nodeeditor.cpp
+        model/subgraphnode.h model/subgraphnode.cpp
+        model/parameter/booleanparameter.h model/parameter/booleanparameter.cpp
+        model/parameter/stringoptionparameter.h model/parameter/stringoptionparameter.cpp)
 
 target_include_directories(keira PUBLIC ../keira)
 
 target_link_libraries(keira PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)
+target_link_libraries(keira PRIVATE Qt6::Widgets)
+target_link_libraries(keira PRIVATE Qt6::Widgets)
 
 
 target_compile_definitions(keira PRIVATE KEIRA_LIBRARY)

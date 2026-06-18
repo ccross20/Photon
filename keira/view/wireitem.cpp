@@ -28,8 +28,11 @@ public:
 
 void WireItem::Impl::updatePoints()
 {
-    pointA = outPort->scenePos();
-    pointB = inPort->scenePos();
+    if(outPort)
+        pointA = outPort->scenePos();
+
+    if(inPort)
+        pointB = inPort->scenePos();
     buildPath();
 }
 

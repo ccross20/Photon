@@ -4,6 +4,7 @@
 #include <QFormLayout>
 #include <QDoubleSpinBox>
 #include <QPushButton>
+#include <QQuaternion>
 #include "tracepathclip.h"
 #include "fixture/fixture.h"
 #include "fixture/capability/anglecapability.h"

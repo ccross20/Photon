@@ -14,7 +14,7 @@ public:
     ButtonParameter(const QByteArray &t_id, const QString &t_name);
 
 
-    QWidget *createWidget(NodeItem *) const override;
+    QWidget *createWidget(NodeEditor *) const override;
 };
 
 } // namespace photon

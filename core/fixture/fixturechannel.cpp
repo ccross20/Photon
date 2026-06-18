@@ -8,6 +8,7 @@
 #include "capability/colorintensitycapability.h"
 #include "capability/wheelrotationcapability.h"
 #include "capability/wheelslotrotationcapability.h"
+#include "capability/prismrotationcapability.h"
 
 namespace photon {
 
@@ -36,6 +37,8 @@ void FixtureChannel::Impl::addCapability(const QJsonObject &t_json)
         capability = new WheelRotationCapability();
     else if(typeString == "wheelslotrotation")
         capability = new WheelSlotRotationCapability();
+    else if(typeString == "prismrotation")
+        capability = new PrismRotationCapability();
     else if(typeString == "colorintensity")
     {
         auto colorString = t_json.value("color").toString().toLower();
@@ -69,6 +72,7 @@ void FixtureChannel::Impl::addCapability(const QJsonObject &t_json)
     {
         capability->setChannel(facade);
         capability->readFromOpenFixtureJson(t_json);
+        capability->setIndex(capabilities.length());
         capabilities.append(capability);
         type = capability->type();
     }

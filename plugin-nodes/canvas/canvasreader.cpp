@@ -8,6 +8,7 @@ keira::NodeInformation CanvasReader::info()
     keira::NodeInformation toReturn([](){return new CanvasReader;});
     toReturn.name = "Canvas Reader";
     toReturn.nodeId = "photon.plugin.node.canvas-reader";
+    toReturn.graphs = QByteArrayList{"canvas"};
 
     return toReturn;
 }

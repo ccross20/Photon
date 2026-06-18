@@ -24,6 +24,7 @@ keira::NodeInformation FixtureTreeSelection::info()
     keira::NodeInformation toReturn([](){return new FixtureTreeSelection;});
     toReturn.name = "Fixture Tree Selection";
     toReturn.nodeId = "photon.fixture.tree-selection";
+    toReturn.categories = {"Fixture"};
 
     return toReturn;
 }

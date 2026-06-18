@@ -24,6 +24,7 @@ keira::NodeInformation ArithmeticNode::info()
     keira::NodeInformation toReturn([](){return new ArithmeticNode;});
     toReturn.name = "Arithmetic";
     toReturn.nodeId = "photon.math.arithmetic";
+    toReturn.categories = {"Math"};
 
     return toReturn;
 }
@@ -75,6 +76,7 @@ void ArithmeticNode::evaluate(keira::EvaluationContext *t_context) const
         break;
     }
 
+        //qDebug() << m_impl->inputAParam->value().toDouble() << m_impl->inputBParam->value().toDouble() << m_impl->outputParam->value().toInt();
 
 
 }

@@ -1,5 +1,6 @@
 
 #include <QMatrix4x4>
+#include <QQuaternion>
 #include "aligntoarrowclip.h"
 #include "fixture/fixture.h"
 #include "fixture/capability/anglecapability.h"

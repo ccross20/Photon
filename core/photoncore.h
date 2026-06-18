@@ -35,6 +35,7 @@ public:
     void initSurface();
     void initOpenGLResources();
     OpenGLResources *openGLResources() const;
+    VirtualDJConnector *djConnector() const;
 
 
     QString appDataPath() const;

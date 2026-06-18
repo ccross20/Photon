@@ -3,6 +3,7 @@
 
 #include <QTreeView>
 #include <QVBoxLayout>
+#include <QHBoxLayout>
 #include <QPushButton>
 #include "fixturecollectionpanel.h"
 #include "scene/scenemodel.h"
@@ -18,6 +19,7 @@ public:
     QPushButton *duplicateButton;
     QWidget *editorWidget;
     QVBoxLayout *vLayout;
+    QHBoxLayout *hLayout;
     SceneModel *sceneModel;
 };
 

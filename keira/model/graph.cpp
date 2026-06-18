@@ -19,6 +19,45 @@ Graph::~Graph()
     delete m_impl;
 }
 
+
+QByteArray Graph::graphTypeId() const
+{
+    return m_impl->graphTypeId;
+}
+
+void Graph::setGraphTypeId(const QByteArray &t_id)
+{
+    m_impl->graphTypeId = t_id;
+}
+
+void Graph::setName(const QString &t_name)
+{
+    m_impl->name = t_name;
+}
+
+QString Graph::name() const
+{
+    return m_impl->name;
+}
+
+QString Graph::familyName() const
+{
+    if(m_impl->parentNode)
+        return m_impl->parentNode->graph()->familyName() + " > " + m_impl->name;
+    else
+        return m_impl->name;
+}
+
+Node *Graph::parentNode() const
+{
+    return m_impl->parentNode;
+}
+
+void Graph::setParentNode(Node *t_node)
+{
+    m_impl->parentNode = t_node;
+}
+
 QByteArray Graph::uniqueId() const
 {
     return m_impl->uniqueId;
@@ -30,11 +69,12 @@ void Graph::addNode(Node *t_node)
         return;
     m_impl->nodes.append(t_node);
     t_node->m_impl->graph = this;
+    t_node->addedToGraph(this);
 
     nodeAdded(t_node);
     emit nodeWasAdded(t_node);
 
-    markDirty();
+    markDirty(Dirty_Structure);
 }
 
 void Graph::removeNode(Node *t_node)
@@ -45,6 +85,7 @@ void Graph::removeNode(Node *t_node)
     m_impl->nodes.removeOne(t_node);
     nodeRemoved(t_node);
     emit nodeWasRemoved(t_node);
+    markDirty(Dirty_Structure);
 }
 
 void Graph::nodeAdded(keira::Node *t_node)
@@ -62,17 +103,6 @@ const QVector<Node*> &Graph::nodes() const
     return m_impl->nodes;
 }
 
-const QVector<Node*> Graph::LoopNodes() const
-{
-    QVector<Node*> toReturn;
-    for(Node *node : m_impl->nodes)
-    {
-        if(node->isLoopable())
-            toReturn.append(node);
-    }
-    return toReturn;
-}
-
 void Graph::updateNodePosition(Node *t_node)
 {
     emit nodePositionUpdated(t_node);
@@ -80,14 +110,21 @@ void Graph::updateNodePosition(Node *t_node)
 
 Node *Graph::findNode(const QByteArray &t_query) const
 {
-    auto result = std::find_if(m_impl->nodes.cbegin(), m_impl->nodes.cend(),[t_query](Node* t_node){return t_node->name().toLatin1() == t_query;});
-    if(result != m_impl->nodes.cend())
-        return *result;
+    for(auto node : m_impl->nodes)
+    {
+        auto result = node->findNode(t_query);
+        if(result)
+            return result;
+    }
 
-    result = std::find_if(m_impl->nodes.cbegin(), m_impl->nodes.cend(),[t_query](Node* t_node){return t_node->uniqueId() == t_query;});
-    if(result != m_impl->nodes.cend())
-        return *result;
     return nullptr;
+}
+
+QVector<Node *> Graph::nodeHierarchy() const
+{
+    if(parentNode())
+        return parentNode()->nodeHierarchy();
+    return QVector<Node *>();
 }
 
 Parameter *Graph::findParameter(const QByteArray &t_query)
@@ -97,6 +134,15 @@ Parameter *Graph::findParameter(const QByteArray &t_query)
     if(node)
         return node->findParameter(terms.back());
     return nullptr;
+}
+
+void Graph::prepForEvaluation()
+{
+    if(m_impl->dirty & Dirty_Priority)
+        resortGraph();
+
+    for(Node *node : m_impl->nodes)
+        node->prepForEvaluation();
 }
 
 void Graph::evaluate(EvaluationContext *t_context) const
@@ -186,10 +232,16 @@ void Graph::disconnectParameters(Parameter *t_output, Parameter *t_input)
     t_output->node()->outputParameterDisconnected(t_input);
     t_input->node()->inputParameterDisconnected(t_output);
 
-    GraphSorter sorter(m_impl->nodes);
-    m_impl->nodes = sorter.sorted();
+    resortGraph();
 
     emit parametersWereDisconnected(t_output, t_input);
+}
+
+void Graph::resortGraph()
+{
+    GraphSorter sorter(m_impl->nodes);
+    m_impl->nodes = sorter.sorted();
+    qDebug() << "resort";
 }
 
 void Graph::disconnectNode(Node *t_node)
@@ -207,18 +259,22 @@ void Graph::disconnectNode(Node *t_node)
     }
 }
 
-void Graph::markDirty()
+void Graph::markDirty(int t_dirty)
 {
-    if(m_impl->isDirty)
+    if(m_impl->dirty & t_dirty)
         return;
-    m_impl->isDirty = true;
+    m_impl->dirty |= t_dirty;
 
     emit dirtyStateChanged();
+
+    if(m_impl->parentNode)
+        m_impl->parentNode->markDirty(t_dirty);
 }
 
 void Graph::markClean()
 {
-    m_impl->isDirty = false;
+    //m_impl->dirty = Clean;
+    m_impl->dirty = Dirty_Eval;
 
     for(Node *node : m_impl->nodes)
     {
@@ -229,7 +285,7 @@ void Graph::markClean()
 
 bool Graph::isDirty() const
 {
-    return m_impl->isDirty;
+    return m_impl->dirty != Clean;
 }
 
 void Graph::readFromJson(const QJsonObject &t_json, NodeLibrary *library)
@@ -247,6 +303,7 @@ void Graph::readFromJson(const QJsonObject &t_json, NodeLibrary *library)
             node->readFromJson(nodeObj, library);
             m_impl->nodes.append(node);
             node->m_impl->graph = this;
+            node->addedToGraph(this);
         }
     }
 
@@ -268,7 +325,9 @@ void Graph::readFromJson(const QJsonObject &t_json, NodeLibrary *library)
         connectParameters(outputParam, inputParam);
     }
 
-    m_impl->uniqueId = t_json["uniqueId"].toString().toLatin1();
+    m_impl->graphTypeId = t_json["graphTypeId"].toString(m_impl->graphTypeId).toLatin1();
+    m_impl->uniqueId = t_json["uniqueId"].toString(m_impl->uniqueId).toLatin1();
+    m_impl->name = t_json["name"].toString();
 }
 
 void Graph::writeToJson(QJsonObject &t_json) const
@@ -296,8 +355,10 @@ void Graph::writeToJson(QJsonObject &t_json) const
         }
     }
     t_json.insert("uniqueId", QString(m_impl->uniqueId));
+    t_json.insert("name", m_impl->name);
     t_json.insert("nodes", nodeArray);
     t_json.insert("connections", connectionArray);
+    t_json.insert("graphTypeId", QString(m_impl->graphTypeId));
 }
 
 

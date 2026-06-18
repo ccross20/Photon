@@ -10,6 +10,7 @@ class WheelSlotCapability::Impl
 {
 public:
     QString wheelName;
+    RotateMode rotateMode = RotateMode_Unknown;
     int slotNumber;
     FixtureWheelSlot *wheelSlot = nullptr;
 };
@@ -39,6 +40,11 @@ int WheelSlotCapability::slotNumber() const
     return m_impl->slotNumber;
 }
 
+WheelSlotCapability::RotateMode WheelSlotCapability::rotateMode() const
+{
+    return m_impl->rotateMode;
+}
+
 FixtureWheelSlot *WheelSlotCapability::wheelSlot() const
 {
     return m_impl->wheelSlot;
@@ -56,6 +62,13 @@ void WheelSlotCapability::readFromOpenFixtureJson(const QJsonObject &t_json)
 
     m_impl->wheelName = channel()->name();
     m_impl->slotNumber = t_json.value("slotNumber").toInt();
+
+    auto rotateMode = t_json.value("rotate").toString("").toLower();
+
+    if(rotateMode == "index")
+        m_impl->rotateMode = RotateMode_Index;
+    else if(rotateMode == "continuous")
+            m_impl->rotateMode = RotateMode_Continuous;
 
     for(auto wheel : fixture()->wheels())
     {

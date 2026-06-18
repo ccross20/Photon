@@ -30,8 +30,9 @@ public:
 keira::NodeInformation GlobalsNode::info()
 {
     keira::NodeInformation toReturn([](){return new GlobalsNode;});
-    toReturn.name = "Globals";
+    toReturn.name = "Routine Globals";
     toReturn.nodeId = "photon.routine.globals";
+    toReturn.graphs = QByteArrayList{"routine"};
 
     return toReturn;
 }

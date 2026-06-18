@@ -62,7 +62,8 @@ enum CapabilityType{
     Capability_ColorWheelSlot,
     Capability_WheelShake,
     Capability_WheelSlotRotation,
-    Capability_WheelRotation
+    Capability_WheelRotation,
+    Capability_PrismRotation
 };
 
 enum FixtureUnit{
@@ -123,6 +124,9 @@ public:
     void setChannel(FixtureChannel *);
     FixtureChannel *fineChannel() const;
     bool isValid(const DMXMatrix &t_matrix) const;
+    int index() const;
+    void setIndex(int);
+
 
     CapabilityType type() const;
 

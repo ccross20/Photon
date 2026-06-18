@@ -31,6 +31,22 @@ double Node::width() const
     return m_impl->width;
 }
 
+int Node::priority() const
+{
+    return m_impl->priority;
+}
+
+void Node::setPriority(int t_priority)
+{
+    if(m_impl->priority == t_priority)
+        return;
+
+    m_impl->priority = t_priority;
+
+    if(m_impl->graph)
+        m_impl->graph->resortGraph();
+}
+
 void Node::setName(const QString &t_name)
 {
     m_impl->name = t_name;
@@ -39,21 +55,6 @@ void Node::setName(const QString &t_name)
 QString Node::name() const
 {
     return m_impl->name;
-}
-
-bool Node::isLoopable() const
-{
-    return m_impl->isLoopable;
-}
-
-void Node::setIsLoopable(bool t_value)
-{
-    m_impl->isLoopable = t_value;
-}
-
-uint Node::loopCount() const
-{
-    return 0;
 }
 
 void Node::setId(const QByteArray &t_id)
@@ -76,6 +77,11 @@ Graph *Node::graph() const
     return m_impl->graph;
 }
 
+void Node::addedToGraph(keira::Graph*)
+{
+
+}
+
 QPointF Node::position() const
 {
     return m_impl->position;
@@ -89,18 +95,35 @@ void Node::setPosition(const QPointF &t_position)
     //emit positionUpdated(this);
 }
 
+void Node::parameterWasAdded(Parameter*)
+{
+
+}
+
+void Node::parameterWasRemoved(Parameter*)
+{
+
+}
+
+void Node::parameterWasModified(Parameter*)
+{
+
+}
+
 void Node::addParameter(Parameter *t_param)
 {
     if(std::any_of(m_impl->parameters.cbegin(), m_impl->parameters.cend(),[t_param](Parameter *testParam){return t_param->name() == testParam->name();}))
         Q_ASSERT("Parameter names must be unique.");
     m_impl->parameters.append(t_param);
     t_param->m_impl->node = this;
+    parameterWasAdded(t_param);
 }
 
 void Node::removeParameter(Parameter *t_param)
 {
     m_impl->parameters.removeOne(t_param);
     t_param->m_impl->node = nullptr;
+    parameterWasRemoved(t_param);
 }
 
 void Node::updateParameter(Parameter *t_param)
@@ -161,6 +184,30 @@ bool Node::isAlwaysDirty() const
     return m_impl->isAlwaysDirty;
 }
 
+Node *Node::findNode(const QByteArray &query) const
+{
+    if(m_impl->name == query || m_impl->uniqueId == query)
+        return const_cast<Node*>(this);
+
+    return nullptr;
+}
+
+QVector<Node *> Node::nodeHierarchy() const
+{
+    QVector<Node *> results;
+
+    if(graph())
+    {
+        auto toAppend = graph()->nodeHierarchy();
+        if(!toAppend.isEmpty())
+            results.append(toAppend);
+        results.append(const_cast<Node*>(this));
+    }
+
+
+    return results;
+}
+
 void Node::evaluate(EvaluationContext *) const
 {
 
@@ -171,37 +218,37 @@ void Node::buttonClicked(const Parameter *)
 
 }
 
-void Node::startLoop()
+void Node::prepForEvaluation()
 {
 
 }
 
-void Node::endLoop()
+void Node::markDirty(int t_dirty)
 {
-
-}
-
-void Node::markDirty()
-{
-    if(m_impl->isDirty)
+    if(m_impl->isDirty & t_dirty)
         return;
-    m_impl->isDirty = true;
+    m_impl->isDirty |= t_dirty;
     for(auto it = m_impl->dependents.cbegin(); it != m_impl->dependents.cend(); ++it)
-        (*it)->markDirty();
+        (*it)->markDirty(t_dirty);
 
-   graph()->markDirty();
+    if(m_impl->graph)
+        graph()->markDirty(t_dirty);
 }
 
 void Node::markClean()
 {
-    m_impl->isDirty = false;
+    //m_impl->isDirty = keira::DirtyModes::Clean;
+    m_impl->isDirty = keira::DirtyModes::Dirty_Eval;
     for(Parameter *param : m_impl->parameters)
         param->m_impl->isDirty = false;
+
+    if(m_impl->isAlwaysDirty)
+        markDirty(DirtyModes::Dirty_Eval);
 }
 
 bool Node::isDirty() const
 {
-    return m_impl->isAlwaysDirty || m_impl->isDirty;
+    return m_impl->isAlwaysDirty || m_impl->isDirty != keira::DirtyModes::Clean;
 }
 
 void Node::inputParameterConnected(Parameter* t_param)
@@ -230,6 +277,11 @@ void Node::outputParameterDisconnected(Parameter* t_param)
     m_impl->dependents.remove(nodeToCheck);
 }
 
+void Node::restore()
+{
+
+}
+
 void Node::readFromJson(const QJsonObject &t_json, NodeLibrary *library)
 {
     m_impl->id = t_json.value("id").toString().toLatin1();
@@ -239,6 +291,9 @@ void Node::readFromJson(const QJsonObject &t_json, NodeLibrary *library)
     m_impl->position = QPointF{positionObject.value("x").toDouble(), positionObject.value("y").toDouble()};
     m_impl->name = t_json.value("name").toString();
     m_impl->isLoopable = t_json.value("isLoopable").toBool();
+    m_impl->priority = t_json.value("priority").toInt(0);
+
+    //qDebug() << m_impl->name;
 
     auto parameterArray = t_json.value("parameters").toArray();
     for(const auto &paramJson : parameterArray)
@@ -251,6 +306,10 @@ void Node::readFromJson(const QJsonObject &t_json, NodeLibrary *library)
             QString typeId = paramObj.value("typeId").toString();
             param = library->createParameter(typeId.toLatin1());
             m_impl->parameters.append(param);
+            param->m_impl->node = this;
+
+            //qDebug() << "Create type" << typeId;
+
         }
 
         if(param)
@@ -265,6 +324,7 @@ void Node::writeToJson(QJsonObject &t_json) const
     t_json.insert("id", QString(m_impl->id));
     t_json.insert("uniqueId", QString(m_impl->uniqueId));
     t_json.insert("isLoopable", m_impl->isLoopable);
+    t_json.insert("priority", m_impl->priority);
 
     QJsonObject positionObject;
     positionObject.insert("x", m_impl->position.x());

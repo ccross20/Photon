@@ -9,6 +9,7 @@
 #include "sequence/channel.h"
 #include "sequence/viewer/stackedparameterwidget.h"
 #include "sequence/sequence.h"
+#include "util/utils.h"
 
 namespace photon {
 
@@ -56,65 +57,15 @@ PulseEffectEditor::PulseEffectEditor(PulseEffect *t_effect):ChannelEffectEditor(
     easeOutDurationSpin->setValue(m_effect->easeOutDuration());
     connect(easeOutDurationSpin, &QDoubleSpinBox::valueChanged, this, &PulseEffectEditor::easeOutDurationChanged);
 
-    QStringList easeStrings;
-    easeStrings << "Linear";
-    easeStrings << "In Quad";
-    easeStrings << "Out Quad";
-    easeStrings << "In Out Quad";
-    easeStrings << "Out In Quad";
-
-    easeStrings << "In Cubic";
-    easeStrings << "Out Cubic";
-    easeStrings << "In Out Cubic";
-    easeStrings << "Out In Cubic";
-
-    easeStrings << "In Quart";
-    easeStrings << "Out Quart";
-    easeStrings << "In Out Quart";
-    easeStrings << "Out In Quart";
-
-    easeStrings << "In Quint";
-    easeStrings << "Out Quint";
-    easeStrings << "In Out Quint";
-    easeStrings << "Out In Quint";
-
-    easeStrings << "In Sine";
-    easeStrings << "Out Sine";
-    easeStrings << "In Out Sine";
-    easeStrings << "Out In Sine";
-
-    easeStrings << "In Expo";
-    easeStrings << "Out Expo";
-    easeStrings << "In Out Expo";
-    easeStrings << "Out In Expo";
-
-    easeStrings << "In Circ";
-    easeStrings << "Out Circ";
-    easeStrings << "In Out Circ";
-    easeStrings << "Out In Circ";
-
-    easeStrings << "In Elastic";
-    easeStrings << "Out Elastic";
-    easeStrings << "In Out Elastic";
-    easeStrings << "Out In Elastic";
-
-    easeStrings << "In Back";
-    easeStrings << "Out Back";
-    easeStrings << "In Out Back";
-    easeStrings << "Out In Back";
-
-    easeStrings << "In Bounce";
-    easeStrings << "Out Bounce";
-    easeStrings << "In Out Bounce";
-    easeStrings << "Out In Bounce";
+    QStringList easeList = easeStrings();
 
     QComboBox *easeInCombo = new QComboBox;
-    easeInCombo->addItems(easeStrings);
+    easeInCombo->addItems(easeList);
     easeInCombo->setCurrentIndex(m_effect->easeInType());
     connect(easeInCombo, &QComboBox::currentIndexChanged, this, &PulseEffectEditor::easeInChanged);
 
     QComboBox *easeOutCombo = new QComboBox;
-    easeOutCombo->addItems(easeStrings);
+    easeOutCombo->addItems(easeList);
     easeOutCombo->setCurrentIndex(m_effect->easeOutType());
     connect(easeOutCombo, &QComboBox::currentIndexChanged, this, &PulseEffectEditor::easeOutChanged);
 

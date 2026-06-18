@@ -119,7 +119,9 @@ void GuiManager::Impl::createAppWindow()
 
 
     if(qsettings.contains("main"))
+    {
         window->restoreGeometry(qsettings.value("main").toByteArray());
+    }
     else
     {
         //auto screenSize = exoApp->primaryScreen()->size();
@@ -180,7 +182,7 @@ void GuiManager::Impl::launchInterface()
 {
     createAppWindow();
 
-    m_ext->restoreLayout();
+    //m_ext->restoreLayout();
 
     window->show();
     /*

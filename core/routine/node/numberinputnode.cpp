@@ -27,6 +27,7 @@ keira::NodeInformation NumberInputNode::info()
     keira::NodeInformation toReturn([](){return new NumberInputNode;});
     toReturn.name = "Number Input";
     toReturn.nodeId = "photon.routine.number-input";
+    toReturn.categories = {"Input"};
 
     return toReturn;
 }
@@ -41,9 +42,9 @@ NumberInputNode::~NumberInputNode()
     delete m_impl;
 }
 
-void NumberInputNode::markDirty()
+void NumberInputNode::markDirty(int t_dirty)
 {
-    Node::markDirty();
+    Node::markDirty(t_dirty);
 
     if(m_impl->defaultValueParam->isDirty() || m_impl->nameParam->isDirty())
         static_cast<Routine*>(graph())->updateChannel(m_impl->index, channelInfo());

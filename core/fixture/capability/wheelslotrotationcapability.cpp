@@ -44,6 +44,11 @@ double WheelSlotRotationCapability::maxSpeed() const
         return fmin(m_impl->speedStart, m_impl->speedStop);
 }
 
+bool WheelSlotRotationCapability::isStop() const
+{
+    return m_impl->speedStop == 0.0 && m_impl->speedStart == 0.0;
+}
+
 bool WheelSlotRotationCapability::supportsAngle() const
 {
     return m_impl->supportsAngle;
@@ -64,6 +69,11 @@ QString WheelSlotRotationCapability::wheel() const
     return m_impl->wheel;
 }
 
+void WheelSlotRotationCapability::selectCapability(DMXMatrix &t_matrix)
+{
+    t_matrix.setValue(channel()->universe() - 1, channel()->universalChannelNumber(),range().middle(),1.0);
+}
+
 void WheelSlotRotationCapability::setAngleDegrees(double value, DMXMatrix &t_matrix, double blend)
 {
     double delta = (value - m_impl->angleStart) / m_impl->angleDelta;
@@ -74,11 +84,18 @@ void WheelSlotRotationCapability::setAngleDegrees(double value, DMXMatrix &t_mat
 
 void WheelSlotRotationCapability::setSpeed(double value, DMXMatrix &t_matrix, double t_blend)
 {
+    /*
     if(value < 0)
         value *= -1.0;
 
     if(m_impl->speedStop > m_impl->speedStart)
         value = 1.0 - value;
+*/
+    if(value > 0)
+        value = 1.0 - value;
+
+    if(value < 0)
+        value *= -1.0;
 
     t_matrix.setRangeMappedValuePercent(channel(), value, range());
 }
@@ -93,6 +110,11 @@ void WheelSlotRotationCapability::readFromOpenFixtureJson(const QJsonObject &t_j
         FixtureCapability::constantPercent(t_json.value("speedStop").toString(), &m_impl->speedStop);
     if(t_json.contains("speedEnd"))
         FixtureCapability::constantPercent(t_json.value("speedEnd").toString(), &m_impl->speedStop);
+    if(t_json.contains("speed"))
+    {
+        FixtureCapability::constantPercent(t_json.value("speed").toString(), &m_impl->speedStop);
+        FixtureCapability::constantPercent(t_json.value("speed").toString(), &m_impl->speedStart);
+    }
 
     FixtureCapability::rotationAngle(t_json.value("angleStart").toString(), &m_impl->angleStart);
     FixtureCapability::rotationAngle(t_json.value("angleEnd").toString(), &m_impl->angleStop);
@@ -102,6 +124,8 @@ void WheelSlotRotationCapability::readFromOpenFixtureJson(const QJsonObject &t_j
     m_impl->angleDelta = m_impl->angleStop - m_impl->angleStart;
 
     m_impl->wheel = t_json.value("wheel").toString().toLower();
+
+    //qDebug() << "Wheel:" << m_impl->wheel;
 
 }
 

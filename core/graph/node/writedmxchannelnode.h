@@ -8,11 +8,8 @@ namespace photon {
 class PHOTONCORE_EXPORT WriteDMXChannelNode : public keira::Node
 {
 public:
-    const static QByteArray InputDMX;
-    const static QByteArray Fixture;
     const static QByteArray ChannelNumber;
     const static QByteArray ChannelValue;
-    const static QByteArray OutputDMX;
 
     WriteDMXChannelNode();
     ~WriteDMXChannelNode();

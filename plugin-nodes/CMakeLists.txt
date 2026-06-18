@@ -59,7 +59,25 @@ set(SOURCES
 add_library(plugin-nodes SHARED ${SOURCES}
     canvas/masknode.h canvas/masknode.cpp
     nodes-resources.qrc
-    canvas/transform/transformtexturenode.h canvas/transform/transformtexturenode.cpp)
+    canvas/transform/transformtexturenode.h canvas/transform/transformtexturenode.cpp
+    fixture-list/fixturelistrandomsubsetnode.h fixture-list/fixturelistrandomsubsetnode.cpp
+    fixture-list/fixturelistintervalsubsetnode.h fixture-list/fixturelistintervalsubsetnode.cpp
+    fixture/setfixtureslotrotation.h fixture/setfixtureslotrotation.cpp
+    fixture/setfixtureprismrotation.h fixture/setfixtureprismrotation.cpp
+    color-palette/colorpalettenode.h color-palette/colorpalettenode.cpp
+    color-palette/colorfromcolorpalette.h color-palette/colorfromcolorpalette.cpp
+    animation/timer.h animation/timer.cpp
+    math/randomnumbernode.h math/randomnumbernode.cpp
+    falloff/linearfalloffnode.h falloff/linearfalloffnode.cpp
+    falloff/randomfalloffnode.h falloff/randomfalloffnode.cpp
+    animation/pulsenode.h animation/pulsenode.cpp
+    math/stopwatchnode.h math/stopwatchnode.cpp
+    color-palette/fadecolorpalettenode.h color-palette/fadecolorpalettenode.cpp
+    color/sparklenode.h color/sparklenode.cpp
+    pixel/pixelsfromfixturelist.h pixel/pixelsfromfixturelist.cpp
+    pixel/setpixelcolor.h pixel/setpixelcolor.cpp
+    math/remapvaluenode.h math/remapvaluenode.cpp
+    utils/djconnectornode.h utils/djconnectornode.cpp)
 
 target_include_directories(plugin-nodes PUBLIC ../keira)
 target_link_libraries(plugin-nodes PRIVATE Qt${QT_VERSION_MAJOR}::Core)

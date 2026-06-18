@@ -12,7 +12,7 @@ public:
     ColorCapability(const QVector<ColorIntensityCapability*> &);
     ~ColorCapability();
 
-    void setColor(const QColor &, DMXMatrix &t_matrix, double t_blend = 1.0) const;
+    void setColor(const QColor &, DMXMatrix &t_matrix, double t_blend = 1.0, DMXTimeMachine *timeMachine = nullptr) const;
     QColor getColor(const DMXMatrix &t_matrix) const;
 
 private:

@@ -12,7 +12,7 @@ PlaygroundWidget::PlaygroundWidget(QWidget *parent)
     QVBoxLayout *vLayout = new QVBoxLayout;
     vLayout->setContentsMargins(0,0,0,0);
 
-    Viewer *viewer = new Viewer();
+    Viewer *viewer = new Viewer(nullptr);
 
     vLayout->addWidget(viewer);
     setLayout(vLayout);

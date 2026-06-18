@@ -13,6 +13,7 @@ GraphSorter::GraphSorter(NodeVector toSort)
         m_toSort.prepend(node);
     }
 
+
     bool foundNode = true;
     while(foundNode)
     {
@@ -27,6 +28,25 @@ GraphSorter::GraphSorter(NodeVector toSort)
             }
         }
     }
+
+    /*
+    qDebug() << "Begin Nodes";
+    for(auto node :m_sorted )
+        qDebug() << node->name();
+
+    qDebug() << "End Nodes";
+*/
+
+    std::sort(m_sorted.begin(), m_sorted.end(), [](const Node* a, const Node* b) {
+        return a->priority() < b->priority();
+    });
+/*
+    qDebug() << "Begin Sorted Nodes";
+    for(auto node :m_sorted )
+        qDebug() << node->name();
+
+    qDebug() << "End Sorted Nodes";
+*/
 }
 
 void GraphSorter::visit(Node *node)

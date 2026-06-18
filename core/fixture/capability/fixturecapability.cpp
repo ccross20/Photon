@@ -13,6 +13,7 @@ public:
     FixtureChannel *channel = nullptr;
     FixtureChannel *fineChannel = nullptr;
     CapabilityType type;
+    int index = -1;
 };
 
 FixtureCapability::FixtureCapability(DMXRange range, CapabilityType capability):m_impl(new Impl)
@@ -24,6 +25,16 @@ FixtureCapability::FixtureCapability(DMXRange range, CapabilityType capability):
 FixtureCapability::~FixtureCapability()
 {
     delete m_impl;
+}
+
+int FixtureCapability::index() const
+{
+    return m_impl->index;
+}
+
+void FixtureCapability::setIndex(int t_index)
+{
+    m_impl->index = t_index;
 }
 
 DMXRange FixtureCapability::range() const

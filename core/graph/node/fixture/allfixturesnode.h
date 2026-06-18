@@ -17,9 +17,6 @@ public:
     void createParameters() override;
     void evaluate(keira::EvaluationContext *) const override;
 
-    uint loopCount() const override;
-    void startLoop() override;
-    void endLoop() override;
 
     static keira::NodeInformation info();
 

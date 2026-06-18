@@ -21,9 +21,9 @@ DimmerCapability::~DimmerCapability()
     delete m_impl;
 }
 
-void DimmerCapability::setPercent(double value, DMXMatrix &t_matrix, double t_blend)
+void DimmerCapability::setPercent(double value, DMXMatrix &t_matrix, double t_blend, DMXTimeMachine *t_timeMachine)
 {
-    t_matrix.setValuePercent(fixture()->universe()-1,channel()->universalChannelNumber(), value, t_blend);
+    t_matrix.setValuePercent(channel(), value, t_blend, t_timeMachine);
 }
 
 void DimmerCapability::setLumens(double value, DMXMatrix &t_matrix, double blend)

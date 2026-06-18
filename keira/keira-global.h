@@ -25,6 +25,15 @@ enum Connection
     AllowMultipleOutput = 0x8
 };
 
+enum DirtyModes
+{
+    Clean = 0,
+    Dirty_Eval = 0x1,
+    Dirty_Priority = 0x2,
+    Dirty_Parameter = 0x4,
+    Dirty_Structure = 0x8
+};
+
 enum PortDirection
 {
     Input,
@@ -36,6 +45,7 @@ using NodeCategoryList = QVector<NodeCategoryId>;
 
 struct EvaluationContext;
 class Node;
+class NodeEditor;
 class NodeItem;
 class NodeLibrary;
 class Graph;

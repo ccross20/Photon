@@ -121,7 +121,7 @@
   "virtual": [
     {
       "name":"Led1",
-      "channels": ["Red","Green","Blue","Amber","UV"]
+      "channels": ["Red","Green","Blue","White","Amber","UV"]
     }
   ],
   "modes": [

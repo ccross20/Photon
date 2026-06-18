@@ -23,6 +23,17 @@ static QColor blendColors(const QColor &t_a, const QColor &t_b, double t_t){
                             );
 }
 
+static QColor blendColorsHSL(const QColor &t_a, const QColor &t_b, double t_t){
+    QColor a = t_a.convertTo(QColor::Hsl);
+    QColor b = t_b.convertTo(QColor::Hsl);
+
+    return QColor::fromHslF(a.hueF() + (b.hueF() - a.hueF()) * t_t,
+                            a.hslSaturationF() + (b.hslSaturationF() - a.hslSaturationF()) * t_t,
+                            a.lightnessF() + (b.lightnessF() - a.lightnessF()) * t_t,
+                            a.alphaF() + (b.alphaF() - a.alphaF()) * t_t
+                            );
+}
+
 static float * colorToValues(const QColor &t_color, float *value, uint size)
 {
     t_color.getHslF(&value[0],&value[1],&value[2]);
@@ -31,6 +42,14 @@ static float * colorToValues(const QColor &t_color, float *value, uint size)
 
 
 static QJsonObject pointToJson(const QPoint &t_pt)
+{
+    QJsonObject obj;
+    obj.insert("x", t_pt.x());
+    obj.insert("y", t_pt.y());
+    return obj;
+}
+
+static QJsonObject pointToJson(const QPointF &t_pt)
 {
     QJsonObject obj;
     obj.insert("x", t_pt.x());
@@ -159,6 +178,63 @@ static void clearWidget(QWidget *widget)
 {
     for(QObject *obj : widget->children())
         delete obj;
+}
+
+static QStringList easeStrings()
+{
+    QStringList easeStrings;
+    easeStrings << "Linear";
+    easeStrings << "In Quad";
+    easeStrings << "Out Quad";
+    easeStrings << "In Out Quad";
+    easeStrings << "Out In Quad";
+
+    easeStrings << "In Cubic";
+    easeStrings << "Out Cubic";
+    easeStrings << "In Out Cubic";
+    easeStrings << "Out In Cubic";
+
+    easeStrings << "In Quart";
+    easeStrings << "Out Quart";
+    easeStrings << "In Out Quart";
+    easeStrings << "Out In Quart";
+
+    easeStrings << "In Quint";
+    easeStrings << "Out Quint";
+    easeStrings << "In Out Quint";
+    easeStrings << "Out In Quint";
+
+    easeStrings << "In Sine";
+    easeStrings << "Out Sine";
+    easeStrings << "In Out Sine";
+    easeStrings << "Out In Sine";
+
+    easeStrings << "In Expo";
+    easeStrings << "Out Expo";
+    easeStrings << "In Out Expo";
+    easeStrings << "Out In Expo";
+
+    easeStrings << "In Circ";
+    easeStrings << "Out Circ";
+    easeStrings << "In Out Circ";
+    easeStrings << "Out In Circ";
+
+    easeStrings << "In Elastic";
+    easeStrings << "Out Elastic";
+    easeStrings << "In Out Elastic";
+    easeStrings << "Out In Elastic";
+
+    easeStrings << "In Back";
+    easeStrings << "Out Back";
+    easeStrings << "In Out Back";
+    easeStrings << "Out In Back";
+
+    easeStrings << "In Bounce";
+    easeStrings << "Out Bounce";
+    easeStrings << "In Out Bounce";
+    easeStrings << "Out In Bounce";
+
+    return easeStrings;
 }
 
 class Utils

@@ -5,6 +5,7 @@
 #include "model/parameter/decimalparameter.h"
 #include "model/parameter/integerparameter.h"
 #include "model/parameter/optionparameter.h"
+#include "graph/parameter/point2dparameter.h"
 #include "util/noisegenerator.h"
 
 namespace photon {
@@ -22,8 +23,10 @@ public:
     static keira::NodeInformation info();
 
 private:
-    keira::DecimalParameter *scaleParam;
-    keira::DecimalParameter *inputParam;
+    Point2DParameter *scaleParam;
+    keira::DecimalParameter *inputXParam;
+    keira::DecimalParameter *inputYParam;
+    Point2DParameter *inputFrequencyParam;
     keira::IntegerParameter *seedParam;
     keira::OptionParameter *noiseModeParam;
     keira::DecimalParameter *minParam;

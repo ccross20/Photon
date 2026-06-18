@@ -30,6 +30,8 @@ public:
     void addWire(WireItem *);
     void removeWire(WireItem *);
 
+    void addPort();
+
 public slots:
     void widgetUpdated(QWidget *, const keira::Parameter *);
 

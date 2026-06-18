@@ -1,7 +1,7 @@
 #include <QSpinBox>
 #include <QLabel>
 #include "colorparameter.h"
-#include "view/nodeitem.h"
+#include "view/nodeeditor.h"
 #include "gui/color/colorwheelswatch.h"
 #include "util/utils.h"
 
@@ -32,7 +32,7 @@ ColorParameter::~ColorParameter()
 }
 
 
-QWidget *ColorParameter::createWidget(keira::NodeItem *item) const
+QWidget *ColorParameter::createWidget(keira::NodeEditor *item) const
 {
     if(isReadOnly())
     {
@@ -46,6 +46,7 @@ QWidget *ColorParameter::createWidget(keira::NodeItem *item) const
     const ColorParameter *param = this;
 
     ColorWheelSwatch *swatch = new ColorWheelSwatch();
+    swatch->setColor(value().value<QColor>());
     swatch->setSizePolicy(QSizePolicy(QSizePolicy::Maximum, QSizePolicy::Minimum));
     ColorWheelSwatch::connect(swatch, &ColorWheelSwatch::colorChanged, swatch,[item, swatch, param](QColor){item->widgetUpdated(swatch, param);});
     /*

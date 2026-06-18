@@ -14,6 +14,7 @@ public:
     QByteArray uniqueId;
     QString name;
     Surface *facade;
+    SurfaceGraph *graph;
 };
 
 }

@@ -18,7 +18,7 @@ public:
 
 RoutineEditPanel::RoutineEditPanel() : Panel("photon.routine"),m_impl(new Impl)
 {
-    m_impl->viewer = new keira::Viewer;
+    m_impl->viewer = new keira::Viewer(photonApp->plugins()->nodeLibrary());
     setPanelWidget(m_impl->viewer);
     setName("Routine");
 

@@ -13,7 +13,7 @@ public:
     Point2DParameter();
     Point2DParameter(const QByteArray &t_id, const QString &t_name, QPointF t_default, int connectionOptions = keira::AllowMultipleOutput | keira::AllowSingleInput);
 
-    QWidget *createWidget(keira::NodeItem *) const override;
+    QWidget *createWidget(keira::NodeEditor *) const override;
     void updateWidget(QWidget *) const override;
     QVariant updateValue(QWidget *) const override;
 

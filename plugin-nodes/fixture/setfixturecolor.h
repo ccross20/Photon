@@ -4,6 +4,7 @@
 #include "model/node.h"
 #include "model/parameter/decimalparameter.h"
 #include "model/parameter/integerparameter.h"
+#include "model/parameter/booleanparameter.h"
 #include "graph/parameter/colorparameter.h"
 
 namespace photon {
@@ -19,6 +20,7 @@ public:
 
 private:
     ColorParameter *m_colorParam;
+    keira::BooleanParameter *m_allCapabilitiesParam;
     keira::DecimalParameter *m_blendParam;
     keira::IntegerParameter *m_capabilityParam;
 };

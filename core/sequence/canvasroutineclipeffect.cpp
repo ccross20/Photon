@@ -15,7 +15,7 @@ namespace photon {
 
 RoutineEditor::RoutineEditor(Routine *t_routine)
 {
-    viewer = new keira::Viewer;
+    viewer = new keira::Viewer(photonApp->plugins()->nodeLibrary());
 
     QVBoxLayout *vLayout = new QVBoxLayout;
     vLayout->setContentsMargins(0,0,0,0);
@@ -165,6 +165,7 @@ void CanvasRoutineClipEffect::evaluate(CanvasEffectEvaluationContext &t_context)
 
     t_context.strength = effectParent()->strengthAtTime(t_context.relativeTime);
 
+    /*
     localContext.channelValues.clear();
     for(const auto &channel : channels())
     {
@@ -179,6 +180,7 @@ void CanvasRoutineClipEffect::evaluate(CanvasEffectEvaluationContext &t_context)
     {
         param->setValue(localContext.channelValues.value(param->node()->uniqueId()));
     }
+*/
 
     m_impl->routine->evaluate(&localContext);
     m_impl->routine->markClean();

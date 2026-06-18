@@ -11,6 +11,7 @@ keira::NodeInformation SetFixtureTilt::info()
     toReturn.name = "Set Fixture Tilt";
     toReturn.nodeId = "photon.plugin.node.set-fixture-tilt";
     toReturn.categories = {"Fixture"};
+    toReturn.graphs = QByteArrayList{"fixture"};
 
     return toReturn;
 }

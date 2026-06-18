@@ -16,10 +16,14 @@ public:
     void removeNode(Node *);
     QByteArray uniqueId() const;
     Node *findNode(const QByteArray &) const;
+    QVector<Node *> nodeHierarchy() const;
     Parameter *findParameter(const QByteArray &);
     const QVector<Node*> &nodes() const;
-    const QVector<Node*> LoopNodes() const;
+    QByteArray graphTypeId() const;
+    void setGraphTypeId(const QByteArray &);
+    void resortGraph();
 
+    void prepForEvaluation();
     virtual void evaluate(EvaluationContext *) const;
     virtual void evaluateAll(EvaluationContext *) const;
     void connectParameters(const QByteArray &, const QByteArray &);
@@ -29,9 +33,16 @@ public:
     void disconnectNode(Node *);
     void updateNodePosition(Node*);
 
-    void markDirty();
+    void markDirty(int);
     void markClean();
     bool isDirty() const;
+
+    Node *parentNode() const;
+    void setParentNode(Node *);
+
+    void setName(const QString &);
+    QString name() const;
+    QString familyName() const;
 
     virtual void readFromJson(const QJsonObject &, NodeLibrary *library);
     virtual void writeToJson(QJsonObject &) const;

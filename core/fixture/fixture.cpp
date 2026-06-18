@@ -5,6 +5,7 @@
 #include "fixturechannel_p.h"
 #include "fixturevirtualchannel.h"
 #include "fixtureeditorwidget.h"
+#include "capability/colorcapability.h"
 #include "fixturewheel.h"
 #include "state/state.h"
 #include "project/project.h"
@@ -19,6 +20,7 @@ public:
     Fixture::Physical physical;
     QVector<FixtureChannel*> channels;
     QVector<FixtureVirtualChannel*> virtualChannels;
+    QVector<ColorCapability*> colors;
     QVector<FixtureMode> modes;
     QVector<FixtureWheel*> wheels;
     State *defaultState = nullptr;
@@ -137,7 +139,7 @@ QVector<FixtureCapability*> Fixture::findCapability(CapabilityType t_type, const
     {
         auto channel = *it;
 
-        if(channel->name() == t_name)
+        if(channel->name().toLower() == t_name.toLower())
         {
             for(auto capabilityIt = channel->capabilities().cbegin(); capabilityIt != channel->capabilities().cend(); ++capabilityIt)
             {
@@ -265,6 +267,16 @@ FixtureChannel* Fixture::findChannelWithName(const QString &t_name) const
 Fixture::Physical Fixture::physical() const
 {
     return m_impl->physical;
+}
+
+int Fixture::colorCount() const
+{
+    return m_impl->colors.length();
+}
+
+ColorCapability *Fixture::colorAtIndex(int index) const
+{
+    return m_impl->colors[abs(index%(m_impl->colors.length()))];
 }
 
 bool extractRange(QString text, int *start, int *end, QString *prefix)
@@ -593,6 +605,22 @@ void Fixture::setMode(uchar t_mode)
             qDebug() << "Could not find:" << channelName;
         }
     }
+
+    m_impl->colors.clear();
+
+    for(auto *vchannel : m_impl->virtualChannels)
+    {
+        for(auto *capability : vchannel->capabilities())
+        {
+            ColorCapability *colorCap = dynamic_cast<ColorCapability*>(capability);
+            if(colorCap)
+            {
+                colorCap->setIndex(m_impl->colors.length());
+                m_impl->colors.append(colorCap);
+            }
+        }
+    }
+
     emit metadataChanged(this);
 }
 

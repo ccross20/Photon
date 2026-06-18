@@ -11,6 +11,7 @@ public:
     bool hasWhite = false;
     bool hasAmber = false;
     bool hasLime = false;
+    bool isCMY = false;
 };
 
 
@@ -22,6 +23,9 @@ ColorCapability::ColorCapability(const QVector<ColorIntensityCapability*> &t_cha
     for(auto channel : m_impl->channels)
     {
         switch (channel->type()) {
+        case Capability_Magenta:
+            m_impl->isCMY = true;
+            break;
         case Capability_Red:
             break;
         case Capability_Green:
@@ -53,6 +57,64 @@ ColorCapability::~ColorCapability()
 {
     delete m_impl;
 }
+
+
+
+enum class LEDChannel {
+    Red,
+    Green,
+    Blue,
+    White,
+    Lime,
+    Amber
+};
+
+struct LEDColor {
+    std::map<LEDChannel, uint8_t> channels;
+};
+
+LEDColor qColorToLED(const QColor& color, const std::vector<LEDChannel>& supportedChannels) {
+    LEDColor led;
+
+    // Start with base RGB values
+    uint8_t r = color.red();
+    uint8_t g = color.green();
+    uint8_t b = color.blue();
+
+    // Calculate white component if supported (extract AFTER amber/lime)
+    if (std::find(supportedChannels.begin(), supportedChannels.end(), LEDChannel::White) != supportedChannels.end()) {
+        uint8_t white = qMin(qMin(r, g), b);
+        led.channels[LEDChannel::White] = white;
+        r -= white;
+        g -= white;
+        b -= white;
+    }
+
+    // Calculate amber component FIRST if supported (orange/yellow region)
+    if (std::find(supportedChannels.begin(), supportedChannels.end(), LEDChannel::Amber) != supportedChannels.end()) {
+        // Amber is roughly 2 parts red, 1 part green
+        uint8_t amber = qMin(uint8_t(r / 2), g);
+        led.channels[LEDChannel::Amber] = amber;
+        r -= amber * 2;
+        g -= amber;
+    }
+
+    // Calculate lime component if supported (yellow-green region)
+    if (std::find(supportedChannels.begin(), supportedChannels.end(), LEDChannel::Lime) != supportedChannels.end()) {
+        uint8_t lime = qMin(r, g);
+        led.channels[LEDChannel::Lime] = lime;
+        r -= lime;
+        g -= lime;
+    }
+
+    // Set remaining RGB
+    led.channels[LEDChannel::Red] = r;
+    led.channels[LEDChannel::Green] = g;
+    led.channels[LEDChannel::Blue] = b;
+
+    return led;
+}
+
 
 struct R_G_B_A_L_W {
     uint8_t R;
@@ -140,33 +202,37 @@ R_G_B_A_L_W rgb_to_rgbalw(const R_G_B& input_rgb, bool hasAmber, bool hasLime, b
     // The final R, G, B are the components that couldn't be efficiently replaced by W, A, or L.
     output.R = static_cast<uint8_t>(std::min(r, 255.0f));
     output.G = static_cast<uint8_t>(std::min(g, 255.0f));
-    output.B = static_cast<uint8_t>(static_cast<float>(input_rgb.B) - min_rgb); // Remaining Blue is just original B - White
+    output.B = static_cast<uint8_t>(std::min(b, 255.0f)); // Remaining Blue is just original B - White
 
     return output;
 }
 
-void ColorCapability::setColor(const QColor &t_color, DMXMatrix &t_matrix, double t_blend) const
+void ColorCapability::setColor(const QColor &t_color, DMXMatrix &t_matrix, double t_blend, DMXTimeMachine *t_timeMachine) const
 {
-    /*
-    QColor c = t_color.toCmyk();
-    for(auto channel : m_impl->channels)
+    if(m_impl->isCMY)
     {
-        switch (channel->type()) {
-        case Capability_Cyan:
-            channel->setPercent(c.cyanF(), t_matrix, t_blend);
-            break;
-        case Capability_Magenta:
-            channel->setPercent(c.magentaF(), t_matrix, t_blend);
-            break;
-        case Capability_Yellow:
-            channel->setPercent(c.yellowF(), t_matrix, t_blend);
-            break;
-        default:
-            break;
-        }
 
+        QColor c = t_color.toCmyk();
+        for(auto channel : m_impl->channels)
+        {
+            switch (channel->type()) {
+            case Capability_Cyan:
+                channel->setPercent(c.cyanF(), t_matrix, t_blend, t_timeMachine);
+                break;
+            case Capability_Magenta:
+                channel->setPercent(c.magentaF(), t_matrix, t_blend, t_timeMachine);
+                break;
+            case Capability_Yellow:
+                channel->setPercent(c.yellowF(), t_matrix, t_blend, t_timeMachine);
+                break;
+            default:
+                break;
+            }
+
+        }
+        return;
     }
-*/
+
 
     QColor c = t_color.toRgb();
     R_G_B rgb;
@@ -175,29 +241,41 @@ void ColorCapability::setColor(const QColor &t_color, DMXMatrix &t_matrix, doubl
     rgb.B = c.blue();
 
     //auto ledColors = rgb_to_rgbalw(rgb, m_impl->hasAmber, m_impl->hasLime, m_impl->hasWhite);
-    auto ledColors = rgb_to_rgbalw(rgb, false,false, m_impl->hasWhite);
+    //auto ledColors = rgb_to_rgbalw(rgb, false,false, m_impl->hasWhite);
 
+    LEDColor ledColor;
+
+    std::vector<LEDChannel> supportedChannels = {LEDChannel::Red, LEDChannel::Green,LEDChannel::Blue};
+
+    if(m_impl->hasWhite)
+        supportedChannels.push_back(LEDChannel::White);
+    if(m_impl->hasAmber && m_impl->hasWhite)
+        supportedChannels.push_back(LEDChannel::Amber);
+    if(m_impl->hasLime && m_impl->hasWhite)
+        supportedChannels.push_back(LEDChannel::Lime);
+
+    ledColor = qColorToLED(c, supportedChannels);
 
     for(auto channel : m_impl->channels)
     {
         switch (channel->type()) {
         case Capability_Red:
-            channel->setPercent(ledColors.R/255.0, t_matrix, t_blend);
+            channel->setPercent(ledColor.channels[LEDChannel::Red]/255.0, t_matrix, t_blend, t_timeMachine);
             break;
         case Capability_Green:
-            channel->setPercent(ledColors.G/255.0, t_matrix, t_blend);
+            channel->setPercent(ledColor.channels[LEDChannel::Green]/255.0, t_matrix, t_blend, t_timeMachine);
             break;
         case Capability_Blue:
-            channel->setPercent(ledColors.B/255.0, t_matrix, t_blend);
+            channel->setPercent(ledColor.channels[LEDChannel::Blue]/255.0, t_matrix, t_blend, t_timeMachine);
             break;
         case Capability_Lime:
-            channel->setPercent(ledColors.L/255.0, t_matrix, t_blend);
+            channel->setPercent(ledColor.channels[LEDChannel::Lime]/255.0, t_matrix, t_blend, t_timeMachine);
             break;
         case Capability_Amber:
-            channel->setPercent(ledColors.A/255.0, t_matrix, t_blend);
+            channel->setPercent(ledColor.channels[LEDChannel::Amber]/255.0, t_matrix, t_blend, t_timeMachine);
             break;
         case Capability_White:
-            channel->setPercent(ledColors.W/255.0, t_matrix, t_blend);
+            channel->setPercent(ledColor.channels[LEDChannel::White]/255.0, t_matrix, t_blend, t_timeMachine);
             break;
             /*
         case Capability_UV:

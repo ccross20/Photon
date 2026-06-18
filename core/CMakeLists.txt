@@ -39,6 +39,7 @@ find_package(Qt6 REQUIRED COMPONENTS Widgets)
 find_package(Qt6 REQUIRED COMPONENTS Widgets)
 find_package(Qt6 REQUIRED COMPONENTS Widgets)
 find_package(Qt6 REQUIRED COMPONENTS Widgets)
+find_package(Qt6 REQUIRED COMPONENTS Core)
 
 set(PROJECT_SOURCES
         photon-global.h
@@ -521,7 +522,23 @@ add_library(photon-core SHARED ${PROJECT_SOURCES}
     surface/viewer/actionsettingswidget.h surface/viewer/actionsettingswidget.cpp
     surface/canvasaction.h surface/canvasaction.cpp
     surface/viewer/canvasactionsettingswidget.h surface/viewer/canvasactionsettingswidget.cpp
-    resources/fixtures/betopper-bee-eye.json resources/fixtures/betopper-lb150.json resources/fixtures/betopper-LPC1818.json resources/fixtures/both-lighting-ir-4.json resources/fixtures/Chauvet-Pyxis.json resources/fixtures/proteus-hybrid.json resources/fixtures/shehds-jws-web.json resources/fixtures/shehds-led-18x18.json)
+    resources/fixtures/betopper-bee-eye.json resources/fixtures/betopper-lb150.json resources/fixtures/betopper-LPC1818.json resources/fixtures/both-lighting-ir-4.json resources/fixtures/Chauvet-Pyxis.json resources/fixtures/proteus-hybrid.json resources/fixtures/shehds-jws-web.json resources/fixtures/shehds-led-18x18.json
+    graph/node/gizmo/togglegizmonode.h graph/node/gizmo/togglegizmonode.cpp
+    graph/node/fixture/fixturesubgraphnode.h graph/node/fixture/fixturesubgraphnode.cpp
+    graph/parameter/fixturelistparameter.h graph/parameter/fixturelistparameter.cpp
+    graph/node/fixture/fixtureglobalsnode.h graph/node/fixture/fixtureglobalsnode.cpp
+    resources/fixtures/martin-mac-quantum.json
+    surface/slidergizmo.h surface/slidergizmo.cpp
+    surface/viewer/slidergizmowidget.h surface/viewer/slidergizmowidget.cpp
+    graph/node/gizmo/slidergizmonode.h graph/node/gizmo/slidergizmonode.cpp
+    surface/viewer/slidergizmoeditor.h surface/viewer/slidergizmoeditor.cpp
+    fixture/capability/prismrotationcapability.h fixture/capability/prismrotationcapability.cpp
+    graph/parameter/colorpaletteparameter.h graph/parameter/colorpaletteparameter.cpp
+    data/dmxtimemachine.h data/dmxtimemachine.cpp
+    graph/node/pixel/pixelgraph.h graph/node/pixel/pixelgraph.cpp
+    graph/parameter/pixellistparameter.h graph/parameter/pixellistparameter.cpp
+    graph/node/pixel/pixelglobalsnode.h graph/node/pixel/pixelglobalsnode.cpp
+    virtualdj/virtualdjconnector.h virtualdj/virtualdjconnector.cpp)
 
 target_include_directories(photon-core PUBLIC ../core)
 target_include_directories(photon-core PUBLIC ../keira)
@@ -558,6 +575,7 @@ target_link_libraries(photon-core PRIVATE Qt6::Widgets)
 target_link_libraries(photon-core PRIVATE Qt6::Widgets)
 target_link_libraries(photon-core PRIVATE Qt6::Widgets)
 target_link_libraries(photon-core PRIVATE Qt6::Widgets)
+target_link_libraries(photon-core PRIVATE Qt6::Core)
 
 target_compile_definitions(photon-core PRIVATE PHOTONCORE_LIBRARY)
 

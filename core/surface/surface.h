@@ -17,6 +17,7 @@ public:
     QString name() const;
     void setName(const QString &);
     Project *project() const;
+    SurfaceGraph *graph() const;
 
     void processChannels(ProcessContext &, double lastTime);
 
@@ -25,6 +26,11 @@ public:
     void writeToJson(QJsonObject &) const;
 
     const QVector<SurfaceGizmoContainer*> &containers() const;
+
+    QVector<SurfaceGizmo*> gizmos() const;
+    QVector<SurfaceGizmo*> gizmosByType(const QByteArray &) const;
+    SurfaceGizmo *findGizmoWithId(const QByteArray &) const;
+    SurfaceGizmo *findGizmoWithUniqueId(const QByteArray &) const;
 
 signals:
     void gizmoContainerWillBeAdded(photon::SurfaceGizmoContainer *, int);

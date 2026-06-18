@@ -49,13 +49,14 @@ void ColorPaletteWidget::colorSelected(int index)
 
 void ColorPaletteWidget::openAddColor()
 {
-    ColorSelectorDialog *colorsWidget = new ColorSelectorDialog(nullptr);
+    ColorSelectorDialog *colorsWidget = new ColorSelectorDialog(Qt::red);
     colorsWidget->setAttribute(Qt::WA_DeleteOnClose);
     colorsWidget->show();
     colorsWidget->raise();
     colorsWidget->activateWindow();
 
     m_palette.append(Qt::red);
+    buildLayout();
 
     connect(colorsWidget,&ColorSelectorDialog::selectionChanged,this,[this](QColor color){
         m_palette.last() = color;
@@ -66,7 +67,7 @@ void ColorPaletteWidget::openAddColor()
 
 void ColorPaletteWidget::openEditColor(int index)
 {
-    ColorSelectorDialog *colorsWidget = new ColorSelectorDialog(nullptr);
+    ColorSelectorDialog *colorsWidget = new ColorSelectorDialog(m_palette[index]);
     colorsWidget->setAttribute(Qt::WA_DeleteOnClose);
     colorsWidget->show();
     colorsWidget->raise();

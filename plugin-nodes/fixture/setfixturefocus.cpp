@@ -11,6 +11,7 @@ keira::NodeInformation SetFixtureFocus::info()
     toReturn.name = "Set Fixture Focus";
     toReturn.nodeId = "photon.plugin.node.set-fixture-focus";
     toReturn.categories = {"Fixture"};
+    toReturn.graphs = QByteArrayList{"fixture"};
 
     return toReturn;
 }

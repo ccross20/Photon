@@ -21,6 +21,7 @@ keira::NodeInformation TrigonometryNode::info()
     keira::NodeInformation toReturn([](){return new TrigonometryNode;});
     toReturn.name = "Trigonometry";
     toReturn.nodeId = "photon.math.trigonometry";
+    toReturn.categories = {"Math"};
 
     return toReturn;
 }

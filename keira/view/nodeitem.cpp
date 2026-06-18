@@ -19,8 +19,6 @@ public:
     Parameter *param;
     PortItem *inputPort = nullptr;
     PortItem *outputPort = nullptr;
-    QWidget *widget = nullptr;
-    QGraphicsProxyWidget *proxy = nullptr;
 };
 
 class NodeItemPort
@@ -39,14 +37,16 @@ class NodeItem::Impl
 public:
     Impl(NodeItem *t_item);
     void layoutNode();
+    bool parameterExists(Parameter *);
 
     NodeItem *facade;
     Node *node;
     QVector<NodeItemParameter> parameters;
     QVector<WireItem*> wires;
     int height = 20;
-    int width = 200;
+    int width = 120;
     int inset = 2;
+    int paramTextInset = 10;
 };
 
 NodeItemPort::NodeItemPort(Parameter *t_param, PortDirection t_direction, QPointF t_pt):param(t_param),
@@ -61,11 +61,25 @@ NodeItem::Impl::Impl(NodeItem *t_item):facade(t_item)
 
 }
 
+bool NodeItem::Impl::parameterExists(Parameter *t_param)
+{
+    for(auto checkParam : parameters)
+    {
+        if(checkParam.param == t_param)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
 void NodeItem::Impl::layoutNode()
 {
     height = 20;
     for(Parameter *param : node->parameters())
     {
+        if(!param->allowInput() && !param->allowOutput())
+            continue;
         height += param->rowHeight();
     }
     height += 5;
@@ -96,6 +110,8 @@ PortItem *NodeItem::snapToPort(QPointF t_position, PortDirection t_direction)
     double y = 20;
     for(const auto &param : m_impl->parameters)
     {
+        if(!param.param->allowInput() && !param.param->allowOutput())
+            continue;
 
         int rowHeight = param.param->rowHeight();
 
@@ -120,38 +136,22 @@ QVariant NodeItem::itemChange(QGraphicsItem::GraphicsItemChange change, const QV
 
 void NodeItem::addedToScene(QGraphicsScene *t_scene)
 {
-    QGraphicsGridLayout *gridLayout = new QGraphicsGridLayout();
-    gridLayout->setColumnStretchFactor(0,1);
-    gridLayout->setColumnStretchFactor(1,2);
-    //gridLayout->setContentsMargins(10,0,10,0);
-
-    int row = 0;
     double y = 20;
     for(Parameter *param : m_impl->node->parameters())
     {
+        if(!param->allowInput() && !param->allowOutput())
+            continue;
         NodeItemParameter itemParam;
         itemParam.param = param;
         int rowHeight = param->rowHeight();
-        itemParam.widget = param->createWidget(this);
-
-        param->updateWidget(itemParam.widget);
-        itemParam.proxy = t_scene->addWidget(itemParam.widget);
 
         int options = param->layoutOptions();
 
         if(options & Parameter::LayoutNoLabel)
         {
-            gridLayout->addItem(itemParam.proxy, row,0,1, 2, Qt::AlignVCenter | Qt::AlignCenter);
-        }
-        else
-        {
-            QLabel *label = new QLabel(param->name());
-            label->setSizePolicy(QSizePolicy(QSizePolicy::Minimum, QSizePolicy::Minimum));
-            label->setStyleSheet("background:transparent;");
 
-            gridLayout->addItem(t_scene->addWidget(label),row,0, Qt::AlignVCenter | Qt::AlignLeft);
-            gridLayout->addItem(itemParam.proxy, row,1, Qt::AlignVCenter | Qt::AlignLeft);
         }
+
 
         if(param->allowInput())
         {
@@ -171,14 +171,58 @@ void NodeItem::addedToScene(QGraphicsScene *t_scene)
 
         m_impl->parameters.append(itemParam);
         y += rowHeight;
-        ++row;
     }
 
-    setLayout(gridLayout);
-    setContentsMargins(2,20,2,5);
-    //gridLayout->addStretch();
+}
+
+void NodeItem::addPort()
+{
 
 
+    prepareGeometryChange();
+    double y = 20;
+    for(Parameter *param : m_impl->node->parameters())
+    {
+        if(!param->allowInput() && !param->allowOutput())
+            continue;
+
+        NodeItemParameter itemParam;
+        itemParam.param = param;
+        int rowHeight = param->rowHeight();
+
+        int options = param->layoutOptions();
+
+        if(options & Parameter::LayoutNoLabel)
+        {
+
+        }
+
+        if(!m_impl->parameterExists(param))
+        {
+            if(param->allowInput())
+            {
+                itemParam.inputPort = new PortItem(param, Input);
+                scene()->addItem(itemParam.inputPort);
+                itemParam.inputPort->setParentItem(this);
+                itemParam.inputPort->setPos(QPointF(m_impl->inset, y + rowHeight / 2));
+            }
+
+            if(param->allowOutput())
+            {
+                itemParam.outputPort = new PortItem(param, Output);
+                scene()->addItem(itemParam.outputPort);
+                itemParam.outputPort->setParentItem(this);
+                itemParam.outputPort->setPos(QPointF(m_impl->width - m_impl->inset, y + rowHeight / 2));
+            }
+
+            m_impl->parameters.append(itemParam);
+        }
+
+        y += rowHeight;
+    }
+
+    m_impl->layoutNode();
+    updateGeometry();
 }
 
 void NodeItem::updatePosition()
@@ -190,8 +234,6 @@ void NodeItem::updatePosition()
 
 void NodeItem::updateFromNode()
 {
-    for(const auto &param : m_impl->parameters)
-        param.param->updateWidget(param.widget);
 }
 
 Node *NodeItem::node() const
@@ -200,7 +242,7 @@ Node *NodeItem::node() const
 }
 
 void NodeItem::widgetUpdated(QWidget *t_widget, const keira::Parameter *t_param)
-{\
+{
     m_impl->node->setValue(t_param->id(), t_param->updateValue(t_widget));
 }
 /*
@@ -249,17 +291,40 @@ void NodeItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, 
     int y = 20;
     for(Parameter *param : m_impl->node->parameters())
     {
+        if(!param->allowInput() && !param->allowOutput())
+            continue;
+        QRect rect(m_impl->inset, y, m_impl->width - (2 * m_impl->inset), param->rowHeight());
         if(counter %2 == 0)
         {
-            painter->fillRect(QRect(m_impl->inset, y, m_impl->width - (2 * m_impl->inset), param->rowHeight()), QColor(255,255,255,100));
+            painter->fillRect(rect, QColor(255,255,255,100));
         }
         y += param->rowHeight();
         ++counter;
     }
 
-
+    auto f = painter->font();
+    f.setBold(true);
     painter->setPen(Qt::black);
+    painter->setFont(f);
     painter->drawText(QRect(5,5,150,30), m_impl->node->name());
+
+
+    f.setBold(false);
+    painter->setFont(f);
+
+    counter = 0;
+    y = 20;
+    for(Parameter *param : m_impl->node->parameters())
+    {
+        if(!param->allowInput() && !param->allowOutput())
+            continue;
+        QRect rect(m_impl->paramTextInset, y, m_impl->width - (2 * m_impl->paramTextInset), param->rowHeight());
+
+        painter->drawText(rect, Qt::AlignLeft | Qt::AlignVCenter, param->name());
+        y += param->rowHeight();
+        ++counter;
+    }
+
 
 }
 

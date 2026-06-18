@@ -8,6 +8,7 @@ keira::NodeInformation RenderStroke::info()
     keira::NodeInformation toReturn([](){return new RenderStroke;});
     toReturn.name = "Render Stroke";
     toReturn.nodeId = "photon.plugin.node.render-stroke";
+    toReturn.graphs = QByteArrayList{"canvas"};
 
     return toReturn;
 }

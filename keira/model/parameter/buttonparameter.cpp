@@ -16,7 +16,7 @@ ButtonParameter::ButtonParameter(const QByteArray &t_id, const QString &t_name) 
 
 }
 
-QWidget *ButtonParameter::createWidget(NodeItem *item) const
+QWidget *ButtonParameter::createWidget(NodeEditor *item) const
 {
     QPushButton *button = new QPushButton(name());
     const ButtonParameter *param = this;

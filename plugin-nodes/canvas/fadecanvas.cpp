@@ -10,6 +10,7 @@ keira::NodeInformation FadeCanvas::info()
     keira::NodeInformation toReturn([](){return new FadeCanvas;});
     toReturn.name = "Fade Canvas";
     toReturn.nodeId = "photon.plugin.node.fade-canvas";
+    toReturn.graphs = QByteArrayList{"canvas"};
 
     return toReturn;
 }

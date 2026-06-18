@@ -1,6 +1,7 @@
 #ifndef PHOTON_DMXMATRIX_H
 #define PHOTON_DMXMATRIX_H
 #include "fixture/fixturechannel.h"
+#include "data/dmxtimemachine.h"
 
 namespace photon {
 
@@ -28,8 +29,14 @@ public:
         return ((t_target - current) * t_blend) + current;
     }
 
-    void setValue(uint t_universe, uint t_channel, uchar t_value, double t_blend = 1.0)
+    void setValue(uint t_universe, uint t_channel, uchar t_value, double t_blend = 1.0, DMXTimeMachine *t_machine = nullptr)
     {
+        if(t_machine)
+        {
+            t_machine->storeData(DMXFrameData(t_universe, t_channel, t_value, t_blend, DMXFrameData::MODE_SET_VALUE));
+            return;
+        }
+
         if(t_universe < channels.size() && t_channel < 512)
             blend(channels[t_universe][t_channel], t_value, t_blend);
     }
@@ -39,8 +46,14 @@ public:
         setRangeMappedValuePercent(t_channel, t_value, t_range.start, t_range.end);
     }
 
-    void setRangeMappedValuePercent(FixtureChannel *t_channel, double t_value,uchar t_min,uchar t_max)
+    void setRangeMappedValuePercent(FixtureChannel *t_channel, double t_value,uchar t_min,uchar t_max, DMXTimeMachine *t_machine = nullptr)
     {
+        if(t_machine)
+        {
+            t_machine->storeData(DMXFrameData(t_channel, t_value, 1.0, t_min, t_max));
+            return;
+        }
+
         double delta = t_max - t_min;
         delta *= t_value;
         delta += t_min;
@@ -65,8 +78,16 @@ public:
 
 
     }
-    void setValuePercent(FixtureChannel *t_channel, double t_value, double t_blend = 1.0)
+    void setValuePercent(FixtureChannel *t_channel, double t_value, double t_blend = 1.0, DMXTimeMachine *t_machine = nullptr)
     {
+
+        if(t_machine)
+        {
+            t_machine->storeData(DMXFrameData(t_channel, t_value, t_blend, DMXFrameData::MODE_SET_VALUE_PERCENT));
+            return;
+        }
+
+
         double currentValue = valuePercent(t_channel);
         double newValue = blendDouble(currentValue, t_value, t_blend);
 
@@ -74,7 +95,9 @@ public:
         uint universe = t_channel->universe() - 1;
         uint channel = t_channel->universalChannelNumber();
         if(universe < channels.size() && channel < 512)
+        {
             blend(channels[universe][channel], floor(newValue * 255.0), 1.0);
+        }
         if(t_channel->fineChannels().length() > 0 && t_channel->fineChannels()[0]->isValid())
         {
             double remainder = (newValue * 255.0) - floor(newValue * 255.0);
@@ -82,17 +105,33 @@ public:
             uint fineUniverse = t_channel->fineChannels()[0]->universe() - 1;
             uint fineChannel = t_channel->fineChannels()[0]->universalChannelNumber();
             if(fineUniverse < channels.size() && fineChannel < 512)
+            {
                 blend(channels[fineUniverse][fineChannel], floor(remainder * 255.0), 1.0);
+            }
         }
 
     }
-    void setValuePercent(uint t_universe, uint t_channel, double t_value, double t_blend = 1.0)
+    void setValuePercent(uint t_universe, uint t_channel, double t_value, double t_blend = 1.0, DMXTimeMachine *t_machine = nullptr)
     {
+        if(t_machine)
+        {
+            t_machine->storeData(DMXFrameData(t_universe, t_channel, t_value, t_blend, DMXFrameData::MODE_SET_VALUE_PERCENT));
+            return;
+        }
+
+
         if(t_universe < channels.size() && t_channel < 512)
             blend(channels[t_universe][t_channel], floor(t_value * 255.0), t_blend);
     }
-    void setValueIntFloor(uint t_universe, uint t_channel, int t_value, double t_blend = 1.0)
+    void setValueIntFloor(uint t_universe, uint t_channel, int t_value, double t_blend = 1.0, DMXTimeMachine *t_machine = nullptr)
     {
+        if(t_machine)
+        {
+            t_machine->storeData(DMXFrameData(t_universe, t_channel, std::min(std::max(t_value,0), 255), t_blend, DMXFrameData::MODE_SET_VALUE));
+            return;
+        }
+
+
         if(t_universe < channels.size() && t_channel < 512)
             blend(channels[t_universe][t_channel], std::min(std::max(t_value,0), 255), t_blend);
     }

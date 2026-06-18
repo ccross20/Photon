@@ -12,6 +12,7 @@ class PHOTONCORE_EXPORT SurfaceGraphWidget : public QWidget
 public:
     explicit SurfaceGraphWidget(SurfaceGraph *graph, QWidget *parent = nullptr);
     ~SurfaceGraphWidget();
+    void setGraph(SurfaceGraph *);
 
 signals:
 

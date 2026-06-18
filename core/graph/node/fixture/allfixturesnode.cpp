@@ -1,6 +1,6 @@
 #include "allfixturesnode.h"
 #include "graph/parameter/dmxmatrixparameter.h"
-#include "graph/parameter/fixtureparameter.h"
+#include "graph/parameter/fixturelistparameter.h"
 #include "model/parameter/decimalparameter.h"
 #include "model/parameter/integerparameter.h"
 #include "fixture/fixturecollection.h"
@@ -16,7 +16,7 @@ const QByteArray AllFixturesNode::FixtureParam = "fixture";
 class AllFixturesNode::Impl
 {
 public:
-    FixtureParameter *fixtureParam;
+    FixtureListParameter *fixtureParam;
     QVector<Fixture*> fixtureList;
 };
 
@@ -25,6 +25,7 @@ keira::NodeInformation AllFixturesNode::info()
     keira::NodeInformation toReturn([](){return new AllFixturesNode;});
     toReturn.name = "All Fixtures";
     toReturn.nodeId = "photon.fixture.all";
+    toReturn.categories = {"Fixture List"};
 
     return toReturn;
 }
@@ -33,7 +34,6 @@ keira::NodeInformation AllFixturesNode::info()
 AllFixturesNode::AllFixturesNode() : keira::Node("photon.fixture.all"),m_impl(new Impl)
 {
     setName("All Fixtures");
-    setIsLoopable(true);
 }
 
 AllFixturesNode::~AllFixturesNode()
@@ -45,37 +45,23 @@ void AllFixturesNode::createParameters()
 {
 
 
-    m_impl->fixtureParam = new FixtureParameter(FixtureParam,"Fixture","");
+    m_impl->fixtureParam = new FixtureListParameter(FixtureParam,"Fixture",{});
     addParameter(m_impl->fixtureParam);
 
 }
 
-void AllFixturesNode::startLoop()
-{
-    m_impl->fixtureList = photonApp->project()->fixtures()->fixtures();
-}
-
-void AllFixturesNode::endLoop()
-{
-
-}
-
-uint AllFixturesNode::loopCount() const
-{
-    return photonApp->project()->fixtures()->fixtures().count();
-}
-
-
 void AllFixturesNode::evaluate(keira::EvaluationContext *t_context) const
 {
 
+    auto allFixtures = photonApp->project()->fixtures()->fixtures();
+    QVector<FixtureParameterData> dataList;
 
-
-
-    if(!photonApp->project()->fixtures()->fixtures().isEmpty())
+    for(auto fixture : allFixtures)
     {
-        m_impl->fixtureParam->setValue(m_impl->fixtureList[t_context->loopCount]->uniqueId());
+        dataList.append(fixture);
     }
+
+    m_impl->fixtureParam->setValue(QVariant::fromValue(dataList));
 
 }
 

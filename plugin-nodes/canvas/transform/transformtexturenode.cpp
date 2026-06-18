@@ -77,6 +77,7 @@ keira::NodeInformation TransformTextureNode::info()
     keira::NodeInformation toReturn([](){return new TransformTextureNode;});
     toReturn.name = "Transform Texture";
     toReturn.nodeId = "photon.plugin.node.transform-texture";
+    toReturn.graphs = QByteArrayList{"canvas"};
 
     return toReturn;
 }

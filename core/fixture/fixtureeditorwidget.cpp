@@ -61,9 +61,9 @@ FixtureEditorWidget::Impl::Impl()
     formLayout->addRow("Universe", universeSpin);
 
     offsetSpin = new QSpinBox;
-    offsetSpin->setMinimum(0);
+    offsetSpin->setMinimum(1);
     offsetSpin->setMaximum(511);
-    formLayout->addRow("Offset", offsetSpin);
+    formLayout->addRow("Starting Channel", offsetSpin);
 
     modeCombo = new QComboBox;
     formLayout->addRow("DMX Mode", modeCombo);
@@ -123,7 +123,7 @@ void FixtureEditorWidget::setFixtures(QVector<Fixture*> t_fixtures)
         m_impl->descriptionLabel->setText("");
         m_impl->universeSpin->setValue(0);
         m_impl->universeSpin->setEnabled(false);
-        m_impl->offsetSpin->setValue(0);
+        m_impl->offsetSpin->setValue(1);
         m_impl->offsetSpin->setEnabled(false);
         m_impl->modeCombo->setEnabled(false);
         m_impl->defaultStateCombo->setEnabled(false);
@@ -166,7 +166,7 @@ void FixtureEditorWidget::setFixtures(QVector<Fixture*> t_fixtures)
     int universe = firstFixture->universe();
     bool multiUniverse = false;
 
-    int offset = firstFixture->dmxOffset();
+    int offset = firstFixture->dmxOffset()+1;
     bool multiOffset = false;
 
     bool multiMode = false;
@@ -241,7 +241,7 @@ void FixtureEditorWidget::setFixtures(QVector<Fixture*> t_fixtures)
 
             if(!multiOffset && currentFixture->dmxOffset() != offset)
             {
-                offset = 0;
+                offset = 1;
                 multiOffset = true;
             }
 
@@ -348,7 +348,7 @@ void FixtureEditorWidget::setOffset(uint t_channel)
 {
     for(auto fixture : m_impl->fixtures)
     {
-        fixture->setDMXOffset(t_channel);
+        fixture->setDMXOffset(t_channel-1);
     }
 }
 

@@ -8,6 +8,7 @@ keira::NodeInformation RenderPath::info()
     keira::NodeInformation toReturn([](){return new RenderPath;});
     toReturn.name = "Render Path";
     toReturn.nodeId = "photon.plugin.node.render-path";
+    toReturn.graphs = QByteArrayList{"canvas"};
 
     return toReturn;
 }

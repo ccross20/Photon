@@ -1,8 +1,10 @@
 #include <QVBoxLayout>
 #include <QPushButton>
+#include <QTabWidget>
 #include "surfacewidget.h"
 #include "surface/surface.h"
 #include "surface/surfacegizmocontainer.h"
+#include "surfacegraphwidget.h"
 #include "surfacegizmocontainerwidget.h"
 #include "util/utils.h"
 
@@ -14,6 +16,7 @@ public:
     Impl(SurfaceWidget *);
     void buildLayout();
     SurfaceWidget *facade;
+    QWidget *surfaceContainer;
     Surface *surface = nullptr;
     SurfaceMode mode = Mode_Edit;
     QVBoxLayout *vLayout = nullptr;
@@ -22,11 +25,12 @@ public:
 void SurfaceWidget::Impl::buildLayout()
 {
     if(vLayout)
-        clearLayout(facade->layout());
+        clearLayout(surfaceContainer->layout());
     else
     {
         vLayout = new QVBoxLayout;
-        facade->setLayout(vLayout);
+        vLayout->setContentsMargins(0,0,0,0);
+        surfaceContainer->setLayout(vLayout);
     }
 
     for (auto container : surface->containers()) {
@@ -47,12 +51,20 @@ void SurfaceWidget::Impl::buildLayout()
 
 SurfaceWidget::Impl::Impl(SurfaceWidget *t_facade):facade(t_facade)
 {
-
+    surfaceContainer = new QWidget;
 }
 
 SurfaceWidget::SurfaceWidget(QWidget *parent)
     : QWidget{parent},m_impl(new Impl(this))
-{}
+{
+    QHBoxLayout *hLayout = new QHBoxLayout;
+    hLayout->setContentsMargins(0,0,0,0);
+    hLayout->addWidget(m_impl->surfaceContainer);
+
+    setLayout(hLayout);
+
+
+}
 
 SurfaceWidget::~SurfaceWidget()
 {

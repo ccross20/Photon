@@ -1,6 +1,6 @@
 #include <QVBoxLayout>
 #include "buspanel.h"
-#include "view/viewer.h"
+#include "view/graphwidget.h"
 #include "view/scene.h"
 #include "project/project.h"
 #include "graph/bus/busgraph.h"
@@ -12,14 +12,14 @@ namespace photon {
 class BusPanel::Impl
 {
 public:
-    keira::Viewer *viewer;
+    keira::GraphWidget *viewer;
     keira::Scene *scene = nullptr;
 };
 
 BusPanel::BusPanel() : Panel("photon.bus"),m_impl(new Impl)
 {
 
-    m_impl->viewer = new keira::Viewer;
+    m_impl->viewer = new keira::GraphWidget(photonApp->plugins()->nodeLibrary());
     setPanelWidget(m_impl->viewer);
     setName("Bus");
 

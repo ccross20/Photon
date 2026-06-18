@@ -19,19 +19,33 @@ public:
     DMXMatrixParameter *dmxParam;
     keira::OptionParameter *networkParam;
     keira::IntegerParameter *initParam;
-    sACNManager::tSender sender;
+    QVector<sACNManager::tSender> senders;
     bool isInitialized = false;
 };
 
 void SACNTransmitNode::Impl::initialize()
 {
-    sender->setSlotCount(512);
-    sender->setName("Photon");
-    sender->setUniverse(1);
-
     auto interfaces = QNetworkInterface::allInterfaces();
-    sender->setNetworkInterface(interfaces[networkParam->value().toInt()]);
-    sender->startSending();
+    int counter = 1;
+    for(auto it = senders.begin(); it!= senders.end(); ++it)
+    {
+
+        qDebug() << "Create universe" << counter;
+        auto sender = *it;
+        sender->setSlotCount(512);
+        sender->setName("Photon" + QString::number(counter));
+        sender->setUniverse(counter++);
+
+        //if(sender->isSending())
+        //sender->stopSending();
+
+
+        sender->setNetworkInterface(interfaces[networkParam->value().toInt()]);
+        sender->startSending();
+    }
+
+
+
     isInitialized = true;
 }
 
@@ -40,6 +54,7 @@ keira::NodeInformation SACNTransmitNode::info()
     keira::NodeInformation toReturn([](){return new SACNTransmitNode;});
     toReturn.name = "sACN Transmit";
     toReturn.nodeId = "photon.bus.sacn-transmit-node";
+    toReturn.graphs = QByteArrayList{"bus"};
 
     return toReturn;
 }
@@ -48,7 +63,11 @@ keira::NodeInformation SACNTransmitNode::info()
 SACNTransmitNode::SACNTransmitNode() : keira::Node("photon.bus.sacn-transmit-node"),m_impl(new Impl)
 {
     setName("sACN Transmit");
-    m_impl->sender = sACNManager::getInstance()->getSender(1);
+
+    for(int i = 1; i < 3; ++i)
+    {
+        m_impl->senders.append(sACNManager::getInstance()->getSender(i));
+    }
 }
 
 SACNTransmitNode::~SACNTransmitNode()
@@ -78,6 +97,14 @@ void SACNTransmitNode::evaluate(keira::EvaluationContext *) const
 {
     if(m_impl->initParam->value().toInt() > 0 && !m_impl->isInitialized)
         m_impl->initialize();
+    else if(m_impl->initParam->value().toInt() <= 0)
+    {
+        m_impl->isInitialized = false;
+        for(auto it = m_impl->senders.begin(); it!= m_impl->senders.end(); ++it)
+        {
+            (*it)->stopSending();
+        }
+    }
 
     if(!m_impl->isInitialized)
         return;
@@ -110,8 +137,14 @@ void SACNTransmitNode::evaluate(keira::EvaluationContext *) const
 
     //qDebug() << QString::number(val1/val2, 'g',3) << QString::number(val2/val3, 'g',3) << QString::number(val4/val5, 'g',3) << QString::number(val5/val6, 'g',3);
 
-    m_impl->sender->setLevel(matrix.channels[0].data(), 512,0);
+    int i = 0;
+    for(auto it = m_impl->senders.begin(); it!= m_impl->senders.end(); ++it)
+    {
+        if(i < matrix.channels.size())
+            (*it)->setLevel(matrix.channels[i++].data(), 512,0);
+    }
 
+    //qDebug() << matrix.channels.size();
 
 }
 

@@ -16,9 +16,10 @@ public:
     QPointF position;
     QByteArray id;
     QByteArray uniqueId;
-    Graph *graph;
-    double width = 200;
-    bool isDirty = true;
+    Graph *graph = nullptr;
+    double width = 120;
+    int priority = 0;
+    int isDirty = true;
     bool visited = false;
     bool isLoopable = false;
     bool isAlwaysDirty = false;

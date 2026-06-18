@@ -24,6 +24,7 @@ keira::NodeInformation CreateTextureNode::info()
     keira::NodeInformation toReturn([](){return new CreateTextureNode;});
     toReturn.name = "Create Texture";
     toReturn.nodeId = "photon.routine.create-texture";
+    toReturn.graphs = QByteArrayList{"canvas"};
 
     return toReturn;
 }
@@ -64,7 +65,7 @@ void CreateTextureNode::evaluate(keira::EvaluationContext *t_context) const
 
     QColor color = m_impl->colorParam->value().value<QColor>();
 
-
+/*
     switch(context->channelValues[SizeInput].toInt())
     {
         case 0:
@@ -86,6 +87,7 @@ void CreateTextureNode::evaluate(keira::EvaluationContext *t_context) const
             size = 2048;
             break;
     }
+*/
 
     if(m_impl->texture->width() != size)
         m_impl->texture->resize(context->openglContext, QImage::Format::Format_ARGB32_Premultiplied, size, size);

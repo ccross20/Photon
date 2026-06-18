@@ -61,6 +61,7 @@ void Scene::setGraph(Graph *t_graph)
     if(m_impl->graph == t_graph)
         return;
     clear();
+    m_impl->wires.clear();
 
     m_impl->wireParentItem = new QGraphicsLineItem;
     addItem(m_impl->wireParentItem);
@@ -102,6 +103,8 @@ void Scene::setGraph(Graph *t_graph)
     connect(m_impl->graph, &Graph::nodePositionUpdated, this, &Scene::nodePositionUpdated);
     connect(m_impl->graph, &Graph::parametersWereConnected, this, &Scene::parametersWereConnected);
     connect(m_impl->graph, &Graph::parametersWereDisconnected, this, &Scene::parametersWereDisconnected);
+
+    emit graphUpdated(m_impl->graph);
 }
 
 Graph *Scene::graph() const
@@ -207,7 +210,9 @@ void Scene::contextMenuEvent(QGraphicsSceneContextMenuEvent *contextMenuEvent)
     QMenu menu;
 
     QMenu *rootMenu = menu.addMenu("Add Node");
-    auto treeRoot = m_impl->library->createNodeTree([](const keira::NodeInformation &info){return true;});
+
+    auto graphType = graph()->graphTypeId();
+    auto treeRoot = m_impl->library->createNodeTree([graphType](const keira::NodeInformation &info){return info.graphs.isEmpty() || info.graphs.contains(graphType);});
 
     std::function<void(QMenu &menu, keira::NodeTreeElement *)> treeLoop;
     treeLoop = [&treeLoop](QMenu &menu, keira::NodeTreeElement *rootElement){

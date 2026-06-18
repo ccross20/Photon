@@ -10,6 +10,8 @@
 #include "fixture/fixturecollection.h"
 #include "fixture/fixture.h"
 #include "surfacegizmocontainer.h"
+#include "surfacegraph.h"
+#include "plugin/pluginfactory.h"
 
 namespace photon {
 
@@ -36,6 +38,51 @@ void Surface::init()
 
 }
 
+QVector<SurfaceGizmo*> Surface::gizmos() const
+{
+    QVector<SurfaceGizmo*> results;
+    for(auto container : m_impl->gizmos)
+    {
+        results.append(container->gizmos());
+    }
+    return results;
+}
+
+QVector<SurfaceGizmo*> Surface::gizmosByType(const QByteArray &t_type) const
+{
+    QVector<SurfaceGizmo*> results;
+    for(auto container : m_impl->gizmos)
+    {
+        results.append(container->gizmosByType(t_type));
+    }
+    return results;
+}
+
+SurfaceGizmo *Surface::findGizmoWithId(const QByteArray &t_id) const
+{
+    for(auto container : m_impl->gizmos)
+    {
+        auto gizmo = container->findGizmoWithId(t_id);
+        if(gizmo)
+            return gizmo;
+    }
+    qDebug() << "Could not find gizmo with id:" << t_id;
+    return nullptr;
+}
+
+SurfaceGizmo *Surface::findGizmoWithUniqueId(const QByteArray &t_id) const
+{
+    for(auto container : m_impl->gizmos)
+    {
+        auto gizmo = container->findGizmoWithUniqueId(t_id);
+        if(gizmo)
+            return gizmo;
+    }
+
+    qDebug() << "Could not find gizmo with id:" << t_id;
+    return nullptr;
+}
+
 QByteArray Surface::uniqueId() const
 {
     return m_impl->uniqueId;
@@ -59,6 +106,11 @@ QString Surface::name() const
 void Surface::setName(const QString &t_value)
 {
     m_impl->name = t_value;
+}
+
+SurfaceGraph *Surface::graph() const
+{
+    return m_impl->graph;
 }
 
 void Surface::addGizmoContainer(photon::SurfaceGizmoContainer *t_gizmo)
@@ -138,6 +190,7 @@ void Surface::readFromJson(const QJsonObject &t_json, const LoadContext &t_conte
             connect(c, &SurfaceGizmoContainer::gizmoWasAdded,this, &Surface::surfaceWasModified);
         }
     }
+
 }
 
 void Surface::writeToJson(QJsonObject &t_json) const
@@ -153,6 +206,7 @@ void Surface::writeToJson(QJsonObject &t_json) const
         gizmoArray.append(gizmoObj);
     }
     t_json.insert("gizmos", gizmoArray);
+
 }
 
 

@@ -2,6 +2,9 @@
 
 namespace photon {
 
-SurfaceGraph::SurfaceGraph() {}
+SurfaceGraph::SurfaceGraph(Surface *t_surface) {
+    m_surface = t_surface;
+    setName("Surface");
+}
 
 } // namespace photon

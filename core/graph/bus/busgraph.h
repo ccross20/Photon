@@ -8,6 +8,8 @@ namespace photon {
 class PHOTONCORE_EXPORT BusGraph : public keira::Graph
 {
 public:
+    const static QByteArray BusGraphId;
+
     BusGraph();
 };
 

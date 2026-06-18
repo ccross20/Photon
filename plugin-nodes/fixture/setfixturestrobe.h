@@ -2,7 +2,7 @@
 #define PHOTON_SETFIXTURESTROBE_H
 #include "model/node.h"
 #include "model/parameter/decimalparameter.h"
-#include "model/parameter/integerparameter.h"
+#include "model/parameter/optionparameter.h"
 
 
 namespace photon {
@@ -18,7 +18,7 @@ public:
 
 private:
     keira::DecimalParameter *m_speedParam;
-    keira::IntegerParameter *m_modeParam;
+    keira::OptionParameter *m_modeParam;
 };
 
 } // namespace photon

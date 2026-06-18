@@ -9,6 +9,7 @@ keira::NodeInformation DrawRectangle::info()
     keira::NodeInformation toReturn([](){return new DrawRectangle;});
     toReturn.name = "Draw Rectangle";
     toReturn.nodeId = "photon.plugin.node.draw-rectangle";
+    toReturn.graphs = QByteArrayList{"canvas"};
 
     return toReturn;
 }

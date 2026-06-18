@@ -27,6 +27,7 @@ keira::NodeInformation ColorInputNode::info()
     keira::NodeInformation toReturn([](){return new ColorInputNode;});
     toReturn.name = "Color Input";
     toReturn.nodeId = "photon.routine.color-input";
+    toReturn.categories = {"Input"};
 
     return toReturn;
 }
@@ -41,9 +42,9 @@ ColorInputNode::~ColorInputNode()
     delete m_impl;
 }
 
-void ColorInputNode::markDirty()
+void ColorInputNode::markDirty(int t_dirty)
 {
-    Node::markDirty();
+    Node::markDirty(t_dirty);
 
     if(m_impl->defaultValueParam->isDirty() || m_impl->nameParam->isDirty())
         static_cast<Routine*>(graph())->updateChannel(m_impl->index, channelInfo());

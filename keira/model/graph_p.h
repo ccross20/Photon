@@ -10,8 +10,11 @@ class Graph::Impl
 public:
     QVector<Node*> nodes;
 
+    Node *parentNode = nullptr;
     QByteArray uniqueId;
-    bool isDirty = true;
+    QByteArray graphTypeId;
+    QString name;
+    int dirty = DirtyModes::Clean;
 };
 
 }

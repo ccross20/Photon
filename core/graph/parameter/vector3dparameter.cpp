@@ -18,7 +18,7 @@ Vector3DParameter::Vector3DParameter(const QByteArray &t_id, const QString &t_na
 }
 
 
-QWidget *Vector3DParameter::createWidget(keira::NodeItem *item) const
+QWidget *Vector3DParameter::createWidget(keira::NodeEditor *item) const
 {
     if(isReadOnly())
     {

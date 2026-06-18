@@ -18,6 +18,7 @@
 #include "graph/bus/busgraph.h"
 #include "graph/bus/dmxgeneratematrixnode.h"
 #include "graph/bus/sequencenode.h"
+#include "graph/bus/surfacenode.h"
 #include "graph/bus/dmxwriternode.h"
 #include "scene/sceneobject.h"
 #include "scene/scenemanager.h"
@@ -52,7 +53,7 @@ Project::Impl::Impl()
     DMXGenerateMatrixNode *generateNode = new DMXGenerateMatrixNode;
     generateNode->createParameters();
 
-    SequenceNode *sequenceNode = new SequenceNode;
+    SurfaceNode *sequenceNode = new SurfaceNode;
     sequenceNode->createParameters();
     sequenceNode->setPosition(QPointF(400,0));
 
@@ -67,8 +68,8 @@ Project::Impl::Impl()
     bus->addNode(sequenceNode);
     bus->addNode(writerNode);
 
-    bus->connectParameters(generateNode->findParameter(DMXGenerateMatrixNode::OutputDMX), sequenceNode->findParameter(SequenceNode::InputDMX));
-    bus->connectParameters(sequenceNode->findParameter(SequenceNode::OutputDMX), writerNode->findParameter(DMXWriterNode::InputDMX));
+    bus->connectParameters(generateNode->findParameter(DMXGenerateMatrixNode::OutputDMX), sequenceNode->findParameter(SurfaceNode::InputDMX));
+    bus->connectParameters(sequenceNode->findParameter(SurfaceNode::OutputDMX), writerNode->findParameter(DMXWriterNode::InputDMX));
 
     State *state = new State();
     state->setName("Default");
@@ -310,6 +311,7 @@ void Project::readFromJson(const QJsonObject &json)
         }
     }
 
+    /*
     if(json.contains("surfaces"))
     {
         QJsonArray surfaceArray = json.value("surfaces").toArray();
@@ -322,6 +324,7 @@ void Project::readFromJson(const QJsonObject &json)
             m_impl->surfaces.addSurface(surface);
         }
     }
+*/
 
     m_impl->bus = new BusGraph;
     if(json.contains("bus"))
@@ -384,6 +387,7 @@ void Project::writeToJson(QJsonObject &json) const
     m_impl->sceneManager->writeToJson(sceneObj);
     json.insert("sceneManager", sceneObj);
 
+    /*
     QJsonArray surfacesArray;
     for(auto surface : m_impl->surfaces.surfaces())
     {
@@ -392,6 +396,7 @@ void Project::writeToJson(QJsonObject &json) const
         surfacesArray.append(surfaceObj);
     }
     json.insert("surfaces", surfacesArray);
+*/
 
 }
 

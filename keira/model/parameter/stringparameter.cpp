@@ -1,7 +1,7 @@
 #include <QLineEdit>
 #include <QLabel>
 #include "stringparameter.h"
-#include "view/nodeitem.h"
+#include "view/nodeeditor.h"
 
 namespace keira {
 
@@ -34,7 +34,7 @@ void StringParameter::setMaxLength(int t_min)
     m_impl->maxLength = t_min;
 }
 
-QWidget *StringParameter::createWidget(NodeItem *item) const
+QWidget *StringParameter::createWidget(NodeEditor *item) const
 {
 
     QLineEdit *lineEdit = new QLineEdit();
@@ -43,6 +43,7 @@ QWidget *StringParameter::createWidget(NodeItem *item) const
     lineEdit->setMinimumWidth(50);
 
     lineEdit->setSizePolicy(QSizePolicy(QSizePolicy::Maximum, QSizePolicy::Minimum));
+    lineEdit->setText(value().toString());
 
     //lineEdit->setReadOnly(isReadOnly());
 

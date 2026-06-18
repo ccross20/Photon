@@ -10,7 +10,7 @@ class KEIRA_EXPORT Viewer : public QGraphicsView
 {
     Q_OBJECT
 public:
-    explicit Viewer(QWidget *parent = nullptr);
+    explicit Viewer(NodeLibrary *t_library, QWidget *parent = nullptr);
     virtual ~Viewer();
 
     Graph *graph() const;
@@ -21,6 +21,7 @@ public:
 
 signals:
     void zoomChanged(double value);
+    void subGraphClicked(Graph *);
 
 protected:
     void drawBackground(QPainter *painter, const QRectF &rect) override;

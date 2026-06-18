@@ -30,7 +30,7 @@ void FocusCapability::setAngleDegrees(double value, DMXMatrix &t_matrix, double 
 
 void FocusCapability::setAnglePercent(double value, DMXMatrix &t_matrix, double t_blend)
 {
-    t_matrix.setValuePercent(fixture()->universe()-1,channel()->universalChannelNumber(), value, t_blend);
+    t_matrix.setValuePercent(channel(), value, t_blend);
 }
 
 double FocusCapability::getAnglePercent(const DMXMatrix &t_matrix)

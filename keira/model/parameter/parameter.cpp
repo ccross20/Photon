@@ -1,6 +1,7 @@
 #include <QLabel>
 #include "parameter_p.h"
 #include "../node.h"
+#include "library/nodelibrary.h"
 
 namespace keira {
 
@@ -53,6 +54,11 @@ Parameter::~Parameter()
     delete m_impl;
 }
 
+void Parameter::setConnectionOptions(int t_connectionOptions)
+{
+    m_impl->connectionOptions = t_connectionOptions;
+}
+
 QByteArray Parameter::id() const
 {
     return m_impl->id;
@@ -83,6 +89,16 @@ QString Parameter::name() const
     return m_impl->name;
 }
 
+void Parameter::setName(const QString &t_value)
+{
+    m_impl->name = t_value;
+}
+
+void Parameter::setId(const QByteArray &t_value)
+{
+    m_impl->id = t_value;
+}
+
 QString Parameter::description() const
 {
     return m_impl->description;
@@ -90,7 +106,7 @@ QString Parameter::description() const
 
 int Parameter::rowHeight() const
 {
-    return 40;
+    return 25;
 }
 
 bool Parameter::hasInput() const
@@ -168,6 +184,9 @@ void Parameter::setValue(const QVariant &t_value)
     m_impl->value = t_value;
     markDirty();
 
+    if(m_impl->node)
+        m_impl->node->parameterWasModified(this);
+
     //qDebug() << "Param set value" << id() << m_impl->value;
     for(Parameter *param : m_impl->outputParams)
         param->setValue(t_value);
@@ -194,7 +213,7 @@ void Parameter::validate(const QVariant &)
 
 }
 
-QWidget *Parameter::createWidget(NodeItem *) const
+QWidget *Parameter::createWidget(NodeEditor *) const
 {
     QLabel *label = new QLabel(name());
     label->setMaximumHeight(24);
@@ -219,7 +238,17 @@ void Parameter::markDirty()
 
     m_impl->isDirty = true;
     if(m_impl->node)
-        m_impl->node->markDirty();
+        m_impl->node->markDirty(Dirty_Parameter);
+}
+
+Parameter *Parameter::clone(NodeLibrary *t_library) const
+{
+    auto param = t_library->createParameter(m_impl->typeId);
+    QJsonObject tempObj;
+    writeToJson(tempObj);
+
+    param->readFromJson(tempObj);
+    return param;
 }
 
 void Parameter::readFromJson(const QJsonObject &t_json)

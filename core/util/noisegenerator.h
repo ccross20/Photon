@@ -64,6 +64,7 @@ public:
     void setFractalOctaves(int octaves);
     double fractalOctaves() const;
     void setFrequency(double frequency);
+    void setFrequency(QPointF frequency);
     double frequency() const;
 
 private:

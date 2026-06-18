@@ -17,7 +17,7 @@ public:
     ColorParameter(const QByteArray &t_id, const QString &t_name, QColor t_default, int connectionOptions = keira::AllowMultipleOutput | keira::AllowSingleInput);
     ~ColorParameter();
 
-    QWidget *createWidget(keira::NodeItem *) const override;
+    QWidget *createWidget(keira::NodeEditor *) const override;
     void updateWidget(QWidget *) const override;
     QVariant updateValue(QWidget *) const override;
 

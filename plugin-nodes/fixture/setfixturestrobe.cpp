@@ -11,6 +11,7 @@ keira::NodeInformation SetFixtureStrobe::info()
     toReturn.name = "Set Fixture Strobe";
     toReturn.nodeId = "photon.plugin.node.set-fixture-strobe";
     toReturn.categories = {"Fixture"};
+    toReturn.graphs = QByteArrayList{"fixture"};
 
     return toReturn;
 }
@@ -27,9 +28,7 @@ void SetFixtureStrobe::createParameters()
     m_speedParam->setMaximum(1.0);
     addParameter(m_speedParam);
 
-    m_modeParam = new keira::IntegerParameter("modeInput","Mode", 2);
-    m_modeParam->setMinimum(0);
-    m_modeParam->setMaximum(2);
+    m_modeParam = new keira::OptionParameter("modeInput","Mode",{"Open","Closed","Strobe","Pulse","Ramp Up", "Ramp Down","Ramp Up Down","Lightning","Spikes","Burst"}, 0);
     addParameter(m_modeParam);
 
 }

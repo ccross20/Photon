@@ -18,8 +18,10 @@
 #include "surface/surfacecollection.h"
 #include "opengl/openglresources.h"
 #include "graph/parameter/textureparameter.h"
+#include "virtualdj/virtualdjconnector.h"
 
 inline void initPluginResource() { Q_INIT_RESOURCE(resources); }
+
 
 namespace photon {
 
@@ -43,13 +45,14 @@ public:
     QOffscreenSurface *surface = nullptr;
     OpenGLResources *openGLResources = nullptr;
     QOpenGLContext *context = nullptr;
+    VirtualDJConnector *djConnector = nullptr;
 };
 
 PhotonCore::Impl::Impl(PhotonCore *t_core):
     sequences(new SequenceCollection),
     resources(new ResourceManager()),
     settings(new Settings(t_core)),
-    plugins(new PluginFactory(t_core)),gui(new GuiManager),timekeeper(new Timekeeper),busEvaluator(new BusEvaluator)
+    plugins(new PluginFactory(t_core)),gui(new GuiManager),timekeeper(new Timekeeper),busEvaluator(new BusEvaluator),djConnector(new VirtualDJConnector)
 {
 
 }
@@ -57,6 +60,7 @@ PhotonCore::Impl::Impl(PhotonCore *t_core):
 PhotonCore::Impl::~Impl()
 {
 
+    delete djConnector;
     context->makeCurrent(surface);
     openGLResources->destroy(context);
     delete openGLResources;
@@ -270,6 +274,11 @@ GuiManager *PhotonCore::gui() const
 BusEvaluator *PhotonCore::busEvaluator() const
 {
     return m_impl->busEvaluator;
+}
+
+VirtualDJConnector *PhotonCore::djConnector() const
+{
+    return m_impl->djConnector;
 }
 
 Timekeeper *PhotonCore::timekeeper() const

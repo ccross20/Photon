@@ -1,7 +1,7 @@
 #include <QSpinBox>
 #include <QLabel>
 #include "integerparameter.h"
-#include "view/nodeitem.h"
+#include "view/nodeeditor.h"
 
 namespace keira {
 
@@ -40,7 +40,7 @@ void IntegerParameter::setMaximum(int t_max)
     m_impl->maximum = t_max;
 }
 
-QWidget *IntegerParameter::createWidget(NodeItem *item) const
+QWidget *IntegerParameter::createWidget(NodeEditor *item) const
 {
     if(isReadOnly())
     {
@@ -55,6 +55,7 @@ QWidget *IntegerParameter::createWidget(NodeItem *item) const
     spin->setMaximum(m_impl->maximum);
     spin->setMinimum(m_impl->minimum);
     spin->setMinimumWidth(50);
+    spin->setValue(value().toInt());
 
     spin->setSizePolicy(QSizePolicy(QSizePolicy::Maximum, QSizePolicy::Minimum));
 

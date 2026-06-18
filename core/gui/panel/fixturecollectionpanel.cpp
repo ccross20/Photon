@@ -21,7 +21,7 @@ FixtureCollectionPanel::FixtureCollectionPanel() : Panel("photon.fixture-collect
 {
     m_impl->editorWidget = nullptr;
     m_impl->vLayout = new QVBoxLayout;
-
+    m_impl->hLayout = new QHBoxLayout;
     setName("Fixtures");
 
     m_impl->treeView = new QTreeView;
@@ -48,8 +48,10 @@ FixtureCollectionPanel::FixtureCollectionPanel() : Panel("photon.fixture-collect
 
     //vLayout->addWidget(m_impl->editorWidget);
 
+    m_impl->hLayout->addLayout(m_impl->vLayout);
 
-    setPanelLayout(m_impl->vLayout);
+
+    setPanelLayout(m_impl->hLayout);
 
 
     connect(m_impl->addButton, &QPushButton::clicked, this, &FixtureCollectionPanel::addClicked);
@@ -119,7 +121,7 @@ void FixtureCollectionPanel::duplicateClicked()
         auto newObj = c->clone();
         if(newObj)
         {
-            newObj->setParentSceneObject(c->parentSceneObject(),c->index());
+            newObj->setParentSceneObject(c->parentSceneObject());
         }
 
         auto fixtures = SceneIterator::FindMany(newObj,[](SceneObject *t_object, bool *t_continue){
@@ -232,7 +234,7 @@ void FixtureCollectionPanel::selectionChanged(const QItemSelection &selected, co
         if(sceneObj)
         {
             m_impl->editorWidget = sceneObj->createEditor();
-            m_impl->vLayout->addWidget(m_impl->editorWidget);
+            m_impl->hLayout->addWidget(m_impl->editorWidget);
             return;
         }
     }

@@ -35,6 +35,13 @@
 #include "graph/node/math/trigonometrynode.h"
 #include "graph/node/math/arithmeticnode.h"
 #include "graph/node/writedmxchannelnode.h"
+#include "graph/node/gizmo/togglegizmonode.h"
+#include "graph/node/gizmo/slidergizmonode.h"
+#include "graph/node/fixture/fixturesubgraphnode.h"
+#include "graph/node/fixture/fixtureglobalsnode.h"
+#include "graph/node/fixture/allfixturesnode.h"
+#include "graph/node/pixel/pixelgraph.h"
+#include "graph/node/pixel/pixelglobalsnode.h"
 
 #include "falloff/constantfalloffeffect.h"
 #include "sequence/constantchanneleffect.h"
@@ -45,11 +52,13 @@
 #include "channel/palettegizmochanneleffect.h"
 #include "channel/gizmoretimechanneleffect.h"
 
+#include "model/parameter/booleanparameter.h"
 #include "model/parameter/decimalparameter.h"
 #include "model/parameter/integerparameter.h"
 #include "model/parameter/buttonparameter.h"
 #include "model/parameter/stringparameter.h"
 #include "model/parameter/optionparameter.h"
+#include "model/parameter/stringoptionparameter.h"
 #include "graph/parameter/dmxmatrixparameter.h"
 #include "graph/parameter/colorparameter.h"
 #include "graph/parameter/canvasparameter.h"
@@ -58,6 +67,9 @@
 #include "graph/parameter/vector3dparameter.h"
 #include "graph/parameter/textureparameter.h"
 #include "graph/parameter/point2dparameter.h"
+#include "graph/parameter/fixturelistparameter.h"
+#include "graph/parameter/pixellistparameter.h"
+#include "graph/parameter/colorpaletteparameter.h"
 
 #include "sequence/fixtureclip.h"
 #include "sequence/canvasclip.h"
@@ -190,6 +202,13 @@ void PluginFactory::init()
     registerNode(CanvasWriterNode::info());
     registerNode(CreateTextureNode::info());
     registerNode(WriteDMXChannelNode::info());
+    registerNode(ToggleGizmoNode::info());
+    registerNode(SliderGizmoNode::info());
+    registerNode(FixtureSubGraphNode::info());
+    registerNode(FixtureGlobalsNode::info());
+    registerNode(AllFixturesNode::info());
+    registerNode(PixelGlobalsNode::info());
+    registerNode(PixelGraph::info());
 
     registerFalloffEffect(ConstantFalloffEffect::info());
 
@@ -211,6 +230,8 @@ void PluginFactory::init()
     m_impl->nodeLibrary.registerParameter(keira::ButtonParameter::ParameterId,[](){return new keira::ButtonParameter();});
     m_impl->nodeLibrary.registerParameter(keira::StringParameter::ParameterId,[](){return new keira::StringParameter();});
     m_impl->nodeLibrary.registerParameter(keira::OptionParameter::ParameterId,[](){return new keira::OptionParameter();});
+    m_impl->nodeLibrary.registerParameter(keira::StringOptionParameter::ParameterId,[](){return new keira::StringOptionParameter();});
+    m_impl->nodeLibrary.registerParameter(keira::BooleanParameter::ParameterId,[](){return new keira::BooleanParameter();});
     m_impl->nodeLibrary.registerParameter(DMXMatrixParameter::ParameterId,[](){return new DMXMatrixParameter();});
     m_impl->nodeLibrary.registerParameter(ColorParameter::ParameterId,[](){return new ColorParameter();});
     m_impl->nodeLibrary.registerParameter(CanvasParameter::ParameterId,[](){return new CanvasParameter();});
@@ -219,6 +240,9 @@ void PluginFactory::init()
     m_impl->nodeLibrary.registerParameter(Vector3DParameter::ParameterId,[](){return new Vector3DParameter();});
     m_impl->nodeLibrary.registerParameter(TextureParameter::ParameterId,[](){return new TextureParameter();});
     m_impl->nodeLibrary.registerParameter(Point2DParameter::ParameterId,[](){return new Point2DParameter();});
+    m_impl->nodeLibrary.registerParameter(FixtureListParameter::ParameterId,[](){return new FixtureListParameter();});
+    m_impl->nodeLibrary.registerParameter(ColorPaletteParameter::ParameterId,[](){return new ColorPaletteParameter();});
+    m_impl->nodeLibrary.registerParameter(PixelListParameter::ParameterId,[](){return new PixelListParameter();});
 
     //qDebug() << "Node Count:" << m_impl->nodeHash.size();
 }
