@@ -11,7 +11,30 @@ class OpenGLFrameBuffer;
 
 struct RoutineEvaluationContext : keira::EvaluationContext
 {
-    RoutineEvaluationContext(DMXMatrix &matrix):dmxMatrix(matrix){}
+    RoutineEvaluationContext(DMXMatrix &matrix) : dmxMatrix(matrix) {}
+
+    // Reference member prevents compiler-generated copy — provide one explicitly.
+    // The copy shares the same DMXMatrix, which is safe because parallel fixture
+    // evaluations write to non-overlapping channels.
+    RoutineEvaluationContext(const RoutineEvaluationContext &o)
+        : keira::EvaluationContext(o), dmxMatrix(o.dmxMatrix)
+    {
+        timeMachine  = o.timeMachine;
+        project      = o.project;
+        fixture      = o.fixture;
+        surface      = o.surface;
+        frameBuffer  = o.frameBuffer;
+        openglContext = o.openglContext;
+        resources    = o.resources;
+        canvas       = o.canvas;
+        frame        = o.frame;
+        relativeTime = o.relativeTime;
+        globalTime   = o.globalTime;
+        delayTime    = o.delayTime;
+        strength     = o.strength;
+        fixtureIndex = o.fixtureIndex;
+        timeOffset   = o.timeOffset;
+    }
     DMXMatrix &dmxMatrix;
     DMXTimeMachine *timeMachine = nullptr;
     Project *project = nullptr;
@@ -26,6 +49,8 @@ struct RoutineEvaluationContext : keira::EvaluationContext
     double globalTime = 0.0;
     double delayTime = 0.0;
     double strength = 1.0;
+    int fixtureIndex = 0;
+    double timeOffset = 0.0;
 };
 
 }

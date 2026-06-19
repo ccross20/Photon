@@ -21,7 +21,10 @@ public:
     const QVector<Node*> &nodes() const;
     QByteArray graphTypeId() const;
     void setGraphTypeId(const QByteArray &);
-    void resortGraph();
+
+    // Drains and applies all commands queued by the UI thread.
+    // Called by the eval thread at the start of each frame.
+    void drainCommandQueue();
 
     void prepForEvaluation();
     virtual void evaluate(EvaluationContext *) const;
@@ -63,6 +66,15 @@ signals:
 
 private:
     friend class Node;
+
+    // Non-locking implementations — called only from within drainCommandQueue()
+    // or from other internal methods already on the eval thread.
+    void addNodeInternal(Node *);
+    void removeNodeInternal(Node *);
+    void connectParametersInternal(Parameter *, Parameter *);
+    void disconnectParametersInternal(Parameter *, Parameter *);
+    void disconnectNodeInternal(Node *);
+    void resortGraphInternal();
 
     class Impl;
     Impl *m_impl;

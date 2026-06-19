@@ -28,7 +28,7 @@ public:
 Scene::Scene(QObject *parent)
     : QGraphicsScene{parent},m_impl(new Impl)
 {
-    m_impl->evaluator = new GraphEvaluator(nullptr,this);
+    m_impl->evaluator = new GraphEvaluator(nullptr, {}, {}, this);
 
     connect(m_impl->evaluator, &GraphEvaluator::evaluationComplete, this, &Scene::updateFromNodes);
 

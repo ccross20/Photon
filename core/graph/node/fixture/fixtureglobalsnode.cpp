@@ -1,4 +1,6 @@
 #include "fixtureglobalsnode.h"
+#include "routine/routineevaluationcontext.h"
+#include "fixture/fixture.h"
 
 namespace photon {
 
@@ -23,6 +25,7 @@ keira::NodeInformation FixtureGlobalsNode::info()
 
 FixtureGlobalsNode::FixtureGlobalsNode()  : keira::Node("photon.fixture.globals"){
     setName("Globals");
+    setIsAlwaysDirty(true);
 }
 
 void FixtureGlobalsNode::createParameters()
@@ -44,6 +47,17 @@ void FixtureGlobalsNode::createParameters()
     addParameter(m_globalTimeParam);
     addParameter(m_timeOffsetParam);
 
+}
+
+void FixtureGlobalsNode::evaluate(keira::EvaluationContext *t_context) const
+{
+    auto ctx = static_cast<RoutineEvaluationContext*>(t_context);
+    m_fixtureParam->setValue(ctx->fixture ? ctx->fixture->uniqueId() : QByteArray{});
+    m_fixtureIndexParam->setValue(ctx->fixtureIndex);
+    m_timeParam->setValue(ctx->relativeTime);
+    m_globalTimeParam->setValue(ctx->globalTime);
+    m_timeOffsetParam->setValue(ctx->timeOffset);
+    // fixtureList is set once before the fixture loop via setValue — no change needed here
 }
 
 } // namespace photon

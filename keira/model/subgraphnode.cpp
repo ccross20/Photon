@@ -14,6 +14,11 @@ SubGraphNode::~SubGraphNode()
     delete m_graph;
 }
 
+void SubGraphNode::drainCommandQueue()
+{
+    m_graph->drainCommandQueue();
+}
+
 Node *SubGraphNode::findNode(const QByteArray &t_query) const
 {
     auto result = Node::findNode(t_query);
@@ -27,6 +32,7 @@ Node *SubGraphNode::findNode(const QByteArray &t_query) const
 void SubGraphNode::evaluate(EvaluationContext *t_context) const
 {
     Node::evaluate(t_context);
+    m_graph->drainCommandQueue();
     m_graph->evaluate(t_context);
 }
 

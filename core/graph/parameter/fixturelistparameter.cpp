@@ -110,6 +110,7 @@ QVariant FixtureListParameter::updateValue(QWidget *t_widget) const
     QVector<FixtureParameterData> fixtureList;
     m_impl->selected.clear();
     auto selected = static_cast<SceneObjectSelector*>(t_widget)->selectedObjects();
+    QSet<QByteArray> testSet;
 
     for(auto sceneObj : selected)
     {
@@ -120,7 +121,12 @@ QVariant FixtureListParameter::updateValue(QWidget *t_widget) const
             {
                 FixtureParameterData data;
                 data.fixtureId = static_cast<Fixture*>(obj)->uniqueId();
-                fixtureList.append(data);
+
+                if(!testSet.contains(data.fixtureId))
+                {
+                    fixtureList.append(data);
+                    testSet << data.fixtureId;
+                }
             }
         }
     }

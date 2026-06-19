@@ -119,8 +119,6 @@ void PhotonCore::init()
     m_impl->plugins->init();
     m_impl->gui->init();
 
-    connect(m_impl->timekeeper, &Timekeeper::tick, m_impl->busEvaluator, &BusEvaluator::evaluate);
-
     initSurface();
     initOpenGLResources();
 }

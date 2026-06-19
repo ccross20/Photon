@@ -34,6 +34,7 @@
 #include "routine/node/createtexturenode.h"
 #include "graph/node/math/trigonometrynode.h"
 #include "graph/node/math/arithmeticnode.h"
+#include "graph/node/math/delaynode.h"
 #include "graph/node/writedmxchannelnode.h"
 #include "graph/node/gizmo/togglegizmonode.h"
 #include "graph/node/gizmo/slidergizmonode.h"
@@ -190,6 +191,7 @@ void PluginFactory::init()
     registerNode(GlobalsNode::info());
     registerNode(TrigonometryNode::info());
     registerNode(ArithmeticNode::info());
+    registerNode(DelayNode::info());
     registerNode(DMXWriterNode::info());
     registerNode(DMXReaderNode::info());
     registerNode(DMXGenerateMatrixNode::info());

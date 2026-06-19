@@ -1,5 +1,5 @@
-#include <QElapsedTimer>
 #include "busevaluator.h"
+#include "model/graphevaluator.h"
 #include "model/node.h"
 #include "data/dmxmatrix.h"
 #include "graph/bus/dmxgeneratematrixnode.h"
@@ -7,6 +7,8 @@
 #include "model/parameter/parameter.h"
 #include "routine/routineevaluationcontext.h"
 #include "photoncore.h"
+#include <QMutex>
+#include <QMutexLocker>
 
 namespace photon {
 
@@ -14,28 +16,77 @@ class BusEvaluator::Impl
 {
 public:
     BusGraph *bus = nullptr;
-    DMXMatrix matrix;
-    QElapsedTimer timer;
-    qlonglong seconds = 0;
-    double elapsed = 0;
+    DMXMatrix writeMatrix;
+    DMXMatrix readMatrix;
+    mutable QMutex matrixMutex;
+    keira::GraphEvaluator *graphEvaluator = nullptr;
     qlonglong frame = 0;
-    int frameSecondCounter = 0;
 };
 
 BusEvaluator::BusEvaluator(QObject *parent)
-    : QObject{parent},m_impl(new Impl)
+    : QObject{parent}, m_impl(new Impl)
 {
+    // Context factory — called on the eval thread at the start of each frame.
+    // Creates a RoutineEvaluationContext referencing the write-side DMX buffer.
+    auto factory = [this](const keira::FrameTime &t) -> keira::EvaluationContext* {
+        m_impl->writeMatrix = DMXMatrix{2};
 
+        if (m_impl->bus) {
+            auto *genNode = m_impl->bus->findNode("DMX Generator");
+            if (genNode) {
+                auto *param = genNode->findParameter(DMXGenerateMatrixNode::OutputDMX);
+                if (param)
+                    param->setValue(m_impl->writeMatrix);
+            }
+        }
+
+        m_impl->frame++;
+        auto *ctx = new RoutineEvaluationContext(m_impl->writeMatrix);
+        ctx->globalTime   = t.elapsed;
+        ctx->relativeTime = t.elapsed;
+        ctx->project      = photonApp->project();
+        ctx->frame        = m_impl->frame;
+        return ctx;
+    };
+
+    // Post-eval callback — called on the eval thread after the graph finishes.
+    // Reads the final DMX output and swaps it into the read buffer under the mutex
+    // so the main thread can safely call dmxMatrix() at any time.
+    auto postEval = [this]() {
+        if (!m_impl->bus)
+            return;
+        auto *outputNode = m_impl->bus->findNode("output");
+        if (!outputNode)
+            return;
+        auto *param = outputNode->findParameter(DMXWriterNode::InputDMX);
+        if (!param)
+            return;
+        QMutexLocker lock(&m_impl->matrixMutex);
+        m_impl->readMatrix = param->value().value<DMXMatrix>();
+    };
+
+    // No Qt parent — lifetime is managed manually so we can guarantee
+    // the thread stops before m_impl is destroyed (see ~BusEvaluator).
+    m_impl->graphEvaluator = new keira::GraphEvaluator(
+        nullptr, std::move(factory), std::move(postEval));
+
+    connect(m_impl->graphEvaluator, &keira::GraphEvaluator::evaluationComplete,
+            this, &BusEvaluator::onFrameComplete);
 }
 
 BusEvaluator::~BusEvaluator()
 {
+    // Stop the eval thread before Impl is destroyed so the factory/callback
+    // lambdas (which capture this) cannot fire after Impl is gone.
+    delete m_impl->graphEvaluator;
+    m_impl->graphEvaluator = nullptr;
     delete m_impl;
 }
 
 void BusEvaluator::setBus(BusGraph *t_bus)
 {
     m_impl->bus = t_bus;
+    m_impl->graphEvaluator->setGraph(t_bus);
 }
 
 BusGraph *BusEvaluator::bus()
@@ -43,59 +94,30 @@ BusGraph *BusEvaluator::bus()
     return m_impl->bus;
 }
 
-double BusEvaluator::elapsed() const
+DMXMatrix BusEvaluator::dmxMatrix() const
 {
-    return m_impl->elapsed;
+    QMutexLocker lock(&m_impl->matrixMutex);
+    return m_impl->readMatrix;
 }
 
-const DMXMatrix &BusEvaluator::dmxMatrix() const
+keira::GraphEvaluator *BusEvaluator::graphEvaluator() const
 {
-    return m_impl->matrix;
+    return m_impl->graphEvaluator;
 }
 
-void BusEvaluator::evaluate()
+void BusEvaluator::setBpm(double bpm)
 {
-    if(!m_impl->bus)
-        return;
+    m_impl->graphEvaluator->setBpm(bpm);
+}
 
-    //QElapsedTimer t;
-    //t.start();
-    m_impl->matrix = DMXMatrix{2};
-    RoutineEvaluationContext context(m_impl->matrix);
-    context.frame = m_impl->frame;
-    context.globalTime = QDateTime::currentMSecsSinceEpoch()/1000.0;
-    context.relativeTime = context.globalTime;
-    context.project = photonApp->project();
+void BusEvaluator::tap()
+{
+    m_impl->graphEvaluator->tap();
+}
 
-    //qDebug() << "Begin eval";
-    m_impl->bus->findNode("DMX Generator")->findParameter(DMXGenerateMatrixNode::OutputDMX)->setValue(m_impl->matrix);
-    m_impl->bus->prepForEvaluation();
-    m_impl->bus->evaluate(&context);
-    m_impl->bus->markClean();
-
-    qlonglong seconds = std::floor(context.globalTime);
-
-    if(m_impl->seconds != seconds)
-    {
-        m_impl->seconds = seconds;
-        //qDebug() << "Frames per second" << m_impl->frameSecondCounter;
-        m_impl->frameSecondCounter = 0;
-    }
-
-    //qDebug() << "Graph eval time: " << t.nsecsElapsed();
-    m_impl->elapsed = m_impl->timer.elapsed() / 1000.0;
-
-    m_impl->matrix = m_impl->bus->findNode("output")->findParameter(DMXWriterNode::InputDMX)->value().value<DMXMatrix>();
-
-    //qDebug() << m_impl->matrix.value(0,3);
-
-    //qDebug() << context.frame << QDateTime::currentMSecsSinceEpoch();
-
-
+void BusEvaluator::onFrameComplete()
+{
     emit evaluationCompleted();
-    m_impl->timer.restart();
-    m_impl->frame += 1;
-    m_impl->frameSecondCounter += 1;
 }
 
 } // namespace photon

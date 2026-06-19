@@ -22,6 +22,7 @@ find_package(Qt6 REQUIRED COMPONENTS
     3DAnimation
     MultimediaWidgets
 )
+find_package(Qt6 REQUIRED COMPONENTS Concurrent)
 find_package(Qt6 REQUIRED COMPONENTS Core)
 find_package(Qt6 REQUIRED COMPONENTS Core)
 find_package(Qt6 REQUIRED COMPONENTS Widgets)
@@ -142,6 +143,8 @@ set(PROJECT_SOURCES
         graph/bus/sequencenode.cpp
         graph/node/math/arithmeticnode.h
         graph/node/math/arithmeticnode.cpp
+        graph/node/math/delaynode.h
+        graph/node/math/delaynode.cpp
         graph/node/math/trigonometrynode.h
         graph/node/math/trigonometrynode.cpp
         graph/parameter/canvasparameter.h
@@ -545,6 +548,7 @@ target_include_directories(photon-core PUBLIC ../keira)
 target_include_directories(photon-core PUBLIC third-party/advanced-docking)
 
 target_link_libraries(photon-core PRIVATE keira)
+target_link_libraries(photon-core PRIVATE Qt6::Concurrent)
 
 target_link_libraries(photon-core PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)
 target_link_libraries(photon-core PRIVATE

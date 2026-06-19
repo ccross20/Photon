@@ -2,6 +2,7 @@
 #define KEIRA_NODE_H
 
 #include "keira-global.h"
+#include "model/frametime.h"
 
 namespace keira {
 
@@ -26,6 +27,7 @@ struct KEIRA_EXPORT NodeInformation
 struct KEIRA_EXPORT EvaluationContext
 {
     virtual ~EvaluationContext(){}
+    FrameTime time;
 };
 
 class KEIRA_EXPORT Node
@@ -61,6 +63,7 @@ public:
     QPointF position() const;
     void setPosition(const QPointF &);
 
+    virtual void drainCommandQueue() {}
     virtual void prepForEvaluation();
     virtual void evaluate(EvaluationContext *context) const;
     virtual void buttonClicked(const Parameter *);

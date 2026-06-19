@@ -76,6 +76,7 @@ Project::Impl::Impl()
     state->addDefaultCapabilities();
 
     states.addState(state);
+    bus->drainCommandQueue();
 
 }
 

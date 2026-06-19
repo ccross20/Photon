@@ -24,7 +24,7 @@ public:
     FixtureGlobalsNode();
 
     void createParameters() override;
-
+    void evaluate(keira::EvaluationContext *) const override;
 
     static keira::NodeInformation info();
 

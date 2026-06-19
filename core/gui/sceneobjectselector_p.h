@@ -2,6 +2,7 @@
 #define SCENEOBJECTSELECTOR_P_H
 
 #include <QTreeView>
+#include <QPushButton>
 #include "sceneobjectselector.h"
 #include "scene/scenemodel.h"
 
@@ -11,17 +12,11 @@ class SelectorItemDelegate : public QAbstractItemDelegate
 {
     Q_OBJECT
 public:
-    SelectorItemDelegate(QObject *parent = Q_NULLPTR);
+    SelectorItemDelegate(QObject *parent = nullptr);
 
     void paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const override;
     QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const override;
     bool editorEvent(QEvent *event, QAbstractItemModel *model, const QStyleOptionViewItem &option, const QModelIndex &index) override;
-
-signals:
-
-private:
-    void getAllChildren(const QModelIndex &index, QModelIndexList &indicies, QAbstractItemModel *model);
-
 };
 
 class SelectorModel : public SceneModel
@@ -36,29 +31,40 @@ public:
     bool setData(const QModelIndex &index, const QVariant &value,
                  int role = Qt::EditRole) override;
 
-    void updateIndex(const QModelIndex &index);
     void setSelectedObjects(const QVector<SceneObject *> &t_selected);
     const QVector<SceneObject *> &selectedObjects() const;
+
+public slots:
+    void selectAll();
+    void selectNone();
 
 signals:
     void selectionChanged();
 
 private:
     bool hasAncestorSelected(SceneObject *) const;
+    bool hasSomeDescendantSelected(SceneObject *) const;
+    void sortByTreeOrder();
+    void collectInTreeOrder(const QModelIndex &parent,
+                            const QSet<SceneObject *> &selected,
+                            QVector<SceneObject *> &result) const;
+    void collectAll(const QModelIndex &parent, QVector<SceneObject *> &result) const;
+    void emitDataChangedForAll(const QModelIndex &parent);
+
     QVector<SceneObject*> m_selectedObjects;
 };
 
 class SceneObjectSelector::Impl
 {
 public:
-    Impl(SceneObjectSelector *, SceneObject*);
-    SelectorModel *model;
-    QTreeView *view;
+    Impl(SceneObjectSelector *, SceneObject *);
+    SelectorModel  *model;
+    QTreeView      *view;
+    QPushButton    *selectAllButton;
+    QPushButton    *selectNoneButton;
     SceneObjectSelector *facade;
 };
 
 }
-
-
 
 #endif // SCENEOBJECTSELECTOR_P_H

@@ -44,7 +44,7 @@ void Node::setPriority(int t_priority)
     m_impl->priority = t_priority;
 
     if(m_impl->graph)
-        m_impl->graph->resortGraph();
+        m_impl->graph->markDirty(Dirty_Priority);
 }
 
 void Node::setName(const QString &t_name)

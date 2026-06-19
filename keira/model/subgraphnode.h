@@ -14,6 +14,7 @@ public:
     virtual bool isContainer() const override {return true;}
     virtual Node *findNode(const QByteArray &query) const override;
 
+    void drainCommandQueue() override;
     virtual void evaluate(EvaluationContext *context) const override;
     virtual void markDirty(int) override;
     void markClean() override;

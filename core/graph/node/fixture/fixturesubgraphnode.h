@@ -5,7 +5,6 @@
 #include "graph/parameter/fixturelistparameter.h"
 #include "model/parameter/booleanparameter.h"
 #include "model/parameter/integerparameter.h"
-#include "data/dmxtimemachine.h"
 
 namespace photon {
 
@@ -27,7 +26,6 @@ public:
 
     static keira::NodeInformation info();
 
-
     virtual void readFromJson(const QJsonObject &, keira::NodeLibrary *library) override;
 
 protected:
@@ -36,14 +34,19 @@ protected:
     void parameterWasModified(keira::Parameter*) override;
 
 private:
+    void syncSubgraphPool(int count) const;
+
     keira::IntegerParameter *m_priortyParam;
     keira::BooleanParameter *m_enabledParam;
-    keira::BooleanParameter *m_useTimeMachineParam;
     FixtureListParameter *m_fixturesParam;
     FixtureGlobalsNode *m_globalsNode;
     QVector<keira::Parameter*> m_passThroughParams;
     QVector<keira::Parameter*> m_globalsParams;
-    DMXTimeMachine *m_timeMachine;
+
+    // One cloned subgraph per fixture — each has independent node parameter
+    // instances so the parallel fixture loop has no shared write state.
+    mutable QVector<keira::Graph*> m_subgraphPool;
+    mutable QVector<FixtureGlobalsNode*> m_globalsPool;
 };
 
 } // namespace photon

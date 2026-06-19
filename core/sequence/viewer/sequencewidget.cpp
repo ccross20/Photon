@@ -423,7 +423,6 @@ void SequenceWidget::gotoTime(double t_time)
     m_impl->timer.restart();
     m_impl->viewer->movePlayheadTo(m_impl->currentTime);
 
-    photonApp->busEvaluator()->evaluate();
     m_impl->player->setPosition(m_impl->currentTime*1000);
     m_impl->waveform->setPlayhead(m_impl->currentTime);
 }

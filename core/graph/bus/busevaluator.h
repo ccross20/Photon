@@ -4,6 +4,8 @@
 #include <QObject>
 #include "busgraph.h"
 
+namespace keira { class GraphEvaluator; }
+
 namespace photon {
 
 class PHOTONCORE_EXPORT BusEvaluator : public QObject
@@ -15,16 +17,20 @@ public:
 
     void setBus(BusGraph *);
     BusGraph *bus();
-    double elapsed() const;
 
-    const DMXMatrix &dmxMatrix() const;
+    DMXMatrix dmxMatrix() const;
+
+    keira::GraphEvaluator *graphEvaluator() const;
 
 public slots:
-    void evaluate();
+    void setBpm(double bpm);
+    void tap();
 
 signals:
-
     void evaluationCompleted();
+
+private slots:
+    void onFrameComplete();
 
 private:
     class Impl;

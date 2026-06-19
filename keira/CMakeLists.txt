@@ -35,6 +35,9 @@ set(PROJECT_SOURCES
         model/graph.h
         model/graph_p.h
         model/graph.cpp
+        model/clockcontroller.h
+        model/clockcontroller.cpp
+        model/frametime.h
         model/graphevaluator.h
         model/graphevaluator.cpp
         model/graphsorter.h
