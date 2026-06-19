@@ -541,7 +541,8 @@ add_library(photon-core SHARED ${PROJECT_SOURCES}
     graph/node/pixel/pixelgraph.h graph/node/pixel/pixelgraph.cpp
     graph/parameter/pixellistparameter.h graph/parameter/pixellistparameter.cpp
     graph/node/pixel/pixelglobalsnode.h graph/node/pixel/pixelglobalsnode.cpp
-    virtualdj/virtualdjconnector.h virtualdj/virtualdjconnector.cpp)
+    virtualdj/virtualdjconnector.h virtualdj/virtualdjconnector.cpp
+    resources/fixtures/elation-dartz-360.json)
 
 target_include_directories(photon-core PUBLIC ../core)
 target_include_directories(photon-core PUBLIC ../keira)

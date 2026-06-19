@@ -53,6 +53,7 @@
 #include "channel/palettegizmochanneleffect.h"
 #include "channel/gizmoretimechanneleffect.h"
 
+#include "model/parameter/anyparameter.h"
 #include "model/parameter/booleanparameter.h"
 #include "model/parameter/decimalparameter.h"
 #include "model/parameter/integerparameter.h"
@@ -227,6 +228,7 @@ void PluginFactory::init()
     registerClip(FixtureClip::info());
     registerClip(CanvasClip::info());
 
+    m_impl->nodeLibrary.registerParameter(keira::AnyParameter::ParameterId,    [](){return new keira::AnyParameter();});
     m_impl->nodeLibrary.registerParameter(keira::DecimalParameter::ParameterId,[](){return new keira::DecimalParameter();});
     m_impl->nodeLibrary.registerParameter(keira::IntegerParameter::ParameterId,[](){return new keira::IntegerParameter();});
     m_impl->nodeLibrary.registerParameter(keira::ButtonParameter::ParameterId,[](){return new keira::ButtonParameter();});

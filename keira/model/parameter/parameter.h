@@ -19,7 +19,9 @@ public:
     virtual ~Parameter();
 
     QByteArray id() const;
-    QByteArray typeId() const;
+    virtual QByteArray typeId() const;
+    virtual bool isGeneric() const;
+    virtual bool acceptsConnectionFrom(const Parameter *source) const;
     QString name() const;
     QString description() const;
     bool hasInput() const;

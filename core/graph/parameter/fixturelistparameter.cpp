@@ -34,7 +34,7 @@ FixtureListParameter::~FixtureListParameter()
 
 QWidget *FixtureListParameter::createWidget(keira::NodeEditor *item) const
 {
-    if(isReadOnly())
+    if(isReadOnly() || hasInput())
     {
         QLabel *label = new QLabel();
         label->setMaximumHeight(30);

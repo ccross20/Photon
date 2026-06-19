@@ -84,6 +84,16 @@ QByteArray Parameter::typeId() const
     return m_impl->typeId;
 }
 
+bool Parameter::isGeneric() const
+{
+    return false;
+}
+
+bool Parameter::acceptsConnectionFrom(const Parameter *source) const
+{
+    return source->typeId() == m_impl->typeId || source->isGeneric();
+}
+
 QString Parameter::name() const
 {
     return m_impl->name;

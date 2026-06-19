@@ -1,4 +1,5 @@
 #include "delaynode.h"
+#include "model/parameter/anyparameter.h"
 #include "model/parameter/decimalparameter.h"
 #include "routine/routineevaluationcontext.h"
 #include <deque>
@@ -9,13 +10,13 @@ const QByteArray DelayNode::Input    = "input";
 const QByteArray DelayNode::Output   = "output";
 const QByteArray DelayNode::MaxDelay = "maxDelay";
 
-struct DelaySample { double time; double value; };
+struct DelaySample { double time; QVariant value; };
 
 class DelayNode::Impl
 {
 public:
-    keira::DecimalParameter *inputParam    = nullptr;
-    keira::DecimalParameter *outputParam   = nullptr;
+    keira::AnyParameter     *inputParam    = nullptr;
+    keira::AnyParameter     *outputParam   = nullptr;
     keira::DecimalParameter *maxDelayParam = nullptr;
     std::deque<DelaySample>  buffer;
 };
@@ -43,7 +44,8 @@ DelayNode::~DelayNode()
 
 void DelayNode::createParameters()
 {
-    m_impl->inputParam = new keira::DecimalParameter(Input, "Input", 0.0);
+    m_impl->inputParam = new keira::AnyParameter(Input, "Input",
+                                                  keira::AllowMultipleOutput | keira::AllowSingleInput);
     addParameter(m_impl->inputParam);
 
     m_impl->maxDelayParam = new keira::DecimalParameter(MaxDelay, "Max Delay", 10.0);
@@ -51,18 +53,17 @@ void DelayNode::createParameters()
     m_impl->maxDelayParam->setMaximum(60.0);
     addParameter(m_impl->maxDelayParam);
 
-    m_impl->outputParam = new keira::DecimalParameter(Output, "Output", 0.0,
-                                                       keira::AllowMultipleOutput);
+    m_impl->outputParam = new keira::AnyParameter(Output, "Output", keira::AllowMultipleOutput);
     addParameter(m_impl->outputParam);
 }
 
 void DelayNode::evaluate(keira::EvaluationContext *t_context) const
 {
     auto *ctx = static_cast<RoutineEvaluationContext *>(t_context);
-    const double now        = ctx->globalTime;
-    const double offset     = ctx->timeOffset;
-    const double maxDelay   = m_impl->maxDelayParam->value().toDouble();
-    const double inputValue = m_impl->inputParam->value().toDouble();
+    const double   now        = ctx->globalTime;
+    const double   offset     = ctx->timeOffset;
+    const double   maxDelay   = m_impl->maxDelayParam->value().toDouble();
+    const QVariant inputValue = m_impl->inputParam->value();
 
     // Record this frame's sample
     m_impl->buffer.push_back({now, inputValue});
@@ -96,16 +97,22 @@ void DelayNode::evaluate(keira::EvaluationContext *t_context) const
             hi = mid;
     }
 
-    // Linear interpolation between the two bracketing samples
     const auto &a = m_impl->buffer[lo];
     const auto &b = m_impl->buffer[hi];
-    const double span = b.time - a.time;
-    if (span < 1e-9) {
+
+    // For decimal types, use linear interpolation. For all others (color, string,
+    // etc.) use nearest-neighbor — there's no meaningful way to interpolate them.
+    if (m_impl->inputParam->typeId() == keira::DecimalParameter::ParameterId) {
+        const double span = b.time - a.time;
+        if (span < 1e-9) {
+            m_impl->outputParam->setValue(a.value);
+            return;
+        }
+        const double t = (targetTime - a.time) / span;
+        m_impl->outputParam->setValue(a.value.toDouble() + t * (b.value.toDouble() - a.value.toDouble()));
+    } else {
         m_impl->outputParam->setValue(a.value);
-        return;
     }
-    const double t = (targetTime - a.time) / span;
-    m_impl->outputParam->setValue(a.value + t * (b.value - a.value));
 }
 
 } // namespace photon

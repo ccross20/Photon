@@ -4,6 +4,7 @@
 #include "parameter/parameter_p.h"
 #include "parameter/decimalparameter.h"
 #include "parameter/buttonparameter.h"
+#include "parameter/anyparameter.h"
 #include "library/nodelibrary.h"
 
 namespace keira {
@@ -251,9 +252,29 @@ bool Node::isDirty() const
     return m_impl->isAlwaysDirty || m_impl->isDirty != keira::DirtyModes::Clean;
 }
 
-void Node::inputParameterConnected(Parameter* t_param)
+void Node::inputParameterConnected(Parameter *t_output)
 {
+    // When a typed source connects to one of our AnyParameters, resolve all
+    // unresolved AnyParameters on this node to that type.
+    const QByteArray srcType = t_output->typeId();
+    if (srcType.isEmpty() || srcType == AnyParameter::ParameterId)
+        return;
 
+    for (Parameter *p : m_impl->parameters)
+    {
+        auto *anyParam = dynamic_cast<AnyParameter *>(p);
+        if (!anyParam || anyParam->isResolved())
+            continue;
+        if (!anyParam->inputParameters().contains(t_output))
+            continue;
+
+        // Found the AnyParameter that received this connection — resolve all
+        // unresolved AnyParameters on the node to the same type.
+        for (Parameter *other : m_impl->parameters)
+            if (auto *otherAny = dynamic_cast<AnyParameter *>(other))
+                otherAny->resolve(srcType);
+        return;
+    }
 }
 
 void Node::outputParameterConnected(Parameter* t_param)

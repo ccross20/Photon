@@ -182,7 +182,7 @@ void GuiManager::Impl::launchInterface()
 {
     createAppWindow();
 
-    //m_ext->restoreLayout();
+    m_ext->restoreLayout();
 
     window->show();
     /*

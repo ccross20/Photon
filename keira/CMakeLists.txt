@@ -64,6 +64,7 @@ add_library(keira SHARED ${PROJECT_SOURCES}
         view/graphwidget.h view/graphwidget.cpp
         view/nodeeditor.h view/nodeeditor.cpp
         model/subgraphnode.h model/subgraphnode.cpp
+        model/parameter/anyparameter.h model/parameter/anyparameter.cpp
         model/parameter/booleanparameter.h model/parameter/booleanparameter.cpp
         model/parameter/stringoptionparameter.h model/parameter/stringoptionparameter.cpp)
 

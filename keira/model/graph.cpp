@@ -1,5 +1,6 @@
 #include "graph_p.h"
 #include "parameter/parameter_p.h"
+#include "parameter/anyparameter.h"
 #include "graphsorter.h"
 #include "node_p.h"
 #include "library/nodelibrary.h"
@@ -178,6 +179,12 @@ void Graph::removeNodeInternal(Node *t_node)
 
 void Graph::connectParametersInternal(Parameter *t_output, Parameter *t_input)
 {
+    if (!t_input->acceptsConnectionFrom(t_output)) {
+        qWarning() << "Type mismatch: cannot connect"
+                   << t_output->typeId() << "→" << t_input->typeId();
+        return;
+    }
+
     if(t_input->hasInput())
         disconnectParametersInternal(t_input->inputParameter(), t_input);
 
