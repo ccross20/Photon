@@ -5,6 +5,7 @@
 #include <QLabel>
 #include <QSpinBox>
 #include <QDoubleSpinBox>
+#include <QSignalBlocker>
 #include "truss.h"
 #include "gui/vector3edit.h"
 
@@ -95,6 +96,8 @@ TrussEditorWidget::TrussEditorWidget(Truss *t_truss, QWidget *parent)
     connect(m_impl->rotationEdit, &Vector3Edit::valueChanged, this, &TrussEditorWidget::setRotation);
 
     m_impl->truss = t_truss;
+    connect(t_truss, &SceneObject::positionChanged, this, &TrussEditorWidget::refreshTransform);
+    connect(t_truss, &SceneObject::rotationChanged, this, &TrussEditorWidget::refreshTransform);
 
     m_impl->nameEdit->setText(t_truss->name());
     m_impl->beamSpin->setValue(t_truss->beams());
@@ -155,6 +158,14 @@ void TrussEditorWidget::setPosition(const QVector3D &t_value)
 void TrussEditorWidget::setRotation(const QVector3D &t_value)
 {
     m_impl->truss->setRotation(t_value);
+}
+
+void TrussEditorWidget::refreshTransform()
+{
+    QSignalBlocker pb(m_impl->positionEdit);
+    QSignalBlocker rb(m_impl->rotationEdit);
+    m_impl->positionEdit->setValue(m_impl->truss->position());
+    m_impl->rotationEdit->setValue(m_impl->truss->rotation());
 }
 
 

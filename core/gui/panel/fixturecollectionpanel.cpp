@@ -228,16 +228,39 @@ void FixtureCollectionPanel::selectionChanged(const QItemSelection &selected, co
         delete m_impl->editorWidget;
     m_impl->editorWidget = nullptr;
 
+    SceneObject *firstSelected = nullptr;
     for(auto index : selectedIndices)
     {
         auto sceneObj = static_cast<SceneObject*>(index.internalPointer());
         if(sceneObj)
         {
+            firstSelected = sceneObj;
             m_impl->editorWidget = sceneObj->createEditor();
             m_impl->hLayout->addWidget(m_impl->editorWidget);
-            return;
+            break;
         }
     }
+
+    if (!m_impl->syncingFromProject && photonApp->project())
+        photonApp->project()->setSelectedSceneObject(firstSelected);
+}
+
+void FixtureCollectionPanel::syncSelectionFromProject(SceneObject *obj)
+{
+    if (!m_impl->sceneModel)
+        return;
+    m_impl->syncingFromProject = true;
+    if (!obj) {
+        m_impl->treeView->selectionModel()->clearSelection();
+    } else {
+        QModelIndex idx = m_impl->sceneModel->indexForObject(obj);
+        if (idx.isValid()) {
+            m_impl->treeView->selectionModel()->select(
+                idx, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+            m_impl->treeView->scrollTo(idx);
+        }
+    }
+    m_impl->syncingFromProject = false;
 }
 
 void FixtureCollectionPanel::projectDidOpen(photon::Project* project)
@@ -246,12 +269,14 @@ void FixtureCollectionPanel::projectDidOpen(photon::Project* project)
     m_impl->treeView->setModel(m_impl->sceneModel);
     connect(m_impl->treeView->selectionModel(), &QItemSelectionModel::selectionChanged, this, &FixtureCollectionPanel::selectionChanged);
     connect(m_impl->sceneModel, &SceneModel::selectionMoved, this, &FixtureCollectionPanel::selectionMoved);
+    connect(project, &Project::selectedSceneObjectChanged, this, &FixtureCollectionPanel::syncSelectionFromProject);
 
     m_impl->addButton->setEnabled(true);
 }
 
 void FixtureCollectionPanel::projectWillClose(photon::Project* project)
 {
+    disconnect(project, &Project::selectedSceneObjectChanged, this, &FixtureCollectionPanel::syncSelectionFromProject);
     disconnect(m_impl->treeView->selectionModel(), &QItemSelectionModel::selectionChanged, this, &FixtureCollectionPanel::selectionChanged);
     disconnect(m_impl->sceneModel, &SceneModel::selectionMoved, this, &FixtureCollectionPanel::selectionMoved);
     m_impl->treeView->setModel(nullptr);

@@ -25,12 +25,17 @@ public:
     TagCollection *tags() const;
     SurfaceCollection *surfaces() const;
 
+    SceneObject *selectedSceneObject() const;
+    void setSelectedSceneObject(SceneObject *obj);
+
     void save(const QString &path = QString{}) const;
     void load(const QString &path = QString{});
     void restore(Project &);
     void readFromJson(const QJsonObject &json);
     void writeToJson(QJsonObject &json) const;
+
 signals:
+    void selectedSceneObjectChanged(photon::SceneObject *);
 
 private:
     class Impl;

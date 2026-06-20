@@ -2,13 +2,10 @@
 #define PHOTON_VISUALIZERPANEL_H
 
 #include "gui/panel.h"
-#include "openglviewport.h"
 
 namespace photon {
 
-class TransformComponent;
-class MaterialComponent;
-class Scene;
+class RhiViewport;
 
 class VisualizerPanel : public Panel
 {
@@ -18,17 +15,11 @@ public:
     ~VisualizerPanel();
 
 protected:
-    virtual void mousePressEvent(QMouseEvent *event) override;
-
-private slots:
-
+    void projectDidOpen(photon::Project *project) override;
+    void projectWillClose(photon::Project *project) override;
 
 private:
-    OpenGLViewport *m_viewport;
-    TransformComponent *m_transform;
-    MaterialComponent *m_material;
-    Scene *m_scene;
-    int m_clickCounter = 0;
+    RhiViewport *m_viewport;
 };
 
 } // namespace photon

@@ -44,6 +44,7 @@ public:
     StateCollection states;
     BusGraph *bus;
     SceneManager *sceneManager;
+    SceneObject *selectedSceneObject = nullptr;
 };
 
 Project::Impl::Impl()
@@ -105,6 +106,19 @@ BusGraph *Project::bus() const
 SceneObject *Project::sceneRoot() const
 {
     return m_impl->sceneManager->rootObject();
+}
+
+SceneObject *Project::selectedSceneObject() const
+{
+    return m_impl->selectedSceneObject;
+}
+
+void Project::setSelectedSceneObject(SceneObject *obj)
+{
+    if (obj == m_impl->selectedSceneObject)
+        return;
+    m_impl->selectedSceneObject = obj;
+    emit selectedSceneObjectChanged(obj);
 }
 
 SceneManager *Project::scene() const

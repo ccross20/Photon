@@ -9,8 +9,8 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(QT NAMES Qt6 REQUIRED COMPONENTS Core Widgets OpenGLWidgets)
-find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Widgets OpenGLWidgets)
+find_package(QT NAMES Qt6 REQUIRED COMPONENTS Core Gui GuiPrivate Widgets OpenGLWidgets ShaderTools)
+find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Gui GuiPrivate Widgets OpenGLWidgets ShaderTools)
 
 set(SOURCES
     component/abstractcomponent.h
@@ -70,6 +70,18 @@ set(SOURCES
     modifier/tiltmodelmodifier.cpp
     openglviewport.h
     openglviewport.cpp
+    rhi/rhicamera.h
+    rhi/rhicamera.cpp
+    rhi/rhimesh.h
+    rhi/rhimesh.cpp
+    rhi/rhirenderer.h
+    rhi/rhirenderer.cpp
+    rhi/rhigizmo.h
+    rhi/rhigizmo.cpp
+    rhi/rhiwindow.h
+    rhi/rhiwindow.cpp
+    rhi/rhiviewport.h
+    rhi/rhiviewport.cpp
     plugin-visualizer-global.h
     pluginvisualizer.cpp
     pluginvisualizer.h
@@ -89,12 +101,24 @@ qt_add_resources(SOURCES resources.qrc)
 add_library(plugin-visualizer SHARED ${SOURCES}
     arrowmodel.h arrowmodel.cpp)
 
+qt6_add_shaders(plugin-visualizer "visualizer_shaders"
+    PREFIX "/visualizer/shaders"
+    BASE "rhi/shaders"
+    FILES
+        rhi/shaders/scene.vert
+        rhi/shaders/scene.frag
+        rhi/shaders/line.vert
+        rhi/shaders/line.frag
+)
+
 
 
 find_library(ASSIMP_LIBRARY assimp-vc142-mt "${PROJECT_SOURCE_DIR}/libs")
 target_link_libraries(plugin-visualizer PRIVATE "${ASSIMP_LIBRARY}")
 
 target_link_libraries(plugin-visualizer PRIVATE Qt${QT_VERSION_MAJOR}::Core)
+target_link_libraries(plugin-visualizer PRIVATE Qt${QT_VERSION_MAJOR}::Gui)
+target_link_libraries(plugin-visualizer PRIVATE Qt${QT_VERSION_MAJOR}::GuiPrivate)
 target_link_libraries(plugin-visualizer PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)
 target_link_libraries(plugin-visualizer PRIVATE Qt${QT_VERSION_MAJOR}::OpenGLWidgets)
 target_link_libraries(plugin-visualizer PRIVATE Qt${QT_VERSION_MAJOR}::OpenGL)

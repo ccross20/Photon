@@ -21,6 +21,7 @@ public:
     QVBoxLayout *vLayout;
     QHBoxLayout *hLayout;
     SceneModel *sceneModel;
+    bool syncingFromProject = false;
 };
 
 

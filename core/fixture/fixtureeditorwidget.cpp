@@ -4,8 +4,10 @@
 #include <QComboBox>
 #include <QLabel>
 #include <QSpinBox>
+#include <QSignalBlocker>
 #include "fixtureeditorwidget.h"
 #include "fixture.h"
+#include "scene/sceneobject.h"
 #include "gui/vector3edit.h"
 #include "photoncore.h"
 #include "project/project.h"
@@ -108,7 +110,15 @@ FixtureEditorWidget::~FixtureEditorWidget()
 
 void FixtureEditorWidget::setFixtures(QVector<Fixture*> t_fixtures)
 {
+    for (auto *fix : m_impl->fixtures) {
+        disconnect(fix, &SceneObject::positionChanged, this, &FixtureEditorWidget::refreshTransform);
+        disconnect(fix, &SceneObject::rotationChanged, this, &FixtureEditorWidget::refreshTransform);
+    }
     m_impl->fixtures = t_fixtures;
+    for (auto *fix : m_impl->fixtures) {
+        connect(fix, &SceneObject::positionChanged, this, &FixtureEditorWidget::refreshTransform);
+        connect(fix, &SceneObject::rotationChanged, this, &FixtureEditorWidget::refreshTransform);
+    }
     m_impl->modeCombo->clear();
 
     if(m_impl->fixtures.isEmpty())
@@ -389,5 +399,14 @@ void FixtureEditorWidget::setRotation(const QVector3D &t_rotation)
     }
 }
 
+void FixtureEditorWidget::refreshTransform()
+{
+    if (m_impl->fixtures.isEmpty())
+        return;
+    QSignalBlocker pb(m_impl->positionEdit);
+    QSignalBlocker rb(m_impl->rotationEdit);
+    m_impl->positionEdit->setValue(m_impl->fixtures.first()->position());
+    m_impl->rotationEdit->setValue(m_impl->fixtures.first()->rotation());
+}
 
 } // namespace photon

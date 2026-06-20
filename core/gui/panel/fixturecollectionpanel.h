@@ -25,6 +25,7 @@ private slots:
     void doubleClicked(const QModelIndex &);
     void selectionChanged(const QItemSelection &selected, const QItemSelection &deselected);
     void selectionMoved(QModelIndexList indices);
+    void syncSelectionFromProject(photon::SceneObject *obj);
 
 protected:
     void projectDidOpen(photon::Project* project) override;

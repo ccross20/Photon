@@ -29,6 +29,7 @@ private slots:
     void setDefaultState(int index);
     void setPosition(const QVector3D &);
     void setRotation(const QVector3D &);
+    void refreshTransform();
 
 
 private:
