@@ -16,6 +16,7 @@ namespace photon {
 
 class SceneObject;
 class RhiRenderer;
+class DMXMatrix;
 
 // A QWindow that owns its QRhi, swapchain and renderer outright. Embedded into the
 // widget hierarchy via QWidget::createWindowContainer (see RhiViewport).
@@ -36,6 +37,7 @@ public:
     void setSelectedSceneObject(SceneObject *obj);
     void setGizmoMode(RhiGizmo::Mode mode);
     void setGizmoSpace(RhiGizmo::Space space);
+    void setDmxState(const DMXMatrix &dmx);
 
 signals:
     void selectionChanged(photon::SceneObject *obj);

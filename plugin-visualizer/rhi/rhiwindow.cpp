@@ -66,6 +66,14 @@ void RhiWindow::setGizmoSpace(RhiGizmo::Space space)
     requestUpdate();
 }
 
+void RhiWindow::setDmxState(const DMXMatrix &dmx)
+{
+    if (!m_renderer)
+        return;
+    m_renderer->setDmxState(dmx);
+    requestUpdate();
+}
+
 void RhiWindow::exposeEvent(QExposeEvent *)
 {
     if (isExposed() && !m_initialized)

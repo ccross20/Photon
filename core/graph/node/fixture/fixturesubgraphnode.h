@@ -1,5 +1,6 @@
 #ifndef FIXTURESUBGRAPHNODE_H
 #define FIXTURESUBGRAPHNODE_H
+#include <QObject>
 #include "model/subgraphnode.h"
 #include "photon-global.h"
 #include "graph/parameter/fixturelistparameter.h"
@@ -47,6 +48,12 @@ private:
     // instances so the parallel fixture loop has no shared write state.
     mutable QVector<keira::Graph*> m_subgraphPool;
     mutable QVector<FixtureGlobalsNode*> m_globalsPool;
+
+    // Set when the source subgraph changes (e.g. a node's parameter is edited),
+    // so the pool is re-cloned on the next evaluate(). Without this, node-internal
+    // parameter edits never reach the per-fixture clones.
+    mutable bool m_poolStale = true;
+    QMetaObject::Connection m_dirtyConn;
 };
 
 } // namespace photon

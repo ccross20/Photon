@@ -237,4 +237,39 @@ RhiMesh *RhiMesh::createTruss(int beams, float length, float offset,
     return mesh;
 }
 
+RhiMesh *RhiMesh::createCone(int sides)
+{
+    sides = qMax(3, sides);
+
+    QByteArray verts;
+    QByteArray indices;
+
+    // Second attribute holds (alpha, 0, 0) — bright at the apex, faint at the base.
+    auto pushV = [&](const QVector3D &p, float alpha) {
+        const float f[6] = { p.x(), p.y(), p.z(), alpha, 0.0f, 0.0f };
+        verts.append(reinterpret_cast<const char *>(f), sizeof(f));
+    };
+
+    constexpr float apexAlpha = 0.85f;
+    constexpr float baseAlpha = 0.04f;
+
+    pushV(QVector3D(0, 0, 0), apexAlpha);  // vertex 0 = apex
+    for (int s = 0; s < sides; ++s) {
+        const float a = (2.0f * kPi) * float(s) / float(sides);
+        pushV(QVector3D(std::cos(a), -1.0f, std::sin(a)), baseAlpha);
+    }
+
+    for (int s = 0; s < sides; ++s) {
+        const quint16 r0 = quint16(1 + s);
+        const quint16 r1 = quint16(1 + (s + 1) % sides);
+        const quint16 idx[3] = { 0, r0, r1 };
+        indices.append(reinterpret_cast<const char *>(idx), sizeof(idx));
+    }
+
+    auto *mesh = new RhiMesh;
+    mesh->setVertexData(verts, sides + 1);
+    mesh->setIndexData(indices, sides * 3);
+    return mesh;
+}
+
 } // namespace photon

@@ -37,10 +37,16 @@ FixtureSubGraphNode::FixtureSubGraphNode() : keira::SubGraphNode("photon.node.fi
     graph()->drainCommandQueue(); // apply immediately — eval thread not running yet
     graph()->setName("Fixture Graph");
     graph()->setGraphTypeId("fixture");
+
+    // Any edit inside the source subgraph (node parameter change, structural edit)
+    // invalidates the cloned pool so evaluate() re-clones with the new values.
+    m_dirtyConn = QObject::connect(graph(), &keira::Graph::dirtyStateChanged,
+                                   [this]() { m_poolStale = true; });
 }
 
 FixtureSubGraphNode::~FixtureSubGraphNode()
 {
+    QObject::disconnect(m_dirtyConn);
     qDeleteAll(m_subgraphPool);
 }
 
@@ -135,7 +141,10 @@ void FixtureSubGraphNode::syncSubgraphPool(int count) const
     m_globalsPool.clear();
 
     if(count == 0)
+    {
+        m_poolStale = false;
         return;
+    }
 
     graph()->drainCommandQueue();
 
@@ -153,6 +162,11 @@ void FixtureSubGraphNode::syncSubgraphPool(int count) const
         m_subgraphPool.append(clone);
         m_globalsPool.append(globals);
     }
+
+    // Reset the source graph's parameter-dirty bits so the *next* edit re-fires
+    // dirtyStateChanged (markDirty short-circuits while a bit is still set).
+    graph()->markClean();
+    m_poolStale = false;
 }
 
 void FixtureSubGraphNode::evaluate(keira::EvaluationContext *t_context) const
@@ -163,7 +177,7 @@ void FixtureSubGraphNode::evaluate(keira::EvaluationContext *t_context) const
     auto context = static_cast<RoutineEvaluationContext*>(t_context);
     const auto fixtures = m_fixturesParam->value().value<QVector<FixtureParameterData>>();
 
-    if(m_subgraphPool.size() != fixtures.size())
+    if(m_poolStale || m_subgraphPool.size() != fixtures.size())
         syncSubgraphPool(fixtures.size());
 
     if(m_subgraphPool.isEmpty())

@@ -11,6 +11,7 @@ namespace photon {
 
 class SceneObject;
 class RhiWindow;
+class DMXMatrix;
 
 // Widget facade for the 3D viewport. Hosts a window-based QRhi renderer
 // (RhiWindow) via QWidget::createWindowContainer so it can sit in the panel
@@ -23,6 +24,7 @@ public:
 
     void setSceneRoot(SceneObject *root);
     void setSelectedSceneObject(SceneObject *obj);
+    void setDmxState(const DMXMatrix &dmx);
 
 signals:
     void selectionChanged(photon::SceneObject *obj);

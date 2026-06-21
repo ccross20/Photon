@@ -18,6 +18,9 @@ protected:
     void projectDidOpen(photon::Project *project) override;
     void projectWillClose(photon::Project *project) override;
 
+private slots:
+    void tick();
+
 private:
     RhiViewport *m_viewport;
 };

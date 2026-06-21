@@ -8,6 +8,7 @@
 #include <QByteArray>
 #include <QSet>
 #include "rhigizmo.h"
+#include "data/dmxmatrix.h"
 
 class QRhi;
 class QRhiBuffer;
@@ -20,6 +21,7 @@ class QRhiCommandBuffer;
 namespace photon {
 
 class SceneObject;
+class Fixture;
 class RhiMesh;
 class RhiCamera;
 
@@ -32,6 +34,9 @@ public:
     ~RhiRenderer();
 
     void setSceneRoot(SceneObject *root) { m_sceneRoot = root; }
+
+    // Latest evaluated DMX output. Drives live fixture color/intensity and beams.
+    void setDmxState(const DMXMatrix &dmx) { m_dmx = dmx; }
 
     // (Re)creates device resources. Pass a render pass descriptor compatible with
     // the target that will be drawn to (e.g. the swapchain's), and its sample count.
@@ -57,7 +62,17 @@ private:
 
     void collectDrawables(SceneObject *obj, QVector<Drawable> &out,
                           QSet<SceneObject *> &seenTrusses);
+    // Appends a beam-cone drawable for every lit fixture in the subtree.
+    void collectBeams(SceneObject *obj, QVector<Drawable> &out) const;
     RhiMesh *trussMeshFor(SceneObject *truss);
+
+    // Reads the fixture's live color and 0..1 intensity from the current DMX state.
+    // Returns false if the fixture has no color/dimmer capability to read.
+    bool evaluateFixture(Fixture *fixture, QColor &outColor, float &outIntensity) const;
+
+    // Live beam cone half-angle (degrees), driven by the zoom channel + lens range
+    // when present, otherwise the default reference angle.
+    float beamHalfAngleFor(Fixture *fixture) const;
     void ensureObjectBuffer(int count);
 
     static bool localBounds(SceneObject *obj, QVector3D &outMin, QVector3D &outMax);
@@ -68,6 +83,7 @@ private:
 
     RhiMesh *m_box = nullptr;
     RhiMesh *m_grid = nullptr;
+    RhiMesh *m_beamCone = nullptr;
 
     // Per-truss geometry, rebuilt when a truss's parameters change.
     QHash<SceneObject *, RhiMesh *>  m_trussMeshes;
@@ -82,12 +98,16 @@ private:
     QRhiShaderResourceBindings *m_lineSrb = nullptr;
     QRhiGraphicsPipeline *m_meshPipeline = nullptr;
     QRhiGraphicsPipeline *m_linePipeline = nullptr;
+    QRhiGraphicsPipeline *m_beamPipeline = nullptr;   // triangles, additive, depth-write off
     QRhiGraphicsPipeline *m_gizmoPipeline = nullptr;  // lines, depth test off
     QRhiBuffer *m_gizmoBuffer = nullptr;              // dynamic, rebuilt per frame
 
     RhiGizmo     m_gizmo;
     SceneObject *m_sceneRoot = nullptr;
     SceneObject *m_selected = nullptr;
+
+    DMXMatrix m_dmx;   // latest evaluated DMX output
+
 };
 
 } // namespace photon

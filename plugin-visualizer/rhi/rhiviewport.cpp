@@ -93,6 +93,11 @@ void RhiViewport::setSelectedSceneObject(SceneObject *obj)
     m_window->setSelectedSceneObject(obj);
 }
 
+void RhiViewport::setDmxState(const DMXMatrix &dmx)
+{
+    m_window->setDmxState(dmx);
+}
+
 void RhiViewport::onGizmoModeChanged(RhiGizmo::Mode mode)
 {
     // Keep buttons in sync when keyboard shortcuts change the mode.

@@ -1,6 +1,7 @@
 #include <rhi/qrhi.h>
 #include <QFile>
 #include <QDataStream>
+#include <QtMath>
 #include <cstring>
 #include <limits>
 #include <utility>
@@ -9,6 +10,12 @@
 #include "rhicamera.h"
 #include "scene/sceneobject.h"
 #include "scene/truss.h"
+#include "fixture/fixture.h"
+#include "fixture/capability/colorcapability.h"
+#include "fixture/capability/dimmercapability.h"
+#include "fixture/capability/pancapability.h"
+#include "fixture/capability/tiltcapability.h"
+#include "fixture/capability/anglecapability.h"
 
 namespace photon {
 
@@ -27,6 +34,14 @@ constexpr quint32 kFramePayload  = 20 * sizeof(float); // mat4 + vec4
 constexpr quint32 kObjectPayload = 20 * sizeof(float); // mat4 + vec4
 constexpr quint32 kGizmoBytes    = 4096 * 6 * sizeof(float); // dynamic line verts
 
+// Beam appearance.
+constexpr float kBeamLength    = 6.0f;    // reference throw (world units) at the reference angle
+constexpr float kBeamHalfAngle = 8.0f;    // default/reference cone half-angle, degrees
+constexpr float kBeamGain      = 0.55f;   // overall additive strength
+constexpr float kBeamMinLevel  = 0.02f;   // skip beams dimmer than this
+constexpr float kBeamThrowMin  = 0.5f;    // throw scale clamp (wide washes)
+constexpr float kBeamThrowMax  = 2.0f;    // throw scale clamp (tight spots)
+
 } // namespace
 
 RhiRenderer::RhiRenderer() {}
@@ -36,12 +51,14 @@ RhiRenderer::~RhiRenderer()
     releaseResources();
     delete m_box;
     delete m_grid;
+    delete m_beamCone;
 }
 
 void RhiRenderer::releaseResources()
 {
     delete m_meshPipeline;  m_meshPipeline = nullptr;
     delete m_linePipeline;  m_linePipeline = nullptr;
+    delete m_beamPipeline;  m_beamPipeline = nullptr;
     delete m_gizmoPipeline; m_gizmoPipeline = nullptr;
     delete m_meshSrb;       m_meshSrb = nullptr;
     delete m_lineSrb;       m_lineSrb = nullptr;
@@ -50,8 +67,9 @@ void RhiRenderer::releaseResources()
     delete m_gizmoBuffer;   m_gizmoBuffer = nullptr;
     m_objectCapacity = 0;
 
-    if (m_box)  m_box->release();
-    if (m_grid) m_grid->release();
+    if (m_box)      m_box->release();
+    if (m_grid)     m_grid->release();
+    if (m_beamCone) m_beamCone->release();
 
     qDeleteAll(m_trussMeshes);
     m_trussMeshes.clear();
@@ -94,6 +112,8 @@ void RhiRenderer::initialize(QRhi *rhi, QRhiRenderPassDescriptor *rpDesc, int sa
         m_box = RhiMesh::createBox(0.15f, 0.15f, 0.15f);
     if (!m_grid)
         m_grid = RhiMesh::createGrid(20, 1.0f);
+    if (!m_beamCone)
+        m_beamCone = RhiMesh::createCone(28);
 
     // Per-object slot stride must satisfy the uniform-buffer offset alignment.
     m_objectSlotSize = m_rhi->ubufAlignment();
@@ -116,6 +136,8 @@ void RhiRenderer::initialize(QRhi *rhi, QRhiRenderPassDescriptor *rpDesc, int sa
     const QShader sceneFrag = loadShader(QStringLiteral(":/visualizer/shaders/scene.frag.qsb"));
     const QShader lineVert  = loadShader(QStringLiteral(":/visualizer/shaders/line.vert.qsb"));
     const QShader lineFrag  = loadShader(QStringLiteral(":/visualizer/shaders/line.frag.qsb"));
+    const QShader beamVert  = loadShader(QStringLiteral(":/visualizer/shaders/beam.vert.qsb"));
+    const QShader beamFrag  = loadShader(QStringLiteral(":/visualizer/shaders/beam.frag.qsb"));
 
     // Both vertex layouts are vec3 + vec3, 24-byte stride.
     QRhiVertexInputLayout inputLayout;
@@ -156,6 +178,32 @@ void RhiRenderer::initialize(QRhi *rhi, QRhiRenderPassDescriptor *rpDesc, int sa
     m_linePipeline->setCullMode(QRhiGraphicsPipeline::None);
     m_linePipeline->setTopology(QRhiGraphicsPipeline::Lines);
     m_linePipeline->create();
+
+    // Beam pipeline: additive translucent cones. Same vertex layout and per-object
+    // SRB as the mesh pass, but additive blending with depth-write disabled so beams
+    // glow over the scene and over each other without occluding.
+    QRhiGraphicsPipeline::TargetBlend beamBlend;
+    beamBlend.enable = true;
+    beamBlend.srcColor = QRhiGraphicsPipeline::One;
+    beamBlend.dstColor = QRhiGraphicsPipeline::One;
+    beamBlend.srcAlpha = QRhiGraphicsPipeline::One;
+    beamBlend.dstAlpha = QRhiGraphicsPipeline::One;
+
+    m_beamPipeline = m_rhi->newGraphicsPipeline();
+    m_beamPipeline->setShaderStages({
+        { QRhiShaderStage::Vertex, beamVert },
+        { QRhiShaderStage::Fragment, beamFrag }
+    });
+    m_beamPipeline->setVertexInputLayout(inputLayout);
+    m_beamPipeline->setShaderResourceBindings(m_meshSrb);
+    m_beamPipeline->setRenderPassDescriptor(rpDesc);
+    m_beamPipeline->setSampleCount(sampleCount);
+    m_beamPipeline->setTargetBlends({ beamBlend });
+    m_beamPipeline->setDepthTest(true);
+    m_beamPipeline->setDepthWrite(false);
+    m_beamPipeline->setCullMode(QRhiGraphicsPipeline::None);
+    m_beamPipeline->setTopology(QRhiGraphicsPipeline::Triangles);
+    m_beamPipeline->create();
 
     // Gizmo: same line shaders/layout/SRB, but depth test off so it draws on top.
     m_gizmoBuffer = m_rhi->newBuffer(QRhiBuffer::Dynamic, QRhiBuffer::VertexBuffer, kGizmoBytes);
@@ -219,7 +267,24 @@ void RhiRenderer::collectDrawables(SceneObject *obj, QVector<Drawable> &out,
         const QByteArray type = child->typeId();
         const bool sel = (child == m_selected);
         if (type == "fixture") {
-            out.append({ m_box, child->globalMatrix(), sel ? highlight : QColor(205, 205, 215) });
+            QColor tint(150, 150, 158);  // body color for fixtures we can't evaluate
+            if (sel) {
+                tint = highlight;
+            } else {
+                QColor emitted;
+                float intensity = 0.0f;
+                if (evaluateFixture(static_cast<Fixture *>(child), emitted, intensity)) {
+                    // Body = dark "off" gray faded out by intensity, plus the emitted
+                    // color added on top, so an unlit fixture reads dark and a lit one
+                    // glows in its real color.
+                    const float keep = 1.0f - intensity;
+                    tint = QColor::fromRgbF(
+                        qMin(1.0f, 0.28f * keep + float(emitted.redF())),
+                        qMin(1.0f, 0.28f * keep + float(emitted.greenF())),
+                        qMin(1.0f, 0.30f * keep + float(emitted.blueF())));
+                }
+            }
+            out.append({ m_box, child->globalMatrix(), tint });
         } else if (type == "truss") {
             seenTrusses.insert(child);
             out.append({ trussMeshFor(child), child->globalMatrix(), sel ? highlight : QColor(150, 150, 155) });
@@ -228,6 +293,102 @@ void RhiRenderer::collectDrawables(SceneObject *obj, QVector<Drawable> &out,
         }
         // "group" is organizational — no geometry, but still recurse into it.
         collectDrawables(child, out, seenTrusses);
+    }
+}
+
+bool RhiRenderer::evaluateFixture(Fixture *fixture, QColor &outColor, float &outIntensity) const
+{
+    if (!fixture)
+        return false;
+
+    // ColorCapability is an aggregate (not stored per-channel), so it must be looked
+    // up by type rather than via the channel-walking findCapability<T>() template.
+    const auto colorCaps  = fixture->findCapability(Capability_Color);
+    const auto dimmerCaps = fixture->findCapability(Capability_Dimmer);
+    if (colorCaps.isEmpty() && dimmerCaps.isEmpty())
+        return false;
+
+    // Colorless fixtures (e.g. a plain dimmer) emit white; the dimmer (if any)
+    // scales it. For color fixtures with no separate dimmer the level is already
+    // carried by the color channels, so dim stays 1.0.
+    const QColor base = colorCaps.isEmpty()
+        ? QColor(255, 255, 255)
+        : static_cast<ColorCapability *>(colorCaps.first())->getColor(m_dmx);
+    const float dim = dimmerCaps.isEmpty()
+        ? 1.0f
+        : float(static_cast<DimmerCapability *>(dimmerCaps.first())->getPercent(m_dmx));
+
+    const float r = qBound(0.0f, float(base.redF())   * dim, 1.0f);
+    const float g = qBound(0.0f, float(base.greenF()) * dim, 1.0f);
+    const float b = qBound(0.0f, float(base.blueF())  * dim, 1.0f);
+
+    outColor = QColor::fromRgbF(r, g, b);
+    outIntensity = qMax(r, qMax(g, b));
+    return true;
+}
+
+float RhiRenderer::beamHalfAngleFor(Fixture *fixture) const
+{
+    const auto zooms = fixture->findCapability(Capability_Zoom);
+    if (zooms.isEmpty())
+        return kBeamHalfAngle;
+
+    // Zoom percent maps across the fixture's physical lens range to a full beam angle.
+    auto *zoom = static_cast<AngleCapability *>(zooms.first());
+    const Fixture::Physical phys = fixture->physical();
+    const double pct = zoom->getAnglePercent(m_dmx);
+    const double fullAngle = pct * (phys.lensMaximum - phys.lensMinimum) + phys.lensMinimum;
+    return qBound(1.0f, float(fullAngle) * 0.5f, 80.0f);
+}
+
+void RhiRenderer::collectBeams(SceneObject *obj, QVector<Drawable> &out) const
+{
+    if (!obj || !m_beamCone)
+        return;
+
+    const float refTan = std::tan(qDegreesToRadians(kBeamHalfAngle));
+
+    for (SceneObject *child : obj->sceneChildren()) {
+        if (child->typeId() == "fixture") {
+            auto *fix = static_cast<Fixture *>(child);
+            QColor emitted;
+            float intensity = 0.0f;
+            if (evaluateFixture(fix, emitted, intensity) && intensity > kBeamMinLevel) {
+                // Pan/tilt aim the beam relative to the fixture's own transform.
+                // Centered so 50% DMX = beam straight down the fixture's local -Y.
+                float panDeg = 0.0f, tiltDeg = 0.0f;
+                const auto pans = fix->findCapability(Capability_Pan);
+                if (!pans.isEmpty()) {
+                    auto *p = static_cast<PanCapability *>(pans.first());
+                    const float range = float(p->angleEnd() - p->angleStart());
+                    panDeg = float(p->getAnglePercent(m_dmx)) * range - range * 0.5f;
+                }
+                const auto tilts = fix->findCapability(Capability_Tilt);
+                if (!tilts.isEmpty()) {
+                    auto *t = static_cast<TiltCapability *>(tilts.first());
+                    const float range = float(t->angleEnd() - t->angleStart());
+                    tiltDeg = float(t->getAnglePercent(m_dmx)) * range - range * 0.5f;
+                }
+
+                // Beam width follows zoom; tighter beams throw farther (clamped).
+                const float halfAngle = beamHalfAngleFor(fix);
+                const float tanHalf = std::tan(qDegreesToRadians(halfAngle));
+                const float length = kBeamLength
+                    * qBound(kBeamThrowMin, refTan / tanHalf, kBeamThrowMax);
+                const float baseRadius = length * tanHalf;
+
+                // Unit cone (apex at origin, axis -Y) oriented and sized into place.
+                QMatrix4x4 m = fix->globalMatrix();
+                m.rotate(panDeg, 0.0f, 1.0f, 0.0f);
+                m.rotate(tiltDeg, 1.0f, 0.0f, 0.0f);
+                m.scale(baseRadius, length, baseRadius);
+
+                out.append({ m_beamCone, m,
+                             QColor::fromRgbF(float(emitted.redF()), float(emitted.greenF()),
+                                              float(emitted.blueF()), kBeamGain) });
+            }
+        }
+        collectBeams(child, out);
     }
 }
 
@@ -332,7 +493,11 @@ void RhiRenderer::render(QRhiCommandBuffer *cb, QRhiRenderTarget *rt, const RhiC
     QVector<Drawable> drawables;
     QSet<SceneObject *> seenTrusses;
     collectDrawables(m_sceneRoot, drawables, seenTrusses);
-    ensureObjectBuffer(drawables.size());
+
+    QVector<Drawable> beams;
+    collectBeams(m_sceneRoot, beams);
+
+    ensureObjectBuffer(drawables.size() + beams.size());
 
     // Drop geometry for trusses no longer in the scene.
     for (auto it = m_trussMeshes.begin(); it != m_trussMeshes.end(); ) {
@@ -351,6 +516,8 @@ void RhiRenderer::render(QRhiCommandBuffer *cb, QRhiRenderTarget *rt, const RhiC
     m_grid->upload(m_rhi, u);
     for (const Drawable &d : drawables)
         d.mesh->upload(m_rhi, u);
+    if (!beams.isEmpty())
+        m_beamCone->upload(m_rhi, u);
 
     // Frame constants: clip-space-corrected view-projection + light direction.
     const QMatrix4x4 viewProj =
@@ -375,6 +542,20 @@ void RhiRenderer::render(QRhiCommandBuffer *cb, QRhiRenderTarget *rt, const RhiC
         slot[18] = float(d.color.blueF());
         slot[19] = float(d.color.alphaF());
         u->updateDynamicBuffer(m_objectBuffer, i * m_objectSlotSize, kObjectPayload, slot);
+    }
+
+    // Beam slots follow the mesh slots in the same buffer.
+    const int beamBase = drawables.size();
+    for (int j = 0; j < beams.size(); ++j) {
+        const Drawable &d = beams[j];
+        float slot[20];
+        std::memcpy(slot, d.model.constData(), 16 * sizeof(float));
+        slot[16] = float(d.color.redF());
+        slot[17] = float(d.color.greenF());
+        slot[18] = float(d.color.blueF());
+        slot[19] = float(d.color.alphaF());
+        u->updateDynamicBuffer(m_objectBuffer, (beamBase + j) * m_objectSlotSize,
+                               kObjectPayload, slot);
     }
 
     // Gizmo line geometry (world space), rebuilt each frame.
@@ -412,6 +593,19 @@ void RhiRenderer::render(QRhiCommandBuffer *cb, QRhiRenderTarget *rt, const RhiC
             cb->setVertexInput(0, 1, &vin, mesh->indexBuffer(), 0,
                                QRhiCommandBuffer::IndexUInt16);
             cb->drawIndexed(mesh->indexCount());
+        }
+    }
+
+    // Light beams: additive cones over the scene (depth-tested, no depth write).
+    if (!beams.isEmpty() && m_beamCone->vertexBuffer() && m_beamCone->isIndexed()) {
+        cb->setGraphicsPipeline(m_beamPipeline);
+        const QRhiCommandBuffer::VertexInput vin(m_beamCone->vertexBuffer(), 0);
+        for (int j = 0; j < beams.size(); ++j) {
+            const QRhiCommandBuffer::DynamicOffset off(1, quint32(beamBase + j) * m_objectSlotSize);
+            cb->setShaderResources(m_meshSrb, 1, &off);
+            cb->setVertexInput(0, 1, &vin, m_beamCone->indexBuffer(), 0,
+                               QRhiCommandBuffer::IndexUInt16);
+            cb->drawIndexed(m_beamCone->indexCount());
         }
     }
 

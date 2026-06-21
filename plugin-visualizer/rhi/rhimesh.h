@@ -42,6 +42,11 @@ public:
     // the local X axis over `length`, with diagonal lacing every `segmentLength`.
     static RhiMesh *createTruss(int beams, float length, float offset,
                                 float radius, float segmentLength);
+    // A hollow light-beam cone: apex at the origin, axis along -Y, unit length and
+    // unit base radius (scale via the model matrix). The second vertex attribute
+    // carries a per-vertex alpha factor (bright apex → faint base) for additive
+    // blending rather than a normal.
+    static RhiMesh *createCone(int sides);
 
 private:
     QByteArray   m_vertexData;
