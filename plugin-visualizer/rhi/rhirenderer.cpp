@@ -22,6 +22,8 @@
 #include "fixture/capability/wheelslotcapability.h"
 #include "fixture/capability/wheelslotrotationcapability.h"
 #include "fixture/capability/wheelrotationcapability.h"
+#include "fixture/capability/prismcapability.h"
+#include "fixture/capability/prismrotationcapability.h"
 #include "fixture/fixturewheel.h"
 #include "fixture/fixturechannel.h"
 
@@ -53,8 +55,13 @@ constexpr float kBeamThrowMax  = 2.0f;    // throw scale clamp (tight spots)
 
 constexpr int    kGoboSize     = 1024;    // gobo texture layer resolution
 
+// Prisms: each active prism splits a beam into N copies fanned off-axis.
+constexpr float  kPrismDeflect   = 4.0f;  // per-copy deflection off the beam axis (deg)
+constexpr float  kPrismRevPerSec = 0.3f;  // full-speed prism rotation (rev/s)
+
 // Surface lighting: spotlight list. 5 vec4 per light + 1 vec4 count header.
-constexpr int    kMaxLights    = 32;
+// Raised to 64 so prism copies (N beams per fixture) still light surfaces.
+constexpr int    kMaxLights    = 64;
 constexpr quint32 kLightsPayload = (1 + 5 * kMaxLights) * 4 * sizeof(float);
 constexpr float  kGoboRevPerSec = 0.5f;   // full-speed gobo rotation rate (rev/s)
 constexpr float  kColorSlotsPerSec = 1.5f; // full-speed color-wheel scroll (slots/s)
@@ -571,44 +578,87 @@ void RhiRenderer::loadGoboImages()
     qInfo() << "RhiRenderer: loaded" << m_goboImages.size() << "gobos from" << dir;
 }
 
-float RhiRenderer::goboForFixture(Fixture *fixture) const
+void RhiRenderer::goboForFixture(Fixture *fixture, float &outA, float &outB, float &outSplit) const
 {
+    outA = 0.0f;
+    outB = 0.0f;
+    outSplit = -2.0f;
+
     const int gc = m_goboImages.size();
     if (gc <= 0)
-        return 0.0f;   // no gobo textures loaded
+        return;   // no gobo textures loaded
 
     const auto slotCaps = fixture->findCapability<WheelSlotCapability *>();
-    if (slotCaps.isEmpty())
-        return float(qBound(0, m_goboIndex, gc));   // no wheel — follow global selector
 
-    // The fixture has a gobo wheel (it owns its gobo). Default to open (no gobo);
-    // the active gobo slot maps onto a loaded gobo texture layer.
-    bool hasGoboWheel = false;
-    int active = 0;
+    // Find the gobo wheel via any gobo slot capability.
+    QString wheelName;
     for (auto *cap : slotCaps) {
         FixtureWheelSlot *ws = cap->wheelSlot();
-        if (!ws)
-            continue;
-        if (ws->type() == FixtureWheelSlot::Slot_Gobo)
-            hasGoboWheel = true;
-        if (cap->isValid(m_dmx))
-            active = (ws->type() == FixtureWheelSlot::Slot_Gobo) ? (ws->index() % gc) + 1 : 0;
+        if (ws && ws->type() == FixtureWheelSlot::Slot_Gobo) {
+            wheelName = cap->wheelName();
+            break;
+        }
     }
-    if (!hasGoboWheel)
-        return float(qBound(0, m_goboIndex, gc));   // global test selector snaps
+    if (wheelName.isEmpty()) {                        // no gobo wheel — global selector
+        outA = outB = float(qBound(0, m_goboIndex, gc));
+        return;
+    }
 
-    // Slew the wheel toward the selected gobo so it steps through the intervening
-    // slots (a quick sweep) rather than snapping. Snap on first sight.
-    const float target = float(active);
-    if (!m_goboWheelPos.contains(fixture)) {
-        m_goboWheelPos[fixture] = target;
-        return target;
+    FixtureWheel *wheel = fixture->findWheel(wheelName);
+    if (!wheel) {
+        outA = outB = float(qBound(0, m_goboIndex, gc));
+        return;
     }
-    float &gp = m_goboWheelPos[fixture];
-    const float maxStep = kGoboSlotsPerSec * m_frameDt;
-    const float d = target - gp;
-    gp += (std::abs(d) <= maxStep) ? d : (d > 0.0f ? maxStep : -maxStep);
-    return float(std::round(gp));
+
+    // Layer strip in wheel order: gobo slots map to texture layers (1..gc), open
+    // and other slots are 0 (no gobo).
+    QVector<int> layerStrip;
+    int goboOrd = 0;
+    for (FixtureWheelSlot *s : wheel->allSlots())
+        layerStrip.append((s && s->type() == FixtureWheelSlot::Slot_Gobo) ? (goboOrd++ % gc) + 1 : 0);
+    const int N = layerStrip.size();
+    if (N == 0)
+        return;
+
+    // Active wheel slot.
+    int targetSlot = -1;
+    for (auto *cap : slotCaps) {
+        FixtureWheelSlot *ws = cap->wheelSlot();
+        if (ws && cap->isValid(m_dmx) &&
+            (ws->type() == FixtureWheelSlot::Slot_Gobo || ws->type() == FixtureWheelSlot::Slot_Open)) {
+            targetSlot = ((cap->slotNumber() - 1) % N + N) % N;
+            break;
+        }
+    }
+    if (targetSlot < 0)
+        return;   // nothing active in the gate → no gobo
+
+    // Slew the wheel toward the target slot (motor), shortest path; snap on first sight.
+    float pos;
+    if (!m_goboWheelPos.contains(fixture)) {
+        pos = float(targetSlot);
+    } else {
+        pos = slewWrapped(m_goboWheelPos[fixture], float(targetSlot), float(N),
+                          kGoboSlotsPerSec * m_frameDt);
+    }
+    m_goboWheelPos[fixture] = pos;
+
+    // Resolve the gate window to one or two layers + a wipe boundary.
+    const float w = kColorGateWidth;
+    const float lo = pos - w * 0.5f;
+    const float hi = pos + w * 0.5f;
+    auto slotAt = [&](float p) { int k = int(std::floor(p + 0.5f)); return ((k % N) + N) % N; };
+    const int sA = slotAt(lo);
+    const int sB = slotAt(hi);
+    outA = float(layerStrip[sA]);
+    outB = float(layerStrip[sB]);
+    if (sA == sB) {
+        outSplit = -2.0f;
+    } else {
+        const float b1 = std::floor(lo) + 0.5f;
+        const float bx = (b1 > lo && b1 < hi) ? b1 : std::floor(hi) + 0.5f;
+        outSplit = qBound(-1.0f, (bx - lo) / w * 2.0f - 1.0f, 1.0f);
+    }
 }
 
 float RhiRenderer::goboRotationFor(Fixture *fixture) const
@@ -643,6 +693,33 @@ float RhiRenderer::goboRotationFor(Fixture *fixture) const
 
     // Active capability not in a rotation range (e.g. stop) — hold current angle.
     return m_goboPhase.value(fixture, 0.0f);
+}
+
+float RhiRenderer::prismRotationFor(Fixture *fixture) const
+{
+    const auto rots = fixture->findCapability<PrismRotationCapability *>();
+    if (rots.isEmpty())
+        return 0.0f;
+
+    for (auto *cap : rots) {
+        if (!cap->isValid(m_dmx) || !cap->channel())
+            continue;
+        const int raw = m_dmx.value(fixture->universe() - 1, cap->channel()->universalChannelNumber());
+        DMXRange r = cap->range();
+        const float span = float(qMax(1, int(r.end) - int(r.start)));
+        const float factor = qBound(0.0f, (float(raw) - float(r.start)) / span, 1.0f);
+
+        if (cap->supportsAngle()) {
+            const double deg = cap->angleStart() + factor * (cap->angleEnd() - cap->angleStart());
+            m_prismPhase[fixture] = float(deg);
+            return float(deg);
+        }
+        const double speedNorm = cap->speedStart() + factor * (cap->speedEnd() - cap->speedStart());
+        float &phase = m_prismPhase[fixture];
+        phase += float(speedNorm) * kPrismRevPerSec * 360.0f * m_frameDt;  // degrees
+        return phase;
+    }
+    return m_prismPhase.value(fixture, 0.0f);
 }
 
 bool RhiRenderer::colorWheelFor(Fixture *fixture, QColor &outA, QColor &outB, float &outSplit) const
@@ -809,12 +886,6 @@ void RhiRenderer::collectBeams(SceneObject *obj, QVector<Drawable> &out) const
                     * qBound(kBeamThrowMin, refTan / tanHalf, kBeamThrowMax);
                 const float baseRadius = length * tanHalf;
 
-                // Unit cone (apex at origin, axis -Y) oriented and sized into place.
-                QMatrix4x4 m = fix->globalMatrix();
-                m.rotate(panDeg, 0.0f, 1.0f, 0.0f);
-                m.rotate(tiltDeg, 1.0f, 0.0f, 0.0f);
-                m.scale(baseRadius, length, baseRadius);
-
                 // Apply the colour wheel (tints the emitted colour; may be split).
                 QColor colA = emitted, colB = emitted;
                 float split = -2.0f;
@@ -826,17 +897,59 @@ void RhiRenderer::collectBeams(SceneObject *obj, QVector<Drawable> &out) const
                     split = ws;
                 }
 
+                float gA = 0.0f, gB = 0.0f, gSplit = -2.0f;
+                goboForFixture(fix, gA, gB, gSplit);
+                const float goboRot = goboRotationFor(fix);
+
+                // Prism: split the beam into N copies fanned off-axis (and spun by
+                // the prism-rotation channel). No prism → a single copy.
+                int facets = 1;
+                bool prismLinear = false;
+                const auto prisms = fix->findCapability<PrismCapability *>();
+                for (auto *pr : prisms) {
+                    if (pr->isValid(m_dmx)) {
+                        facets = qMax(1, pr->facetCount());
+                        prismLinear = pr->isLinear();
+                        break;
+                    }
+                }
+                const float prismRot = (facets > 1) ? prismRotationFor(fix) : 0.0f;
+
+                // Common per-copy properties.
                 Drawable beam;
                 beam.mesh = m_beamCone;
-                beam.model = m;
                 beam.color = QColor::fromRgbF(float(colA.redF()), float(colA.greenF()),
                                               float(colA.blueF()), kBeamGain);
-                beam.gobo = goboForFixture(fix);
-                beam.goboRot = goboRotationFor(fix);
+                beam.gobo = gA;
+                beam.gobo2 = gB;
+                beam.goboSplit = gSplit;
+                beam.goboRot = goboRot;
                 beam.color2 = QColor::fromRgbF(float(colB.redF()), float(colB.greenF()),
                                                float(colB.blueF()), kBeamGain);
                 beam.split = split;
-                out.append(beam);
+
+                for (int fct = 0; fct < facets; ++fct) {
+                    // Unit cone (apex at origin, axis -Y) oriented and sized into place.
+                    QMatrix4x4 m = fix->globalMatrix();
+                    m.rotate(panDeg, 0.0f, 1.0f, 0.0f);
+                    m.rotate(tiltDeg, 1.0f, 0.0f, 0.0f);
+                    if (facets > 1) {
+                        if (prismLinear) {
+                            // Copies in a line: vary deflection, fixed azimuth.
+                            const float off = (float(fct) - (facets - 1) * 0.5f) * kPrismDeflect;
+                            m.rotate(prismRot, 0.0f, 1.0f, 0.0f);
+                            m.rotate(off, 1.0f, 0.0f, 0.0f);
+                        } else {
+                            // Copies in a ring: even azimuth, constant deflection.
+                            const float az = prismRot + 360.0f * float(fct) / float(facets);
+                            m.rotate(az, 0.0f, 1.0f, 0.0f);
+                            m.rotate(kPrismDeflect, 1.0f, 0.0f, 0.0f);
+                        }
+                    }
+                    m.scale(baseRadius, length, baseRadius);
+                    beam.model = m;
+                    out.append(beam);
+                }
             }
         }
         collectBeams(child, out);
@@ -1098,8 +1211,10 @@ void RhiRenderer::render(QRhiCommandBuffer *cb, QRhiRenderTarget *rt, const RhiC
             L[0]  = apex.x(); L[1] = apex.y(); L[2] = apex.z(); L[3] = range;
             L[4]  = axis.x(); L[5] = axis.y(); L[6] = axis.z(); L[7] = cosOuter;
             L[8]  = float(c.redF()); L[9] = float(c.greenF()); L[10] = float(c.blueF());
-            L[11] = beams[i].gobo;        // gobo pattern index
+            L[11] = beams[i].gobo;        // gobo layer A
             L[12] = beams[i].goboRot;     // gobo rotation (radians)
+            L[13] = beams[i].gobo2;       // gobo layer B (wheel wipe)
+            L[14] = beams[i].goboSplit;   // gobo wipe boundary (-1..1, <-1 = none)
             L[16] = float(c2.redF()); L[17] = float(c2.greenF()); L[18] = float(c2.blueF());
             L[19] = beams[i].split;       // color split position (-1..1, <-1 = none)
         }
@@ -1123,16 +1238,17 @@ void RhiRenderer::render(QRhiCommandBuffer *cb, QRhiRenderTarget *rt, const RhiC
             slot[18] = float(d.color.blueF());
             slot[19] = float(d.color.alphaF());
             slot[20] = apex.x(); slot[21] = apex.y(); slot[22] = apex.z();
+            slot[23] = d.gobo2;     // apex.w  = second gobo layer (wheel wipe)
             slot[24] = axis.x(); slot[25] = axis.y(); slot[26] = axis.z();
             slot[27] = cosH;
             slot[28] = length;
-            slot[29] = d.gobo;      // params.y = gobo pattern index
+            slot[29] = d.gobo;      // params.y = gobo layer A
             slot[30] = d.goboRot;   // params.z = gobo rotation (radians)
             slot[31] = d.split;     // params.w = color split position (-1..1, <-1 = none)
             slot[32] = float(d.color2.redF());
             slot[33] = float(d.color2.greenF());
             slot[34] = float(d.color2.blueF());
-            slot[35] = float(d.color2.alphaF());
+            slot[35] = d.goboSplit; // color2.w = gobo wipe boundary (-1..1, <-1 = none)
             u->updateDynamicBuffer(m_beamBuffer, j * m_beamSlotSize, kBeamPayload, slot);
         }
     } else {

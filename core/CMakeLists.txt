@@ -538,6 +538,7 @@ add_library(photon-core SHARED ${PROJECT_SOURCES}
     graph/node/gizmo/slidergizmonode.h graph/node/gizmo/slidergizmonode.cpp
     surface/viewer/slidergizmoeditor.h surface/viewer/slidergizmoeditor.cpp
     fixture/capability/prismrotationcapability.h fixture/capability/prismrotationcapability.cpp
+    fixture/capability/prismcapability.h fixture/capability/prismcapability.cpp
     graph/parameter/colorpaletteparameter.h graph/parameter/colorpaletteparameter.cpp
     data/dmxtimemachine.h data/dmxtimemachine.cpp
     graph/node/pixel/pixelgraph.h graph/node/pixel/pixelgraph.cpp

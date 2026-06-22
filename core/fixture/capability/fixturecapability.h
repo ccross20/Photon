@@ -63,7 +63,8 @@ enum CapabilityType{
     Capability_WheelShake,
     Capability_WheelSlotRotation,
     Capability_WheelRotation,
-    Capability_PrismRotation
+    Capability_PrismRotation,
+    Capability_Prism
 };
 
 enum FixtureUnit{

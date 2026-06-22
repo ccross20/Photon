@@ -13,10 +13,10 @@ layout(std140, binding = 0) uniform Frame {
 layout(std140, binding = 1) uniform Beam {
     mat4 model;
     vec4 color;      // rgb = emitted color, a = gain
-    vec4 apex;       // xyz = cone apex (world)
+    vec4 apex;       // xyz = cone apex (world), w = second gobo layer (wheel wipe)
     vec4 axisCos;    // xyz = beam axis (world, unit), w = cos(half angle)
-    vec4 params;     // x = length, y = gobo index, z = gobo rotation, w = color split (-1..1)
-    vec4 color2;     // rgb = second color-wheel color (split)
+    vec4 params;     // x = length, y = gobo layer A, z = gobo rotation, w = color split (-1..1)
+    vec4 color2;     // rgb = second color-wheel color (split), w = gobo wipe boundary (-1..1)
 } beam;
 
 const int STEPS = 24;
@@ -76,7 +76,9 @@ void main()
     float tanH = sqrt(max(1.0 / (cosH * cosH) - 1.0, 0.0));
 
     // Stable frame perpendicular to the axis for the gobo angular coordinate.
-    int goboIdx = int(beam.params.y + 0.5);
+    int goboA = int(beam.params.y + 0.5);     // gate-side layers (wheel wipe)
+    int goboB = int(beam.apex.w + 0.5);
+    float goboSplit = beam.color2.w;
     float goboRot = beam.params.z;
     vec3 up = abs(d.y) > 0.99 ? vec3(1.0, 0.0, 0.0) : vec3(0.0, 1.0, 0.0);
     vec3 U = normalize(cross(up, d));
@@ -116,11 +118,14 @@ void main()
         float fl = clamp(1.0 - s / L, 0.0, 1.0);          // fade with distance
         fl *= smoothstep(0.0, 0.06 * L, s);               // soften at the source
 
+        // Pick the gobo layer by cross-beam position (the wheel wipe), then sample.
+        float gx = dot(rvec, U) / max(coneR, 1e-4);   // -1..1 across the cone
+        int gi = (gx < goboSplit) ? goboA : goboB;
         vec4 g = vec4(1.0);                    // rgb = glass tint, a = transmittance
-        if (goboIdx > 0) {
+        if (gi > 0) {
             float theta = atan(dot(rvec, V), dot(rvec, U));
             vec2 guv = rotate2(vec2(cos(theta), sin(theta)) * rn, goboRot);
-            g = texture(goboTex, vec3(guv * 0.5 + 0.5, float(goboIdx - 1)));
+            g = texture(goboTex, vec3(guv * 0.5 + 0.5, float(gi - 1)));
         }
 
         // The gobo modulates the in-air haze but never fully erases it (scattered

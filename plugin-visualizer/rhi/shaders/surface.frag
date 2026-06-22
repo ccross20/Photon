@@ -20,7 +20,7 @@ layout(std140, binding = 1) uniform Object {
 // (goboRot, ...), (color2.rgb, split).
 layout(std140, binding = 2) uniform Lights {
     vec4 countv;
-    vec4 data[160];
+    vec4 data[320];
 } lights;
 
 // Gobo texture array: one layer per loaded image (rgb = transmitted color, a = transmittance).
@@ -46,8 +46,10 @@ void main()
         vec3  D        = lights.data[i * 5 + 1].xyz;   // spot axis (apex -> base)
         float cosOuter = lights.data[i * 5 + 1].w;
         vec3  col      = lights.data[i * 5 + 2].xyz;
-        int   goboIdx  = int(lights.data[i * 5 + 2].w + 0.5);
+        int   goboA    = int(lights.data[i * 5 + 2].w + 0.5);
         float goboRot  = lights.data[i * 5 + 3].x;
+        int   goboB    = int(lights.data[i * 5 + 3].y + 0.5);
+        float goboSplit = lights.data[i * 5 + 3].z;
         vec3  col2     = lights.data[i * 5 + 4].xyz;
         float split    = lights.data[i * 5 + 4].w;
 
@@ -77,20 +79,22 @@ void main()
         float xsplit = rn * cos(theta);
         vec3 lightCol = mix(col, col2, smoothstep(split - 0.03, split + 0.03, xsplit));
 
-        // Projected gobo: sample the (rotating) gobo texture in the cone disk.
+        // Projected gobo: pick the layer by cross-beam position (wheel wipe), then
+        // sample the (rotating) gobo texture in the cone disk.
+        int gi = (xsplit < goboSplit) ? goboA : goboB;
         vec3 goboRGB = vec3(1.0);
-        float goboA = 1.0;
-        if (goboIdx > 0) {
+        float goboMask = 1.0;
+        if (gi > 0) {
             vec2 guv = rotate2(vec2(cos(theta), sin(theta)) * rn, goboRot);
-            vec4 g = texture(goboTex, vec3(guv * 0.5 + 0.5, float(goboIdx - 1)));
+            vec4 g = texture(goboTex, vec3(guv * 0.5 + 0.5, float(gi - 1)));
             goboRGB = g.rgb;
-            goboA = g.a;
+            goboMask = g.a;
         }
 
         float ndl = abs(dot(N, l));               // surfaces are double-sided
         float atten = 1.0 / (1.0 + 0.025 * dist * dist);
 
-        result += albedo * (lightCol * goboRGB) * (shape * goboA * ndl * atten * 2.6);
+        result += albedo * (lightCol * goboRGB) * (shape * goboMask * ndl * atten * 2.6);
     }
 
     fragColor = vec4(result, 1.0);

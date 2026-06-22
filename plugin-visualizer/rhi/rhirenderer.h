@@ -78,10 +78,12 @@ private:
         RhiMesh   *mesh;   // non-owning; shared box or a cached per-truss mesh
         QMatrix4x4 model;
         QColor     color;
-        float      gobo = 0.0f;     // beams only: gobo pattern index (0 = none)
+        float      gobo = 0.0f;     // beams only: gobo layer (0 = none, 1..N)
+        float      gobo2 = 0.0f;    // beams only: second gobo layer (wheel wipe)
+        float      goboSplit = -2.0f; // beams only: gobo wipe boundary x in [-1,1]
         float      goboRot = 0.0f;  // beams only: gobo rotation (radians)
         QColor     color2;          // beams only: second color-wheel color (split)
-        float      split = -2.0f;   // beams only: split boundary x in [-1,1] (<-1 = none)
+        float      split = -2.0f;   // beams only: color split boundary x in [-1,1] (<-1 = none)
     };
 
     void collectDrawables(SceneObject *obj, QVector<Drawable> &out,
@@ -100,13 +102,17 @@ private:
     // when present, otherwise the default reference angle.
     float beamHalfAngleFor(Fixture *fixture) const;
 
-    // Active gobo pattern for a fixture: its gobo-wheel slot if it has one,
-    // otherwise the global test-gobo selection.
-    float goboForFixture(Fixture *fixture) const;
+    // Resolves a fixture's gobo wheel to the layer(s) in the gate. As the wheel
+    // slews between slots two layers straddle the gate (a wipe), giving outA != outB
+    // and a split boundary; parked on a slot, outA == outB. Layer 0 = no gobo.
+    void goboForFixture(Fixture *fixture, float &outA, float &outB, float &outSplit) const;
 
     // Current gobo rotation (radians) from the fixture's gobo-rotation channel:
     // continuous speed is accumulated over time; indexed mode returns a static angle.
     float goboRotationFor(Fixture *fixture) const;
+
+    // Current prism rotation (degrees) from the fixture's prism-rotation channel.
+    float prismRotationFor(Fixture *fixture) const;
 
     // Advances a fixture's motorised attributes (pan/tilt + zoom) toward their DMX
     // targets over time and returns the current smoothed values.
@@ -181,6 +187,7 @@ private:
     mutable float  m_frameDt = 0.0f;                   // seconds since last frame
     mutable QHash<SceneObject *, float> m_goboPhase;   // accumulated continuous rotation
     mutable QHash<SceneObject *, float> m_colorPhase;  // accumulated color-wheel position
+    mutable QHash<SceneObject *, float> m_prismPhase;  // accumulated prism rotation (deg)
 
     // Per-fixture smoothed motor state (degrees) + velocities, for motor-like movement.
     struct FixtureMotion {
