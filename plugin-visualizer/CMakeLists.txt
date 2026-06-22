@@ -111,6 +111,10 @@ qt6_add_shaders(plugin-visualizer "visualizer_shaders"
         rhi/shaders/line.frag
         rhi/shaders/beam.vert
         rhi/shaders/beam.frag
+        rhi/shaders/beamvol.vert
+        rhi/shaders/beamvol.frag
+        rhi/shaders/surface.vert
+        rhi/shaders/surface.frag
 )
 
 

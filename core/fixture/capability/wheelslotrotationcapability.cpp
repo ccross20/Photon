@@ -125,7 +125,7 @@ void WheelSlotRotationCapability::readFromOpenFixtureJson(const QJsonObject &t_j
 
     m_impl->wheel = t_json.value("wheel").toString().toLower();
 
-    //qDebug() << "Wheel:" << m_impl->wheel;
+    qDebug() << "Create Wheel Slot Rotation, Wheel:" << m_impl->wheel;
 
 }
 

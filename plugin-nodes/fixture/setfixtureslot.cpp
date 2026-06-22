@@ -66,7 +66,6 @@ void SetFixtureSlot::evaluate(keira::EvaluationContext *t_context) const
             wheelName = context->fixture->wheels()[wheelIndex]->name();
         wheelName = wheelName.toLower();
 
-
         for(auto curSlot : allSlots)
         {
             auto wheelSlot = static_cast<WheelSlotCapability*>(curSlot);

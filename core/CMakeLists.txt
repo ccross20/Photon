@@ -291,6 +291,8 @@ set(PROJECT_SOURCES
         scene/sceneobject.cpp
         scene/truss.h
         scene/truss.cpp
+        scene/scenesurface.h
+        scene/scenesurface.cpp
         sequence/beatlayer.h
         sequence/beatlayer.cpp
         sequence/canvasclip.h

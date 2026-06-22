@@ -10,6 +10,7 @@
 #include "fixture/fixturecollection.h"
 #include "scene/scenegroup.h"
 #include "scene/truss.h"
+#include "scene/scenesurface.h"
 #include "pixel/pixelstrip.h"
 #include "scene/sceneiterator.h"
 #include "scene/scenearrow.h"
@@ -88,6 +89,8 @@ void FixtureCollectionPanel::addClicked()
     menu.addAction("Truss",[this](){addTruss();});
     menu.addAction("Light Strip",[this](){addLightStrip();});
     menu.addAction("Arrow",[this](){addArrow();});
+    menu.addAction("Wall",[this](){addWall();});
+    menu.addAction("Floor",[this](){addFloor();});
 
     menu.exec(m_impl->addButton->mapToGlobal(m_impl->addButton->rect().bottomLeft()));
 }
@@ -189,6 +192,29 @@ void FixtureCollectionPanel::addArrow()
     auto arrow = new SceneArrow;
     arrow->setName("Arrow");
     arrow->setParentSceneObject(photonApp->project()->sceneRoot());
+}
+
+void FixtureCollectionPanel::addWall()
+{
+    auto wall = new SceneSurface;
+    wall->setName("Wall");
+    wall->setSurfaceWidth(12.0f);
+    wall->setSurfaceHeight(6.0f);
+    // Vertical plane standing on the floor, set back behind the rig (normal +Z).
+    wall->setPosition(QVector3D(0.0f, 3.0f, -6.0f));
+    wall->setParentSceneObject(photonApp->project()->sceneRoot());
+}
+
+void FixtureCollectionPanel::addFloor()
+{
+    auto floor = new SceneSurface;
+    floor->setName("Floor");
+    floor->setSurfaceWidth(16.0f);
+    floor->setSurfaceHeight(16.0f);
+    // Lay the plane flat (normal +Y) at ground level.
+    floor->setRotation(QVector3D(-90.0f, 0.0f, 0.0f));
+    floor->setPosition(QVector3D(0.0f, 0.0f, 0.0f));
+    floor->setParentSceneObject(photonApp->project()->sceneRoot());
 }
 
 void FixtureCollectionPanel::addLightStrip()

@@ -74,6 +74,27 @@ void RhiWindow::setDmxState(const DMXMatrix &dmx)
     requestUpdate();
 }
 
+void RhiWindow::setBeamMode(RhiRenderer::BeamMode mode)
+{
+    if (!m_renderer)
+        return;
+    m_renderer->setBeamMode(mode);
+    requestUpdate();
+}
+
+void RhiWindow::setGoboIndex(int index)
+{
+    if (!m_renderer)
+        return;
+    m_renderer->setGoboIndex(index);
+    requestUpdate();
+}
+
+int RhiWindow::goboCount() const
+{
+    return m_renderer ? m_renderer->goboCount() : 0;
+}
+
 void RhiWindow::exposeEvent(QExposeEvent *)
 {
     if (isExposed() && !m_initialized)

@@ -2,6 +2,7 @@
 #include "fixture/fixture.h"
 #include "scenegroup.h"
 #include "truss.h"
+#include "scenesurface.h"
 #include "pixel/pixelstrip.h"
 #include "scene/scenearrow.h"
 
@@ -21,6 +22,8 @@ SceneObject *SceneFactory::createObject(const QByteArray &id)
         return new SceneGroup();
     if(id == "truss")
         return new Truss();
+    if(id == "surface")
+        return new SceneSurface();
     if(id == "pixelstrip")
         return new PixelStrip();
     if(id == "arrow")

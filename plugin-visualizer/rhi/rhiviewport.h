@@ -36,6 +36,9 @@ private:
     RhiWindow    *m_window    = nullptr;
     QButtonGroup *m_modeGroup = nullptr;
     QToolButton  *m_spaceBtn  = nullptr;
+    QToolButton  *m_beamBtn   = nullptr;
+    QToolButton  *m_goboBtn   = nullptr;
+    int           m_goboIndex = 0;
 };
 
 } // namespace photon

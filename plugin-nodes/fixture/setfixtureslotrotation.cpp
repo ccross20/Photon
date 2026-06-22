@@ -41,7 +41,7 @@ void SetFixtureSlotRotation::evaluate(keira::EvaluationContext *t_context) const
         float rotationAmount = m_angleParam->value().toFloat();
 
         bool useAngle = m_modeParam->value().toInt() == 0;
-        QString name = m_nameParam->value().toString();
+        QString name = m_nameParam->value().toString().toLower();
 
         if(!name.isEmpty())
         {

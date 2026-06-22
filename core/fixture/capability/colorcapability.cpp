@@ -332,6 +332,11 @@ QColor ColorCapability::getColor(const DMXMatrix &t_matrix) const
         case Capability_Blue:
             b = channel->getPercent(t_matrix);
             break;
+            /*
+        case Capability_White:
+            r = g = b = channel->getPercent(t_matrix);
+            break;
+*/
         default:
             break;
         }

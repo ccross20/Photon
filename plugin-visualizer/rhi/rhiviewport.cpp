@@ -55,12 +55,40 @@ RhiViewport::RhiViewport(QWidget *parent)
     m_spaceBtn = makeToolBtn("Global", "Toggle world / local transform axes");
     m_spaceBtn->setChecked(false);
 
+    m_beamBtn = makeToolBtn("Cones", "Toggle basic / volumetric light beams");
+    m_beamBtn->setChecked(false);
+
+    // Gobo cycle button (test patterns) — not checkable; click cycles the pattern.
+    m_goboBtn = makeToolBtn("Gobo: Off", "Cycle projected test gobo pattern");
+    m_goboBtn->setCheckable(false);
+    m_goboBtn->setMinimumWidth(90);
+
     connect(m_modeGroup, &QButtonGroup::idClicked, m_window,
             [this](int id) { m_window->setGizmoMode(static_cast<RhiGizmo::Mode>(id)); });
 
     connect(m_spaceBtn, &QToolButton::toggled, this, [this](bool local) {
         m_spaceBtn->setText(local ? "Local" : "Global");
         m_window->setGizmoSpace(local ? RhiGizmo::Local : RhiGizmo::Global);
+    });
+
+    connect(m_beamBtn, &QToolButton::toggled, this, [this](bool volumetric) {
+        m_beamBtn->setText(volumetric ? "Volume" : "Cones");
+        m_window->setBeamMode(volumetric ? RhiRenderer::BeamMode::Volumetric
+                                         : RhiRenderer::BeamMode::Basic);
+    });
+
+    connect(m_goboBtn, &QToolButton::clicked, this, [this]() {
+        const int count = m_window->goboCount();
+        if (count <= 0) {
+            m_goboIndex = 0;
+            m_goboBtn->setText(QStringLiteral("Gobo: Off"));
+            m_window->setGoboIndex(0);
+            return;
+        }
+        m_goboIndex = (m_goboIndex + 1) % (count + 1);
+        m_goboBtn->setText(m_goboIndex == 0 ? QStringLiteral("Gobo: Off")
+                                            : QStringLiteral("Gobo: %1").arg(m_goboIndex));
+        m_window->setGoboIndex(m_goboIndex);
     });
 
     QHBoxLayout *tbLayout = new QHBoxLayout(toolbar);
@@ -71,6 +99,10 @@ RhiViewport::RhiViewport(QWidget *parent)
     tbLayout->addWidget(rotateBtn);
     tbLayout->addSpacing(12);
     tbLayout->addWidget(m_spaceBtn);
+    tbLayout->addSpacing(12);
+    tbLayout->addWidget(m_beamBtn);
+    tbLayout->addSpacing(12);
+    tbLayout->addWidget(m_goboBtn);
     tbLayout->addStretch();
 
     // ── Main layout ──────────────────────────────────────────────────────────

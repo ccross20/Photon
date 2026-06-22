@@ -70,6 +70,8 @@ void WheelSlotCapability::readFromOpenFixtureJson(const QJsonObject &t_json)
     else if(rotateMode == "continuous")
             m_impl->rotateMode = RotateMode_Continuous;
 
+    //qDebug() << "Create " << m_impl->wheelName << rotateMode;
+
     for(auto wheel : fixture()->wheels())
     {
         if(wheel->name().toLower() == m_impl->wheelName.toLower())

@@ -5,6 +5,7 @@
 #include <QPointF>
 #include "rhicamera.h"
 #include "rhigizmo.h"
+#include "rhirenderer.h"
 
 class QRhi;
 class QRhiSwapChain;
@@ -38,6 +39,9 @@ public:
     void setGizmoMode(RhiGizmo::Mode mode);
     void setGizmoSpace(RhiGizmo::Space space);
     void setDmxState(const DMXMatrix &dmx);
+    void setBeamMode(RhiRenderer::BeamMode mode);
+    void setGoboIndex(int index);
+    int goboCount() const;
 
 signals:
     void selectionChanged(photon::SceneObject *obj);

@@ -237,6 +237,25 @@ RhiMesh *RhiMesh::createTruss(int beams, float length, float offset,
     return mesh;
 }
 
+RhiMesh *RhiMesh::createPlane()
+{
+    QByteArray verts;
+    QByteArray indices;
+    int base = 0;
+
+    const QVector3D n(0.0f, 0.0f, 1.0f);
+    const QVector3D a(-0.5f, -0.5f, 0.0f);
+    const QVector3D b( 0.5f, -0.5f, 0.0f);
+    const QVector3D c( 0.5f,  0.5f, 0.0f);
+    const QVector3D d(-0.5f,  0.5f, 0.0f);
+    pushQuad(verts, indices, base, a, b, c, d, n);
+
+    auto *mesh = new RhiMesh;
+    mesh->setVertexData(verts, 4);
+    mesh->setIndexData(indices, 6);
+    return mesh;
+}
+
 RhiMesh *RhiMesh::createCone(int sides)
 {
     sides = qMax(3, sides);

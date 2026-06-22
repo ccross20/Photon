@@ -38,6 +38,9 @@ public:
     // Geometry generators.
     static RhiMesh *createBox(float halfX, float halfY, float halfZ);
     static RhiMesh *createGrid(int halfExtent, float spacing);
+    // Unit quad in the local XY plane (corners ±0.5), normal +Z. Scale via the
+    // model matrix. Used for wall/floor surfaces (lit, position + normal layout).
+    static RhiMesh *createPlane();
     // Box-truss: `beams` chord tubes on a circle of radius `offset`, running along
     // the local X axis over `length`, with diagonal lacing every `segmentLength`.
     static RhiMesh *createTruss(int beams, float length, float offset,
