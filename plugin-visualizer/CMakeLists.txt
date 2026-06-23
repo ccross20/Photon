@@ -74,6 +74,8 @@ set(SOURCES
     rhi/rhicamera.cpp
     rhi/rhimesh.h
     rhi/rhimesh.cpp
+    rhi/rhimodel.h
+    rhi/rhimodel.cpp
     rhi/rhirenderer.h
     rhi/rhirenderer.cpp
     rhi/rhigizmo.h

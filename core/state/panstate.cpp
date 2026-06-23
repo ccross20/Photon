@@ -1,5 +1,5 @@
 #include "panstate.h"
-#include "fixture/capability/pancapability.h"
+#include "fixture/capability/anglecapability.h"
 
 namespace photon {
 
@@ -23,7 +23,7 @@ void PanState::evaluate(const StateEvaluationContext &t_context) const
     {
         for(auto curTilt : tilts)
         {
-            auto pan = static_cast<PanCapability*>(curTilt);
+            auto pan = static_cast<AngleCapability*>(curTilt);
             pan->setAnglePercent(tiltPercent,t_context.dmxMatrix, t_context.strength);
             return;
         }
@@ -34,7 +34,7 @@ void PanState::evaluate(const StateEvaluationContext &t_context) const
         {
             for(auto curTilt : tilts)
             {
-                auto pan = static_cast<PanCapability*>(curTilt);
+                auto pan = static_cast<AngleCapability*>(curTilt);
                 pan->setAngleDegreesCentered(tiltPercent,t_context.dmxMatrix, t_context.strength);
                 return;
             }
@@ -43,7 +43,7 @@ void PanState::evaluate(const StateEvaluationContext &t_context) const
         {
             for(auto curTilt : tilts)
             {
-                auto pan = static_cast<PanCapability*>(curTilt);
+                auto pan = static_cast<AngleCapability*>(curTilt);
                 pan->setAngleDegrees(tiltPercent,t_context.dmxMatrix, t_context.strength);
                 return;
             }

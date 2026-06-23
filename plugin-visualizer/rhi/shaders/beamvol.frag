@@ -17,6 +17,7 @@ layout(std140, binding = 1) uniform Beam {
     vec4 axisCos;    // xyz = beam axis (world, unit), w = cos(half angle)
     vec4 params;     // x = length, y = gobo layer A, z = gobo rotation, w = color split (-1..1)
     vec4 color2;     // rgb = second color-wheel color (split), w = gobo wipe boundary (-1..1)
+    vec4 fadePlane;  // xyz = plane normal (toward apex), w = offset; zero = no fade
 } beam;
 
 const int STEPS = 24;
@@ -101,6 +102,20 @@ void main()
     float dt = (t1 - t0) / float(STEPS);
     float accum = 0.0;
     vec3  accumGobo = vec3(0.0);   // density-weighted gobo colour (glass tint)
+    // Soft-fade against an opaque surface: signed distance is positive on the beam
+    // side; samples behind the surface contribute nothing, and the shaft fades over
+    // a short band approaching it so the cone/floor intersection has no hard ring.
+    bool  hasFade = dot(beam.fadePlane.xyz, beam.fadePlane.xyz) > 1e-6;
+    float fadeBand = max(0.08 * L, 0.15);
+    // Per-fragment fade by this cone-surface point's distance to the surface. The
+    // per-sample fade alone leaves a hard silhouette: a fragment right at the cone/
+    // floor intersection still integrates bright samples higher up the chord. Fading
+    // the whole fragment as its surface point nears the floor dissolves that edge.
+    float fragFade = 1.0;
+    if (hasFade) {
+        float fsd = dot(beam.fadePlane.xyz, vWorld) + beam.fadePlane.w;
+        fragFade = smoothstep(0.0, max(0.18 * L, 0.3), fsd);
+    }
     for (int i = 0; i < STEPS; ++i) {
         float t = t0 + (float(i) + 0.5) * dt;
         vec3 X = O + v * t;
@@ -108,6 +123,13 @@ void main()
         float s = dot(ax, d);                 // distance along axis
         if (s < 0.0 || s > L)
             continue;
+        float surfFade = 1.0;
+        if (hasFade) {
+            float sd = dot(beam.fadePlane.xyz, X) + beam.fadePlane.w;
+            if (sd < 0.0)
+                continue;                     // behind the opaque surface
+            surfFade = smoothstep(0.0, fadeBand, sd);
+        }
         float coneR = s * tanH;               // cone radius at this slice
         vec3 rvec = ax - d * s;               // radial vector from axis
         float r = length(rvec);
@@ -131,7 +153,7 @@ void main()
         // The gobo modulates the in-air haze but never fully erases it (scattered
         // light keeps the cone glowing), so sparse gobos don't make the beam vanish.
         float trans = mix(0.4, 1.0, g.a);
-        float wgt = fr * fl * trans * dt;
+        float wgt = fr * fl * trans * surfFade * dt;
         accum += wgt;
         accumGobo += g.rgb * wgt;
     }
@@ -141,7 +163,7 @@ void main()
     // accumGobo / accum is the density-weighted gobo colour, tinting the shaft for
     // glass gobos (metal gobos are white, so this is a no-op for them).
     vec3 goboTint = (accum > 1e-5) ? accumGobo / accum : vec3(1.0);
-    float intensity = 1.0 - exp(-accum * gain * 8.0);
+    float intensity = (1.0 - exp(-accum * gain * 8.0)) * fragFade;
     vec3 col = beamColor * goboTint * intensity;
     fragColor = vec4(col, intensity);                      // premultiplied, additive
 }

@@ -19,23 +19,23 @@
     }
   },
   "wheels": {
-    "Fixed Gobo Wheel": {
+    "Fixed Gobos": {
       "slots": [
         { "type": "Open" },
-        { "type": "Gobo", "name": "Gobo 01" },
-        { "type": "Gobo", "name": "Gobo 02" },
-        { "type": "Gobo", "name": "Gobo 03" },
-        { "type": "Gobo", "name": "Gobo 04" },
-        { "type": "Gobo", "name": "Gobo 05" },
-        { "type": "Gobo", "name": "Gobo 06" },
-        { "type": "Gobo", "name": "Gobo 07" },
-        { "type": "Gobo", "name": "Gobo 08" },
-        { "type": "Gobo", "name": "Gobo 09" },
-        { "type": "Gobo", "name": "Gobo 10" },
-        { "type": "Gobo", "name": "Gobo 11" },
-        { "type": "Gobo", "name": "Gobo 12" },
-        { "type": "Gobo", "name": "Gobo 13" },
-        { "type": "Gobo", "name": "Gobo 14" }
+        { "type": "Gobo", "name": "Gobo 01", "image": "dartz-static-01.png" },
+        { "type": "Gobo", "name": "Gobo 02", "image": "dartz-static-02.png" },
+        { "type": "Gobo", "name": "Gobo 03", "image": "dartz-static-03.png" },
+        { "type": "Gobo", "name": "Gobo 04", "image": "dartz-static-04.png" },
+        { "type": "Gobo", "name": "Gobo 05", "image": "dartz-static-05.png" },
+        { "type": "Gobo", "name": "Gobo 06", "image": "dartz-static-06.png" },
+        { "type": "Gobo", "name": "Gobo 07", "image": "dartz-static-07.png" },
+        { "type": "Gobo", "name": "Gobo 08", "image": "dartz-static-08.png" },
+        { "type": "Gobo", "name": "Gobo 09", "image": "dartz-static-09.png" },
+        { "type": "Gobo", "name": "Gobo 10", "image": "dartz-static-10.png" },
+        { "type": "Gobo", "name": "Gobo 11", "image": "dartz-static-11.png" },
+        { "type": "Gobo", "name": "Gobo 12", "image": "dartz-static-12.png" },
+        { "type": "Gobo", "name": "Gobo 13", "image": "dartz-static-13.png" },
+        { "type": "Gobo", "name": "Gobo 14", "image": "dartz-static-14.png" }
       ]
     }
   },

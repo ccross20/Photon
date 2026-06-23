@@ -14,7 +14,7 @@ public:
 
     void setPercent(double value, DMXMatrix &t_matrix, double blend = 1.0, DMXTimeMachine *timeMachine = nullptr);
     void setLumens(double value, DMXMatrix &t_matrix, double blend = 1.0);
-    double getPercent(const DMXMatrix &t_matrix);
+    double getPercent(const DMXMatrix &t_matrix) const;
 
     void readFromOpenFixtureJson(const QJsonObject &) override;
 

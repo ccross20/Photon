@@ -1,7 +1,7 @@
 #include "tiltmodelmodifier.h"
 #include "component/transformcomponent.h"
 #include "fixture/fixture.h"
-#include "fixture/capability/tiltcapability.h"
+#include "fixture/capability/anglecapability.h"
 
 namespace photon {
 
@@ -26,7 +26,7 @@ TiltModelModifier::TiltModelModifier(SceneObjectModel *t_model,  Entity *t_entit
 
     if(capabilities.length() > 0)
     {
-        m_capability = static_cast<TiltCapability*>(capabilities[0]);
+        m_capability = static_cast<AngleCapability*>(capabilities[0]);
         m_transform = entity()->findComponent<TransformComponent*>();
     }
 

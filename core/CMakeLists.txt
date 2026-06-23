@@ -107,8 +107,6 @@ set(PROJECT_SOURCES
         fixture/maskeffect.cpp
         fixture/capability/anglecapability.h
         fixture/capability/anglecapability.cpp
-        fixture/capability/capabilityfactory.h
-        fixture/capability/capabilityfactory.cpp
         fixture/capability/colorcapability.h
         fixture/capability/colorcapability.cpp
         fixture/capability/colorintensitycapability.h
@@ -117,20 +115,12 @@ set(PROJECT_SOURCES
         fixture/capability/dimmercapability.cpp
         fixture/capability/fixturecapability.h
         fixture/capability/fixturecapability.cpp
-        fixture/capability/focuscapability.h
-        fixture/capability/focuscapability.cpp
         fixture/capability/nofunctioncapability.h
         fixture/capability/nofunctioncapability.cpp
-        fixture/capability/pancapability.h
-        fixture/capability/pancapability.cpp
         fixture/capability/shutterstrobecapability.h
         fixture/capability/shutterstrobecapability.cpp
-        fixture/capability/tiltcapability.h
-        fixture/capability/tiltcapability.cpp
         fixture/capability/wheelslotcapability.h
         fixture/capability/wheelslotcapability.cpp
-        fixture/capability/zoomcapability.h
-        fixture/capability/zoomcapability.cpp
         graph/bus/busevaluator.h
         graph/bus/busevaluator.cpp
         graph/bus/busgraph.h

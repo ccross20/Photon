@@ -3,13 +3,17 @@
 
 #include <QVector>
 #include <QMatrix4x4>
+#include <QVector4D>
+#include <QVector3D>
 #include <QColor>
 #include <QHash>
+#include <QPair>
 #include <QByteArray>
 #include <QSet>
 #include <QElapsedTimer>
 #include <QImage>
 #include "rhigizmo.h"
+#include "rhimodel.h"
 #include "data/dmxmatrix.h"
 
 class QRhi;
@@ -44,7 +48,11 @@ public:
     RhiRenderer();
     ~RhiRenderer();
 
-    void setSceneRoot(SceneObject *root) { m_sceneRoot = root; }
+    void setSceneRoot(SceneObject *root) {
+        m_sceneRoot = root;
+        m_typePath.clear();       // re-resolve model files (e.g. newly added ones)
+        m_emitterWorld.clear();
+    }
 
     // Latest evaluated DMX output. Drives live fixture color/intensity and beams.
     void setDmxState(const DMXMatrix &dmx) { m_dmx = dmx; }
@@ -78,12 +86,15 @@ private:
         RhiMesh   *mesh;   // non-owning; shared box or a cached per-truss mesh
         QMatrix4x4 model;
         QColor     color;
+        bool       emissive = false; // meshes: render unlit/full-bright (e.g. lens face)
         float      gobo = 0.0f;     // beams only: gobo layer (0 = none, 1..N)
         float      gobo2 = 0.0f;    // beams only: second gobo layer (wheel wipe)
         float      goboSplit = -2.0f; // beams only: gobo wipe boundary x in [-1,1]
         float      goboRot = 0.0f;  // beams only: gobo rotation (radians)
         QColor     color2;          // beams only: second color-wheel color (split)
         float      split = -2.0f;   // beams only: color split boundary x in [-1,1] (<-1 = none)
+        QVector4D  fadePlane;       // volumetric beams: xyz = plane normal (toward apex),
+                                    // w = offset (signed dist = dot(n,X)+w); zero = no fade
     };
 
     void collectDrawables(SceneObject *obj, QVector<Drawable> &out,
@@ -92,11 +103,21 @@ private:
     void collectBeams(SceneObject *obj, QVector<Drawable> &out) const;
     // Appends a lit-plane drawable for every wall/floor surface in the subtree.
     void collectSurfaces(SceneObject *obj, QVector<Drawable> &out) const;
+    // Collects every surface plane (world point + unit normal) for volumetric beam
+    // soft-fade against opaque surfaces. Rebuilt each frame before collectBeams.
+    void gatherSurfacePlanes(SceneObject *obj) const;
+    // For a beam (apex + downward axis), the plane it should fade against: the nearest
+    // surface its axis crosses within reach. Returns zero (no fade) when none.
+    QVector4D fadePlaneFor(const QVector3D &apex, const QVector3D &axis, float length) const;
     RhiMesh *trussMeshFor(SceneObject *truss);
 
     // Reads the fixture's live color and 0..1 intensity from the current DMX state.
     // Returns false if the fixture has no color/dimmer capability to read.
     bool evaluateFixture(Fixture *fixture, QColor &outColor, float &outIntensity) const;
+
+    // Current shutter/strobe output multiplier (0..1) from the active shutter channel:
+    // 1 when open or absent, 0 when closed, a time-driven flash/pulse when strobing.
+    float shutterFactor(Fixture *fixture) const;
 
     // Live beam cone half-angle (degrees), driven by the zoom channel + lens range
     // when present, otherwise the default reference angle.
@@ -118,6 +139,18 @@ private:
     // targets over time and returns the current smoothed values.
     void updateFixtureMotion(Fixture *fixture, float &panOut, float &tiltOut,
                              float &halfAngleOut) const;
+    // Advances motion for every fixture once per frame (so the model body and the
+    // beam read the same smoothed values without double-advancing).
+    void updateMotionPass(SceneObject *obj) const;
+
+    // Resolves + loads the 3D model for a fixture (cached), or null for the box.
+    RhiModel *modelForFixture(Fixture *fixture) const;
+    QString resolveModelPath(Fixture *fixture) const;
+    // Walks a model node tree, emitting a drawable per mesh (pan/tilt applied at the
+    // rigged joints) and capturing the "lamp" emitter's world transform.
+    void collectModelNodes(const RhiModel::Node &node, const QMatrix4x4 &parentWorld,
+                           float pan, float tilt, bool selected, const QColor &lensColor,
+                           QVector<Drawable> &out, QMatrix4x4 *emitterWorld) const;
 
     // Resolves a fixture's color wheel to the colour(s) visible in the gate. Returns
     // false if the fixture has no active colour wheel (open / RGB mixing only). When
@@ -161,6 +194,8 @@ private:
 
     // Gobo texture array (one layer per loaded image), sampled by beams + surfaces.
     QVector<QImage> m_goboImages;
+    // Lowercase gobo filename -> 1-based texture layer, for per-slot image lookup.
+    QHash<QString, int> m_goboFileLayer;
     QRhiTexture *m_goboTex = nullptr;
     QRhiSampler *m_goboSampler = nullptr;
     bool m_goboUploaded = false;
@@ -176,6 +211,15 @@ private:
     QRhiGraphicsPipeline *m_beamVolPipeline = nullptr; // volumetric raymarch
     QRhiGraphicsPipeline *m_gizmoPipeline = nullptr;   // lines, depth test off
     QRhiBuffer *m_gizmoBuffer = nullptr;               // dynamic, rebuilt per frame
+
+    // Fixture models, deduped by file path; type->path resolution cached separately
+    // (keyed by model type, so changing a fixture's type re-resolves automatically).
+    mutable QHash<QString, RhiModel *> m_models;
+    mutable QHash<QString, QString> m_typePath;
+    // Lamp-emitter world transform per lit fixture with a model (beam origin).
+    QHash<SceneObject *, QMatrix4x4> m_emitterWorld;
+    // Surface planes (world point, unit normal) for volumetric beam soft-fade.
+    mutable QVector<QPair<QVector3D, QVector3D>> m_surfacePlanes;
 
     RhiGizmo     m_gizmo;
     SceneObject *m_sceneRoot = nullptr;

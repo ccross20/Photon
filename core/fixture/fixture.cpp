@@ -6,6 +6,7 @@
 #include "fixturevirtualchannel.h"
 #include "fixtureeditorwidget.h"
 #include "capability/colorcapability.h"
+#include "capability/anglecapability.h"
 #include "fixturewheel.h"
 #include "state/state.h"
 #include "project/project.h"
@@ -29,6 +30,8 @@ public:
     QString manufacturer;
     QString comments;
     QString identifier;
+    QStringList categories;   // from the OpenFixture definition
+    QString modelType;        // per-fixture model override ("" = auto from category)
     int dmxOffset = 0;
     int dmxSize = 0;
     int universe = 1;
@@ -212,6 +215,24 @@ QString Fixture::identifier() const
     return m_impl->identifier;
 }
 
+QStringList Fixture::categories() const
+{
+    return m_impl->categories;
+}
+
+QString Fixture::modelType() const
+{
+    return m_impl->modelType;
+}
+
+void Fixture::setModelType(const QString &t_value)
+{
+    if(m_impl->modelType == t_value)
+        return;
+    m_impl->modelType = t_value;
+    emit metadataChanged(this);
+}
+
 int Fixture::dmxSize() const
 {
     return m_impl->dmxSize;
@@ -279,6 +300,31 @@ ColorCapability *Fixture::colorAtIndex(int index) const
     return m_impl->colors[abs(index%(m_impl->colors.length()))];
 }
 
+ColorCapability *Fixture::color() const
+{
+    return colorCount() > 0 ? colorAtIndex(0) : nullptr;
+}
+
+AngleCapability *Fixture::pan() const
+{
+    return static_cast<AngleCapability *>(findCapability(Capability_Pan).value(0));
+}
+
+AngleCapability *Fixture::tilt() const
+{
+    return static_cast<AngleCapability *>(findCapability(Capability_Tilt).value(0));
+}
+
+AngleCapability *Fixture::zoom() const
+{
+    return static_cast<AngleCapability *>(findCapability(Capability_Zoom).value(0));
+}
+
+AngleCapability *Fixture::focus() const
+{
+    return static_cast<AngleCapability *>(findCapability(Capability_Focus).value(0));
+}
+
 bool extractRange(QString text, int *start, int *end, QString *prefix)
 {
     int startIndex = text.indexOf("[");
@@ -330,6 +376,14 @@ void Fixture::readFromOpenFixtureJson(const QJsonObject &t_json)
 {
     if(name().isEmpty())
         setName(t_json.value("name").toString(name()));
+
+    if(t_json.contains("categories"))
+    {
+        m_impl->categories.clear();
+        for(const auto &c : t_json.value("categories").toArray())
+            m_impl->categories.append(c.toString());
+    }
+
     if(t_json.contains("physical"))
     {
         auto physicalObj = t_json.value("physical").toObject();
@@ -639,6 +693,7 @@ void Fixture::readFromJson(const QJsonObject &json, const LoadContext &t_context
     m_impl->universe = json.value("universe").toInt(1);
     m_impl->manufacturer = json.value("manufacturer").toString();
     m_impl->comments = json.value("comments").toString();
+    m_impl->modelType = json.value("modelType").toString();
     m_impl->identifier = json.value("identifier").toString();
     m_impl->definitionPath = json.value("definitionPath").toString();
     m_impl->uniqueIndex = json.value("uniqueIndex").toInt(0);
@@ -663,6 +718,7 @@ void Fixture::writeToJson(QJsonObject &json) const
     json.insert("universe", m_impl->universe);
     json.insert("manufacturer", m_impl->manufacturer);
     json.insert("comments", m_impl->comments);
+    json.insert("modelType", m_impl->modelType);
     json.insert("identifier", m_impl->identifier);
     json.insert("selectedMode", m_impl->selectedMode);
     json.insert("definitionPath", m_impl->definitionPath);

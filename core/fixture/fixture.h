@@ -9,6 +9,7 @@
 namespace photon {
 
 class ColorCapability;
+class AngleCapability;
 
 struct FixtureMode
 {
@@ -83,6 +84,11 @@ public:
     QString manufacturer() const;
     QString comments() const;
     QString identifier() const;
+    QStringList categories() const;
+
+    // Visualiser model type override ("" = auto-detect from category).
+    QString modelType() const;
+    void setModelType(const QString &);
 
     void setComments(const QString &);
     void setIdentifier(const QString &);
@@ -99,6 +105,15 @@ public:
 
     int colorCount() const;
     ColorCapability *colorAtIndex(int) const;
+
+    // Typed convenience accessors (null if the fixture lacks the capability). These
+    // hide which lookup mechanism applies — e.g. the colour aggregate isn't stored
+    // per-channel, and pan/tilt/zoom/focus are all AngleCapability instances.
+    ColorCapability *color() const;
+    AngleCapability *pan() const;
+    AngleCapability *tilt() const;
+    AngleCapability *zoom() const;
+    AngleCapability *focus() const;
 
     const QVector<FixtureChannel*> &channels() const;
     FixtureChannel* findChannelWithName(const QString &name) const;

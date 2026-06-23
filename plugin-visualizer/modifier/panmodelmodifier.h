@@ -5,7 +5,7 @@
 namespace photon {
 
 class TransformComponent;
-class PanCapability;
+class AngleCapability;
 
 class PanModelModifier : public ModelModifier
 {
@@ -21,7 +21,7 @@ private:
 
     Axis m_axis;
     TransformComponent *m_transform;
-    PanCapability *m_capability;
+    AngleCapability *m_capability;
 };
 
 } // namespace photon

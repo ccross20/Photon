@@ -1,6 +1,7 @@
 #include <rhi/qrhi.h>
 #include <QFile>
 #include <QDir>
+#include <QFileInfo>
 #include <QCoreApplication>
 #include <QDataStream>
 #include <QtMath>
@@ -16,9 +17,8 @@
 #include "fixture/fixture.h"
 #include "fixture/capability/colorcapability.h"
 #include "fixture/capability/dimmercapability.h"
-#include "fixture/capability/pancapability.h"
-#include "fixture/capability/tiltcapability.h"
 #include "fixture/capability/anglecapability.h"
+#include "fixture/capability/shutterstrobecapability.h"
 #include "fixture/capability/wheelslotcapability.h"
 #include "fixture/capability/wheelslotrotationcapability.h"
 #include "fixture/capability/wheelrotationcapability.h"
@@ -42,7 +42,7 @@ QShader loadShader(const QString &path)
 
 constexpr quint32 kFramePayload  = 24 * sizeof(float); // mat4 + vec4 lightDir + vec4 camPos
 constexpr quint32 kObjectPayload = 20 * sizeof(float); // mat4 + vec4
-constexpr quint32 kBeamPayload   = 36 * sizeof(float); // mat4 + color + apex + axisCos + params + color2
+constexpr quint32 kBeamPayload   = 40 * sizeof(float); // mat4 + color + apex + axisCos + params + color2 + fadePlane
 constexpr quint32 kGizmoBytes    = 4096 * 6 * sizeof(float); // dynamic line verts
 
 // Beam appearance.
@@ -58,6 +58,8 @@ constexpr int    kGoboSize     = 1024;    // gobo texture layer resolution
 // Prisms: each active prism splits a beam into N copies fanned off-axis.
 constexpr float  kPrismDeflect   = 4.0f;  // per-copy deflection off the beam axis (deg)
 constexpr float  kPrismRevPerSec = 0.3f;  // full-speed prism rotation (rev/s)
+constexpr int    kDefaultPrismFacets = 3; // when the fixture encodes a prism via its
+                                          // rotation channel only (no facet count in data)
 
 // Surface lighting: spotlight list. 5 vec4 per light + 1 vec4 count header.
 // Raised to 64 so prism copies (N beams per fixture) still light surfaces.
@@ -149,6 +151,8 @@ RhiRenderer::~RhiRenderer()
     delete m_grid;
     delete m_beamCone;
     delete m_plane;
+    qDeleteAll(m_models);
+    m_models.clear();
 }
 
 void RhiRenderer::releaseResources()
@@ -178,6 +182,8 @@ void RhiRenderer::releaseResources()
     if (m_grid)     m_grid->release();
     if (m_beamCone) m_beamCone->release();
     if (m_plane)    m_plane->release();
+    for (RhiModel *model : m_models)
+        if (model) model->releaseGpu();
 
     qDeleteAll(m_trussMeshes);
     m_trussMeshes.clear();
@@ -472,6 +478,108 @@ RhiMesh *RhiRenderer::trussMeshFor(SceneObject *obj)
     return mesh;
 }
 
+namespace {
+// Maps a fixture's OpenFixture category to a generic model type. PAR/uplight/wash
+// aren't distinguishable from category data, so they rely on the per-fixture override.
+QString autoModelType(const QStringList &categories)
+{
+    for (const QString &c : categories) {
+        const QString lc = c.toLower();
+        if (lc.contains("moving head") || lc.contains("scanner")) return "mover";
+        if (lc.contains("strobe"))  return "strobe";
+        if (lc.contains("blinder")) return "blinder";
+        if (lc.contains("bar") || lc.contains("matrix")) return "bar";
+    }
+    return "par";   // generic default
+}
+} // namespace
+
+QString RhiRenderer::resolveModelPath(Fixture *fixture) const
+{
+    const QString dir = QCoreApplication::applicationDirPath() + "/models/";
+    QString type = fixture->modelType();          // per-fixture override
+    if (type.isEmpty())
+        type = autoModelType(fixture->categories());
+
+    const QStringList exts = { "fbx", "glb", "gltf", "obj", "dae" };
+    for (const QString &ext : exts) {
+        const QString p = dir + type + "." + ext;
+        if (QFile::exists(p))
+            return p;
+    }
+    return QString();
+}
+
+RhiModel *RhiRenderer::modelForFixture(Fixture *fixture) const
+{
+    // Model type: per-fixture override, else auto from category (cheap each frame).
+    QString type = fixture->modelType();
+    if (type.isEmpty())
+        type = autoModelType(fixture->categories());
+
+    // type -> file path (cached; "" means no file for that type).
+    auto pit = m_typePath.constFind(type);
+    QString path;
+    if (pit != m_typePath.constEnd()) {
+        path = pit.value();
+    } else {
+        path = resolveModelPath(fixture);
+        m_typePath.insert(type, path);
+    }
+    if (path.isEmpty())
+        return nullptr;
+
+    // path -> loaded model (deduped; cached even on failure to avoid re-loading).
+    auto mit = m_models.constFind(path);
+    if (mit != m_models.constEnd())
+        return mit.value();
+    RhiModel *model = RhiModel::load(path);
+    m_models.insert(path, model);
+    return model;
+}
+
+void RhiRenderer::updateMotionPass(SceneObject *obj) const
+{
+    if (!obj)
+        return;
+    for (SceneObject *child : obj->sceneChildren()) {
+        if (child->typeId() == "fixture") {
+            float p = 0.0f, t = 0.0f, h = 0.0f;
+            updateFixtureMotion(static_cast<Fixture *>(child), p, t, h);
+        }
+        updateMotionPass(child);
+    }
+}
+
+void RhiRenderer::collectModelNodes(const RhiModel::Node &node, const QMatrix4x4 &parentWorld,
+                                    float pan, float tilt, bool selected, const QColor &lensColor,
+                                    QVector<Drawable> &out, QMatrix4x4 *emitterWorld) const
+{
+    static const QColor highlight(255, 170, 40);
+    static const QColor bodyColor(42, 42, 46);   // dark grey chassis
+
+    QMatrix4x4 world = parentWorld * node.local;
+    if (node.panAxis >= 0)
+        world.rotate(pan, QVector3D(node.panAxis == 0, node.panAxis == 1, node.panAxis == 2));
+    if (node.tiltAxis >= 0)
+        world.rotate(tilt, QVector3D(node.tiltAxis == 0, node.tiltAxis == 1, node.tiltAxis == 2));
+
+    // Lens faces glow the fixture's live emitted colour (even when selected, so the
+    // colour stays readable); the rest of the body is a dark-grey chassis.
+    const QColor color = node.lens ? lensColor : (selected ? highlight : bodyColor);
+    for (RhiMesh *m : node.meshes) {
+        Drawable d{ m, world, color };
+        d.emissive = node.lens;   // lens glows unlit, like a light source
+        out.append(d);
+    }
+
+    if (node.emitter && emitterWorld)
+        *emitterWorld = world;
+
+    for (const RhiModel::Node &c : node.children)
+        collectModelNodes(c, world, pan, tilt, selected, lensColor, out, emitterWorld);
+}
+
 void RhiRenderer::collectDrawables(SceneObject *obj, QVector<Drawable> &out,
                                    QSet<SceneObject *> &seenTrusses)
 {
@@ -484,24 +592,48 @@ void RhiRenderer::collectDrawables(SceneObject *obj, QVector<Drawable> &out,
         const QByteArray type = child->typeId();
         const bool sel = (child == m_selected);
         if (type == "fixture") {
-            QColor tint(150, 150, 158);  // body color for fixtures we can't evaluate
-            if (sel) {
-                tint = highlight;
-            } else {
+            auto *fix = static_cast<Fixture *>(child);
+            RhiModel *model = modelForFixture(fix);
+            if (model) {
+                // Real model: draw its animated hierarchy and capture the lamp emitter.
+                const FixtureMotion mo = m_motion.value(fix);
+                // Lens tint: the live emitted colour over a dark-glass base (so an
+                // unlit lens reads as dark rather than pure black).
+                QColor lensColor(18, 18, 22);
                 QColor emitted;
                 float intensity = 0.0f;
-                if (evaluateFixture(static_cast<Fixture *>(child), emitted, intensity)) {
-                    // Body = dark "off" gray faded out by intensity, plus the emitted
-                    // color added on top, so an unlit fixture reads dark and a lit one
-                    // glows in its real color.
-                    const float keep = 1.0f - intensity;
-                    tint = QColor::fromRgbF(
-                        qMin(1.0f, 0.28f * keep + float(emitted.redF())),
-                        qMin(1.0f, 0.28f * keep + float(emitted.greenF())),
-                        qMin(1.0f, 0.30f * keep + float(emitted.blueF())));
+                if (evaluateFixture(fix, emitted, intensity)) {
+                    lensColor = QColor::fromRgbF(
+                        qMin(1.0f, 0.07f + float(emitted.redF())),
+                        qMin(1.0f, 0.07f + float(emitted.greenF())),
+                        qMin(1.0f, 0.08f + float(emitted.blueF())));
                 }
+                QMatrix4x4 emitter;
+                collectModelNodes(model->root(), fix->globalMatrix(), mo.pan, mo.tilt, sel,
+                                  lensColor, out, model->hasEmitter() ? &emitter : nullptr);
+                if (model->hasEmitter())
+                    m_emitterWorld.insert(fix, emitter);
+                else
+                    m_emitterWorld.remove(fix);
+            } else {
+                // No model: a box tinted by the live colour (dark when off).
+                QColor tint(150, 150, 158);
+                if (sel) {
+                    tint = highlight;
+                } else {
+                    QColor emitted;
+                    float intensity = 0.0f;
+                    if (evaluateFixture(fix, emitted, intensity)) {
+                        const float keep = 1.0f - intensity;
+                        tint = QColor::fromRgbF(
+                            qMin(1.0f, 0.28f * keep + float(emitted.redF())),
+                            qMin(1.0f, 0.28f * keep + float(emitted.greenF())),
+                            qMin(1.0f, 0.30f * keep + float(emitted.blueF())));
+                    }
+                }
+                out.append({ m_box, fix->globalMatrix(), tint });
+                m_emitterWorld.remove(fix);
             }
-            out.append({ m_box, child->globalMatrix(), tint });
         } else if (type == "truss") {
             seenTrusses.insert(child);
             out.append({ trussMeshFor(child), child->globalMatrix(), sel ? highlight : QColor(150, 150, 155) });
@@ -518,40 +650,108 @@ bool RhiRenderer::evaluateFixture(Fixture *fixture, QColor &outColor, float &out
     if (!fixture)
         return false;
 
-    // ColorCapability is an aggregate (not stored per-channel), so it must be looked
-    // up by type rather than via the channel-walking findCapability<T>() template.
-    const auto colorCaps  = fixture->findCapability(Capability_Color);
+    ColorCapability *colorCap = fixture->color();
     const auto dimmerCaps = fixture->findCapability(Capability_Dimmer);
-    if (colorCaps.isEmpty() && dimmerCaps.isEmpty())
+    if (!colorCap && dimmerCaps.isEmpty())
         return false;
 
     // Colorless fixtures (e.g. a plain dimmer) emit white; the dimmer (if any)
     // scales it. For color fixtures with no separate dimmer the level is already
     // carried by the color channels, so dim stays 1.0.
-    const QColor base = colorCaps.isEmpty()
-        ? QColor(255, 255, 255)
-        : static_cast<ColorCapability *>(colorCaps.first())->getColor(m_dmx);
+    const QColor base = colorCap ? colorCap->getColor(m_dmx) : QColor(255, 255, 255);
     const float dim = dimmerCaps.isEmpty()
         ? 1.0f
         : float(static_cast<DimmerCapability *>(dimmerCaps.first())->getPercent(m_dmx));
 
-    const float r = qBound(0.0f, float(base.redF())   * dim, 1.0f);
-    const float g = qBound(0.0f, float(base.greenF()) * dim, 1.0f);
-    const float b = qBound(0.0f, float(base.blueF())  * dim, 1.0f);
+    // Shutter/strobe gates the whole output (steady when open, blinking when strobing).
+    const float shutter = shutterFactor(fixture);
+    const float lvl = dim * shutter;
+
+    const float r = qBound(0.0f, float(base.redF())   * lvl, 1.0f);
+    const float g = qBound(0.0f, float(base.greenF()) * lvl, 1.0f);
+    const float b = qBound(0.0f, float(base.blueF())  * lvl, 1.0f);
 
     outColor = QColor::fromRgbF(r, g, b);
     outIntensity = qMax(r, qMax(g, b));
     return true;
 }
 
+float RhiRenderer::shutterFactor(Fixture *fixture) const
+{
+    const auto caps = fixture->findCapability(Capability_Strobe);
+    if (caps.isEmpty())
+        return 1.0f;   // no shutter channel → always open
+
+    ShutterStrobeCapability *sh = nullptr;
+    for (auto *c : caps) {
+        if (c->isValid(m_dmx)) { sh = static_cast<ShutterStrobeCapability *>(c); break; }
+    }
+    if (!sh)
+        return 1.0f;
+
+    const double tt = m_lastClockSec;
+    auto fract = [](double x) { return x - std::floor(x); };
+    // Strobe speed (slow..fast → 0.01..1) maps onto a plausible flash-rate range.
+    const double sp = qBound(0.0, sh->getSpeedPercent(m_dmx), 1.0);
+
+    switch (sh->shutterEffect()) {
+    case ShutterStrobeCapability::Shutter_Closed:
+        return 0.0f;
+
+    case ShutterStrobeCapability::Shutter_Strobe:
+    case ShutterStrobeCapability::Shutter_Spikes:
+    case ShutterStrobeCapability::Shutter_Burst: {
+        const float hz = float(1.0 + sp * 24.0);          // 1..25 Hz
+        const float phase = float(fract(tt * hz));
+        if (sh->hasRandomCapability()) {                  // irregular dropouts
+            const double pidx = std::floor(tt * hz);
+            const float rnd = float(fract(std::sin(pidx * 12.9898) * 43758.5453));
+            return (phase < 0.35f && rnd > 0.25f) ? 1.0f : 0.0f;
+        }
+        return (phase < 0.35f) ? 1.0f : 0.0f;             // brief flash
+    }
+
+    case ShutterStrobeCapability::Shutter_Lightning: {    // sparse random bursts
+        const float hz = float(2.0 + sp * 10.0);
+        const float phase = float(fract(tt * hz));
+        const double pidx = std::floor(tt * hz);
+        const float rnd = float(fract(std::sin(pidx * 78.233) * 43758.5453));
+        return (phase < 0.2f && rnd > 0.6f) ? 1.0f : 0.0f;
+    }
+
+    case ShutterStrobeCapability::Shutter_Pulse: {        // smooth on/off
+        const float hz = float(1.0 + sp * 12.0);
+        const float phase = float(fract(tt * hz));
+        return 0.5f - 0.5f * float(std::cos(qDegreesToRadians(360.0 * phase)));
+    }
+
+    case ShutterStrobeCapability::Shutter_RampUp: {
+        const float hz = float(1.0 + sp * 12.0);
+        return float(fract(tt * hz));                     // sawtooth up
+    }
+    case ShutterStrobeCapability::Shutter_RampDown: {
+        const float hz = float(1.0 + sp * 12.0);
+        return 1.0f - float(fract(tt * hz));              // sawtooth down
+    }
+    case ShutterStrobeCapability::Shutter_RampUpDown: {
+        const float hz = float(1.0 + sp * 12.0);
+        const float phase = float(fract(tt * hz));
+        return 1.0f - std::abs(phase * 2.0f - 1.0f);      // triangle
+    }
+
+    case ShutterStrobeCapability::Shutter_Open:
+    default:
+        return 1.0f;
+    }
+}
+
 float RhiRenderer::beamHalfAngleFor(Fixture *fixture) const
 {
-    const auto zooms = fixture->findCapability(Capability_Zoom);
-    if (zooms.isEmpty())
+    AngleCapability *zoom = fixture->zoom();
+    if (!zoom)
         return kBeamHalfAngle;
 
     // Zoom percent maps across the fixture's physical lens range to a full beam angle.
-    auto *zoom = static_cast<AngleCapability *>(zooms.first());
     const Fixture::Physical phys = fixture->physical();
     const double pct = zoom->getAnglePercent(m_dmx);
     const double fullAngle = pct * (phys.lensMaximum - phys.lensMinimum) + phys.lensMinimum;
@@ -574,8 +774,10 @@ void RhiRenderer::loadGoboImages()
         if (img.size() != QSize(kGoboSize, kGoboSize))
             img = img.scaled(kGoboSize, kGoboSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
         m_goboImages.append(img);
+        // 1-based layer (0 = no gobo); keyed by lowercase filename for slot lookup.
+        m_goboFileLayer.insert(f.toLower(), m_goboImages.size());
     }
-    qInfo() << "RhiRenderer: loaded" << m_goboImages.size() << "gobos from" << dir;
+    qWarning() << "RhiRenderer: loaded" << m_goboImages.size() << "gobos from" << dir;
 }
 
 void RhiRenderer::goboForFixture(Fixture *fixture, float &outA, float &outB, float &outSplit) const
@@ -610,12 +812,25 @@ void RhiRenderer::goboForFixture(Fixture *fixture, float &outA, float &outB, flo
         return;
     }
 
-    // Layer strip in wheel order: gobo slots map to texture layers (1..gc), open
-    // and other slots are 0 (no gobo).
+    // Layer strip in wheel order. A gobo slot maps to the texture layer of its
+    // referenced image file (per-fixture artwork); a slot with no image reference
+    // falls back to a sequential placeholder so unconfigured fixtures still show
+    // something. Open and other slots are 0 (no gobo).
     QVector<int> layerStrip;
     int goboOrd = 0;
-    for (FixtureWheelSlot *s : wheel->allSlots())
-        layerStrip.append((s && s->type() == FixtureWheelSlot::Slot_Gobo) ? (goboOrd++ % gc) + 1 : 0);
+    for (FixtureWheelSlot *s : wheel->allSlots()) {
+        int layer = 0;
+        if (s && s->type() == FixtureWheelSlot::Slot_Gobo) {
+            const auto *gs = dynamic_cast<const GoboSlot *>(s);
+            const QString file = gs ? QFileInfo(gs->imagePath()).fileName().toLower() : QString();
+            if (!file.isEmpty())
+                layer = m_goboFileLayer.value(file, 0);   // configured: mapped, or 0 if file missing
+            else
+                layer = (goboOrd % gc) + 1;               // unconfigured: placeholder
+            ++goboOrd;
+        }
+        layerStrip.append(layer);
+    }
     const int N = layerStrip.size();
     if (N == 0)
         return;
@@ -829,15 +1044,11 @@ void RhiRenderer::updateFixtureMotion(Fixture *fixture, float &panOut, float &ti
 {
     // DMX target angles, centered so 50% = straight down the fixture's local -Y.
     float panTarget = 0.0f, tiltTarget = 0.0f;
-    const auto pans = fixture->findCapability(Capability_Pan);
-    if (!pans.isEmpty()) {
-        auto *p = static_cast<PanCapability *>(pans.first());
+    if (AngleCapability *p = fixture->pan()) {
         const float range = float(p->angleEnd() - p->angleStart());
         panTarget = float(p->getAnglePercent(m_dmx)) * range - range * 0.5f;
     }
-    const auto tilts = fixture->findCapability(Capability_Tilt);
-    if (!tilts.isEmpty()) {
-        auto *t = static_cast<TiltCapability *>(tilts.first());
+    if (AngleCapability *t = fixture->tilt()) {
         const float range = float(t->angleEnd() - t->angleStart());
         tiltTarget = float(t->getAnglePercent(m_dmx)) * range - range * 0.5f;
     }
@@ -872,10 +1083,10 @@ void RhiRenderer::collectBeams(SceneObject *obj, QVector<Drawable> &out) const
         if (child->typeId() == "fixture") {
             auto *fix = static_cast<Fixture *>(child);
 
-            // Advance pan/tilt/zoom motors every frame (even when dark, so the head
-            // tracks during blackout "dark moves").
-            float panDeg = 0.0f, tiltDeg = 0.0f, halfAngle = 8.0f;
-            updateFixtureMotion(fix, panDeg, tiltDeg, halfAngle);
+            // Smoothed motor values (already advanced once this frame by updateMotionPass).
+            const FixtureMotion mo = m_motion.value(fix);
+            const float panDeg = mo.pan, tiltDeg = mo.tilt;
+            const float halfAngle = mo.init ? mo.zoom : beamHalfAngleFor(fix);
 
             QColor emitted;
             float intensity = 0.0f;
@@ -905,12 +1116,27 @@ void RhiRenderer::collectBeams(SceneObject *obj, QVector<Drawable> &out) const
                 // the prism-rotation channel). No prism → a single copy.
                 int facets = 1;
                 bool prismLinear = false;
+                // Fixtures that carry an explicit Prism capability give us the facet count.
                 const auto prisms = fix->findCapability<PrismCapability *>();
                 for (auto *pr : prisms) {
                     if (pr->isValid(m_dmx)) {
                         facets = qMax(1, pr->facetCount());
                         prismLinear = pr->isLinear();
                         break;
+                    }
+                }
+                // Otherwise, some fixtures (e.g. Martin MAC) encode the prism purely
+                // through their rotation channel: any active prism-rotation range means
+                // the prism is engaged. Use a default facet count (none is in the data).
+                // Only when there is NO explicit Prism capability — otherwise an always-
+                // valid rotation range (angle mode at DMX 0) would force the prism on.
+                if (facets <= 1 && prisms.isEmpty()) {
+                    const auto prots = fix->findCapability<PrismRotationCapability *>();
+                    for (auto *pr : prots) {
+                        if (pr->isValid(m_dmx)) {
+                            facets = kDefaultPrismFacets;
+                            break;
+                        }
                     }
                 }
                 const float prismRot = (facets > 1) ? prismRotationFor(fix) : 0.0f;
@@ -928,11 +1154,28 @@ void RhiRenderer::collectBeams(SceneObject *obj, QVector<Drawable> &out) const
                                                float(colB.blueF()), kBeamGain);
                 beam.split = split;
 
+                // Beam origin/orientation: the model's "lamp" emitter (already
+                // animated through the hierarchy) when present, otherwise the
+                // fixture transform with pan/tilt applied. The cone points down -Y.
+                QMatrix4x4 base;
+                if (m_emitterWorld.contains(fix)) {
+                    base = m_emitterWorld.value(fix);
+                } else {
+                    base = fix->globalMatrix();
+                    base.rotate(panDeg, 0.0f, 1.0f, 0.0f);
+                    base.rotate(tiltDeg, 1.0f, 0.0f, 0.0f);
+                }
+
+                // Soft-fade the shaft where it meets the nearest surface it points at
+                // (kills the hard cone/floor intersection ring). Same plane for all
+                // prism copies — they share the surface.
+                const QVector3D bApex = base.map(QVector3D(0, 0, 0));
+                const QVector3D bAxis = base.mapVector(QVector3D(0, -1, 0)).normalized();
+                beam.fadePlane = fadePlaneFor(bApex, bAxis, length);
+
                 for (int fct = 0; fct < facets; ++fct) {
                     // Unit cone (apex at origin, axis -Y) oriented and sized into place.
-                    QMatrix4x4 m = fix->globalMatrix();
-                    m.rotate(panDeg, 0.0f, 1.0f, 0.0f);
-                    m.rotate(tiltDeg, 1.0f, 0.0f, 0.0f);
+                    QMatrix4x4 m = base;
                     if (facets > 1) {
                         if (prismLinear) {
                             // Copies in a line: vary deflection, fixed azimuth.
@@ -970,6 +1213,50 @@ void RhiRenderer::collectSurfaces(SceneObject *obj, QVector<Drawable> &out) cons
         }
         collectSurfaces(child, out);
     }
+}
+
+void RhiRenderer::gatherSurfacePlanes(SceneObject *obj) const
+{
+    if (!obj)
+        return;
+    if (obj == m_sceneRoot)
+        m_surfacePlanes.clear();
+    for (SceneObject *child : obj->sceneChildren()) {
+        if (child->typeId() == "surface") {
+            const QMatrix4x4 m = child->globalMatrix();
+            const QVector3D point = m.map(QVector3D(0, 0, 0));
+            // Plane mesh lies in local XY; its facing normal is the local +Z axis.
+            const QVector3D normal = (m.mapVector(QVector3D(0, 0, 1))).normalized();
+            m_surfacePlanes.append({ point, normal });
+        }
+        gatherSurfacePlanes(child);
+    }
+}
+
+QVector4D RhiRenderer::fadePlaneFor(const QVector3D &apex, const QVector3D &axis,
+                                    float length) const
+{
+    // The cone reaches a bit past its nominal length; allow a margin so a pool that
+    // lands just beyond the tip still fades the shaft.
+    const float reach = length * 1.5f;
+    float bestT = reach;
+    QVector4D best(0, 0, 0, 0);   // zero normal = no fade
+    for (const auto &pl : m_surfacePlanes) {
+        const QVector3D &P = pl.first;
+        QVector3D N = pl.second;
+        const float denom = QVector3D::dotProduct(axis, N);
+        if (qAbs(denom) < 1e-4f)
+            continue;   // beam parallel to the surface
+        const float t = QVector3D::dotProduct(P - apex, N) / denom;
+        if (t <= 0.05f || t >= bestT)
+            continue;   // behind the apex or farther than the current best
+        // Orient the normal toward the apex so signed distance is positive in the beam.
+        if (denom > 0.0f)
+            N = -N;
+        bestT = t;
+        best = QVector4D(N, -QVector3D::dotProduct(N, P));
+    }
+    return best;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1051,7 +1338,17 @@ void RhiRenderer::pickRecursive(SceneObject *obj, const QVector3D &origin, const
 
     for (SceneObject *child : obj->sceneChildren()) {
         QVector3D mn, mx;
-        if (localBounds(child, mn, mx)) {
+        bool haveBounds;
+        // Fixtures with a loaded model pick against the model's AABB.
+        RhiModel *model = (child->typeId() == "fixture") ? modelForFixture(static_cast<Fixture *>(child)) : nullptr;
+        if (model) {
+            mn = model->boundsMin();
+            mx = model->boundsMax();
+            haveBounds = true;
+        } else {
+            haveBounds = localBounds(child, mn, mx);
+        }
+        if (haveBounds) {
             const QMatrix4x4 inv = child->globalMatrix().inverted();
             const QVector3D lo = inv.map(origin);
             const QVector3D ld = inv.mapVector(dir);
@@ -1084,11 +1381,15 @@ void RhiRenderer::render(QRhiCommandBuffer *cb, QRhiRenderTarget *rt, const RhiC
     m_frameDt = float(qBound(0.0, nowSec - m_lastClockSec, 0.1));
     m_lastClockSec = nowSec;
 
+    // Advance all fixture motors once so the model body and the beam agree.
+    updateMotionPass(m_sceneRoot);
+
     QVector<Drawable> drawables;
     QSet<SceneObject *> seenTrusses;
     collectDrawables(m_sceneRoot, drawables, seenTrusses);
 
     QVector<Drawable> beams;
+    gatherSurfacePlanes(m_sceneRoot);   // for volumetric beam soft-fade
     collectBeams(m_sceneRoot, beams);
 
     QVector<Drawable> surfaces;
@@ -1173,7 +1474,7 @@ void RhiRenderer::render(QRhiCommandBuffer *cb, QRhiRenderTarget *rt, const RhiC
         slot[16] = float(d.color.redF());
         slot[17] = float(d.color.greenF());
         slot[18] = float(d.color.blueF());
-        slot[19] = float(d.color.alphaF());
+        slot[19] = d.emissive ? 1.0f : 0.0f;   // emissive factor (lens glows unlit)
         u->updateDynamicBuffer(m_objectBuffer, i * m_objectSlotSize, kObjectPayload, slot);
     }
 
@@ -1231,7 +1532,7 @@ void RhiRenderer::render(QRhiCommandBuffer *cb, QRhiRenderTarget *rt, const RhiC
             float cosH = 0.0f, length = 0.0f;
             beamConeFromModel(d.model, apex, axis, cosH, length);
 
-            float slot[36] = { 0.0f };
+            float slot[40] = { 0.0f };
             std::memcpy(slot, d.model.constData(), 16 * sizeof(float));
             slot[16] = float(d.color.redF());
             slot[17] = float(d.color.greenF());
@@ -1249,6 +1550,8 @@ void RhiRenderer::render(QRhiCommandBuffer *cb, QRhiRenderTarget *rt, const RhiC
             slot[33] = float(d.color2.greenF());
             slot[34] = float(d.color2.blueF());
             slot[35] = d.goboSplit; // color2.w = gobo wipe boundary (-1..1, <-1 = none)
+            slot[36] = d.fadePlane.x(); slot[37] = d.fadePlane.y();
+            slot[38] = d.fadePlane.z(); slot[39] = d.fadePlane.w();  // surface fade plane
             u->updateDynamicBuffer(m_beamBuffer, j * m_beamSlotSize, kBeamPayload, slot);
         }
     } else {

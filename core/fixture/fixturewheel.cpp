@@ -114,7 +114,10 @@ QString GoboSlot::imagePath() const
 
 void GoboSlot::readFromJson(const QJsonObject &t_json)
 {
-
+    FixtureWheelSlot::readFromJson(t_json);
+    // Filename of this slot's gobo image, resolved by the visualizer against its
+    // deployed fixtures/gobos folder. Empty for slots with no artwork (e.g. open).
+    m_impl->path = t_json.value("image").toString();
 }
 
 

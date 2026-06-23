@@ -1,5 +1,5 @@
 #include "zoomstate.h"
-#include "fixture/capability/zoomcapability.h"
+#include "fixture/capability/anglecapability.h"
 
 namespace photon {
 
@@ -17,7 +17,7 @@ void ZoomState::evaluate(const StateEvaluationContext &t_context) const
 
     for(auto curZoom : zooms)
     {
-        auto zoom = static_cast<ZoomCapability*>(curZoom);
+        auto zoom = static_cast<AngleCapability*>(curZoom);
         zoom->setAnglePercent(zoomPercent,t_context.dmxMatrix, t_context.strength);
         return;
     }

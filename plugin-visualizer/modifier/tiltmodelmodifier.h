@@ -5,7 +5,7 @@
 namespace photon {
 
 class TransformComponent;
-class TiltCapability;
+class AngleCapability;
 
 class Lerper
 {
@@ -35,7 +35,7 @@ private:
 
     Axis m_axis;
     TransformComponent *m_transform;
-    TiltCapability *m_capability;
+    AngleCapability *m_capability;
     Lerper m_lerper;
 };
 

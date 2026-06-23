@@ -31,7 +31,7 @@ void DimmerCapability::setLumens(double value, DMXMatrix &t_matrix, double blend
 
 }
 
-double DimmerCapability::getPercent(const DMXMatrix &t_matrix)
+double DimmerCapability::getPercent(const DMXMatrix &t_matrix) const
 {
     return t_matrix.valuePercent(fixture()->universe()-1,channel()->universalChannelNumber());
 }

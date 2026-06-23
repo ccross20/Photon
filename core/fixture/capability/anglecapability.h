@@ -16,7 +16,7 @@ public:
     void setAngleDegreesCentered(double value, DMXMatrix &t_matrix, double blend = 1.0);
     void setAnglePercent(double value, DMXMatrix &t_matrix, double blend = 1.0);
     void setAnglePercentCentered(double value, DMXMatrix &t_matrix, double blend = 1.0);
-    double getAnglePercent(const DMXMatrix &t_matrix);
+    double getAnglePercent(const DMXMatrix &t_matrix) const;
 
     double angle() const;
     double angleStart() const;

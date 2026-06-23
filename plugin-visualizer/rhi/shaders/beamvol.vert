@@ -19,6 +19,7 @@ layout(std140, binding = 1) uniform Beam {
     vec4 axisCos;    // xyz = beam axis (world, unit), w = cos(half angle)
     vec4 params;     // x = length, y = gobo index, z = gobo rotation, w = color split
     vec4 color2;     // rgb = second color-wheel color (split)
+    vec4 fadePlane;  // xyz = plane normal (toward apex), w = offset; zero = no fade
 } beam;
 
 void main()

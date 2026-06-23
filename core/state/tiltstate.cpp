@@ -1,5 +1,5 @@
 #include "tiltstate.h"
-#include "fixture/capability/tiltcapability.h"
+#include "fixture/capability/anglecapability.h"
 
 namespace photon {
 
@@ -17,7 +17,7 @@ void TiltState::evaluate(const StateEvaluationContext &t_context) const
 
     for(auto curTilt : tilts)
     {
-        auto tilt = static_cast<TiltCapability*>(curTilt);
+        auto tilt = static_cast<AngleCapability*>(curTilt);
         tilt->setAnglePercent(tiltPercent,t_context.dmxMatrix, t_context.strength);
         return;
     }

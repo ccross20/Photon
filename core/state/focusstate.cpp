@@ -1,5 +1,5 @@
 #include "focusstate.h"
-#include "fixture/capability/focuscapability.h"
+#include "fixture/capability/anglecapability.h"
 
 namespace photon {
 
@@ -17,7 +17,7 @@ void FocusState::evaluate(const StateEvaluationContext &t_context) const
 
     for(auto curTilt : tilts)
     {
-        auto tilt = static_cast<FocusCapability*>(curTilt);
+        auto tilt = static_cast<AngleCapability*>(curTilt);
         tilt->setAnglePercent(tiltPercent,t_context.dmxMatrix, t_context.strength);
         return;
     }

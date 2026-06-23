@@ -1,7 +1,7 @@
 #include "panmodelmodifier.h"
 #include "component/transformcomponent.h"
 #include "fixture/fixture.h"
-#include "fixture/capability/pancapability.h"
+#include "fixture/capability/anglecapability.h"
 
 namespace photon {
 
@@ -11,7 +11,7 @@ PanModelModifier::PanModelModifier(SceneObjectModel *t_model,  Entity *t_entity)
 
     if(pans.length() > 0)
     {
-        m_capability = static_cast<PanCapability*>(pans[0]);
+        m_capability = static_cast<AngleCapability*>(pans[0]);
         m_transform = entity()->findComponent<TransformComponent*>();
     }
 

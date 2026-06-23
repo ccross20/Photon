@@ -34,6 +34,7 @@ public:
     Vector3Edit *positionEdit;
     Vector3Edit *rotationEdit;
     QComboBox *defaultStateCombo;
+    QComboBox *modelCombo;
 };
 
 FixtureEditorWidget::Impl::Impl()
@@ -73,6 +74,12 @@ FixtureEditorWidget::Impl::Impl()
     defaultStateCombo = new QComboBox;
     formLayout->addRow("Default State", defaultStateCombo);
 
+    modelCombo = new QComboBox;
+    // Index 0 = Auto (empty override); the rest are visualiser model types.
+    modelCombo->addItems(QStringList() << "Auto" << "mover" << "par" << "uplight"
+                                       << "strobe" << "blinder" << "bar" << "wash");
+    formLayout->addRow("Model", modelCombo);
+
     tagEdit = new QLineEdit;
     formLayout->addRow("Tags", tagEdit);
 
@@ -98,6 +105,7 @@ FixtureEditorWidget::FixtureEditorWidget(QWidget *parent)
     connect(m_impl->offsetSpin, &QSpinBox::valueChanged, this, &FixtureEditorWidget::setOffset);
     connect(m_impl->modeCombo, &QComboBox::activated, this, &FixtureEditorWidget::setMode);
     connect(m_impl->defaultStateCombo, &QComboBox::activated, this, &FixtureEditorWidget::setDefaultState);
+    connect(m_impl->modelCombo, &QComboBox::activated, this, &FixtureEditorWidget::setModelType);
     connect(m_impl->positionEdit, &Vector3Edit::valueChanged, this, &FixtureEditorWidget::setPosition);
     connect(m_impl->rotationEdit, &Vector3Edit::valueChanged, this, &FixtureEditorWidget::setRotation);
     connect(m_impl->tagEdit, &QLineEdit::textEdited, this, &FixtureEditorWidget::setTags);
@@ -137,6 +145,7 @@ void FixtureEditorWidget::setFixtures(QVector<Fixture*> t_fixtures)
         m_impl->offsetSpin->setEnabled(false);
         m_impl->modeCombo->setEnabled(false);
         m_impl->defaultStateCombo->setEnabled(false);
+        m_impl->modelCombo->setEnabled(false);
         m_impl->positionEdit->setEnabled(false);
         m_impl->rotationEdit->setEnabled(false);
         m_impl->tagEdit->setEnabled(false);
@@ -151,6 +160,7 @@ void FixtureEditorWidget::setFixtures(QVector<Fixture*> t_fixtures)
     m_impl->offsetSpin->setEnabled(true);
     m_impl->modeCombo->setEnabled(true);
     m_impl->defaultStateCombo->setEnabled(true);
+    m_impl->modelCombo->setEnabled(true);
     m_impl->positionEdit->setEnabled(true);
     m_impl->rotationEdit->setEnabled(true);
     m_impl->tagEdit->setEnabled(true);
@@ -304,6 +314,10 @@ void FixtureEditorWidget::setFixtures(QVector<Fixture*> t_fixtures)
     m_impl->defaultStateCombo->setCurrentIndex(chosenState);
 
     m_impl->modeCombo->setCurrentIndex(mode);
+
+    const QString modelType = firstFixture->modelType();
+    const int modelIndex = modelType.isEmpty() ? 0 : qMax(0, m_impl->modelCombo->findText(modelType));
+    m_impl->modelCombo->setCurrentIndex(modelIndex);
 }
 
 void FixtureEditorWidget::setName(const QString &name)
@@ -380,6 +394,16 @@ void FixtureEditorWidget::setMode(int t_index)
     for(auto fixture : m_impl->fixtures)
     {
         fixture->setMode(t_index);
+    }
+}
+
+void FixtureEditorWidget::setModelType(int t_index)
+{
+    // Index 0 = Auto (empty override); others are the model-type token.
+    const QString type = (t_index <= 0) ? QString() : m_impl->modelCombo->itemText(t_index);
+    for(auto fixture : m_impl->fixtures)
+    {
+        fixture->setModelType(type);
     }
 }
 

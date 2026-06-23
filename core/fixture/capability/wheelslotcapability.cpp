@@ -60,7 +60,9 @@ void WheelSlotCapability::readFromOpenFixtureJson(const QJsonObject &t_json)
 {
     FixtureCapability::readFromOpenFixtureJson(t_json);
 
-    m_impl->wheelName = channel()->name();
+    // The wheel this slot belongs to: the capability's "wheel" property when present
+    // (OFL), otherwise it defaults to the channel name.
+    m_impl->wheelName = t_json.value("wheel").toString(channel()->name());
     m_impl->slotNumber = t_json.value("slotNumber").toInt();
 
     auto rotateMode = t_json.value("rotate").toString("").toLower();

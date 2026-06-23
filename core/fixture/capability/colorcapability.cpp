@@ -292,57 +292,49 @@ void ColorCapability::setColor(const QColor &t_color, DMXMatrix &t_matrix, doubl
 
 QColor ColorCapability::getColor(const DMXMatrix &t_matrix) const
 {
-    /*
-    QColor color;
-    float c = 1.0f,m = 1.0f,y= 1.0f, k = 0.0f;
-
-    for(auto channel : m_impl->channels)
+    // Mirror of setColor(): reconstruct the emitted colour from whichever channels
+    // the fixture actually has. CMY is subtractive; RGB(+white/amber/lime) is additive.
+    if (m_impl->isCMY)
     {
-        switch (channel->type()) {
-        case Capability_Cyan:
-            c = channel->getPercent(t_matrix);
-            break;
-        case Capability_Magenta:
-            m = channel->getPercent(t_matrix);
-            break;
-        case Capability_Yellow:
-            y = channel->getPercent(t_matrix);
-            break;
-        default:
-            break;
+        float c = 0.0f, m = 0.0f, y = 0.0f;
+        for (auto channel : m_impl->channels)
+        {
+            switch (channel->type()) {
+            case Capability_Cyan:    c = channel->getPercent(t_matrix); break;
+            case Capability_Magenta: m = channel->getPercent(t_matrix); break;
+            case Capability_Yellow:  y = channel->getPercent(t_matrix); break;
+            default: break;
+            }
         }
-
+        QColor color;
+        color.setCmykF(qBound(0.0f, c, 1.0f), qBound(0.0f, m, 1.0f), qBound(0.0f, y, 1.0f), 0.0f);
+        return color;
     }
-    color.setCmykF(c,m,y,k);
-    return color;
-*/
+
+    // Additive emitters. White adds to all channels; amber and lime add back their
+    // approximate hues (the inverse of the extraction done in setColor()).
+    float r = 0.0f, g = 0.0f, b = 0.0f;
+    float white = 0.0f, amber = 0.0f, lime = 0.0f;
+    for (auto channel : m_impl->channels)
+    {
+        const float v = float(channel->getPercent(t_matrix));
+        switch (channel->type()) {
+        case Capability_Red:   r = v; break;
+        case Capability_Green: g = v; break;
+        case Capability_Blue:  b = v; break;
+        case Capability_White: white = v; break;
+        case Capability_Amber: amber = v; break;
+        case Capability_Lime:  lime = v; break;
+        default: break;
+        }
+    }
+
+    r += white + amber * 1.0f + lime * 0.5f;   // amber ~ (1.0, 0.5, 0), lime ~ (0.5, 1.0, 0)
+    g += white + amber * 0.5f + lime * 1.0f;
+    b += white;
 
     QColor color;
-    float r = 1.0f,g = 1.0f,b= 1.0f;
-
-    for(auto channel : m_impl->channels)
-    {
-        switch (channel->type()) {
-        case Capability_Red:
-            r = channel->getPercent(t_matrix);
-            break;
-        case Capability_Green:
-            g = channel->getPercent(t_matrix);
-            break;
-        case Capability_Blue:
-            b = channel->getPercent(t_matrix);
-            break;
-            /*
-        case Capability_White:
-            r = g = b = channel->getPercent(t_matrix);
-            break;
-*/
-        default:
-            break;
-        }
-
-    }
-    color.setRgbF(r,g,b);
+    color.setRgbF(qBound(0.0f, r, 1.0f), qBound(0.0f, g, 1.0f), qBound(0.0f, b, 1.0f));
     return color;
 }
 
