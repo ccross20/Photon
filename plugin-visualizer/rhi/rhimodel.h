@@ -24,6 +24,8 @@ class RhiMesh;
 //   * a node named "lamp" is the light emitter (beam origin/direction)
 //   * a node whose name starts with "lens" is the lens face; it is tinted with the
 //     fixture's live emitted colour so the lens glows the current beam colour
+//   * a node named "origin" is the fixture's reference frame (mount / pan pivot); the
+//     model is placed so this node coincides with the fixture's scene transform
 class RhiModel
 {
 public:
@@ -36,6 +38,7 @@ public:
         int  tiltAxis = -1;
         bool emitter = false;
         bool lens = false;             // tinted with the live emitted colour
+        bool origin = false;           // fixture reference frame (mount / pan pivot)
         QVector<Node> children;
     };
 
@@ -46,6 +49,11 @@ public:
 
     const Node &root() const { return m_root; }
     bool hasEmitter() const { return m_hasEmitter; }
+    // The "origin" null's transform relative to the model root (identity if absent).
+    // The renderer places the model by globalMatrix * originTransform().inverted() so
+    // the origin coincides with the fixture's scene transform.
+    bool hasOrigin() const { return m_hasOrigin; }
+    QMatrix4x4 originTransform() const { return m_originTransform; }
     QVector3D boundsMin() const { return m_min; }
     QVector3D boundsMax() const { return m_max; }
 
@@ -55,6 +63,8 @@ public:
 private:
     Node m_root;
     bool m_hasEmitter = false;
+    bool m_hasOrigin = false;
+    QMatrix4x4 m_originTransform;
     QVector3D m_min{0, 0, 0};
     QVector3D m_max{0, 0, 0};
 

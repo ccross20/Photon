@@ -148,7 +148,7 @@
     "Prism 2": {
       "capabilities": [
         { "dmxRange": [0,   31],  "type": "NoFunction" },
-        { "dmxRange": [32,  255], "type": "Prism", "comment": "6-facet prism" }
+        { "dmxRange": [32,  255], "type": "Prism", "comment": "6-facet linear prism" }
       ]
     },
     "Prism 2 Rotation": {

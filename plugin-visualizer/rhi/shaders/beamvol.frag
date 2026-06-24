@@ -81,9 +81,11 @@ void main()
     int goboB = int(beam.apex.w + 0.5);
     float goboSplit = beam.color2.w;
     float goboRot = beam.params.z;
-    vec3 up = abs(d.y) > 0.99 ? vec3(1.0, 0.0, 0.0) : vec3(0.0, 1.0, 0.0);
-    vec3 U = normalize(cross(up, d));
-    vec3 V = cross(d, U);
+    // Gobo reference frame from the cone's own local axes (model X/Z), so it carries
+    // the fixture/prism roll and never flips. A world-up cross product (the old way)
+    // is discontinuous when the beam points steeply, which made gobos flip.
+    vec3 U = normalize((beam.model * vec4(1.0, 0.0, 0.0, 0.0)).xyz);
+    vec3 V = normalize((beam.model * vec4(0.0, 0.0, 1.0, 0.0)).xyz);
 
     // Representative cross-beam coordinate (along U) at the segment midpoint, for the
     // colour-wheel split. -1..1 across the cone.

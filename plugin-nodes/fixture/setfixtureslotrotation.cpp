@@ -1,6 +1,8 @@
+#include <QHash>
 #include "setfixtureslotrotation.h"
 #include "routine/routineevaluationcontext.h"
 #include "fixture/capability/wheelslotrotationcapability.h"
+#include "fixture/fixturechannel.h"
 #include "fixture/fixture.h"
 
 namespace photon {
@@ -27,9 +29,10 @@ void SetFixtureSlotRotation::createParameters()
     m_angleParam = new keira::DecimalParameter("amount","Amount", 0);
     addParameter(m_angleParam);
 
-
-    m_nameParam = new keira::StringParameter("nameInput","Name", "color");
-    addParameter(m_nameParam);
+    // Which rotating (gobo) wheel, by order among the fixture's slot-rotation channels.
+    m_wheelParam = new keira::OptionParameter("wheel","Wheel",
+        {"Gobo Wheel 1","Gobo Wheel 2","Gobo Wheel 3"}, 0);
+    addParameter(m_wheelParam);
 
 }
 
@@ -41,40 +44,49 @@ void SetFixtureSlotRotation::evaluate(keira::EvaluationContext *t_context) const
         float rotationAmount = m_angleParam->value().toFloat();
 
         bool useAngle = m_modeParam->value().toInt() == 0;
-        QString name = m_nameParam->value().toString().toLower();
 
-        if(!name.isEmpty())
+        // Group slot-rotation capabilities by channel (one channel == one wheel),
+        // preserving order, then pick the wheel chosen in the dropdown.
+        auto allCapabilities = context->fixture->findCapability(CapabilityType::Capability_WheelSlotRotation);
+
+        QVector<FixtureChannel*> channelOrder;
+        QHash<FixtureChannel*, QVector<WheelSlotRotationCapability*>> byChannel;
+        for(auto capability : allCapabilities)
         {
-            auto allCapabilities = context->fixture->findCapability(CapabilityType::Capability_WheelSlotRotation, name);
+            auto cap = static_cast<WheelSlotRotationCapability*>(capability);
+            FixtureChannel *ch = cap->channel();
+            if(!byChannel.contains(ch))
+                channelOrder.append(ch);
+            byChannel[ch].append(cap);
+        }
 
-            //qDebug() << name << allCapabilities.length();
+        const int wheelIdx = m_wheelParam->value().toInt();
+        if(wheelIdx < 0 || wheelIdx >= channelOrder.size())
+            return;
 
-            for(auto capability : allCapabilities)
+        for(auto wheelSlot : byChannel[channelOrder[wheelIdx]])
+        {
+            if(wheelSlot->supportsAngle() && useAngle)
             {
-                auto wheelSlot = static_cast<WheelSlotRotationCapability*>(capability);
-
-                if(wheelSlot->supportsAngle() && useAngle)
+                wheelSlot->setAngleDegrees(rotationAmount,context->dmxMatrix,1.0);
+                return;
+            }
+            else
+            {
+                if(rotationAmount > 0 && wheelSlot->maxSpeed() > 0)
                 {
-                    wheelSlot->setAngleDegrees(rotationAmount,context->dmxMatrix,1.0);
+                    wheelSlot->setSpeed(rotationAmount,context->dmxMatrix,1.0);
                     return;
                 }
-                else
+                else if(rotationAmount < 0 && wheelSlot->maxSpeed() < 0)
                 {
-                    if(rotationAmount > 0 && wheelSlot->maxSpeed() > 0)
-                    {
-                        wheelSlot->setSpeed(rotationAmount,context->dmxMatrix,1.0);
-                        return;
-                    }
-                    else if(rotationAmount < 0 && wheelSlot->maxSpeed() < 0)
-                    {
-                        wheelSlot->setSpeed(rotationAmount,context->dmxMatrix,1.0);
-                        return;
-                    }
-                    else if(rotationAmount == 0 && wheelSlot->isStop())
-                    {
-                        wheelSlot->selectCapability(context->dmxMatrix);
-                        return;
-                    }
+                    wheelSlot->setSpeed(rotationAmount,context->dmxMatrix,1.0);
+                    return;
+                }
+                else if(rotationAmount == 0 && wheelSlot->isStop())
+                {
+                    wheelSlot->selectCapability(context->dmxMatrix);
+                    return;
                 }
             }
         }

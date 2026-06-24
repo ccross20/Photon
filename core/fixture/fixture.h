@@ -120,6 +120,10 @@ public:
 
     const QVector<FixtureWheel*> &wheels() const;
     FixtureWheel *findWheel(const QString &) const;
+    // Maps a generic wheel role (e.g. "color wheel", "gobo wheel 2") to this fixture's
+    // actual wheel name, by classifying each wheel's slot types. Empty if none match.
+    // Lets fixture nodes offer a fixed dropdown instead of per-fixture name typing.
+    QString resolveWheelName(const QString &role) const;
     QVector<FixtureCapability*> findCapability(CapabilityType type, int index = 0) const;
     QVector<FixtureCapability*> findCapability(CapabilityType type, const QString &name) const;
 

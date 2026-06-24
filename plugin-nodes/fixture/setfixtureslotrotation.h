@@ -18,7 +18,7 @@ public:
 
 private:
     keira::OptionParameter *m_modeParam;
-    keira::StringParameter *m_nameParam;
+    keira::OptionParameter *m_wheelParam;
     keira::DecimalParameter *m_angleParam;
 };
 

@@ -54,6 +54,8 @@ private:
     // parameter edits never reach the per-fixture clones.
     mutable bool m_poolStale = true;
     QMetaObject::Connection m_dirtyConn;
+    QMetaObject::Connection m_connectConn;
+    QMetaObject::Connection m_disconnectConn;
 };
 
 } // namespace photon

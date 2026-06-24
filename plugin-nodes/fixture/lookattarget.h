@@ -3,6 +3,7 @@
 
 #include "model/node.h"
 #include "model/parameter/decimalparameter.h"
+#include "model/parameter/booleanparameter.h"
 #include "graph/parameter/vector3dparameter.h"
 
 namespace photon {
@@ -22,6 +23,8 @@ private:
     Vector3DParameter *m_targetParam;
     keira::DecimalParameter *m_tiltParam;
     keira::DecimalParameter *m_panParam;
+    keira::BooleanParameter *m_invertPanParam;
+    keira::BooleanParameter *m_invertTiltParam;
 };
 
 } // namespace photon

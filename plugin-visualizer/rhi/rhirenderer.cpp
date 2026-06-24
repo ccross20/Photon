@@ -60,11 +60,12 @@ constexpr float  kPrismDeflect   = 4.0f;  // per-copy deflection off the beam ax
 constexpr float  kPrismRevPerSec = 0.3f;  // full-speed prism rotation (rev/s)
 constexpr int    kDefaultPrismFacets = 3; // when the fixture encodes a prism via its
                                           // rotation channel only (no facet count in data)
+constexpr int    kMaxPrismCopies = 64;    // cap on stacked-prism copies per fixture
 
-// Surface lighting: spotlight list. 5 vec4 per light + 1 vec4 count header.
+// Surface lighting: spotlight list. 6 vec4 per light + 1 vec4 count header.
 // Raised to 64 so prism copies (N beams per fixture) still light surfaces.
 constexpr int    kMaxLights    = 64;
-constexpr quint32 kLightsPayload = (1 + 5 * kMaxLights) * 4 * sizeof(float);
+constexpr quint32 kLightsPayload = (1 + 6 * kMaxLights) * 4 * sizeof(float);
 constexpr float  kGoboRevPerSec = 0.5f;   // full-speed gobo rotation rate (rev/s)
 constexpr float  kColorSlotsPerSec = 1.5f; // full-speed color-wheel scroll (slots/s)
 constexpr float  kColorGateWidth = 0.5f;  // gate window in slot units (split when crossing a boundary)
@@ -580,6 +581,14 @@ void RhiRenderer::collectModelNodes(const RhiModel::Node &node, const QMatrix4x4
         collectModelNodes(c, world, pan, tilt, selected, lensColor, out, emitterWorld);
 }
 
+QMatrix4x4 RhiRenderer::fixtureModelMatrix(Fixture *fixture, RhiModel *model) const
+{
+    QMatrix4x4 m = fixture->globalMatrix();
+    if (model && model->hasOrigin())
+        m = m * model->originTransform().inverted();   // origin null lands on the fixture transform
+    return m;
+}
+
 void RhiRenderer::collectDrawables(SceneObject *obj, QVector<Drawable> &out,
                                    QSet<SceneObject *> &seenTrusses)
 {
@@ -609,7 +618,7 @@ void RhiRenderer::collectDrawables(SceneObject *obj, QVector<Drawable> &out,
                         qMin(1.0f, 0.08f + float(emitted.blueF())));
                 }
                 QMatrix4x4 emitter;
-                collectModelNodes(model->root(), fix->globalMatrix(), mo.pan, mo.tilt, sel,
+                collectModelNodes(model->root(), fixtureModelMatrix(fix, model), mo.pan, mo.tilt, sel,
                                   lensColor, out, model->hasEmitter() ? &emitter : nullptr);
                 if (model->hasEmitter())
                     m_emitterWorld.insert(fix, emitter);
@@ -910,31 +919,51 @@ float RhiRenderer::goboRotationFor(Fixture *fixture) const
     return m_goboPhase.value(fixture, 0.0f);
 }
 
-float RhiRenderer::prismRotationFor(Fixture *fixture) const
+float RhiRenderer::prismRotationFor(Fixture *fixture, int channelIndex) const
 {
     const auto rots = fixture->findCapability<PrismRotationCapability *>();
     if (rots.isEmpty())
         return 0.0f;
 
+    // Restrict to the rotation channel paired with the engaged prism (a rotation
+    // channel has several capabilities — angle + speed ranges — so group by channel).
+    // channelIndex < 0 means "read whichever channel is active" (rotation-only fixtures).
+    FixtureChannel *wantChannel = nullptr;
+    if (channelIndex >= 0) {
+        QVector<FixtureChannel *> chans;
+        for (auto *c : rots) {
+            if (c->channel() && !chans.contains(c->channel()))
+                chans.append(c->channel());
+        }
+        if (channelIndex >= chans.size())
+            return 0.0f;
+        wantChannel = chans[channelIndex];
+    }
+
     for (auto *cap : rots) {
+        if (wantChannel && cap->channel() != wantChannel)
+            continue;
         if (!cap->isValid(m_dmx) || !cap->channel())
             continue;
-        const int raw = m_dmx.value(fixture->universe() - 1, cap->channel()->universalChannelNumber());
+        // Phase accumulates PER ROTATION CHANNEL — a fixture with several prisms must
+        // spin each independently (keying by fixture would make them share/clobber one).
+        FixtureChannel *key = cap->channel();
+        const int raw = m_dmx.value(fixture->universe() - 1, key->universalChannelNumber());
         DMXRange r = cap->range();
         const float span = float(qMax(1, int(r.end) - int(r.start)));
         const float factor = qBound(0.0f, (float(raw) - float(r.start)) / span, 1.0f);
 
         if (cap->supportsAngle()) {
             const double deg = cap->angleStart() + factor * (cap->angleEnd() - cap->angleStart());
-            m_prismPhase[fixture] = float(deg);
+            m_prismPhase[key] = float(deg);
             return float(deg);
         }
         const double speedNorm = cap->speedStart() + factor * (cap->speedEnd() - cap->speedStart());
-        float &phase = m_prismPhase[fixture];
+        float &phase = m_prismPhase[key];
         phase += float(speedNorm) * kPrismRevPerSec * 360.0f * m_frameDt;  // degrees
         return phase;
     }
-    return m_prismPhase.value(fixture, 0.0f);
+    return wantChannel ? m_prismPhase.value(wantChannel, 0.0f) : 0.0f;
 }
 
 bool RhiRenderer::colorWheelFor(Fixture *fixture, QColor &outA, QColor &outB, float &outSplit) const
@@ -1112,34 +1141,36 @@ void RhiRenderer::collectBeams(SceneObject *obj, QVector<Drawable> &out) const
                 goboForFixture(fix, gA, gB, gSplit);
                 const float goboRot = goboRotationFor(fix);
 
-                // Prism: split the beam into N copies fanned off-axis (and spun by
-                // the prism-rotation channel). No prism → a single copy.
-                int facets = 1;
-                bool prismLinear = false;
-                // Fixtures that carry an explicit Prism capability give us the facet count.
+                // Prism: split the beam into N copies fanned off-axis (and spun by the
+                // prism-rotation channel). Multiple prisms can be engaged at once and
+                // STACK — each one re-splits every copy from the previous (cartesian
+                // product). No prism → a single copy.
+                struct ActivePrism { int facets; bool linear; float rot; };
+                QVector<ActivePrism> activePrisms;
+                // Each engaged Prism capability adds a layer; its rotation comes from the
+                // matching rotation channel (Prism N <-> Prism N Rotation, same index).
                 const auto prisms = fix->findCapability<PrismCapability *>();
-                for (auto *pr : prisms) {
-                    if (pr->isValid(m_dmx)) {
-                        facets = qMax(1, pr->facetCount());
-                        prismLinear = pr->isLinear();
-                        break;
-                    }
+                for (int i = 0; i < prisms.size(); ++i) {
+                    if (prisms[i]->isValid(m_dmx))
+                        activePrisms.append({ qMax(2, prisms[i]->facetCount()),
+                                              prisms[i]->isLinear(),
+                                              prismRotationFor(fix, i) });
                 }
                 // Otherwise, some fixtures (e.g. Martin MAC) encode the prism purely
                 // through their rotation channel: any active prism-rotation range means
                 // the prism is engaged. Use a default facet count (none is in the data).
                 // Only when there is NO explicit Prism capability — otherwise an always-
                 // valid rotation range (angle mode at DMX 0) would force the prism on.
-                if (facets <= 1 && prisms.isEmpty()) {
+                if (activePrisms.isEmpty() && prisms.isEmpty()) {
                     const auto prots = fix->findCapability<PrismRotationCapability *>();
                     for (auto *pr : prots) {
                         if (pr->isValid(m_dmx)) {
-                            facets = kDefaultPrismFacets;
+                            activePrisms.append({ kDefaultPrismFacets, false,
+                                                  prismRotationFor(fix, -1) });
                             break;
                         }
                     }
                 }
-                const float prismRot = (facets > 1) ? prismRotationFor(fix) : 0.0f;
 
                 // Common per-copy properties.
                 Drawable beam;
@@ -1161,7 +1192,7 @@ void RhiRenderer::collectBeams(SceneObject *obj, QVector<Drawable> &out) const
                 if (m_emitterWorld.contains(fix)) {
                     base = m_emitterWorld.value(fix);
                 } else {
-                    base = fix->globalMatrix();
+                    base = fixtureModelMatrix(fix, modelForFixture(fix));
                     base.rotate(panDeg, 0.0f, 1.0f, 0.0f);
                     base.rotate(tiltDeg, 1.0f, 0.0f, 0.0f);
                 }
@@ -1173,22 +1204,40 @@ void RhiRenderer::collectBeams(SceneObject *obj, QVector<Drawable> &out) const
                 const QVector3D bAxis = base.mapVector(QVector3D(0, -1, 0)).normalized();
                 beam.fadePlane = fadePlaneFor(bApex, bAxis, length);
 
-                for (int fct = 0; fct < facets; ++fct) {
-                    // Unit cone (apex at origin, axis -Y) oriented and sized into place.
-                    QMatrix4x4 m = base;
-                    if (facets > 1) {
-                        if (prismLinear) {
-                            // Copies in a line: vary deflection, fixed azimuth.
-                            const float off = (float(fct) - (facets - 1) * 0.5f) * kPrismDeflect;
-                            m.rotate(prismRot, 0.0f, 1.0f, 0.0f);
-                            m.rotate(off, 1.0f, 0.0f, 0.0f);
-                        } else {
-                            // Copies in a ring: even azimuth, constant deflection.
-                            const float az = prismRot + 360.0f * float(fct) / float(facets);
-                            m.rotate(az, 0.0f, 1.0f, 0.0f);
-                            m.rotate(kPrismDeflect, 1.0f, 0.0f, 0.0f);
-                        }
+                // Per-facet deflection (relative to the incoming beam) for one prism.
+                auto facetRot = [](const ActivePrism &p, int fct) {
+                    QMatrix4x4 r;
+                    if (p.linear) {
+                        // Copies in a line: vary deflection, shared azimuth (the spin).
+                        const float off = (float(fct) - (p.facets - 1) * 0.5f) * kPrismDeflect;
+                        r.rotate(p.rot, 0.0f, 1.0f, 0.0f);
+                        r.rotate(off, 1.0f, 0.0f, 0.0f);
+                    } else {
+                        // Copies in a ring: even azimuth, constant deflection.
+                        const float az = p.rot + 360.0f * float(fct) / float(p.facets);
+                        r.rotate(az, 0.0f, 1.0f, 0.0f);
+                        r.rotate(kPrismDeflect, 1.0f, 0.0f, 0.0f);
                     }
+                    return r;
+                };
+
+                // Build the set of beam orientations: start with the straight beam, then
+                // let each active prism re-split every existing copy (stacked prisms).
+                QVector<QMatrix4x4> orientations{ QMatrix4x4() };
+                for (const ActivePrism &p : activePrisms) {
+                    QVector<QMatrix4x4> next;
+                    next.reserve(orientations.size() * p.facets);
+                    for (const QMatrix4x4 &o : orientations)
+                        for (int fct = 0; fct < p.facets; ++fct)
+                            next.append(o * facetRot(p, fct));
+                    orientations = std::move(next);
+                    if (orientations.size() >= kMaxPrismCopies)   // sanity clamp
+                        break;
+                }
+
+                for (const QMatrix4x4 &o : orientations) {
+                    // Unit cone (apex at origin, axis -Y) oriented and sized into place.
+                    QMatrix4x4 m = base * o;
                     m.scale(baseRadius, length, baseRadius);
                     beam.model = m;
                     out.append(beam);
@@ -1349,7 +1398,12 @@ void RhiRenderer::pickRecursive(SceneObject *obj, const QVector3D &origin, const
             haveBounds = localBounds(child, mn, mx);
         }
         if (haveBounds) {
-            const QMatrix4x4 inv = child->globalMatrix().inverted();
+            // Models are placed via fixtureModelMatrix (origin-offset); match it so the
+            // pick ray transforms into the same space as the rendered bounds.
+            const QMatrix4x4 placement = model
+                ? fixtureModelMatrix(static_cast<Fixture *>(child), model)
+                : child->globalMatrix();
+            const QMatrix4x4 inv = placement.inverted();
             const QVector3D lo = inv.map(origin);
             const QVector3D ld = inv.mapVector(dir);
             float t;
@@ -1495,12 +1549,15 @@ void RhiRenderer::render(QRhiCommandBuffer *cb, QRhiRenderTarget *rt, const RhiC
     // as the beams). Built every frame regardless of beam mode.
     {
         const int lightCount = qMin(beams.size(), kMaxLights);
-        QVector<float> lightData((1 + 5 * kMaxLights) * 4, 0.0f);
+        QVector<float> lightData((1 + 6 * kMaxLights) * 4, 0.0f);
         lightData[0] = float(lightCount);
         for (int i = 0; i < lightCount; ++i) {
             QVector3D apex, axis;
             float cosH = 0.0f, length = 0.0f;
             beamConeFromModel(beams[i].model, apex, axis, cosH, length);
+            // Gobo frame's reference axis (the cone's local X in world space), so the
+            // surface pool's gobo orientation matches the beam and never flips.
+            const QVector3D up = beams[i].model.mapVector(QVector3D(1, 0, 0)).normalized();
             const QColor c = beams[i].color;
             const QColor c2 = beams[i].color2;
             const float cosOuter = cosH;
@@ -1508,7 +1565,7 @@ void RhiRenderer::render(QRhiCommandBuffer *cb, QRhiRenderTarget *rt, const RhiC
             // on floors/walls beyond the cone tip rather than at the falloff edge.
             const float range = qMax(length * 6.0f, 60.0f);
 
-            float *L = lightData.data() + (1 + i * 5) * 4;
+            float *L = lightData.data() + (1 + i * 6) * 4;
             L[0]  = apex.x(); L[1] = apex.y(); L[2] = apex.z(); L[3] = range;
             L[4]  = axis.x(); L[5] = axis.y(); L[6] = axis.z(); L[7] = cosOuter;
             L[8]  = float(c.redF()); L[9] = float(c.greenF()); L[10] = float(c.blueF());
@@ -1518,6 +1575,7 @@ void RhiRenderer::render(QRhiCommandBuffer *cb, QRhiRenderTarget *rt, const RhiC
             L[14] = beams[i].goboSplit;   // gobo wipe boundary (-1..1, <-1 = none)
             L[16] = float(c2.redF()); L[17] = float(c2.greenF()); L[18] = float(c2.blueF());
             L[19] = beams[i].split;       // color split position (-1..1, <-1 = none)
+            L[20] = up.x(); L[21] = up.y(); L[22] = up.z();   // gobo frame reference axis
         }
         u->updateDynamicBuffer(m_lightsBuffer, 0, kLightsPayload, lightData.constData());
     }

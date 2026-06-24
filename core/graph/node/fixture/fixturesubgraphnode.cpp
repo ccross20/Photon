@@ -42,11 +42,20 @@ FixtureSubGraphNode::FixtureSubGraphNode() : keira::SubGraphNode("photon.node.fi
     // invalidates the cloned pool so evaluate() re-clones with the new values.
     m_dirtyConn = QObject::connect(graph(), &keira::Graph::dirtyStateChanged,
                                    [this]() { m_poolStale = true; });
+    // Connecting/disconnecting parameters is a structural edit that does NOT raise
+    // dirtyStateChanged, so watch those too — otherwise removing a connection isn't
+    // reflected until an unrelated parameter edit re-clones the pool.
+    m_connectConn = QObject::connect(graph(), &keira::Graph::parametersWereConnected,
+                                     [this](keira::Parameter *, keira::Parameter *) { m_poolStale = true; });
+    m_disconnectConn = QObject::connect(graph(), &keira::Graph::parametersWereDisconnected,
+                                        [this](keira::Parameter *, keira::Parameter *) { m_poolStale = true; });
 }
 
 FixtureSubGraphNode::~FixtureSubGraphNode()
 {
     QObject::disconnect(m_dirtyConn);
+    QObject::disconnect(m_connectConn);
+    QObject::disconnect(m_disconnectConn);
     qDeleteAll(m_subgraphPool);
 }
 

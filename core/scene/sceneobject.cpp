@@ -234,7 +234,22 @@ QVector3D SceneObject::rotation() const
 
 QVector3D SceneObject::globalRotation() const
 {
-    return globalMatrix().map(m_impl->rotation);
+    // Decompose the rotation out of the global matrix (its basis columns, normalised
+    // to strip any scale) as Euler angles. NOTE: the old implementation mapped the
+    // local Euler vector through the full matrix as if it were a point, which folded
+    // in translation and produced garbage (e.g. it returned the position when the
+    // local rotation was zero).
+    const QMatrix4x4 g = globalMatrix();
+    QVector3D c0(g(0, 0), g(1, 0), g(2, 0));
+    QVector3D c1(g(0, 1), g(1, 1), g(2, 1));
+    QVector3D c2(g(0, 2), g(1, 2), g(2, 2));
+    c0.normalize(); c1.normalize(); c2.normalize();
+    const float v[9] = {
+        c0.x(), c1.x(), c2.x(),
+        c0.y(), c1.y(), c2.y(),
+        c0.z(), c1.z(), c2.z()
+    };
+    return QQuaternion::fromRotationMatrix(QMatrix3x3(v)).toEulerAngles();
 }
 
 QVector3D SceneObject::globalPosition() const

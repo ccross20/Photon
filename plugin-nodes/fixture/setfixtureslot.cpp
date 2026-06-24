@@ -22,28 +22,28 @@ SetFixtureSlot::SetFixtureSlot(): keira::Node("photon.plugin.node.set-fixture-sl
 
 }
 
+// Generic wheel roles offered in the dropdown; the label is resolved per-fixture
+// (by slot type + ordinal) to the actual wheel name. "Custom" uses the text field.
+static const QStringList kWheelRoles = {
+    "Color Wheel", "Gobo Wheel 1", "Gobo Wheel 2", "Gobo Wheel 3",
+    "Animation Wheel", "Custom"
+};
+
 void SetFixtureSlot::createParameters()
 {
+    m_wheelRoleParam = new keira::OptionParameter("wheelRole","Wheel", kWheelRoles, 1);
+    addParameter(m_wheelRoleParam);
 
-    m_modeParam = new keira::OptionParameter("mode","Mode",{"Name","Number"},0);
-    addParameter(m_modeParam);
+    m_wheelNameParam = new keira::StringParameter("nameInput","Custom Wheel", "color");
+    addParameter(m_wheelNameParam);
 
     m_rotateModeParam = new keira::OptionParameter("rotateMode","Rotate Mode",{"Unknown","Indexed","Continuous"},0);
     addParameter(m_rotateModeParam);
-
-    m_wheelParam = new keira::IntegerParameter("wheelInput","Wheel Number", 1);
-    m_wheelParam->setMinimum(1);
-    m_wheelParam->setMaximum(20);
-    addParameter(m_wheelParam);
 
     m_slotParam = new keira::IntegerParameter("slotInput","Slot Number", 1);
     m_slotParam->setMinimum(1);
     m_slotParam->setMaximum(100);
     addParameter(m_slotParam);
-
-    m_wheelNameParam = new keira::StringParameter("nameInput","Wheel Name", "color");
-    addParameter(m_wheelNameParam);
-
 }
 
 void SetFixtureSlot::evaluate(keira::EvaluationContext *t_context) const
@@ -53,17 +53,17 @@ void SetFixtureSlot::evaluate(keira::EvaluationContext *t_context) const
     {
         auto allSlots = context->fixture->findCapability(Capability_WheelSlot);
 
-        int wheelIndex = m_wheelParam->value().toInt() - 1;
         int slotNum = m_slotParam->value().toInt();
 
         auto rotateMode = static_cast<WheelSlotCapability::RotateMode>(m_rotateModeParam->value().toInt());
 
-        //qDebug() << "Slot " << slotNum << allSlots.length();
-
-        QString wheelName = m_wheelNameParam->value().toString();
-
-        if(m_modeParam->value().toInt() == 1 && wheelIndex < context->fixture->wheels().length())
-            wheelName = context->fixture->wheels()[wheelIndex]->name();
+        // Resolve the chosen generic role to the fixture's actual wheel name; "Custom"
+        // falls back to the free-text field.
+        const int roleIdx = m_wheelRoleParam->value().toInt();
+        const QString role = (roleIdx >= 0 && roleIdx < kWheelRoles.size()) ? kWheelRoles[roleIdx] : QString();
+        QString wheelName = (role == "Custom" || role.isEmpty())
+            ? m_wheelNameParam->value().toString()
+            : context->fixture->resolveWheelName(role);
         wheelName = wheelName.toLower();
 
         for(auto curSlot : allSlots)

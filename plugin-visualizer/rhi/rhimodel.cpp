@@ -81,6 +81,7 @@ static void traceNode(const RhiModel::Node &n, int depth)
     if (n.tiltAxis >= 0) roles += QString(" TILT[%1]").arg("xyz"[n.tiltAxis]);
     if (n.emitter)       roles += " LAMP";
     if (n.lens)          roles += " LENS";
+    if (n.origin)        roles += " ORIGIN";
     qWarning().noquote() << QString(depth * 2, ' ') + "|-" << (n.name.isEmpty() ? "<unnamed>" : n.name)
                          << QString("(meshes %1)").arg(n.meshes.size()) << roles;
     for (const RhiModel::Node &c : n.children)
@@ -102,7 +103,9 @@ RhiModel::~RhiModel()
 }
 
 static void processNode(const aiNode *node, const aiScene *scene, const QMatrix4x4 &parentAccum,
-                        RhiModel::Node &out, bool &hasEmitter, QVector3D &gMin, QVector3D &gMax)
+                        RhiModel::Node &out, bool &hasEmitter,
+                        bool &hasOrigin, QMatrix4x4 &originXform,
+                        QVector3D &gMin, QVector3D &gMax)
 {
     out.name = node->mName.C_Str();
     out.local = convert(node->mTransformation);
@@ -123,6 +126,11 @@ static void processNode(const aiNode *node, const aiScene *scene, const QMatrix4
     }
     if (lname.startsWith("lens"))
         out.lens = true;
+    if (lname == "origin") {
+        out.origin = true;
+        hasOrigin = true;
+        originXform = accum;   // static root->origin transform (above pan/tilt)
+    }
 
     for (unsigned int i = 0; i < node->mNumMeshes; ++i) {
         const aiMesh *mesh = scene->mMeshes[node->mMeshes[i]];
@@ -144,7 +152,8 @@ static void processNode(const aiNode *node, const aiScene *scene, const QMatrix4
 
     for (unsigned int i = 0; i < node->mNumChildren; ++i) {
         RhiModel::Node child;
-        processNode(node->mChildren[i], scene, accum, child, hasEmitter, gMin, gMax);
+        processNode(node->mChildren[i], scene, accum, child, hasEmitter,
+                    hasOrigin, originXform, gMin, gMax);
         out.children.append(child);
     }
 }
@@ -178,13 +187,15 @@ RhiModel *RhiModel::load(const QString &path)
     auto *model = new RhiModel;
     QVector3D gMin( std::numeric_limits<float>::max(),  std::numeric_limits<float>::max(),  std::numeric_limits<float>::max());
     QVector3D gMax(-std::numeric_limits<float>::max(), -std::numeric_limits<float>::max(), -std::numeric_limits<float>::max());
-    processNode(scene->mRootNode, scene, QMatrix4x4(), model->m_root, model->m_hasEmitter, gMin, gMax);
+    processNode(scene->mRootNode, scene, QMatrix4x4(), model->m_root, model->m_hasEmitter,
+                model->m_hasOrigin, model->m_originTransform, gMin, gMax);
 
     if (gMin.x() <= gMax.x()) {   // had geometry
         model->m_min = gMin;
         model->m_max = gMax;
     }
     qWarning() << "RhiModel: loaded" << path << "emitter" << model->m_hasEmitter
+               << "origin" << model->m_hasOrigin
                << "bounds" << model->m_min << model->m_max;
     qWarning().noquote() << "RhiModel: node tree for" << path;
     traceNode(model->m_root, 0);

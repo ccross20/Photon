@@ -16,11 +16,11 @@ layout(std140, binding = 1) uniform Object {
     vec4 color;
 } object;
 
-// Up to 32 spotlights, 5 vec4 each: posRange, dirCosOuter, (color.rgb, gobo),
-// (goboRot, ...), (color2.rgb, split).
+// Up to 64 spotlights, 6 vec4 each: posRange, dirCosOuter, (color.rgb, goboA),
+// (goboRot, goboB, goboSplit, -), (color2.rgb, split), (frameU.xyz, -).
 layout(std140, binding = 2) uniform Lights {
     vec4 countv;
-    vec4 data[320];
+    vec4 data[384];
 } lights;
 
 // Gobo texture array: one layer per loaded image (rgb = transmitted color, a = transmittance).
@@ -41,17 +41,18 @@ void main()
 
     int count = int(lights.countv.x);
     for (int i = 0; i < count; ++i) {
-        vec3  P        = lights.data[i * 5 + 0].xyz;
-        float range    = lights.data[i * 5 + 0].w;
-        vec3  D        = lights.data[i * 5 + 1].xyz;   // spot axis (apex -> base)
-        float cosOuter = lights.data[i * 5 + 1].w;
-        vec3  col      = lights.data[i * 5 + 2].xyz;
-        int   goboA    = int(lights.data[i * 5 + 2].w + 0.5);
-        float goboRot  = lights.data[i * 5 + 3].x;
-        int   goboB    = int(lights.data[i * 5 + 3].y + 0.5);
-        float goboSplit = lights.data[i * 5 + 3].z;
-        vec3  col2     = lights.data[i * 5 + 4].xyz;
-        float split    = lights.data[i * 5 + 4].w;
+        vec3  P        = lights.data[i * 6 + 0].xyz;
+        float range    = lights.data[i * 6 + 0].w;
+        vec3  D        = lights.data[i * 6 + 1].xyz;   // spot axis (apex -> base)
+        float cosOuter = lights.data[i * 6 + 1].w;
+        vec3  col      = lights.data[i * 6 + 2].xyz;
+        int   goboA    = int(lights.data[i * 6 + 2].w + 0.5);
+        float goboRot  = lights.data[i * 6 + 3].x;
+        int   goboB    = int(lights.data[i * 6 + 3].y + 0.5);
+        float goboSplit = lights.data[i * 6 + 3].z;
+        vec3  col2     = lights.data[i * 6 + 4].xyz;
+        float split    = lights.data[i * 6 + 4].w;
+        vec3  frameU   = lights.data[i * 6 + 5].xyz;   // gobo frame reference axis
 
         vec3 toFrag = vWorld - P;
         float dist = length(toFrag);
@@ -68,9 +69,9 @@ void main()
         float rn = clamp(ang / max(halfAng, 1e-4), 0.0, 1.0);
         float shape = smoothstep(1.0, 0.65, rn);  // bright core, soft edge
 
-        // Stable frame perpendicular to the axis for gobo + colour-split coordinates.
-        vec3 up = abs(D.y) > 0.99 ? vec3(1.0, 0.0, 0.0) : vec3(0.0, 1.0, 0.0);
-        vec3 U = normalize(cross(up, D));
+        // Gobo frame from the beam's own local axis (passed in) so the pool's gobo
+        // orientation matches the shaft and never flips at steep beam angles.
+        vec3 U = normalize(frameU - D * dot(frameU, D));   // orthonormalise against axis
         vec3 V = cross(D, U);
         vec3 pdir = l - D * cosA;                 // perpendicular component
         float theta = atan(dot(pdir, V), dot(pdir, U));

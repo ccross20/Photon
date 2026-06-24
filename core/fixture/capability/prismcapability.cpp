@@ -1,5 +1,7 @@
 #include <QRegularExpression>
 #include "prismcapability.h"
+#include "data/dmxmatrix.h"
+#include "fixture/fixturechannel.h"
 
 namespace photon {
 
@@ -27,6 +29,12 @@ int PrismCapability::facetCount() const
 bool PrismCapability::isLinear() const
 {
     return m_impl->linear;
+}
+
+void PrismCapability::selectCapability(DMXMatrix &t_matrix)
+{
+    t_matrix.setValue(channel()->universe() - 1, channel()->universalChannelNumber(),
+                      range().middle(), 1.0);
 }
 
 void PrismCapability::readFromOpenFixtureJson(const QJsonObject &t_json)

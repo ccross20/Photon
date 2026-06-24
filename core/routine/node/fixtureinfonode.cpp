@@ -63,7 +63,7 @@ void FixtureInfoNode::evaluate(keira::EvaluationContext *t_context) const
         return;
 
     m_impl->positionParam->setValue(fixture->globalPosition());
-    m_impl->rotationParam->setValue(fixture->rotation());
+    m_impl->rotationParam->setValue(fixture->globalRotation());
 }
 
 } // namespace photon

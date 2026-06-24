@@ -18,6 +18,9 @@ public:
     int facetCount() const;
     bool isLinear() const;
 
+    // Engages the prism: writes a value inside this capability's DMX range.
+    void selectCapability(DMXMatrix &t_matrix);
+
     void readFromOpenFixtureJson(const QJsonObject &) override;
 
 private:

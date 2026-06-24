@@ -18,6 +18,7 @@ public:
     static keira::NodeInformation info();
 
 private:
+    keira::OptionParameter *m_prismParam;
     keira::OptionParameter *m_modeParam;
     keira::DecimalParameter *m_angleParam;
     keira::BooleanParameter *m_usePrismParam;

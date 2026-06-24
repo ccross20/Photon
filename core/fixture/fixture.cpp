@@ -78,6 +78,40 @@ FixtureWheel *Fixture::findWheel(const QString &t_name) const
     return nullptr;
 }
 
+QString Fixture::resolveWheelName(const QString &t_role) const
+{
+    const QString role = t_role.toLower();
+
+    // Which slot type this role targets.
+    FixtureWheelSlot::SlotType want = FixtureWheelSlot::Slot_Gobo;
+    if (role.contains("color"))
+        want = FixtureWheelSlot::Slot_Color;
+    else if (role.contains("animation"))
+        want = FixtureWheelSlot::Slot_AnimationGoboStart;
+
+    // Trailing ordinal (1-based), e.g. "gobo wheel 2" -> 2; default 1.
+    int ordinal = 1;
+    for (int i = role.size() - 1; i >= 0; --i) {
+        if (role[i].isDigit()) {
+            int j = i;
+            while (j > 0 && role[j - 1].isDigit()) --j;
+            ordinal = role.mid(j, i - j + 1).toInt();
+            break;
+        }
+    }
+
+    int matchCount = 0;
+    for (FixtureWheel *wheel : m_impl->wheels) {
+        bool isMatch = false;
+        for (FixtureWheelSlot *s : wheel->allSlots()) {
+            if (s && s->type() == want) { isMatch = true; break; }
+        }
+        if (isMatch && ++matchCount == ordinal)
+            return wheel->name();
+    }
+    return QString();
+}
+
 QVector<FixtureCapability*> Fixture::findCapability(CapabilityType t_type, int t_index) const
 {
     QVector<FixtureCapability*> results;

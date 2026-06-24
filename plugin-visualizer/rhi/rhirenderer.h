@@ -31,6 +31,7 @@ namespace photon {
 
 class SceneObject;
 class Fixture;
+class FixtureChannel;
 class RhiMesh;
 class RhiCamera;
 
@@ -132,8 +133,9 @@ private:
     // continuous speed is accumulated over time; indexed mode returns a static angle.
     float goboRotationFor(Fixture *fixture) const;
 
-    // Current prism rotation (degrees) from the fixture's prism-rotation channel.
-    float prismRotationFor(Fixture *fixture) const;
+    // Current prism rotation (degrees) from the prism-rotation channel paired with the
+    // engaged prism (channelIndex = its index among prism-rotation channels; -1 = any).
+    float prismRotationFor(Fixture *fixture, int channelIndex = -1) const;
 
     // Advances a fixture's motorised attributes (pan/tilt + zoom) toward their DMX
     // targets over time and returns the current smoothed values.
@@ -146,6 +148,9 @@ private:
     // Resolves + loads the 3D model for a fixture (cached), or null for the box.
     RhiModel *modelForFixture(Fixture *fixture) const;
     QString resolveModelPath(Fixture *fixture) const;
+    // World placement for a fixture's model root: the fixture's scene transform, offset
+    // so the model's "origin" null (if any) coincides with it.
+    QMatrix4x4 fixtureModelMatrix(Fixture *fixture, RhiModel *model) const;
     // Walks a model node tree, emitting a drawable per mesh (pan/tilt applied at the
     // rigged joints) and capturing the "lamp" emitter's world transform.
     void collectModelNodes(const RhiModel::Node &node, const QMatrix4x4 &parentWorld,
@@ -231,7 +236,7 @@ private:
     mutable float  m_frameDt = 0.0f;                   // seconds since last frame
     mutable QHash<SceneObject *, float> m_goboPhase;   // accumulated continuous rotation
     mutable QHash<SceneObject *, float> m_colorPhase;  // accumulated color-wheel position
-    mutable QHash<SceneObject *, float> m_prismPhase;  // accumulated prism rotation (deg)
+    mutable QHash<FixtureChannel *, float> m_prismPhase;  // accumulated prism rotation (deg), per rotation channel
 
     // Per-fixture smoothed motor state (degrees) + velocities, for motor-like movement.
     struct FixtureMotion {
