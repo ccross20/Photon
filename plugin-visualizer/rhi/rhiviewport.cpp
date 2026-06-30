@@ -43,6 +43,7 @@ RhiViewport::RhiViewport(QWidget *parent)
     auto *selectBtn = makeToolBtn("Select",  "Select objects  [Q]");
     auto *moveBtn   = makeToolBtn("Move",    "Translate gizmo  [W]");
     auto *rotateBtn = makeToolBtn("Rotate",  "Rotate gizmo  [E]");
+    auto *scaleBtn  = makeToolBtn("Scale",   "Scale gizmo (zones)  [R]");
 
     selectBtn->setChecked(true); // default: Select mode (no gizmo)
 
@@ -51,6 +52,7 @@ RhiViewport::RhiViewport(QWidget *parent)
     m_modeGroup->addButton(selectBtn, static_cast<int>(RhiGizmo::None));
     m_modeGroup->addButton(moveBtn,   static_cast<int>(RhiGizmo::Translate));
     m_modeGroup->addButton(rotateBtn, static_cast<int>(RhiGizmo::Rotate));
+    m_modeGroup->addButton(scaleBtn,  static_cast<int>(RhiGizmo::Scale));
 
     m_spaceBtn = makeToolBtn("Global", "Toggle world / local transform axes");
     m_spaceBtn->setChecked(false);
@@ -97,6 +99,7 @@ RhiViewport::RhiViewport(QWidget *parent)
     tbLayout->addWidget(selectBtn);
     tbLayout->addWidget(moveBtn);
     tbLayout->addWidget(rotateBtn);
+    tbLayout->addWidget(scaleBtn);
     tbLayout->addSpacing(12);
     tbLayout->addWidget(m_spaceBtn);
     tbLayout->addSpacing(12);

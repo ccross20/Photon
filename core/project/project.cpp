@@ -27,6 +27,7 @@
 #include "surface/surfacecollection.h"
 #include "surface/surface.h"
 #include "tag/tagcollection.h"
+#include "fixture/fixturegroup.h"
 
 namespace photon {
 
@@ -41,6 +42,7 @@ public:
     RoutineCollection routines;
     SurfaceCollection surfaces;
     TagCollection tags;
+    FixtureGroupCollection groups;
     StateCollection states;
     BusGraph *bus;
     SceneManager *sceneManager;
@@ -144,6 +146,11 @@ StateCollection *Project::states() const
 TagCollection *Project::tags() const
 {
     return &m_impl->tags;
+}
+
+FixtureGroupCollection *Project::groups() const
+{
+    return &m_impl->groups;
 }
 
 CanvasCollection *Project::canvases() const
@@ -264,6 +271,9 @@ void Project::readFromJson(const QJsonObject &json)
             tags << tag.toString();
         m_impl->tags.replaceTags(tags);
     }
+
+    if(json.contains("fixtureGroups"))
+        m_impl->groups.readFromJson(json.value("fixtureGroups").toObject());
 
     if(json.contains("states"))
     {
@@ -388,6 +398,10 @@ void Project::writeToJson(QJsonObject &json) const
         tagArray.append(tag);
     }
     json.insert("tags", tagArray);
+
+    QJsonObject groupsObj;
+    m_impl->groups.writeToJson(groupsObj);
+    json.insert("fixtureGroups", groupsObj);
 
     QJsonArray layoutArray;
     for(auto layout : m_impl->pixelLayouts.layouts())

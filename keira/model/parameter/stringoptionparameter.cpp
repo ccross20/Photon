@@ -68,6 +68,7 @@ QWidget *StringOptionParameter::createWidget(NodeEditor *item) const
     if(isReadOnly())
     {
         QLabel *label = new QLabel();
+        label->setText(value().toString());
         label->setMaximumHeight(30);
         label->setStyleSheet("background:transparent;");
         label->setSizePolicy(QSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::Minimum));
@@ -90,6 +91,18 @@ QWidget *StringOptionParameter::createWidget(NodeEditor *item) const
 
     combo->setSizePolicy(QSizePolicy(QSizePolicy::Maximum, QSizePolicy::Minimum));
 
+    // Initialise the selection to the current value. The node editor builds widgets
+    // via createWidget only (it never calls updateWidget), so without this the combo
+    // always shows the first item regardless of the stored value. Done before the
+    // signal connection so it doesn't fire a spurious change.
+    if(m_impl->optionLambda)
+    {
+        const int idx = combo->findData(value());
+        if(idx >= 0)
+            combo->setCurrentIndex(idx);
+    }
+    else
+        combo->setCurrentText(value().toString());
 
     const StringOptionParameter *param = this;
     QComboBox::connect(combo, &QComboBox::currentIndexChanged, combo,[item, combo, param](){item->widgetUpdated(combo, param);});

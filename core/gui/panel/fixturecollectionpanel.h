@@ -22,6 +22,7 @@ private slots:
     void addArrow();
     void addWall();
     void addFloor();
+    void addZone();
     void removeClicked();
     void duplicateClicked();
     void doubleClicked(const QModelIndex &);

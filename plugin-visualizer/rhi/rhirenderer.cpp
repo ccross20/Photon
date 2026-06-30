@@ -14,6 +14,7 @@
 #include "scene/sceneobject.h"
 #include "scene/truss.h"
 #include "scene/scenesurface.h"
+#include "scene/scenezone.h"
 #include "fixture/fixture.h"
 #include "fixture/capability/colorcapability.h"
 #include "fixture/capability/dimmercapability.h"
@@ -646,6 +647,8 @@ void RhiRenderer::collectDrawables(SceneObject *obj, QVector<Drawable> &out,
         } else if (type == "truss") {
             seenTrusses.insert(child);
             out.append({ trussMeshFor(child), child->globalMatrix(), sel ? highlight : QColor(150, 150, 155) });
+        } else if (type == "zone") {
+            // Zones draw as wireframe boxes in the gizmo line pass, not solid geometry.
         } else if (type != "group") {
             out.append({ m_box, child->globalMatrix(), sel ? highlight : QColor(150, 130, 95) });
         }
@@ -1264,6 +1267,39 @@ void RhiRenderer::collectSurfaces(SceneObject *obj, QVector<Drawable> &out) cons
     }
 }
 
+void RhiRenderer::appendZoneWireframes(SceneObject *obj, QByteArray &out) const
+{
+    if (!obj)
+        return;
+    for (SceneObject *child : obj->sceneChildren()) {
+        if (child->typeId() == "zone") {
+            auto *zone = static_cast<SceneZone *>(child);
+            const QMatrix4x4 m = zone->globalMatrix();
+            const QVector3D h = zone->size() * 0.5f;
+            const QColor c = (child == m_selected) ? QColor(255, 170, 40) : zone->color();
+            const float r = float(c.redF()), g = float(c.greenF()), b = float(c.blueF());
+
+            // 8 corners, bit2=x bit1=y bit0=z.
+            QVector3D corner[8];
+            for (int i = 0; i < 8; ++i) {
+                const float sx = (i & 4) ? h.x() : -h.x();
+                const float sy = (i & 2) ? h.y() : -h.y();
+                const float sz = (i & 1) ? h.z() : -h.z();
+                corner[i] = m.map(QVector3D(sx, sy, sz));
+            }
+            auto addVert = [&](const QVector3D &p) {
+                const float v[6] = { p.x(), p.y(), p.z(), r, g, b };
+                out.append(reinterpret_cast<const char *>(v), sizeof(v));
+            };
+            // Edges connect corners differing in exactly one axis bit (12 edges).
+            for (int a = 0; a < 8; ++a)
+                for (int d : {1, 2, 4})
+                    if (a < (a ^ d)) { addVert(corner[a]); addVert(corner[a ^ d]); }
+        }
+        appendZoneWireframes(child, out);
+    }
+}
+
 void RhiRenderer::gatherSurfacePlanes(SceneObject *obj) const
 {
     if (!obj)
@@ -1335,6 +1371,12 @@ bool RhiRenderer::localBounds(SceneObject *obj, QVector3D &outMin, QVector3D &ou
         const float hh = surf->surfaceHeight() * 0.5f;
         outMin = QVector3D(-hw, -hh, -0.05f);
         outMax = QVector3D( hw,  hh,  0.05f);
+        return true;
+    }
+    if (type == "zone") {
+        const QVector3D h = static_cast<SceneZone *>(obj)->size() * 0.5f;
+        outMin = -h;
+        outMax =  h;
         return true;
     }
     if (type == "fixture" || type == "arrow" || type != "group") {
@@ -1629,6 +1671,7 @@ void RhiRenderer::render(QRhiCommandBuffer *cb, QRhiRenderTarget *rt, const RhiC
     // Gizmo line geometry (world space), rebuilt each frame.
     QByteArray gizmoVerts;
     m_gizmo.buildLines(camera, gizmoVerts);
+    appendZoneWireframes(m_sceneRoot, gizmoVerts);   // zone boxes drawn as overlay lines
     if (gizmoVerts.size() > int(kGizmoBytes))
         gizmoVerts.truncate(int(kGizmoBytes));
     const int gizmoVertexCount = gizmoVerts.size() / int(6 * sizeof(float));

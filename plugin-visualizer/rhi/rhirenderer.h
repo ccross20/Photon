@@ -104,6 +104,9 @@ private:
     void collectBeams(SceneObject *obj, QVector<Drawable> &out) const;
     // Appends a lit-plane drawable for every wall/floor surface in the subtree.
     void collectSurfaces(SceneObject *obj, QVector<Drawable> &out) const;
+    // Appends wireframe-box line verts (pos+color, 6 floats each) for every SceneZone
+    // in the subtree, into the gizmo line buffer (drawn as a depth-off overlay).
+    void appendZoneWireframes(SceneObject *obj, QByteArray &out) const;
     // Collects every surface plane (world point + unit normal) for volumetric beam
     // soft-fade against opaque surfaces. Rebuilt each frame before collectBeams.
     void gatherSurfacePlanes(SceneObject *obj) const;

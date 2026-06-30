@@ -41,6 +41,9 @@
 #include "graph/node/fixture/fixturesubgraphnode.h"
 #include "graph/node/fixture/fixtureglobalsnode.h"
 #include "graph/node/fixture/allfixturesnode.h"
+#include "graph/node/fixture/selectfixturesnode.h"
+#include "graph/node/fixture/fixturegroupnode.h"
+#include "gui/panel/fixturegroupcollectionpanel.h"
 #include "graph/node/pixel/pixelgraph.h"
 #include "graph/node/pixel/pixelglobalsnode.h"
 
@@ -186,6 +189,7 @@ void PluginFactory::init()
     registerPluginPanel("photon.dmx-viewer",[](){return new DMXViewerPanel;});
     registerPluginPanel("photon.canvas-viewer",[](){return new CanvasViewerPanel;});
     registerPluginPanel("photon.tag-collection",[](){return new TagCollectionPanel;});
+    registerPluginPanel("photon.fixture-group-collection",[](){return new FixtureGroupCollectionPanel;});
     registerPluginPanel("photon.pixellayout-collection",[](){return new PixelLayoutCollectionPanel;});
 
     registerNode(FixtureWriterNode::info());
@@ -210,6 +214,8 @@ void PluginFactory::init()
     registerNode(FixtureSubGraphNode::info());
     registerNode(FixtureGlobalsNode::info());
     registerNode(AllFixturesNode::info());
+    registerNode(SelectFixturesNode::info());
+    registerNode(FixtureGroupNode::info());
     registerNode(PixelGlobalsNode::info());
     registerNode(PixelGraph::info());
 

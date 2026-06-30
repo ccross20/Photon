@@ -2,10 +2,19 @@
 #include "rhigizmo.h"
 #include "rhicamera.h"
 #include "scene/sceneobject.h"
+#include "scene/scenezone.h"
 
 namespace photon {
 
 namespace {
+
+SceneZone *asZone(SceneObject *o)
+{
+    return (o && o->typeId() == "zone") ? static_cast<SceneZone *>(o) : nullptr;
+}
+
+float comp(const QVector3D &v, int i) { return i == 0 ? v.x() : i == 1 ? v.y() : v.z(); }
+void setComp(QVector3D &v, int i, float val) { if (i == 0) v.setX(val); else if (i == 1) v.setY(val); else v.setZ(val); }
 
 constexpr float kPi = 3.14159265358979323846f;
 
@@ -42,6 +51,17 @@ void pushSeg(QByteArray &b, const QVector3D &a, const QVector3D &c, const QVecto
 {
     pushVertex(b, a, col);
     pushVertex(b, c, col);
+}
+
+// A small axis-aligned wireframe cube marker centered at c (half-extent h).
+void pushBox(QByteArray &b, const QVector3D &c, float h, const QVector3D &col)
+{
+    QVector3D corner[8];
+    for (int i = 0; i < 8; ++i)
+        corner[i] = c + QVector3D((i & 4) ? h : -h, (i & 2) ? h : -h, (i & 1) ? h : -h);
+    for (int a = 0; a < 8; ++a)
+        for (int d : {1, 2, 4})
+            if (a < (a ^ d)) pushSeg(b, corner[a], corner[a ^ d], col);
 }
 
 // Closest distance between the ray (O,D) and the axis line (A0 + s*Adir), plus the
@@ -143,6 +163,20 @@ void RhiGizmo::buildLines(const RhiCamera &cam, QByteArray &out) const
             pushSeg(out, c2, c3, col);
             pushSeg(out, c3, c0, col);
         }
+    } else if (m_mode == Scale) {
+        // Per-axis size handles for a zone box (symmetric scaling about the center).
+        SceneZone *zone = asZone(m_target);
+        if (!zone)
+            return;
+        const QVector3D sz = zone->size();
+        const QMatrix4x4 gm = m_target->globalMatrix();
+        for (int i = 0; i < 3; ++i) {
+            const QVector3D ax = QVector3D(gm(0, i), gm(1, i), gm(2, i)).normalized();
+            const QVector3D handle = center + ax * (comp(sz, i) * 0.5f);
+            const QVector3D col = (m_activeAxis == i) ? kActive : kColor[i];
+            pushSeg(out, center, handle, col);
+            pushBox(out, handle, scale * 0.05f, col);
+        }
     } else { // Rotate rings
         const int seg = 64;
         for (int i = 0; i < 3; ++i) {
@@ -220,6 +254,37 @@ bool RhiGizmo::beginDrag(const QVector3D &O, const QVector3D &D, const RhiCamera
         return false;
     }
 
+    if (m_mode == Scale) {
+        SceneZone *zone = asZone(m_target);
+        if (!zone)
+            return false;
+        const QVector3D sz = zone->size();
+        const QMatrix4x4 gm = m_target->globalMatrix();
+        float bestDist = scale * 0.12f;
+        int bestAxis = -1;
+        float bestS = 0.0f;
+        for (int i = 0; i < 3; ++i) {
+            const QVector3D ax = QVector3D(gm(0, i), gm(1, i), gm(2, i)).normalized();
+            float dist, s;
+            closestAxisParam(O, D, center, ax, dist, s);
+            const float half = comp(sz, i) * 0.5f;
+            if (dist < bestDist && s > scale * 0.05f && s < half + scale) {
+                bestDist = dist;
+                bestAxis = i;
+                bestS = s;
+            }
+        }
+        if (bestAxis < 0)
+            return false;
+        m_activeAxis  = bestAxis;
+        m_grabCenter  = center;
+        m_dragAxisDir = QVector3D(gm(0, bestAxis), gm(1, bestAxis), gm(2, bestAxis)).normalized();
+        m_startParam  = bestS;
+        m_startSize   = sz;
+        m_dragging    = true;
+        return true;
+    }
+
     // Rotate
     float bestErr = scale * 0.10f;
     int bestAxis = -1;
@@ -256,6 +321,20 @@ void RhiGizmo::updateDrag(const QVector3D &O, const QVector3D &D)
 {
     if (!m_dragging || !m_target || m_activeAxis < 0)
         return;
+
+    if (m_mode == Scale) {
+        SceneZone *zone = asZone(m_target);
+        if (!zone)
+            return;
+        float dist, s;
+        closestAxisParam(O, D, m_grabCenter, m_dragAxisDir, dist, s);
+        const float startHalf = comp(m_startSize, m_activeAxis) * 0.5f;
+        const float newHalf = qMax(0.05f, startHalf + (s - m_startParam));
+        QVector3D ns = m_startSize;
+        setComp(ns, m_activeAxis, newHalf * 2.0f);   // symmetric: center stays put
+        zone->setSize(ns);
+        return;
+    }
 
     if (m_mode == Translate) {
         if (m_activeAxis >= 3) {

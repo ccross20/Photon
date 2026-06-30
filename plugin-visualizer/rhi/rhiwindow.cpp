@@ -304,6 +304,7 @@ void RhiWindow::keyPressEvent(QKeyEvent *event)
     switch (event->key()) {
     case Qt::Key_W: setGizmoMode(RhiGizmo::Translate); break;
     case Qt::Key_E: setGizmoMode(RhiGizmo::Rotate);    break;
+    case Qt::Key_R: setGizmoMode(RhiGizmo::Scale);     break;
     case Qt::Key_Q: setGizmoMode(RhiGizmo::None);      break;
     case Qt::Key_Escape:
         m_renderer->setSelection(nullptr);

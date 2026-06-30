@@ -3,6 +3,7 @@
 #include "scenegroup.h"
 #include "truss.h"
 #include "scenesurface.h"
+#include "scenezone.h"
 #include "pixel/pixelstrip.h"
 #include "scene/scenearrow.h"
 
@@ -24,6 +25,8 @@ SceneObject *SceneFactory::createObject(const QByteArray &id)
         return new Truss();
     if(id == "surface")
         return new SceneSurface();
+    if(id == "zone")
+        return new SceneZone();
     if(id == "pixelstrip")
         return new PixelStrip();
     if(id == "arrow")

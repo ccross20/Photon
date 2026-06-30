@@ -94,6 +94,12 @@ set(PROJECT_SOURCES
         fixture/fixturechannel.cpp
         fixture/fixturecollection.h
         fixture/fixturecollection.cpp
+        fixture/fixturequery.h
+        fixture/fixturequery.cpp
+        fixture/fixturegroup.h
+        fixture/fixturegroup.cpp
+        scene/scenezone.h
+        scene/scenezone.cpp
         fixture/fixtureeditorwidget.h
         fixture/fixtureeditorwidget.cpp
         fixture/fixturemask.h
@@ -442,6 +448,7 @@ add_library(photon-core SHARED ${PROJECT_SOURCES}
     state/statecollection.h state/statecollection.cpp
     tag/tagcollection.h tag/tagcollection.cpp
     gui/panel/tagcollectionpanel.h gui/panel/tagcollectionpanel.cpp
+    gui/panel/fixturegroupcollectionpanel.h gui/panel/fixturegroupcollectionpanel_p.h gui/panel/fixturegroupcollectionpanel.cpp
     gui/panel/tagcollectionpanel_p.h
     gui/tagpicker.h gui/tagpicker.cpp
     gui/tageditwidget.h gui/tageditwidget.cpp
@@ -493,6 +500,8 @@ add_library(photon-core SHARED ${PROJECT_SOURCES}
     graph/node/writedmxchannelnode.h graph/node/writedmxchannelnode.cpp
     graph/node/fixture/fixturetreeselection.h graph/node/fixture/fixturetreeselection.cpp
     graph/node/fixture/allfixturesnode.h graph/node/fixture/allfixturesnode.cpp
+    graph/node/fixture/selectfixturesnode.h graph/node/fixture/selectfixturesnode.cpp
+    graph/node/fixture/fixturegroupnode.h graph/node/fixture/fixturegroupnode.cpp
     sequence/baseeffectparent.h
     surface/surfaceaction.h surface/surfaceaction.cpp
     surface/surfaceaction_p.h

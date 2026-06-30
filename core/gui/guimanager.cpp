@@ -68,6 +68,7 @@ void GuiManager::Impl::createAppWindow()
     windowMenu->addAction("Surfaces", [](){photonApp->gui()->createFloatingPanel("photon.surface-collection");});
     windowMenu->addAction("Canvas Viewer", [](){photonApp->gui()->createFloatingPanel("photon.canvas-viewer");});
     windowMenu->addAction("Tags", [](){photonApp->gui()->createFloatingPanel("photon.tag-collection");});
+    windowMenu->addAction("Fixture Groups", [](){photonApp->gui()->createFloatingPanel("photon.fixture-group-collection");});
     menubar->addMenu(windowMenu);
 
     Panel *panel1 = createPanel("photon.bus");

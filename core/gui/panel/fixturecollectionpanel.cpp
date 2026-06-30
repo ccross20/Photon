@@ -11,6 +11,7 @@
 #include "scene/scenegroup.h"
 #include "scene/truss.h"
 #include "scene/scenesurface.h"
+#include "scene/scenezone.h"
 #include "pixel/pixelstrip.h"
 #include "scene/sceneiterator.h"
 #include "scene/scenearrow.h"
@@ -91,6 +92,7 @@ void FixtureCollectionPanel::addClicked()
     menu.addAction("Arrow",[this](){addArrow();});
     menu.addAction("Wall",[this](){addWall();});
     menu.addAction("Floor",[this](){addFloor();});
+    menu.addAction("Zone",[this](){addZone();});
 
     menu.exec(m_impl->addButton->mapToGlobal(m_impl->addButton->rect().bottomLeft()));
 }
@@ -215,6 +217,15 @@ void FixtureCollectionPanel::addFloor()
     floor->setRotation(QVector3D(-90.0f, 0.0f, 0.0f));
     floor->setPosition(QVector3D(0.0f, 0.0f, 0.0f));
     floor->setParentSceneObject(photonApp->project()->sceneRoot());
+}
+
+void FixtureCollectionPanel::addZone()
+{
+    auto zone = new SceneZone;
+    zone->setName("Zone");
+    zone->setSize(QVector3D(4.0f, 4.0f, 4.0f));
+    zone->setPosition(QVector3D(0.0f, 2.0f, 0.0f));
+    zone->setParentSceneObject(photonApp->project()->sceneRoot());
 }
 
 void FixtureCollectionPanel::addLightStrip()

@@ -21,7 +21,7 @@ class RhiCamera;
 class RhiGizmo
 {
 public:
-    enum Mode  { None, Translate, Rotate };
+    enum Mode  { None, Translate, Rotate, Scale };
     enum Space { Global, Local };
 
     void setMode(Mode m)   { if (!m_dragging) m_mode  = m; }
@@ -62,6 +62,9 @@ private:
     QVector3D  m_dragAxisDir;  // axis dir (single-axis) or plane normal (plane handle)
     float      m_startParam = 0.0f;
     QMatrix4x4 m_parentInv;
+
+    // Scale drag state (zones): per-axis size handles, symmetric about the center.
+    QVector3D   m_startSize;
 
     // Rotate drag state.
     QVector3D   m_center;

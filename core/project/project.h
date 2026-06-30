@@ -23,6 +23,7 @@ public:
     SceneObject *sceneRoot() const;
     SceneManager *scene() const;
     TagCollection *tags() const;
+    FixtureGroupCollection *groups() const;
     SurfaceCollection *surfaces() const;
 
     SceneObject *selectedSceneObject() const;
