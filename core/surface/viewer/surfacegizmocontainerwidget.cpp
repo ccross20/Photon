@@ -41,10 +41,19 @@ SurfaceGizmoContainerWidget::SurfaceGizmoContainerWidget(SurfaceGizmoContainer *
 
         connect(addButton, &QPushButton::clicked, [container, addButton](){
 
+            // Drop new gizmos in a cascading grid so they don't stack at 0,0
+            // until the QML designer lets them be dragged into place.
+            auto place = [container](SurfaceGizmo *gizmo){
+                const int n = container->gizmos().size();
+                gizmo->setPropertyValue("x", 20.0 + (n % 4) * 180.0);
+                gizmo->setPropertyValue("y", 20.0 + (n / 4) * 90.0);
+                container->addGizmo(gizmo);
+            };
+
             QMenu menu;
-            menu.addAction("Toggle",[container](){container->addGizmo(new ToggleGizmo);});
-            menu.addAction("Palette",[container](){container->addGizmo(new PaletteGizmo);});
-            menu.addAction("Slider",[container](){container->addGizmo(new SliderGizmo);});
+            menu.addAction("Toggle",[place](){place(new ToggleGizmo);});
+            menu.addAction("Palette",[place](){place(new PaletteGizmo);});
+            menu.addAction("Slider",[place](){place(new SliderGizmo);});
 
             menu.exec(addButton->mapToGlobal(addButton->rect().bottomLeft()));
 

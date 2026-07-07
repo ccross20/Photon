@@ -16,6 +16,15 @@ SurfaceGizmo::SurfaceGizmo(QByteArray t_type, QObject *parent)
 {
     m_impl->type = t_type;
     m_impl->uniqueId = QUuid::createUuid().toString().toLatin1();
+
+    // Free-form layout geometry, common to every gizmo. Tagged "layout" so the
+    // inspector can group/separate it from gizmo-specific config later.
+    const QVariantHash layout{{"category", "layout"}};
+    addProperty("x",        "X",        GizmoProperty::Number, 20.0,  layout);
+    addProperty("y",        "Y",        GizmoProperty::Number, 20.0,  layout);
+    addProperty("width",    "Width",    GizmoProperty::Number, 160.0, layout);
+    addProperty("height",   "Height",   GizmoProperty::Number, 60.0,  layout);
+    addProperty("rotation", "Rotation", GizmoProperty::Number, 0.0,   layout);
 }
 
 SurfaceGizmo::~SurfaceGizmo()
