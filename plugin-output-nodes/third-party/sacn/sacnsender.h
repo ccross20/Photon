@@ -18,6 +18,8 @@
 
 #include <Qt>
 #include <QMutex>
+#include <QHash>
+#include <QString>
 #include <vector>
 #include <map>
 #include "streamingacn.h"
@@ -301,7 +303,10 @@ private slots:
 private:
     CStreamServer(QNetworkInterface);
     virtual ~CStreamServer();
-    static CStreamServer *m_instance;
+    // One instance per interface (keyed by QNetworkInterface::name()) so each NIC gets
+    // its own bound TX socket. Was a single global instance locked to the first
+    // interface used, which ignored later interface changes.
+    static QHash<QString, CStreamServer*> m_instances;
 
     sACNTxSocket * m_sendsock;  //The actual socket used for sending
     QThread *m_thread;

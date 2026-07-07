@@ -1,7 +1,9 @@
 #include <QNetworkInterface>
+#include <QNetworkAddressEntry>
+#include <QAbstractSocket>
 #include "sacntransmitnode.h"
 #include "graph/parameter/dmxmatrixparameter.h"
-#include "model/parameter/optionparameter.h"
+#include "model/parameter/stringoptionparameter.h"
 #include "model/parameter/integerparameter.h"
 #include "streamingacn.h"
 #include "sacnsender.h"
@@ -17,7 +19,7 @@ class SACNTransmitNode::Impl
 public:
     void initialize();
     DMXMatrixParameter *dmxParam;
-    keira::OptionParameter *networkParam;
+    keira::StringOptionParameter *networkParam;
     keira::IntegerParameter *initParam;
     QVector<sACNManager::tSender> senders;
     bool isInitialized = false;
@@ -25,26 +27,30 @@ public:
 
 void SACNTransmitNode::Impl::initialize()
 {
-    auto interfaces = QNetworkInterface::allInterfaces();
+    // Resolve the interface by NAME against the CURRENT system state. Selecting by
+    // index into allInterfaces() was unstable: plugging in the USB-NIC or WiFi
+    // connecting reorders/resizes the list, so the stored index pointed at a different
+    // adapter (e.g. WiFi) than the label showed, and sACN went out the wrong link.
+    const QString ifaceName = networkParam->value().toString();
+    QNetworkInterface iface = QNetworkInterface::interfaceFromName(ifaceName);
+    if(!iface.isValid())
+    {
+        qWarning() << "sACN Transmit: network interface not found:" << ifaceName
+                   << "- leaving uninitialized (will retry).";
+        return;   // stay uninitialized so a later evaluate retries once the NIC exists
+    }
+
     int counter = 1;
     for(auto it = senders.begin(); it!= senders.end(); ++it)
     {
-
-        qDebug() << "Create universe" << counter;
+        qDebug() << "Create universe" << counter << "on interface" << iface.humanReadableName();
         auto sender = *it;
         sender->setSlotCount(512);
         sender->setName("Photon" + QString::number(counter));
         sender->setUniverse(counter++);
-
-        //if(sender->isSending())
-        //sender->stopSending();
-
-
-        sender->setNetworkInterface(interfaces[networkParam->value().toInt()]);
+        sender->setNetworkInterface(iface);
         sender->startSending();
     }
-
-
 
     isInitialized = true;
 }
@@ -80,13 +86,24 @@ void SACNTransmitNode::createParameters()
     m_impl->dmxParam = new DMXMatrixParameter(InputDMX,"DMX Data", DMXMatrix());
     addParameter(m_impl->dmxParam);
 
-    QStringList interfaces;
-    for(const auto &ni : QNetworkInterface::allInterfaces())
-    {
-        interfaces << ni.humanReadableName();
-    }
-
-    m_impl->networkParam = new keira::OptionParameter(Network,"Network",interfaces,0);
+    // Network adapter selection. Stored value is the interface's stable name() (not an
+    // index); the dropdown is rebuilt live from the current adapters, showing the
+    // friendly humanReadableName. Only up, non-loopback, IPv4-capable NICs are listed.
+    m_impl->networkParam = new keira::StringOptionParameter(Network,"Network", {}, 0);
+    m_impl->networkParam->setOptionLambda([](){
+        QVector<std::pair<QString,QString>> opts;
+        for(const auto &ni : QNetworkInterface::allInterfaces())
+        {
+            if(!ni.flags().testFlag(QNetworkInterface::IsUp)) continue;
+            if(ni.flags().testFlag(QNetworkInterface::IsLoopBack)) continue;
+            bool hasV4 = false;
+            for(const auto &entry : ni.addressEntries())
+                if(entry.ip().protocol() == QAbstractSocket::IPv4Protocol) { hasV4 = true; break; }
+            if(!hasV4) continue;
+            opts.append(std::pair<QString,QString>(ni.humanReadableName(), ni.name()));
+        }
+        return opts;
+    });
     addParameter(m_impl->networkParam);
 
     m_impl->initParam = new keira::IntegerParameter("init","Initialize", 0);

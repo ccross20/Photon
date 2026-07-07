@@ -113,11 +113,30 @@ void DMXViewerCells::mouseMoveEvent(QMouseEvent *t_event)
 {
     QWidget::mouseMoveEvent(t_event);
 
-    QPoint pt = t_event->pos() - QPoint(m_impl->margin, m_impl->margin);
+    const int colStride = m_impl->cellWidth + m_impl->spacing;
+    const int rowStride = m_impl->cellHeight + m_impl->spacing;
+    const QPoint pt = t_event->pos() - QPoint(m_impl->margin, m_impl->margin);
 
-    int column = pt.x() / (m_impl->cellWidth + m_impl->spacing);
-    int row = pt.y() / (m_impl->cellHeight + m_impl->spacing);
-    int columnsPerRow = std::floor(width() / (m_impl->cellWidth + m_impl->spacing));
+    // Columns per row must match the paint layout: it draws a cell then wraps once the
+    // next x would exceed width()-cellWidth. Using a different count (e.g. width/stride)
+    // makes the hovered cell drift from the cursor on every row past the first.
+    int columnsPerRow = (width() - m_impl->cellWidth - m_impl->margin) / colStride + 1;
+    if(columnsPerRow < 1)
+        columnsPerRow = 1;
+
+    if(pt.x() < 0 || pt.y() < 0)
+    {
+        m_impl->hoverCell(-1);
+        return;
+    }
+
+    const int column = pt.x() / colStride;
+    const int row = pt.y() / rowStride;
+    if(column >= columnsPerRow)   // in the right-edge gutter, not over a cell
+    {
+        m_impl->hoverCell(-1);
+        return;
+    }
 
     m_impl->hoverCell(row * columnsPerRow + column);
 }

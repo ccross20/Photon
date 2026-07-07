@@ -309,20 +309,25 @@ void sACNSentUniverse::doTimeout()
     qDebug() << "Source " << this->name() << " timeout";
 }
 
-CStreamServer *CStreamServer::m_instance = Q_NULLPTR;
+QHash<QString, CStreamServer*> CStreamServer::m_instances;
 
 CStreamServer *CStreamServer::getInstance(QNetworkInterface t_interface)
 {
-    if(!m_instance)
-        m_instance = new CStreamServer(t_interface);
-    return m_instance;
+    // One server (and bound TX socket) per interface. Keying by interface name means
+    // selecting a different NIC actually binds to it, instead of reusing a single
+    // instance locked to whichever interface was used first.
+    const QString key = t_interface.name();
+    auto it = m_instances.find(key);
+    if(it == m_instances.end())
+        it = m_instances.insert(key, new CStreamServer(t_interface));
+    return it.value();
 }
 
 void CStreamServer::shutdown()
 {
-    if(m_instance)
-        m_instance->deleteLater();
-    m_instance = Q_NULLPTR;
+    for(CStreamServer *server : m_instances)
+        server->deleteLater();
+    m_instances.clear();
 }
 
 CStreamServer::CStreamServer(QNetworkInterface t_interface) :
