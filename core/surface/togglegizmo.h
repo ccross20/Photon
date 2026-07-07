@@ -34,20 +34,18 @@ public:
     double pressTime() const;
     double timeSincePress() const;
 
+    QVector<GizmoOutput> outputs() const override;
+    QVariant outputValue(const QByteArray &portId) const override;
+
     SurfaceGizmoWidget *createWidget(SurfaceMode mode) override;
 
     void readFromJson(const QJsonObject &, const LoadContext &) override;
     void writeToJson(QJsonObject &) const override;
 
 private:
-    double m_pressTime;
+    // Runtime interaction state (not part of the property model).
+    double m_pressTime = 0;
     bool m_isPressed = false;
-    bool m_isSticky = false;
-    bool m_isRadio = false;
-    QString m_text = "Toggle";
-    QColor m_offColor = Qt::white;
-    QColor m_onColor = Qt::green;
-
 };
 
 } // namespace photon

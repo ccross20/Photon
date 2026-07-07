@@ -5,18 +5,18 @@ namespace photon {
 const QByteArray PaletteGizmo::GizmoId = "Palette";
 
 PaletteGizmo::PaletteGizmo():SurfaceGizmo(GizmoId) {
+    addProperty("isSticky", "Sticky", GizmoProperty::Boolean, false);
     m_palette = {Qt::red, Qt::green, Qt::blue};
 }
 
 bool PaletteGizmo::isSticky() const
 {
-    return m_isSticky;
+    return propertyValue("isSticky").toBool();
 }
 
 void PaletteGizmo::setIsSticky(bool t_value)
 {
-    m_isSticky = t_value;
-    markChanged();
+    setPropertyValue("isSticky", t_value);
 }
 
 bool PaletteGizmo::isPressed() const
@@ -58,6 +58,23 @@ void PaletteGizmo::selectColor(int t_index)
     markChanged();
 }
 
+QVector<SurfaceGizmo::GizmoOutput> PaletteGizmo::outputs() const
+{
+    return {
+        {"color", "Color", GizmoProperty::Color},
+        {"index", "Index", GizmoProperty::Number}
+    };
+}
+
+QVariant PaletteGizmo::outputValue(const QByteArray &t_portId) const
+{
+    if(t_portId == "color")
+        return selectedColor();
+    if(t_portId == "index")
+        return selectedColorIndex();
+    return {};
+}
+
 SurfaceGizmoWidget *PaletteGizmo::createWidget(SurfaceMode mode)
 {
     auto widget = new PaletteGizmoWidget(this, mode);
@@ -68,7 +85,6 @@ SurfaceGizmoWidget *PaletteGizmo::createWidget(SurfaceMode mode)
 void PaletteGizmo::readFromJson(const QJsonObject &t_json, const LoadContext &t_context)
 {
     SurfaceGizmo::readFromJson(t_json, t_context);
-    m_isSticky = t_json.value("isSticky").toBool();
     m_isPressed = t_json.value("isPressed").toBool();
 
     m_palette.clear();
@@ -82,14 +98,13 @@ void PaletteGizmo::readFromJson(const QJsonObject &t_json, const LoadContext &t_
 void PaletteGizmo::writeToJson(QJsonObject &t_json) const
 {
     SurfaceGizmo::writeToJson(t_json);
-    t_json.insert("isSticky", m_isSticky);
 
     QJsonArray colorArray;
     for(auto color : m_palette)
         colorArray.append(color.name());
     t_json.insert("colors", colorArray);
 
-    if(m_isSticky)
+    if(isSticky())
         t_json.insert("isPressed", m_isPressed);
 }
 

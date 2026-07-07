@@ -35,4 +35,8 @@ target_link_libraries(keira-test PRIVATE Qt${QT_VERSION_MAJOR}::Core)
 target_link_libraries(keira-test PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)
 target_link_libraries(keira-test PRIVATE Qt${QT_VERSION_MAJOR}::Gui)
 
+# Throwaway eval micro-benchmark
+add_executable(keira-bench evalbenchmark.cpp)
+target_link_libraries(keira-bench PRIVATE keira Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Widgets Qt${QT_VERSION_MAJOR}::Gui)
+
 

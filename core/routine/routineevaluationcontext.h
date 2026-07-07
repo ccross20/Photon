@@ -1,6 +1,7 @@
 #ifndef ROUTINEEVALUATIONCONTEXT_H
 #define ROUTINEEVALUATIONCONTEXT_H
 
+#include <QHash>
 #include "photon-global.h"
 #include "data/dmxmatrix.h"
 #include "model/node.h"
@@ -34,6 +35,7 @@ struct RoutineEvaluationContext : keira::EvaluationContext
         strength     = o.strength;
         fixtureIndex = o.fixtureIndex;
         timeOffset   = o.timeOffset;
+        gizmoValues  = o.gizmoValues;
     }
     DMXMatrix &dmxMatrix;
     DMXTimeMachine *timeMachine = nullptr;
@@ -51,6 +53,10 @@ struct RoutineEvaluationContext : keira::EvaluationContext
     double strength = 1.0;
     int fixtureIndex = 0;
     double timeOffset = 0.0;
+
+    // Surface value bus: "<gizmoUniqueId>/<portId>" -> live value, published by
+    // SurfaceNode each frame and read by GizmoValueNode.
+    QHash<QByteArray, QVariant> gizmoValues;
 };
 
 }

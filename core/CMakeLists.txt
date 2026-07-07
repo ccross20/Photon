@@ -484,6 +484,7 @@ add_library(photon-core SHARED ${PROJECT_SOURCES}
     processcontext.h
     surface/surface_p.h
     surface/surfacegizmo.h surface/surfacegizmo.cpp
+    surface/gizmoproperty.h surface/gizmoproperty.cpp
     surface/fixturegizmo.h surface/fixturegizmo.cpp
     surface/surfacegizmo_p.h
     surface/viewer/surfacewidget.h surface/viewer/surfacewidget.cpp
@@ -535,6 +536,7 @@ add_library(photon-core SHARED ${PROJECT_SOURCES}
     surface/slidergizmo.h surface/slidergizmo.cpp
     surface/viewer/slidergizmowidget.h surface/viewer/slidergizmowidget.cpp
     graph/node/gizmo/slidergizmonode.h graph/node/gizmo/slidergizmonode.cpp
+    graph/node/gizmo/gizmovaluenode.h graph/node/gizmo/gizmovaluenode.cpp
     surface/viewer/slidergizmoeditor.h surface/viewer/slidergizmoeditor.cpp
     fixture/capability/prismrotationcapability.h fixture/capability/prismrotationcapability.cpp
     fixture/capability/prismcapability.h fixture/capability/prismcapability.cpp

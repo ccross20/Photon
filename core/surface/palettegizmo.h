@@ -24,6 +24,8 @@ public:
 
     const ColorPalette &palette() const{return m_palette;}
 
+    QVector<GizmoOutput> outputs() const override;
+    QVariant outputValue(const QByteArray &portId) const override;
 
     SurfaceGizmoWidget *createWidget(SurfaceMode mode) override;
 
@@ -34,7 +36,6 @@ public:
 private:
     ColorPalette m_palette;
     int m_selectedIndex = -1;
-    bool m_isSticky = false;
     bool m_isPressed = false;
 };
 

@@ -5,49 +5,63 @@ namespace photon {
 
 const QByteArray SliderGizmo::GizmoId = "Slider";
 
-SliderGizmo::SliderGizmo():SurfaceGizmo("Slider") {}
+SliderGizmo::SliderGizmo():SurfaceGizmo("Slider")
+{
+    addProperty("text", "Label",  GizmoProperty::Text,   QString("Slider"));
+    addProperty("min",  "Min",    GizmoProperty::Number, 0.0);
+    addProperty("max",  "Max",    GizmoProperty::Number, 1.0);
+    addProperty("value","Value",  GizmoProperty::Number, 0.0);
+}
 
 QString SliderGizmo::text() const
 {
-    return m_text;
+    return propertyValue("text").toString();
 }
 void SliderGizmo::setText(const QString &t_text)
 {
-    m_text = t_text;
-    markChanged();
+    setPropertyValue("text", t_text);
 }
 
 double SliderGizmo::minValue() const
 {
-    return m_min;
+    return propertyValue("min").toDouble();
 }
 
 void SliderGizmo::setMinValue(double t_value)
 {
-    m_min = t_value;
-    markChanged();
+    setPropertyValue("min", t_value);
 }
 
 double SliderGizmo::maxValue() const
 {
-    return m_max;
+    return propertyValue("max").toDouble();
 }
 
 void SliderGizmo::setMaxValue(double t_value)
 {
-    m_max = t_value;
-    markChanged();
+    setPropertyValue("max", t_value);
 }
 
 double SliderGizmo::value() const
 {
-    return m_value;
+    return propertyValue("value").toDouble();
 }
 
 void SliderGizmo::setValue(double t_value)
 {
-    m_value = t_value;
-    markChanged();
+    setPropertyValue("value", t_value);
+}
+
+QVector<SurfaceGizmo::GizmoOutput> SliderGizmo::outputs() const
+{
+    return { {"value", "Value", GizmoProperty::Number} };
+}
+
+QVariant SliderGizmo::outputValue(const QByteArray &t_portId) const
+{
+    if(t_portId == "value")
+        return value();
+    return {};
 }
 
 SurfaceGizmoWidget *SliderGizmo::createWidget(SurfaceMode mode)
@@ -55,25 +69,6 @@ SurfaceGizmoWidget *SliderGizmo::createWidget(SurfaceMode mode)
     auto widget = new SliderGizmoWidget(this, mode);
     connect(this, &SurfaceGizmo::gizmoUpdated, widget, &SurfaceGizmoWidget::updateGizmo);
     return widget;
-}
-
-void SliderGizmo::readFromJson(const QJsonObject &t_json, const LoadContext &t_context)
-{
-    SurfaceGizmo::readFromJson(t_json, t_context);
-
-    m_text = t_json.value("text").toString(m_text);
-    m_min = t_json.value("min").toDouble(m_min);
-    m_max = t_json.value("max").toDouble(m_max);
-    m_value = t_json.value("value").toDouble(m_value);
-}
-
-void SliderGizmo::writeToJson(QJsonObject &t_json) const
-{
-    SurfaceGizmo::writeToJson(t_json);
-    t_json.insert("min", m_min);
-    t_json.insert("max", m_max);
-    t_json.insert("text", m_text);
-    t_json.insert("value", m_value);
 }
 
 } // namespace photon

@@ -24,17 +24,10 @@ public:
     double value() const;
     void setValue(double);
 
+    QVector<GizmoOutput> outputs() const override;
+    QVariant outputValue(const QByteArray &portId) const override;
+
     SurfaceGizmoWidget *createWidget(SurfaceMode mode) override;
-
-    void readFromJson(const QJsonObject &, const LoadContext &) override;
-    void writeToJson(QJsonObject &) const override;
-
-private:
-    QString m_text = "Slider";
-    double m_min = 0;
-    double m_max = 1;
-    double m_value = 0;
-
 };
 
 } // namespace photon

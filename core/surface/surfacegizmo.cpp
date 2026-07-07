@@ -1,3 +1,4 @@
+#include <QJsonArray>
 #include "surfacegizmo_p.h"
 
 namespace photon {
@@ -19,7 +20,43 @@ SurfaceGizmo::SurfaceGizmo(QByteArray t_type, QObject *parent)
 
 SurfaceGizmo::~SurfaceGizmo()
 {
+    qDeleteAll(m_impl->properties);
     delete m_impl;
+}
+
+GizmoProperty *SurfaceGizmo::addProperty(const QByteArray &t_id, const QString &t_name, GizmoProperty::Type t_type,
+                                         const QVariant &t_default, const QVariantHash &t_metadata)
+{
+    auto *prop = new GizmoProperty(t_id, t_name, t_type, t_default, t_metadata);
+    m_impl->properties.append(prop);
+    m_impl->propertyById.insert(t_id, prop);
+    return prop;
+}
+
+GizmoProperty *SurfaceGizmo::property(const QByteArray &t_id) const
+{
+    return m_impl->propertyById.value(t_id, nullptr);
+}
+
+const QVector<GizmoProperty*> &SurfaceGizmo::properties() const
+{
+    return m_impl->properties;
+}
+
+QVariant SurfaceGizmo::propertyValue(const QByteArray &t_id) const
+{
+    auto *prop = property(t_id);
+    return prop ? prop->value() : QVariant();
+}
+
+void SurfaceGizmo::setPropertyValue(const QByteArray &t_id, const QVariant &t_value)
+{
+    auto *prop = property(t_id);
+    if(!prop || prop->value() == t_value)
+        return;
+    prop->setValue(t_value);
+    emit propertyChanged(t_id);
+    markChanged();
 }
 
 
@@ -85,6 +122,16 @@ void SurfaceGizmo::markChanged()
     emit gizmoUpdated();
 }
 
+QVector<SurfaceGizmo::GizmoOutput> SurfaceGizmo::outputs() const
+{
+    return {};
+}
+
+QVariant SurfaceGizmo::outputValue(const QByteArray &) const
+{
+    return {};
+}
+
 void SurfaceGizmo::processChannels(ProcessContext &t_context)
 {
 
@@ -106,7 +153,13 @@ void SurfaceGizmo::readFromJson(const QJsonObject &t_json, const LoadContext &t_
     if(m_impl->uniqueId.isEmpty())
         m_impl->uniqueId = QUuid::createUuid().toString().toLatin1();
 
-    qDebug() << "Load " << m_impl->uniqueId;
+    const QJsonArray propArray = t_json.value("properties").toArray();
+    for(const auto &propValue : propArray)
+    {
+        const QJsonObject propObj = propValue.toObject();
+        if(auto *prop = property(propObj.value("id").toString().toLatin1()))
+            prop->readFromJson(propObj);
+    }
 }
 
 void SurfaceGizmo::writeToJson(QJsonObject &t_json) const
@@ -115,6 +168,15 @@ void SurfaceGizmo::writeToJson(QJsonObject &t_json) const
     t_json.insert("uniqueId", QString(m_impl->uniqueId));
     t_json.insert("id", QString(m_impl->id));
     t_json.insert("name", QString(m_impl->name));
+
+    QJsonArray propArray;
+    for(auto *prop : m_impl->properties)
+    {
+        QJsonObject propObj;
+        prop->writeToJson(propObj);
+        propArray.append(propObj);
+    }
+    t_json.insert("properties", propArray);
 }
 
 

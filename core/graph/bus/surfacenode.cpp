@@ -3,6 +3,7 @@
 #include "graph/parameter/dmxmatrixparameter.h"
 #include "model/parameter/buttonparameter.h"
 #include "surface/surface.h"
+#include "surface/surfacegizmo.h"
 #include "surface/surfacecollection.h"
 #include "photoncore.h"
 #include "routine/routineevaluationcontext.h"
@@ -67,6 +68,15 @@ void SurfaceNode::evaluate(keira::EvaluationContext *t_context) const
 {
     auto context = static_cast<RoutineEvaluationContext*>(t_context);
     context->surface = m_impl->surface;
+
+    // Publish every gizmo's live outputs onto the value bus so GizmoValueNodes
+    // downstream can read them by "<uniqueId>/<portId>" without type coupling.
+    for(auto *gizmo : m_impl->surface->gizmos())
+    {
+        const QByteArray prefix = gizmo->uniqueId() + "/";
+        for(const auto &output : gizmo->outputs())
+            context->gizmoValues.insert(prefix + output.id, gizmo->outputValue(output.id));
+    }
 
     DMXMatrix matrix = m_impl->dmxInParam->value().value<DMXMatrix>();
     ProcessContext processContext{matrix};

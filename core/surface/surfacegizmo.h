@@ -3,6 +3,7 @@
 
 #include <QObject>
 #include "photon-global.h"
+#include "gizmoproperty.h"
 
 namespace photon {
 
@@ -21,6 +22,15 @@ public:
         double time;
     };
 
+    // Describes a value this gizmo publishes onto the surface value bus, read by
+    // GizmoValueNode in the graph. Decouples the graph from concrete gizmo types.
+    struct GizmoOutput
+    {
+        QByteArray id;
+        QString name;
+        GizmoProperty::Type type = GizmoProperty::Number;
+    };
+
 
 
     explicit SurfaceGizmo(QByteArray type, QObject *parent = nullptr);
@@ -33,6 +43,21 @@ public:
     void addHistoryEvent(const QByteArray &id, const QVariant &value = QVariant());
     GizmoHistoryEvent lastHistoryEvent() const;
     QVector<GizmoHistoryEvent> historyEvents() const;
+
+    // Data-driven property model. Concrete gizmos register their persisted,
+    // editable configuration here; the base handles serialization and the
+    // inspector/QML layers read the definitions generically.
+    GizmoProperty *addProperty(const QByteArray &id, const QString &name, GizmoProperty::Type type,
+                               const QVariant &defaultValue, const QVariantHash &metadata = {});
+    GizmoProperty *property(const QByteArray &id) const;
+    const QVector<GizmoProperty*> &properties() const;
+    QVariant propertyValue(const QByteArray &id) const;
+    void setPropertyValue(const QByteArray &id, const QVariant &value);
+
+    // Value-bus outputs. Concrete gizmos override to expose their live values
+    // (a slider's position, a toggle's state, ...) to the graph.
+    virtual QVector<GizmoOutput> outputs() const;
+    virtual QVariant outputValue(const QByteArray &portId) const;
 
     virtual void processChannels(ProcessContext &);
 
@@ -49,6 +74,7 @@ protected:
 
 signals:
     void gizmoUpdated();
+    void propertyChanged(const QByteArray &id);
 
 private:
     class Impl;

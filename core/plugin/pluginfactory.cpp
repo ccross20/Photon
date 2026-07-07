@@ -38,6 +38,7 @@
 #include "graph/node/writedmxchannelnode.h"
 #include "graph/node/gizmo/togglegizmonode.h"
 #include "graph/node/gizmo/slidergizmonode.h"
+#include "graph/node/gizmo/gizmovaluenode.h"
 #include "graph/node/fixture/fixturesubgraphnode.h"
 #include "graph/node/fixture/fixtureglobalsnode.h"
 #include "graph/node/fixture/allfixturesnode.h"
@@ -211,6 +212,7 @@ void PluginFactory::init()
     registerNode(WriteDMXChannelNode::info());
     registerNode(ToggleGizmoNode::info());
     registerNode(SliderGizmoNode::info());
+    registerNode(GizmoValueNode::info());
     registerNode(FixtureSubGraphNode::info());
     registerNode(FixtureGlobalsNode::info());
     registerNode(AllFixturesNode::info());
