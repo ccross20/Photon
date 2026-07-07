@@ -89,6 +89,17 @@ void ToggleGizmo::setIsPressed(bool t_value)
         m_pressTime = QDateTime::currentMSecsSinceEpoch()/1000.0;
 }
 
+void ToggleGizmo::setActive(bool t_value)
+{
+    setIsPressed(t_value);
+    emit valuesChanged();
+}
+
+bool ToggleGizmo::isActive() const
+{
+    return isPressed();
+}
+
 QVector<SurfaceGizmo::GizmoOutput> ToggleGizmo::outputs() const
 {
     return { {"value", "State", GizmoProperty::Boolean} };

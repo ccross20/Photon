@@ -10,6 +10,10 @@ namespace photon {
 class PHOTONCORE_EXPORT SurfaceGizmo : public QObject
 {
     Q_OBJECT
+    // QML-facing surface. `values` is a reactive {propertyId: value} map so QML
+    // can bind e.g. `gizmo.values.value`; writes go through setPropValue().
+    Q_PROPERTY(QString gizmoType READ gizmoTypeString CONSTANT)
+    Q_PROPERTY(QVariantMap values READ valuesMap NOTIFY valuesChanged)
 public:
 
     const static QByteArray GizmoPressId;
@@ -54,6 +58,18 @@ public:
     QVariant propertyValue(const QByteArray &id) const;
     void setPropertyValue(const QByteArray &id, const QVariant &value);
 
+    // QML accessors.
+    QString gizmoTypeString() const;
+    QVariantMap valuesMap() const;
+    Q_INVOKABLE void setPropValue(const QString &id, const QVariant &value);
+
+    // Generic perform-mode interaction hooks, dispatched virtually so QML can
+    // drive any gizmo through the base meta-object. Concrete gizmos override.
+    Q_INVOKABLE virtual void setActive(bool) {}
+    Q_INVOKABLE virtual bool isActive() const { return false; }
+    Q_INVOKABLE virtual QVariantList swatchColors() const { return {}; }
+    Q_INVOKABLE virtual void selectSwatch(int) {}
+
     // Value-bus outputs. Concrete gizmos override to expose their live values
     // (a slider's position, a toggle's state, ...) to the graph.
     virtual QVector<GizmoOutput> outputs() const;
@@ -75,6 +91,7 @@ protected:
 signals:
     void gizmoUpdated();
     void propertyChanged(const QByteArray &id);
+    void valuesChanged();
 
 private:
     class Impl;

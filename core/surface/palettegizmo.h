@@ -27,6 +27,9 @@ public:
     QVector<GizmoOutput> outputs() const override;
     QVariant outputValue(const QByteArray &portId) const override;
 
+    QVariantList swatchColors() const override;
+    void selectSwatch(int) override;
+
     SurfaceGizmoWidget *createWidget(SurfaceMode mode) override;
 
     void readFromJson(const QJsonObject &, const LoadContext &) override;

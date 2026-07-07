@@ -37,6 +37,9 @@ public:
     QVector<GizmoOutput> outputs() const override;
     QVariant outputValue(const QByteArray &portId) const override;
 
+    void setActive(bool) override;
+    bool isActive() const override;
+
     SurfaceGizmoWidget *createWidget(SurfaceMode mode) override;
 
     void readFromJson(const QJsonObject &, const LoadContext &) override;

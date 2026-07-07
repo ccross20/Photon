@@ -13,6 +13,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(QT NAMES Qt6 COMPONENTS Widgets Network OpenGLWidgets)
 find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Widgets Network OpenGLWidgets)
+find_package(Qt6 REQUIRED COMPONENTS Quick Qml QuickWidgets)
 find_package(Qt6 REQUIRED COMPONENTS
     3DCore
     3DRender
@@ -485,8 +486,10 @@ add_library(photon-core SHARED ${PROJECT_SOURCES}
     surface/surface_p.h
     surface/surfacegizmo.h surface/surfacegizmo.cpp
     surface/gizmoproperty.h surface/gizmoproperty.cpp
+    surface/viewer/surfacequickview.h surface/viewer/surfacequickview.cpp
     surface/fixturegizmo.h surface/fixturegizmo.cpp
     surface/surfacegizmo_p.h
+    surfaceqml.qrc
     surface/viewer/surfacewidget.h surface/viewer/surfacewidget.cpp
     gui/panel/surfacepanel.h gui/panel/surfacepanel.cpp
     surface/surfacecollection.h surface/surfacecollection.cpp
@@ -554,6 +557,7 @@ target_include_directories(photon-core PUBLIC third-party/advanced-docking)
 
 target_link_libraries(photon-core PRIVATE keira)
 target_link_libraries(photon-core PRIVATE Qt6::Concurrent)
+target_link_libraries(photon-core PRIVATE Qt6::Quick Qt6::Qml Qt6::QuickWidgets)
 
 target_link_libraries(photon-core PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)
 target_link_libraries(photon-core PRIVATE

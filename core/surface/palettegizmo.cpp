@@ -58,6 +58,20 @@ void PaletteGizmo::selectColor(int t_index)
     markChanged();
 }
 
+QVariantList PaletteGizmo::swatchColors() const
+{
+    QVariantList list;
+    for(const auto &color : m_palette)
+        list.append(color.name(QColor::HexArgb));
+    return list;
+}
+
+void PaletteGizmo::selectSwatch(int t_index)
+{
+    selectColor(t_index);
+    emit valuesChanged();
+}
+
 QVector<SurfaceGizmo::GizmoOutput> PaletteGizmo::outputs() const
 {
     return {

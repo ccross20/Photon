@@ -56,7 +56,26 @@ void SurfaceGizmo::setPropertyValue(const QByteArray &t_id, const QVariant &t_va
         return;
     prop->setValue(t_value);
     emit propertyChanged(t_id);
+    emit valuesChanged();
     markChanged();
+}
+
+QString SurfaceGizmo::gizmoTypeString() const
+{
+    return QString::fromUtf8(m_impl->type);
+}
+
+QVariantMap SurfaceGizmo::valuesMap() const
+{
+    QVariantMap map;
+    for(auto *prop : m_impl->properties)
+        map.insert(QString::fromUtf8(prop->id()), prop->value());
+    return map;
+}
+
+void SurfaceGizmo::setPropValue(const QString &t_id, const QVariant &t_value)
+{
+    setPropertyValue(t_id.toUtf8(), t_value);
 }
 
 

@@ -1,0 +1,8 @@
+<RCC>
+    <qresource prefix="/qml/surface">
+        <file alias="SurfacePerform.qml">qml/surface/SurfacePerform.qml</file>
+        <file alias="SliderGizmo.qml">qml/surface/SliderGizmo.qml</file>
+        <file alias="ToggleGizmo.qml">qml/surface/ToggleGizmo.qml</file>
+        <file alias="PaletteGizmo.qml">qml/surface/PaletteGizmo.qml</file>
+    </qresource>
+</RCC>
