@@ -37,9 +37,16 @@ Rectangle {
         }
     }
 
+    Inspector {
+        id: inspector
+        anchors { top: toolbar.bottom; right: parent.right; bottom: parent.bottom }
+        width: 236
+        gizmo: root.selectedGizmo
+    }
+
     Item {
         id: canvasArea
-        anchors { top: toolbar.bottom; left: parent.left; right: parent.right; bottom: parent.bottom }
+        anchors { top: toolbar.bottom; left: parent.left; right: inspector.left; bottom: parent.bottom }
         clip: true
 
         // Alignment grid

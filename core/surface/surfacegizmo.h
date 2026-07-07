@@ -62,6 +62,9 @@ public:
     QString gizmoTypeString() const;
     QVariantMap valuesMap() const;
     Q_INVOKABLE void setPropValue(const QString &id, const QVariant &value);
+    // Property definitions for the inspector: [{id, name, type, category,
+    // metadata}], type as a string ("Number"/"Boolean"/"Text"/"Color"/...).
+    Q_INVOKABLE QVariantList propertyDefs() const;
 
     // Generic perform-mode interaction hooks, dispatched virtually so QML can
     // drive any gizmo through the base meta-object. Concrete gizmos override.

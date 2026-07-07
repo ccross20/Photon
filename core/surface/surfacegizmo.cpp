@@ -87,6 +87,36 @@ void SurfaceGizmo::setPropValue(const QString &t_id, const QVariant &t_value)
     setPropertyValue(t_id.toUtf8(), t_value);
 }
 
+static QString gizmoPropertyTypeName(GizmoProperty::Type t_type)
+{
+    switch(t_type)
+    {
+    case GizmoProperty::Number:  return "Number";
+    case GizmoProperty::Boolean: return "Boolean";
+    case GizmoProperty::Text:    return "Text";
+    case GizmoProperty::Color:   return "Color";
+    case GizmoProperty::Point:   return "Point";
+    case GizmoProperty::Options: return "Options";
+    }
+    return "Number";
+}
+
+QVariantList SurfaceGizmo::propertyDefs() const
+{
+    QVariantList defs;
+    for(auto *prop : m_impl->properties)
+    {
+        QVariantMap def;
+        def.insert("id", QString::fromUtf8(prop->id()));
+        def.insert("name", prop->name());
+        def.insert("type", gizmoPropertyTypeName(prop->type()));
+        def.insert("category", prop->metadata("category", "general"));
+        def.insert("metadata", prop->metadata());
+        defs.append(def);
+    }
+    return defs;
+}
+
 
 SurfaceGizmoWidget *SurfaceGizmo::createWidget(SurfaceMode mode)
 {

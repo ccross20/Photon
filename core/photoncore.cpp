@@ -3,6 +3,7 @@
 #include <QSettings>
 #include <QInputDialog>
 #include <QOpenGLContext>
+#include <QQuickWindow>
 #include "photoncore.h"
 #include "gui/guimanager.h"
 #include "plugin/pluginfactory.h"
@@ -76,6 +77,13 @@ PhotonCore::Impl::~Impl()
 PhotonCore::PhotonCore(int &argc, char **argv) : QApplication(argc, argv),
     m_impl(new Impl(this))
 {
+    // Pin Qt Quick to OpenGL to match the rest of the app (visualizer +
+    // shared GL contexts). On Windows Quick defaults to Direct3D 11, and the
+    // graphics-API mismatch forces the top-level window to be recreated the
+    // first time a QQuickWidget (surface view) appears, which flashes the
+    // whole window. Must run before the first QQuickWindow is created.
+    QQuickWindow::setGraphicsApi(QSGRendererInterface::OpenGL);
+
     qRegisterMetaType<TextureData>();
     connect(m_impl->resources,&ResourceManager::resourceAdded, this, &PhotonCore::resourceAdded);
     connect(m_impl->settings, &Settings::settingsChanged, this, &PhotonCore::settingsChanged);

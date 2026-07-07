@@ -6,6 +6,7 @@
 #include <QKeyEvent>
 #include <QMainWindow>
 #include <QToolBar>
+#include <QQuickWidget>
 #include "guimanager_p.h"
 #include "project/project.h"
 #include "photoncore.h"
@@ -182,6 +183,16 @@ void GuiManager::Impl::floatingWidgetCreated(ads::CFloatingDockContainer* Floati
 void GuiManager::Impl::launchInterface()
 {
     createAppWindow();
+
+    // Pre-warm Qt Quick before the window's first show so the top-level is
+    // created in composited (RHI backing-store) mode from the start. Otherwise
+    // the first QQuickWidget (a surface view) forces the whole window to be
+    // recreated, flashing it. 1x1 and lowered, so it's invisible.
+    auto *prewarm = new QQuickWidget(window);
+    prewarm->setSource(QUrl("qrc:/qml/surface/Prewarm.qml"));
+    prewarm->setFixedSize(1, 1);
+    prewarm->move(0, 0);
+    prewarm->lower();
 
     m_ext->restoreLayout();
 
