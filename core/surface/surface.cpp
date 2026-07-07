@@ -121,6 +121,7 @@ void Surface::addGizmoContainer(photon::SurfaceGizmoContainer *t_gizmo)
     m_impl->gizmos.append(t_gizmo);
 
     connect(t_gizmo, &SurfaceGizmoContainer::gizmoWasAdded,this, &Surface::surfaceWasModified);
+    connect(t_gizmo, &SurfaceGizmoContainer::gizmoWasRemoved,this, &Surface::surfaceWasModified);
 
     emit gizmoContainerWasAdded(t_gizmo, m_impl->gizmos.length()-1);
     emit surfaceWasModified();
@@ -188,6 +189,7 @@ void Surface::readFromJson(const QJsonObject &t_json, const LoadContext &t_conte
             m_impl->gizmos.append(c);
 
             connect(c, &SurfaceGizmoContainer::gizmoWasAdded,this, &Surface::surfaceWasModified);
+            connect(c, &SurfaceGizmoContainer::gizmoWasRemoved,this, &Surface::surfaceWasModified);
         }
     }
 

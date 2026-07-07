@@ -5,66 +5,32 @@
 #include <QButtonGroup>
 #include "surfacewidget.h"
 #include "surface/surface.h"
-#include "surface/surfacegizmocontainer.h"
-#include "surfacegraphwidget.h"
-#include "surfacegizmocontainerwidget.h"
 #include "surfacequickview.h"
-#include "util/utils.h"
 
 namespace photon {
 
 class SurfaceWidget::Impl
 {
 public:
-    Impl(SurfaceWidget *);
-    void buildLayout();
+    Impl(SurfaceWidget *t_facade):facade(t_facade){}
     SurfaceWidget *facade;
-    QWidget *surfaceContainer;
     QStackedWidget *stack = nullptr;
-    SurfaceQuickView *quickView = nullptr;
+    SurfaceQuickView *editView = nullptr;
+    SurfaceQuickView *performView = nullptr;
     Surface *surface = nullptr;
     SurfaceMode mode = Mode_Edit;
-    QVBoxLayout *vLayout = nullptr;
 };
-
-void SurfaceWidget::Impl::buildLayout()
-{
-    if(vLayout)
-        clearLayout(surfaceContainer->layout());
-    else
-    {
-        vLayout = new QVBoxLayout;
-        vLayout->setContentsMargins(0,0,0,0);
-        surfaceContainer->setLayout(vLayout);
-    }
-
-    for (auto container : surface->containers()) {
-        vLayout->addWidget(container->createWidget(mode));
-    }
-
-    QPushButton *emptyButton = new QPushButton("Add Container");
-    emptyButton->setMaximumHeight(10000);
-    connect(emptyButton, &QPushButton::clicked,surface, [this](){
-        surface->addGizmoContainer(new SurfaceGizmoContainer);
-    });
-    vLayout->addWidget(emptyButton);
-}
-
-SurfaceWidget::Impl::Impl(SurfaceWidget *t_facade):facade(t_facade)
-{
-    surfaceContainer = new QWidget;
-}
 
 SurfaceWidget::SurfaceWidget(QWidget *parent)
     : QWidget{parent},m_impl(new Impl(this))
 {
-    m_impl->quickView = new SurfaceQuickView;
+    m_impl->editView = new SurfaceQuickView(true);
+    m_impl->performView = new SurfaceQuickView(false);
 
     m_impl->stack = new QStackedWidget;
-    m_impl->stack->addWidget(m_impl->surfaceContainer); // index 0: edit
-    m_impl->stack->addWidget(m_impl->quickView);        // index 1: perform
+    m_impl->stack->addWidget(m_impl->editView);     // index 0: edit (QML designer)
+    m_impl->stack->addWidget(m_impl->performView);  // index 1: perform
 
-    // Mode toolbar
     auto *editButton = new QPushButton("Edit");
     auto *performButton = new QPushButton("Perform");
     editButton->setCheckable(true);
@@ -100,16 +66,9 @@ SurfaceWidget::~SurfaceWidget()
 
 void SurfaceWidget::setSurface(Surface *t_surface)
 {
-    if(m_impl->surface)
-    {
-        if(m_impl->surface == t_surface)
-            return;
-        disconnect(m_impl->surface, &Surface::surfaceWasModified, this, &SurfaceWidget::rebuildLayout);
-    }
     m_impl->surface = t_surface;
-    connect(m_impl->surface, &Surface::surfaceWasModified, this, &SurfaceWidget::rebuildLayout);
-    m_impl->quickView->setSurface(t_surface);
-    m_impl->buildLayout();
+    m_impl->editView->setSurface(t_surface);
+    m_impl->performView->setSurface(t_surface);
 }
 
 Surface *SurfaceWidget::surface() const
@@ -126,14 +85,12 @@ void SurfaceWidget::setMode(SurfaceMode t_mode)
 {
     m_impl->mode = t_mode;
     m_impl->stack->setCurrentIndex(t_mode == Mode_Performance ? 1 : 0);
-    if(t_mode == Mode_Performance)
-        m_impl->quickView->setSurface(m_impl->surface);
     emit modeChanged(t_mode);
 }
 
 void SurfaceWidget::rebuildLayout()
 {
-    m_impl->buildLayout();
+    // Views refresh themselves from the surface model; nothing to rebuild here.
 }
 
 void SurfaceWidget::showEvent(QShowEvent *t_event)
