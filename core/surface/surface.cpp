@@ -10,6 +10,7 @@
 #include "fixture/fixturecollection.h"
 #include "fixture/fixture.h"
 #include "surfacegizmocontainer.h"
+#include "containergizmo.h"
 #include "surfacegraph.h"
 #include "plugin/pluginfactory.h"
 
@@ -26,10 +27,19 @@ Surface::Surface(const QString &t_name, QObject *parent)
     : QObject{parent},m_impl(new Impl(this))
 {
     m_impl->name = t_name;
+    m_impl->root = new ContainerGizmo;
+    m_impl->root->setId("root");
+    connect(m_impl->root, &ContainerGizmo::childrenChanged, this, &Surface::surfaceWasModified);
+}
+
+ContainerGizmo *Surface::rootContainer() const
+{
+    return m_impl->root;
 }
 
 Surface::~Surface()
 {
+    delete m_impl->root;
     delete m_impl;
 }
 
@@ -40,30 +50,29 @@ void Surface::init()
 
 QVector<SurfaceGizmo*> Surface::gizmos() const
 {
+    // All gizmos in the tree (leaves + containers). Containers have no outputs,
+    // so including them is harmless for the value bus.
     QVector<SurfaceGizmo*> results;
-    for(auto container : m_impl->gizmos)
-    {
-        results.append(container->gizmos());
-    }
+    m_impl->root->collectDescendants(results, true);
     return results;
 }
 
 QVector<SurfaceGizmo*> Surface::gizmosByType(const QByteArray &t_type) const
 {
     QVector<SurfaceGizmo*> results;
-    for(auto container : m_impl->gizmos)
+    for(auto *gizmo : gizmos())
     {
-        results.append(container->gizmosByType(t_type));
+        if(gizmo->type() == t_type)
+            results.append(gizmo);
     }
     return results;
 }
 
 SurfaceGizmo *Surface::findGizmoWithId(const QByteArray &t_id) const
 {
-    for(auto container : m_impl->gizmos)
+    for(auto *gizmo : gizmos())
     {
-        auto gizmo = container->findGizmoWithId(t_id);
-        if(gizmo)
+        if(gizmo->id() == t_id)
             return gizmo;
     }
     qDebug() << "Could not find gizmo with id:" << t_id;
@@ -72,12 +81,8 @@ SurfaceGizmo *Surface::findGizmoWithId(const QByteArray &t_id) const
 
 SurfaceGizmo *Surface::findGizmoWithUniqueId(const QByteArray &t_id) const
 {
-    for(auto container : m_impl->gizmos)
-    {
-        auto gizmo = container->findGizmoWithUniqueId(t_id);
-        if(gizmo)
-            return gizmo;
-    }
+    if(auto *gizmo = m_impl->root->findDescendantWithUniqueId(t_id))
+        return gizmo;
 
     qDebug() << "Could not find gizmo with id:" << t_id;
     return nullptr;
@@ -166,10 +171,7 @@ void Surface::processChannels(ProcessContext &t_context, double lastTime)
 
 void Surface::restore(Project &t_project)
 {
-    for(auto container : m_impl->gizmos)
-    {
-        container->restore(t_project);
-    }
+    m_impl->root->restore(t_project);
 }
 
 void Surface::readFromJson(const QJsonObject &t_json, const LoadContext &t_context)
@@ -177,22 +179,8 @@ void Surface::readFromJson(const QJsonObject &t_json, const LoadContext &t_conte
     m_impl->name = t_json.value("name").toString();
     m_impl->uniqueId = t_json["uniqueId"].toString().toLatin1();
 
-    if(t_json.contains("gizmos"))
-    {
-        QJsonArray gizmoArray = t_json.value("gizmos").toArray();
-        for(const auto &gizmo : gizmoArray)
-        {
-            const QJsonObject &gizmoObj = gizmo.toObject();
-
-            SurfaceGizmoContainer *c = new SurfaceGizmoContainer;
-            c->readFromJson(gizmoObj, t_context);
-            m_impl->gizmos.append(c);
-
-            connect(c, &SurfaceGizmoContainer::gizmoWasAdded,this, &Surface::surfaceWasModified);
-            connect(c, &SurfaceGizmoContainer::gizmoWasRemoved,this, &Surface::surfaceWasModified);
-        }
-    }
-
+    if(t_json.contains("root"))
+        m_impl->root->readFromJson(t_json.value("root").toObject(), t_context);
 }
 
 void Surface::writeToJson(QJsonObject &t_json) const
@@ -200,15 +188,9 @@ void Surface::writeToJson(QJsonObject &t_json) const
     t_json.insert("name", m_impl->name);
     t_json.insert("uniqueId", QString(m_impl->uniqueId));
 
-    QJsonArray gizmoArray;
-    for(const auto &gizmo : m_impl->gizmos)
-    {
-        QJsonObject gizmoObj;
-        gizmo->writeToJson(gizmoObj);
-        gizmoArray.append(gizmoObj);
-    }
-    t_json.insert("gizmos", gizmoArray);
-
+    QJsonObject rootObj;
+    m_impl->root->writeToJson(rootObj);
+    t_json.insert("root", rootObj);
 }
 
 

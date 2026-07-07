@@ -7,11 +7,23 @@ Rectangle {
     id: root
     color: "#1e1e1e"
 
+    // Edit context threaded through the gizmo tree (see GizmoFrame/ContainerGizmo).
     property var selectedGizmo: null
     property bool snapEnabled: true
     property int gridSize: 10
 
-    // Designer toolbar
+    function selectGizmo(g) { root.selectedGizmo = g; }
+    function removeGizmo(g) {
+        if (root.selectedGizmo === g)
+            root.selectedGizmo = null;
+        surfaceView.removeGizmo(g);
+    }
+    // Add into the selected container, else the root container.
+    function addTarget() {
+        return (root.selectedGizmo && root.selectedGizmo.gizmoType === "Container")
+            ? root.selectedGizmo : surfaceView.root;
+    }
+
     Rectangle {
         id: toolbar
         anchors { top: parent.top; left: parent.left; right: parent.right }
@@ -25,9 +37,10 @@ Rectangle {
             anchors.leftMargin: 8
             spacing: 6
 
-            Button { text: "+ Slider"; onClicked: surfaceView.addGizmo("Slider") }
-            Button { text: "+ Toggle"; onClicked: surfaceView.addGizmo("Toggle") }
-            Button { text: "+ Palette"; onClicked: surfaceView.addGizmo("Palette") }
+            Button { text: "+ Slider";    onClicked: surfaceView.addGizmo("Slider", root.addTarget()) }
+            Button { text: "+ Toggle";    onClicked: surfaceView.addGizmo("Toggle", root.addTarget()) }
+            Button { text: "+ Palette";   onClicked: surfaceView.addGizmo("Palette", root.addTarget()) }
+            Button { text: "+ Container"; onClicked: surfaceView.addGizmo("Container", root.addTarget()) }
 
             CheckBox {
                 text: "Snap"
@@ -49,7 +62,6 @@ Rectangle {
         anchors { top: toolbar.bottom; left: parent.left; right: inspector.left; bottom: parent.bottom }
         clip: true
 
-        // Alignment grid
         Canvas {
             id: grid
             anchors.fill: parent
@@ -70,28 +82,17 @@ Rectangle {
             onHeightChanged: requestPaint()
         }
 
-        // Click empty canvas to deselect (below the gizmo frames)
+        // Click empty canvas to deselect (below the container).
         MouseArea {
             anchors.fill: parent
             onClicked: root.selectedGizmo = null
         }
 
-        Repeater {
-            model: surfaceView.gizmos
-            delegate: GizmoFrame {
-                required property var modelData
-                gizmo: modelData
-                editMode: true
-                selected: root.selectedGizmo === modelData
-                snapEnabled: root.snapEnabled
-                gridSize: root.gridSize
-                onSelectRequested: root.selectedGizmo = modelData
-                onRemoveRequested: {
-                    if (root.selectedGizmo === modelData)
-                        root.selectedGizmo = null;
-                    surfaceView.removeGizmo(modelData);
-                }
-            }
+        ContainerGizmo {
+            anchors.fill: parent
+            gizmo: surfaceView.root
+            editMode: true
+            editContext: root
         }
     }
 }

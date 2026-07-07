@@ -2,20 +2,19 @@
 #define SURFACEQUICKVIEW_H
 
 #include <QQuickWidget>
-#include <QVariantList>
 #include "photon-global.h"
 
 namespace photon {
 
-// QML-hosted view for a Surface. In perform mode it renders each gizmo via a
-// per-type QML component and drives the C++ model two-way. In edit mode it adds
-// the free-form designer chrome (select/drag/resize/grid). Both modes share the
-// same gizmo rendering; only the surrounding QML root differs.
+// QML-hosted view for a Surface. Renders the surface's root ContainerGizmo
+// recursively (containers arrange children by layout, nesting arbitrarily). In
+// edit mode it adds the free-form designer chrome; in perform mode controls
+// receive input directly.
 class PHOTONCORE_EXPORT SurfaceQuickView : public QQuickWidget
 {
     Q_OBJECT
     Q_PROPERTY(bool editMode READ editMode CONSTANT)
-    Q_PROPERTY(QVariantList gizmos READ gizmos NOTIFY gizmosChanged)
+    Q_PROPERTY(QObject *root READ rootObject NOTIFY rootChanged)
 public:
     explicit SurfaceQuickView(bool editMode = false, QWidget *parent = nullptr);
 
@@ -24,15 +23,16 @@ public:
     void setSurface(Surface *);
     Surface *surface() const;
 
-    // Flat list of the surface's gizmos as QObject* for QML consumption.
-    QVariantList gizmos() const;
+    // The surface's root ContainerGizmo, for QML rendering.
+    QObject *rootObject() const;
 
-    // Designer actions, callable from QML.
-    Q_INVOKABLE void addGizmo(const QString &type);
+    // Designer actions, callable from QML. `target` is the container to add
+    // into (a ContainerGizmo); null adds to the root.
+    Q_INVOKABLE void addGizmo(const QString &type, QObject *target = nullptr);
     Q_INVOKABLE void removeGizmo(QObject *gizmo);
 
 signals:
-    void gizmosChanged();
+    void rootChanged();
 
 private:
     bool m_editMode = false;

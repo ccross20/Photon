@@ -83,10 +83,16 @@ Rectangle {
     Component {
         id: optionsEditor
         ComboBox {
+            id: combo
             property var def
-            model: (def.metadata && def.metadata.options) ? def.metadata.options : []
-            Component.onCompleted: currentIndex = find(inspector.gizmo ? inspector.gizmo.values[def.id] : "")
-            onActivated: if (inspector.gizmo) inspector.gizmo.setPropValue(def.id, currentText)
+            // The current model value. Recomputed when def is assigned (which
+            // happens after Component.onCompleted via the Loader), so the index
+            // must track this reactively rather than being set once on load.
+            property string modelValue: (inspector.gizmo && def) ? String(inspector.gizmo.values[def.id]) : ""
+            model: (def && def.metadata && def.metadata.options) ? def.metadata.options : []
+            onModelValueChanged: combo.currentIndex = combo.find(combo.modelValue)
+            onModelChanged: combo.currentIndex = combo.find(combo.modelValue)
+            onActivated: if (inspector.gizmo) inspector.gizmo.setPropValue(def.id, combo.currentText)
         }
     }
 

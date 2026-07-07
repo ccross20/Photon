@@ -3,6 +3,7 @@
         <file alias="SurfacePerform.qml">qml/surface/SurfacePerform.qml</file>
         <file alias="SurfaceEdit.qml">qml/surface/SurfaceEdit.qml</file>
         <file alias="GizmoFrame.qml">qml/surface/GizmoFrame.qml</file>
+        <file alias="ContainerGizmo.qml">qml/surface/ContainerGizmo.qml</file>
         <file alias="Inspector.qml">qml/surface/Inspector.qml</file>
         <file alias="Prewarm.qml">qml/surface/Prewarm.qml</file>
         <file alias="SliderGizmo.qml">qml/surface/SliderGizmo.qml</file>

@@ -19,6 +19,10 @@ public:
     Project *project() const;
     SurfaceGraph *graph() const;
 
+    // Root of the gizmo tree. Everything in the surface lives under this
+    // container; layouts and nested pages are ContainerGizmos within it.
+    ContainerGizmo *rootContainer() const;
+
     void processChannels(ProcessContext &, double lastTime);
 
     void restore(Project &);

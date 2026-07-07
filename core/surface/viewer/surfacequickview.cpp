@@ -3,7 +3,7 @@
 #include "surfacequickview.h"
 #include "surface/surface.h"
 #include "surface/surfacegizmo.h"
-#include "surface/surfacegizmocontainer.h"
+#include "surface/containergizmo.h"
 #include "surface/gizmofactory.h"
 
 namespace photon {
@@ -27,15 +27,8 @@ void SurfaceQuickView::setSurface(Surface *t_surface)
     if(m_surface == t_surface)
         return;
 
-    if(m_surface)
-        disconnect(m_surface, nullptr, this, nullptr);
-
     m_surface = t_surface;
-
-    if(m_surface)
-        connect(m_surface, &Surface::surfaceWasModified, this, &SurfaceQuickView::gizmosChanged);
-
-    emit gizmosChanged();
+    emit rootChanged();
 }
 
 Surface *SurfaceQuickView::surface() const
@@ -43,18 +36,12 @@ Surface *SurfaceQuickView::surface() const
     return m_surface;
 }
 
-QVariantList SurfaceQuickView::gizmos() const
+QObject *SurfaceQuickView::rootObject() const
 {
-    QVariantList list;
-    if(m_surface)
-    {
-        for(auto *gizmo : m_surface->gizmos())
-            list.append(QVariant::fromValue(static_cast<QObject*>(gizmo)));
-    }
-    return list;
+    return m_surface ? static_cast<QObject*>(m_surface->rootContainer()) : nullptr;
 }
 
-void SurfaceQuickView::addGizmo(const QString &t_type)
+void SurfaceQuickView::addGizmo(const QString &t_type, QObject *t_target)
 {
     if(!m_surface)
         return;
@@ -63,23 +50,17 @@ void SurfaceQuickView::addGizmo(const QString &t_type)
     if(!gizmo)
         return;
 
-    // Cascade the drop position across the whole surface so new gizmos don't
-    // land on top of each other.
-    const int n = m_surface->gizmos().size();
+    ContainerGizmo *container = qobject_cast<ContainerGizmo*>(t_target);
+    if(!container)
+        container = m_surface->rootContainer();
+
+    // Cascade the drop position within the target container (used by Absolute
+    // layouts; layout containers arrange children themselves).
+    const int n = container->children().size();
     gizmo->setPropertyValue("x", 20.0 + (n % 4) * 180.0);
     gizmo->setPropertyValue("y", 20.0 + (n / 4) * 90.0);
 
-    // Ensure there is a container to hold it.
-    SurfaceGizmoContainer *container = m_surface->containers().isEmpty()
-        ? nullptr : m_surface->containers().first();
-    if(!container)
-    {
-        container = new SurfaceGizmoContainer;
-        m_surface->addGizmoContainer(container);
-    }
-    container->addGizmo(gizmo);
-
-    emit gizmosChanged();
+    container->addChild(gizmo);
 }
 
 void SurfaceQuickView::removeGizmo(QObject *t_gizmo)
@@ -88,16 +69,8 @@ void SurfaceQuickView::removeGizmo(QObject *t_gizmo)
     if(!gizmo || !m_surface)
         return;
 
-    for(auto *container : m_surface->containers())
-    {
-        if(container->gizmos().contains(gizmo))
-        {
-            container->removeGizmo(gizmo);
-            break;
-        }
-    }
-
-    emit gizmosChanged();
+    if(auto *container = m_surface->rootContainer()->parentContainerOf(gizmo))
+        container->removeChild(gizmo);
 }
 
 } // namespace photon

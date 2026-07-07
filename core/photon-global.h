@@ -111,6 +111,7 @@ class SurfaceAction;
 class SurfaceCollection;
 class SurfaceGizmo;
 class SurfaceGizmoContainer;
+class ContainerGizmo;
 class SurfaceGizmoContainerWidget;
 class SurfaceGizmoWidget;
 class SurfaceGraph;

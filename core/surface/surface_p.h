@@ -11,6 +11,7 @@ class Surface::Impl
 public:
     Impl(Surface *);
     QVector<SurfaceGizmoContainer*> gizmos;
+    ContainerGizmo *root = nullptr;
     QByteArray uniqueId;
     QString name;
     Surface *facade;

@@ -486,6 +486,7 @@ add_library(photon-core SHARED ${PROJECT_SOURCES}
     surface/surface_p.h
     surface/surfacegizmo.h surface/surfacegizmo.cpp
     surface/gizmoproperty.h surface/gizmoproperty.cpp
+    surface/containergizmo.h surface/containergizmo.cpp
     surface/viewer/surfacequickview.h surface/viewer/surfacequickview.cpp
     surface/fixturegizmo.h surface/fixturegizmo.cpp
     surface/surfacegizmo_p.h
