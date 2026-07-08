@@ -62,6 +62,14 @@ void NodeEditor::rebuildParameters()
 
 
     m_vLayout->addLayout(m_gridLayout);
+
+    // Optional custom editor UI, below the parameter grid.
+    if(m_node)
+    {
+        if(QWidget *custom = m_node->createCustomWidget(this))
+            m_vLayout->addWidget(custom);
+    }
+
     m_vLayout->addStretch();
 
 }

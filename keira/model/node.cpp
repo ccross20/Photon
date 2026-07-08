@@ -73,6 +73,11 @@ void Node::createParameters()
 
 }
 
+QWidget *Node::createCustomWidget(NodeEditor *)
+{
+    return nullptr;
+}
+
 Graph *Node::graph() const
 {
     return m_impl->graph;

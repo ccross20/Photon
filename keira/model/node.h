@@ -4,6 +4,8 @@
 #include "keira-global.h"
 #include "model/frametime.h"
 
+class QWidget;
+
 namespace keira {
 
 
@@ -37,6 +39,10 @@ public:
     virtual ~Node();
 
     virtual void createParameters();
+    // Optional custom editor UI, shown in the node editor below the standard
+    // parameter grid. Lets a node offer richer controls (e.g. a capability
+    // manager) than per-parameter field widgets. Returns nullptr by default.
+    virtual QWidget *createCustomWidget(NodeEditor *editor);
     Graph *graph() const;
     void setName(const QString &);
     QString name() const;
