@@ -34,6 +34,8 @@ public:
     SurfaceGizmo *findDescendantWithUniqueId(const QByteArray &) const;
     // The container directly holding the given gizmo, or nullptr.
     ContainerGizmo *parentContainerOf(SurfaceGizmo *) const;
+    // True if the gizmo is this container or anywhere in its subtree.
+    bool containsDescendant(SurfaceGizmo *) const;
 
     // QML: children as QObject* for recursive rendering.
     QVariantList childItemsList() const;
@@ -47,6 +49,7 @@ public:
 public slots:
     void addChild(photon::SurfaceGizmo *, int index = -1);
     void removeChild(photon::SurfaceGizmo *);
+    void moveChild(photon::SurfaceGizmo *, int index);
 
 signals:
     void childrenChanged();

@@ -72,6 +72,32 @@ void ContainerGizmo::removeChild(SurfaceGizmo *t_child)
     }
 }
 
+void ContainerGizmo::moveChild(SurfaceGizmo *t_child, int t_index)
+{
+    const int from = m_children.indexOf(t_child);
+    if(from < 0)
+        return;
+    m_children.removeAt(from);
+    m_children.insert(qBound(0, t_index, m_children.size()), t_child);
+    emit childrenChanged();
+    markChanged();
+}
+
+bool ContainerGizmo::containsDescendant(SurfaceGizmo *t_gizmo) const
+{
+    for(auto *child : m_children)
+    {
+        if(child == t_gizmo)
+            return true;
+        if(auto *container = qobject_cast<ContainerGizmo*>(child))
+        {
+            if(container->containsDescendant(t_gizmo))
+                return true;
+        }
+    }
+    return false;
+}
+
 void ContainerGizmo::collectDescendants(QVector<SurfaceGizmo*> &t_out, bool t_includeContainers) const
 {
     for(auto *child : m_children)

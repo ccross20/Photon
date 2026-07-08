@@ -22,6 +22,36 @@ Item {
     readonly property bool stretch: cont.gizmo ? (cont.gizmo.values.stretch || false) : false
     readonly property int count: cont.gizmo ? cont.gizmo.childItems.length : 0
 
+    // Insertion index for a drop at (px,py) in this container's coordinates.
+    // Absolute/Tabs append; layouts insert by comparing against child centers.
+    function dropIndex(px, py) {
+        if (!cont.gizmo)
+            return 0;
+        var n = cont.gizmo.childItems.length;
+        var lt = cont.layoutType;
+        if (lt === "Absolute" || lt === "Tabs")
+            return n;
+        var pos = layoutLoader.item;
+        if (!pos)
+            return n;
+        var lx = px - cont.pad;
+        var ly = py - cont.pad;
+        var idx = 0;
+        for (var i = 0; i < pos.children.length; i++) {
+            var c = pos.children[i];
+            if (c.gizmo === undefined || c.gizmo === null)
+                continue; // skip the Repeater and non-frame children
+            if (lt === "Vertical") {
+                if (ly > c.y + c.height / 2) idx++;
+            } else if (lt === "Horizontal") {
+                if (lx > c.x + c.width / 2) idx++;
+            } else { // Grid (approximate)
+                if (ly > c.y + c.height || (ly > c.y && lx > c.x + c.width / 2)) idx++;
+            }
+        }
+        return idx;
+    }
+
     // Subtle backing so containers are visible while editing.
     Rectangle {
         anchors.fill: parent
@@ -31,7 +61,26 @@ Item {
         border.width: 1
     }
 
+    // Reparent/reorder drop target. Behind the content so nested containers'
+    // DropAreas take priority for the deepest container under the pointer.
+    DropArea {
+        id: dropArea
+        anchors.fill: parent
+        enabled: cont.editMode
+        onDropped: (drop) => {
+            var g = cont.editContext ? cont.editContext.dragGizmo : null;
+            if (g)
+                surfaceView.reparentGizmo(g, cont.gizmo, cont.dropIndex(drop.x, drop.y));
+        }
+        Rectangle {
+            anchors.fill: parent
+            color: "#203daee9"
+            visible: dropArea.containsDrag
+        }
+    }
+
     Loader {
+        id: layoutLoader
         anchors.fill: parent
         anchors.margins: cont.pad
         sourceComponent: {

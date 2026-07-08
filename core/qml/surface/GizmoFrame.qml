@@ -93,8 +93,11 @@ Item {
         radius: 3
         color: "#3daee9"
         visible: frame.editMode && frame.selected && !frame.layoutManaged
-        x: frame.width - width / 2
-        y: frame.height - height / 2
+        // Kept fully inside the frame: a handle straddling the edge would have
+        // its outer half fall outside the frame's bounds, where clicks are not
+        // delivered to it (they hit the container behind instead).
+        x: frame.width - width
+        y: frame.height - height
         z: 3
 
         MouseArea {
@@ -122,8 +125,8 @@ Item {
         radius: 9
         color: "#c0392b"
         visible: frame.editMode && frame.selected
-        x: frame.width - width / 2
-        y: -height / 2
+        x: frame.width - width
+        y: 0
         z: 3
 
         Text {
@@ -136,6 +139,40 @@ Item {
         MouseArea {
             anchors.fill: parent
             onClicked: if (frame.editContext) frame.editContext.removeGizmo(frame.gizmo)
+        }
+    }
+
+    // Drag grip (top-left) — reparent/reorder. Distinct from the body drag so
+    // repositioning in an Absolute container and moving between containers stay
+    // separate gestures. Drives the SurfaceEdit drag proxy via editContext.
+    Rectangle {
+        width: 18
+        height: 18
+        radius: 3
+        color: "#3daee9"
+        visible: frame.editMode && frame.selected
+        x: 0
+        y: 0
+        z: 3
+
+        Text {
+            anchors.centerIn: parent
+            text: "✥"
+            color: "white"
+            font.pixelSize: 11
+        }
+
+        DragHandler {
+            target: null
+            onActiveChanged: {
+                if (!frame.editContext)
+                    return;
+                if (active)
+                    frame.editContext.beginDrag(frame.gizmo, centroid.scenePosition);
+                else
+                    frame.editContext.endDrag();
+            }
+            onCentroidChanged: if (active && frame.editContext) frame.editContext.moveDrag(centroid.scenePosition)
         }
     }
 }

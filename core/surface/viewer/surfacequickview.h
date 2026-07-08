@@ -30,6 +30,9 @@ public:
     // into (a ContainerGizmo); null adds to the root.
     Q_INVOKABLE void addGizmo(const QString &type, QObject *target = nullptr);
     Q_INVOKABLE void removeGizmo(QObject *gizmo);
+    // Move a gizmo into `target` container at `index` (reparent), or reorder
+    // within its current container when target is already its parent.
+    Q_INVOKABLE void reparentGizmo(QObject *gizmo, QObject *target, int index);
 
 signals:
     void rootChanged();

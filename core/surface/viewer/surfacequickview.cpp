@@ -73,4 +73,30 @@ void SurfaceQuickView::removeGizmo(QObject *t_gizmo)
         container->removeChild(gizmo);
 }
 
+void SurfaceQuickView::reparentGizmo(QObject *t_gizmo, QObject *t_target, int t_index)
+{
+    auto *gizmo = qobject_cast<SurfaceGizmo*>(t_gizmo);
+    auto *target = qobject_cast<ContainerGizmo*>(t_target);
+    if(!gizmo || !target || !m_surface || gizmo == target)
+        return;
+
+    // Never drop a container into itself or its own subtree.
+    if(auto *movedContainer = qobject_cast<ContainerGizmo*>(gizmo))
+    {
+        if(movedContainer->containsDescendant(target))
+            return;
+    }
+
+    ContainerGizmo *old = m_surface->rootContainer()->parentContainerOf(gizmo);
+    if(old == target)
+    {
+        target->moveChild(gizmo, t_index);
+        return;
+    }
+
+    if(old)
+        old->removeChild(gizmo);
+    target->addChild(gizmo, t_index);
+}
+
 } // namespace photon

@@ -12,6 +12,26 @@ Rectangle {
     property bool snapEnabled: true
     property int gridSize: 10
 
+    // Drag-to-reparent state, driven by GizmoFrame grips and consumed by the
+    // drag proxy + container DropAreas.
+    property bool dragActive: false
+    property var dragGizmo: null
+    property point dragScenePos: Qt.point(0, 0)
+
+    function beginDrag(g, scenePos) {
+        root.dragGizmo = g;
+        root.dragScenePos = scenePos;
+        root.dragActive = true;
+        dragProxy.Drag.start();
+    }
+    function moveDrag(scenePos) { root.dragScenePos = scenePos; }
+    function endDrag() {
+        // Explicit drop() reliably delivers to the DropArea under the hotspot;
+        // toggling Drag.active via a binding does not.
+        dragProxy.Drag.drop();
+        root.dragActive = false;
+    }
+
     function selectGizmo(g) { root.selectedGizmo = g; }
     function removeGizmo(g) {
         if (root.selectedGizmo === g)
@@ -93,6 +113,31 @@ Rectangle {
             gizmo: surfaceView.root
             editMode: true
             editContext: root
+        }
+    }
+
+    // Floating proxy that follows the pointer during a reparent drag. Its Drag
+    // hotspot is what container DropAreas test against.
+    Item {
+        id: dragProxy
+        z: 1000
+        width: 44
+        height: 26
+        visible: root.dragActive
+        x: root.dragScenePos.x - width / 2
+        y: root.dragScenePos.y - height / 2
+
+        property var payload: root.dragGizmo
+
+        Drag.hotSpot.x: width / 2
+        Drag.hotSpot.y: height / 2
+
+        Rectangle {
+            anchors.fill: parent
+            radius: 4
+            color: "#803daee9"
+            border.color: "#3daee9"
+            border.width: 1
         }
     }
 }
