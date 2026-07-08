@@ -60,11 +60,6 @@ void Scene::setGraph(Graph *t_graph)
 {
     if(m_impl->graph == t_graph)
         return;
-    clear();
-    m_impl->wires.clear();
-
-    m_impl->wireParentItem = new QGraphicsLineItem;
-    addItem(m_impl->wireParentItem);
 
     if(m_impl->graph)
     {
@@ -73,38 +68,91 @@ void Scene::setGraph(Graph *t_graph)
         disconnect(m_impl->graph, &Graph::nodePositionUpdated, this, &Scene::nodePositionUpdated);
         disconnect(m_impl->graph, &Graph::parametersWereConnected, this, &Scene::parametersWereConnected);
         disconnect(m_impl->graph, &Graph::parametersWereDisconnected, this, &Scene::parametersWereDisconnected);
+        disconnect(m_impl->graph, &Graph::nodePortsChanged, this, &Scene::nodePortsChanged);
     }
 
     m_impl->graph = t_graph;
     m_impl->evaluator->setGraph(m_impl->graph);
 
+    rebuildScene();
+
     if(!m_impl->graph)
         return;
-
-    for(auto node : t_graph->nodes())
-    {
-        nodeWasAdded(node);
-    }
-
-    for(auto node : t_graph->nodes())
-    {
-        for(Parameter *param : node->parameters())
-        {
-            for(Parameter *inputParam : param->outputParameters())
-            {
-                parametersWereConnected(param, inputParam);
-            }
-        }
-    }
-
 
     connect(m_impl->graph, &Graph::nodeWasAdded, this, &Scene::nodeWasAdded);
     connect(m_impl->graph, &Graph::nodeWasRemoved, this, &Scene::nodeWasRemoved);
     connect(m_impl->graph, &Graph::nodePositionUpdated, this, &Scene::nodePositionUpdated);
     connect(m_impl->graph, &Graph::parametersWereConnected, this, &Scene::parametersWereConnected);
     connect(m_impl->graph, &Graph::parametersWereDisconnected, this, &Scene::parametersWereDisconnected);
+    connect(m_impl->graph, &Graph::nodePortsChanged, this, &Scene::nodePortsChanged);
 
     emit graphUpdated(m_impl->graph);
+}
+
+// Rebuild only the affected node's ports (and the wires touching it), leaving
+// the rest of the scene intact — so selection and the node-editor panel are
+// preserved when a node exposes/unexposes a parameter at runtime.
+void Scene::nodePortsChanged(keira::Node *t_node)
+{
+    NodeItem *item = itemForNode(t_node);
+    if(!item)
+        return;
+
+    // Drop wires touching this node; they reference ports about to be recreated.
+    QVector<WireItem*> affected;
+    for(auto *wire : m_impl->wires)
+    {
+        if(wire->outParameter()->node() == t_node || wire->inParameter()->node() == t_node)
+            affected.append(wire);
+    }
+    for(auto *wire : affected)
+    {
+        if(auto *outItem = itemForNode(wire->outParameter()->node()))
+            outItem->removeWire(wire);
+        if(auto *inItem = itemForNode(wire->inParameter()->node()))
+            inItem->removeWire(wire);
+        m_impl->wires.removeOne(wire);
+        delete wire;
+    }
+
+    item->rebuildPorts();
+
+    // Recreate wires for this node's remaining connections.
+    for(Parameter *param : t_node->parameters())
+    {
+        for(Parameter *inParam : param->outputParameters())
+            parametersWereConnected(param, inParam);
+        for(Parameter *outParam : param->inputParameters())
+            parametersWereConnected(outParam, param);
+    }
+}
+
+// Clear and rebuild all node items and wires from the current graph. Used on
+// graph switch and when a node's ports change at runtime (surface graphs are
+// small, so a full rebuild is simplest and robust).
+void Scene::rebuildScene()
+{
+    clear();
+    m_impl->nodeMap.clear();
+    m_impl->wires.clear();
+
+    m_impl->wireParentItem = new QGraphicsLineItem;
+    addItem(m_impl->wireParentItem);
+
+    if(!m_impl->graph)
+        return;
+
+    for(auto node : m_impl->graph->nodes())
+        nodeWasAdded(node);
+
+    for(auto node : m_impl->graph->nodes())
+    {
+        for(Parameter *param : node->parameters())
+        {
+            for(Parameter *inputParam : param->outputParameters())
+                parametersWereConnected(param, inputParam);
+        }
+    }
 }
 
 Graph *Scene::graph() const

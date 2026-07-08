@@ -31,6 +31,9 @@ public:
     void removeWire(WireItem *);
 
     void addPort();
+    // Recreate all of this node's port items from its current parameters
+    // (used when parameters are added/removed at runtime).
+    void rebuildPorts();
 
 public slots:
     void widgetUpdated(QWidget *, const keira::Parameter *);

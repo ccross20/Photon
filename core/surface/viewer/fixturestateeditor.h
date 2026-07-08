@@ -8,13 +8,16 @@ class QVBoxLayout;
 
 namespace photon {
 
+class FixtureStateNode;
+
 // Custom node-editor widget for FixtureStateNode: manages the node's State by
-// adding/removing capabilities and editing each capability's channel values.
+// adding/removing capabilities, editing each capability's channel values, and
+// exposing individual channels as graph input ports.
 class FixtureStateEditor : public QWidget
 {
     Q_OBJECT
 public:
-    explicit FixtureStateEditor(State *state, QWidget *parent = nullptr);
+    explicit FixtureStateEditor(FixtureStateNode *node, QWidget *parent = nullptr);
 
 public slots:
     void openAddMenu();
@@ -22,7 +25,7 @@ public slots:
 private:
     void rebuild();
 
-    State *m_state = nullptr;
+    FixtureStateNode *m_node = nullptr;
     QVBoxLayout *m_layout = nullptr;
 };
 

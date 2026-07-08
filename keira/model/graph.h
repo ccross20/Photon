@@ -63,6 +63,9 @@ signals:
     void parametersWereConnected(keira::Parameter *t_out, keira::Parameter *t_in);
     void parametersWereDisconnected(keira::Parameter *t_out, keira::Parameter *t_in);
     void dirtyStateChanged();
+    // A node's parameter set changed at runtime (ports added/removed); the view
+    // should rebuild that node's ports.
+    void nodePortsChanged(keira::Node *);
 
 private:
     friend class Node;

@@ -43,6 +43,9 @@ public:
     // parameter grid. Lets a node offer richer controls (e.g. a capability
     // manager) than per-parameter field widgets. Returns nullptr by default.
     virtual QWidget *createCustomWidget(NodeEditor *editor);
+    // Notify the view that this node's parameters changed at runtime so its
+    // ports are rebuilt. Call after add/removeParameter outside createParameters.
+    void portsChanged();
     Graph *graph() const;
     void setName(const QString &);
     QString name() const;

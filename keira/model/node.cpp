@@ -78,6 +78,12 @@ QWidget *Node::createCustomWidget(NodeEditor *)
     return nullptr;
 }
 
+void Node::portsChanged()
+{
+    if(m_impl->graph)
+        emit m_impl->graph->nodePortsChanged(this);
+}
+
 Graph *Node::graph() const
 {
     return m_impl->graph;

@@ -33,6 +33,8 @@ protected:
 
 private slots:
 
+    void rebuildScene();
+    void nodePortsChanged(keira::Node *);
     void nodeWasAdded(keira::Node *);
     void nodeWasRemoved(keira::Node *);
     void nodePositionUpdated(keira::Node *);

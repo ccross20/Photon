@@ -2,8 +2,11 @@
 #include "fixturestatenode.h"
 #include "graph/parameter/fixturelistparameter.h"
 #include "model/parameter/booleanparameter.h"
+#include "model/parameter/anyparameter.h"
+#include "model/graph.h"
 #include "routine/routineevaluationcontext.h"
 #include "state/state.h"
+#include "state/statecapability.h"
 #include "state/stateevaluationcontext.h"
 #include "fixture/fixturecollection.h"
 #include "fixture/fixture.h"
@@ -39,6 +42,48 @@ FixtureStateNode::FixtureStateNode() : keira::Node("photon.node.fixture-state")
 FixtureStateNode::~FixtureStateNode()
 {
     delete m_state;
+    qDeleteAll(m_retiredParams);
+}
+
+bool FixtureStateNode::isChannelExposed(StateCapability *t_cap, int t_index) const
+{
+    return findParameter(t_cap->channelId(t_index)) != nullptr;
+}
+
+void FixtureStateNode::setChannelExposed(StateCapability *t_cap, int t_index, bool t_exposed)
+{
+    const QByteArray channelId = t_cap->channelId(t_index);
+    keira::Parameter *existing = findParameter(channelId);
+
+    if(t_exposed)
+    {
+        if(existing)
+            return;
+        auto *param = new keira::AnyParameter(channelId, t_cap->name(),
+                                              keira::AllowMultipleOutput | keira::AllowSingleInput);
+        addParameter(param);
+        portsChanged();
+    }
+    else
+    {
+        if(!existing)
+            return;
+        // Drop connections, then retire (not delete) so the eval thread never
+        // touches a freed parameter.
+        if(graph())
+        {
+            const auto inputs = existing->inputParameters();
+            for(auto *in : inputs)
+                graph()->disconnectParameters(in, existing);
+            const auto outputs = existing->outputParameters();
+            for(auto *out : outputs)
+                graph()->disconnectParameters(existing, out);
+        }
+        removeParameter(existing);
+        m_inputHistory.remove(channelId);
+        m_retiredParams.append(existing);
+        portsChanged();
+    }
 }
 
 State *FixtureStateNode::state() const
@@ -57,14 +102,10 @@ void FixtureStateNode::createParameters()
     addParameter(m_enableParam);
 }
 
-// Nearest-neighbour lookup of the Enable value at a past time.
-static bool enabledAt(const std::deque<FixtureStateNode::EnableSample> &t_history, double t_time)
+// Index of the last sample at or before t_time (nearest-neighbour before).
+template<typename Sample>
+static int sampleIndexAt(const std::deque<Sample> &t_history, double t_time)
 {
-    if(t_history.empty())
-        return true;
-    if(t_history.front().time >= t_time)
-        return t_history.front().enabled; // not enough history yet
-
     int lo = 0, hi = static_cast<int>(t_history.size()) - 1;
     while(lo + 1 < hi)
     {
@@ -74,7 +115,17 @@ static bool enabledAt(const std::deque<FixtureStateNode::EnableSample> &t_histor
         else
             hi = mid;
     }
-    return t_history[lo].enabled;
+    return lo;
+}
+
+// Nearest-neighbour lookup of the Enable value at a past time.
+static bool enabledAt(const std::deque<FixtureStateNode::EnableSample> &t_history, double t_time)
+{
+    if(t_history.empty())
+        return true;
+    if(t_history.front().time >= t_time)
+        return t_history.front().enabled; // not enough history yet
+    return t_history[sampleIndexAt(t_history, t_time)].enabled;
 }
 
 void FixtureStateNode::evaluate(keira::EvaluationContext *t_context) const
@@ -84,16 +135,27 @@ void FixtureStateNode::evaluate(keira::EvaluationContext *t_context) const
 
     const double now = context->globalTime;
 
-    // Record this frame's Enable value.
-    m_enableHistory.push_back({now, m_enableParam->value().toBool()});
-
-    // Prune history older than the largest offset we might look back to.
+    // Prune histories older than the largest offset we might look back to.
     double maxOffset = 0.0;
     for(const auto &fixtureData : fixtures)
         maxOffset = std::max(maxOffset, fixtureData.offset);
     const double cutoff = now - maxOffset - 1.0;
+
+    // Record this frame's Enable value.
+    m_enableHistory.push_back({now, m_enableParam->value().toBool()});
     while(m_enableHistory.size() > 1 && m_enableHistory.front().time < cutoff)
         m_enableHistory.pop_front();
+
+    // Record each connected exposed input's value.
+    for(auto *param : parameters())
+    {
+        if(param == m_fixturesParam || param == m_enableParam || !param->hasInput())
+            continue;
+        auto &history = m_inputHistory[param->id()];
+        history.push_back({now, param->value()});
+        while(history.size() > 1 && history.front().time < cutoff)
+            history.pop_front();
+    }
 
     for(const auto &fixtureData : fixtures)
     {
@@ -101,8 +163,10 @@ void FixtureStateNode::evaluate(keira::EvaluationContext *t_context) const
         if(!fixture)
             continue;
 
+        const double delayedTime = now - fixtureData.offset;
+
         // Enable is delayed per fixture, so toggling it staggers across the rig.
-        if(!enabledAt(m_enableHistory, now - fixtureData.offset))
+        if(!enabledAt(m_enableHistory, delayedTime))
             continue;
 
         StateEvaluationContext local(context->dmxMatrix);
@@ -111,17 +175,29 @@ void FixtureStateNode::evaluate(keira::EvaluationContext *t_context) const
         local.globalTime   = context->globalTime;
         local.relativeTime = context->relativeTime;
 
-        // Seed channel values from the capabilities' stored values, then run.
-        // (Exposed-parameter overrides will be injected here in a later step.)
+        // Seed from the capabilities' static values, then override any exposed
+        // (connected) channel with its per-fixture offset-delayed driven value.
         local.channelValues.clear();
         m_state->initializeValues(local);
+
+        for(auto *param : parameters())
+        {
+            if(param == m_fixturesParam || param == m_enableParam || !param->hasInput())
+                continue;
+            const auto &history = m_inputHistory[param->id()];
+            if(history.empty())
+                continue;
+            const int idx = (history.front().time >= delayedTime) ? 0 : sampleIndexAt(history, delayedTime);
+            local.channelValues[param->id()] = history[idx].value;
+        }
+
         m_state->evaluate(local);
     }
 }
 
 QWidget *FixtureStateNode::createCustomWidget(keira::NodeEditor *)
 {
-    return new FixtureStateEditor(m_state);
+    return new FixtureStateEditor(this);
 }
 
 void FixtureStateNode::readFromJson(const QJsonObject &t_json, keira::NodeLibrary *t_library)

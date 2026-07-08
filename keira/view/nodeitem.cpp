@@ -225,6 +225,61 @@ void NodeItem::addPort()
     updateGeometry();
 }
 
+void NodeItem::rebuildPorts()
+{
+    prepareGeometryChange();
+
+    // Remove existing port items. Callers must remove any wires touching this
+    // node first, since those wires reference these ports.
+    for(auto &param : m_impl->parameters)
+    {
+        if(param.inputPort)
+        {
+            if(scene()) scene()->removeItem(param.inputPort);
+            delete param.inputPort;
+        }
+        if(param.outputPort)
+        {
+            if(scene()) scene()->removeItem(param.outputPort);
+            delete param.outputPort;
+        }
+    }
+    m_impl->parameters.clear();
+
+    double y = 20;
+    for(Parameter *param : m_impl->node->parameters())
+    {
+        if(!param->allowInput() && !param->allowOutput())
+            continue;
+
+        NodeItemParameter itemParam;
+        itemParam.param = param;
+        int rowHeight = param->rowHeight();
+
+        if(param->allowInput())
+        {
+            itemParam.inputPort = new PortItem(param, Input);
+            scene()->addItem(itemParam.inputPort);
+            itemParam.inputPort->setParentItem(this);
+            itemParam.inputPort->setPos(QPointF(m_impl->inset, y + rowHeight / 2));
+        }
+        if(param->allowOutput())
+        {
+            itemParam.outputPort = new PortItem(param, Output);
+            scene()->addItem(itemParam.outputPort);
+            itemParam.outputPort->setParentItem(this);
+            itemParam.outputPort->setPos(QPointF(m_impl->width - m_impl->inset, y + rowHeight / 2));
+        }
+
+        m_impl->parameters.append(itemParam);
+        y += rowHeight;
+    }
+
+    m_impl->layoutNode();
+    updateGeometry();
+    update();
+}
+
 void NodeItem::updatePosition()
 {
     setPos(m_impl->node->position());

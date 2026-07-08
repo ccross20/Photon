@@ -9,6 +9,7 @@
 #include <QColorDialog>
 #include <QFrame>
 #include "fixturestateeditor.h"
+#include "graph/node/fixture/fixturestatenode.h"
 #include "state/state.h"
 #include "state/statecapability.h"
 #include "sequence/channel.h"
@@ -65,8 +66,8 @@ static QWidget *makeChannelEditor(StateCapability *t_cap, int t_index, const Cha
     }
 }
 
-FixtureStateEditor::FixtureStateEditor(State *t_state, QWidget *parent)
-    : QWidget(parent), m_state(t_state)
+FixtureStateEditor::FixtureStateEditor(FixtureStateNode *t_node, QWidget *parent)
+    : QWidget(parent), m_node(t_node)
 {
     m_layout = new QVBoxLayout(this);
     m_layout->setContentsMargins(0, 0, 0, 0);
@@ -83,9 +84,10 @@ void FixtureStateEditor::rebuild()
         delete item;
     }
 
-    if(m_state)
+    State *state = m_node ? m_node->state() : nullptr;
+    if(state)
     {
-        for(auto *cap : m_state->capabilities())
+        for(auto *cap : state->capabilities())
         {
             auto *frame = new QFrame;
             frame->setFrameShape(QFrame::StyledPanel);
@@ -97,8 +99,8 @@ void FixtureStateEditor::rebuild()
             header->addStretch();
             auto *removeBtn = new QPushButton("×");
             removeBtn->setMaximumWidth(24);
-            connect(removeBtn, &QPushButton::clicked, this, [this, cap](){
-                m_state->removeCapability(cap);
+            connect(removeBtn, &QPushButton::clicked, this, [this, state, cap](){
+                state->removeCapability(cap);
                 delete cap;
                 rebuild();
             });
@@ -110,7 +112,23 @@ void FixtureStateEditor::rebuild()
             {
                 auto *row = new QHBoxLayout;
                 row->addWidget(new QLabel(channels[i].name));
-                row->addWidget(makeChannelEditor(cap, i, channels[i]), 1);
+
+                auto *editor = makeChannelEditor(cap, i, channels[i]);
+                row->addWidget(editor, 1);
+
+                // Expose the channel as a graph input port; static editor is
+                // disabled while exposed (its value comes from the connection).
+                const bool exposed = m_node->isChannelExposed(cap, i);
+                auto *exposeCheck = new QCheckBox("→");
+                exposeCheck->setToolTip("Expose as graph input");
+                exposeCheck->setChecked(exposed);
+                editor->setEnabled(!exposed);
+                connect(exposeCheck, &QCheckBox::toggled, this, [this, cap, i, editor](bool on){
+                    m_node->setChannelExposed(cap, i, on);
+                    editor->setEnabled(!on);
+                });
+                row->addWidget(exposeCheck);
+
                 v->addLayout(row);
             }
 
@@ -125,7 +143,8 @@ void FixtureStateEditor::rebuild()
 
 void FixtureStateEditor::openAddMenu()
 {
-    if(!m_state)
+    State *state = m_node ? m_node->state() : nullptr;
+    if(!state)
         return;
 
     struct Entry { const char *name; CapabilityType type; };
@@ -143,8 +162,8 @@ void FixtureStateEditor::openAddMenu()
     for(const auto &entry : entries)
     {
         const CapabilityType type = entry.type;
-        menu.addAction(entry.name, this, [this, type](){
-            m_state->addCapability(type);
+        menu.addAction(entry.name, this, [this, state, type](){
+            state->addCapability(type);
             rebuild();
         });
     }
