@@ -13,6 +13,9 @@ class PHOTONCORE_EXPORT ContainerGizmo : public SurfaceGizmo
 {
     Q_OBJECT
     Q_PROPERTY(QVariantList childItems READ childItemsList NOTIFY childrenChanged)
+    // Which child page is visible in the Tabs layout. Runtime state (not a
+    // persisted GizmoProperty), driven two-way from the QML tab bar.
+    Q_PROPERTY(int currentPage READ currentPage WRITE setCurrentPage NOTIFY currentPageChanged)
 public:
     const static QByteArray GizmoId;
 
@@ -20,6 +23,9 @@ public:
     ~ContainerGizmo();
 
     const QVector<SurfaceGizmo*> &children() const;
+
+    int currentPage() const;
+    void setCurrentPage(int);
 
     // Collect this container's descendant gizmos into `out`. Containers are
     // included only when includeContainers is true.
@@ -44,9 +50,11 @@ public slots:
 
 signals:
     void childrenChanged();
+    void currentPageChanged();
 
 private:
     QVector<SurfaceGizmo*> m_children;
+    int m_currentPage = 0;
 };
 
 } // namespace photon

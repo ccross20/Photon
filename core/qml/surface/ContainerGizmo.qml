@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import QtQuick.Controls
 
 // Renders a container gizmo by arranging its children according to its `layout`
 // property. Each child is a GizmoFrame, which recurses into ContainerGizmo when
@@ -38,6 +39,7 @@ Item {
             case "Vertical":   return colComp;
             case "Horizontal": return rowComp;
             case "Grid":       return gridComp;
+            case "Tabs":       return tabsComp;
             default:           return absComp;
             }
         }
@@ -136,6 +138,75 @@ Item {
                     layoutManaged: true
                     width: cont.stretch ? gridPositioner.cellW : modelData.values.width
                     height: cont.stretch ? gridPositioner.cellH : modelData.values.height
+                }
+            }
+        }
+    }
+
+    // ---- Tabs / Pages -------------------------------------------------------
+    Component {
+        id: tabsComp
+        Item {
+            anchors.fill: parent
+
+            TabBar {
+                id: bar
+                width: parent.width
+                currentIndex: cont.gizmo ? cont.gizmo.currentPage : 0
+                onCurrentIndexChanged: if (cont.gizmo) cont.gizmo.currentPage = bar.currentIndex
+
+                Repeater {
+                    model: cont.gizmo.childItems
+                    delegate: TabButton {
+                        required property var modelData
+                        required property int index
+                        text: (modelData.values.title && modelData.values.title.length > 0)
+                              ? modelData.values.title : ("Page " + (index + 1))
+                        width: Math.max(80, implicitWidth)
+                        // Selecting a tab also selects that page in edit mode, so
+                        // added controls target the page rather than the container.
+                        onClicked: if (cont.editMode && cont.editContext) cont.editContext.selectGizmo(modelData)
+                    }
+                }
+            }
+
+            // Add a page (edit only). New pages are Absolute containers, made
+            // current and selected so the next added control lands inside them.
+            Button {
+                visible: cont.editMode
+                anchors.left: bar.right
+                anchors.leftMargin: 4
+                anchors.verticalCenter: bar.verticalCenter
+                text: "+"
+                width: 32
+                onClicked: {
+                    surfaceView.addGizmo("Container", cont.gizmo);
+                    if (cont.gizmo) {
+                        var last = cont.gizmo.childItems.length - 1;
+                        cont.gizmo.currentPage = last;
+                        if (cont.editContext)
+                            cont.editContext.selectGizmo(cont.gizmo.childItems[last]);
+                    }
+                }
+            }
+
+            // Page content: each page fills this area; only the current is shown.
+            // Explicit fill (rather than StackLayout) guarantees the page frame
+            // has size, so it is selectable by clicking its content.
+            Item {
+                anchors { top: bar.bottom; left: parent.left; right: parent.right; bottom: parent.bottom }
+                Repeater {
+                    model: cont.gizmo.childItems
+                    delegate: GizmoFrame {
+                        required property var modelData
+                        required property int index
+                        anchors.fill: parent
+                        visible: index === (cont.gizmo ? cont.gizmo.currentPage : 0)
+                        gizmo: modelData
+                        editMode: cont.editMode
+                        editContext: cont.editContext
+                        layoutManaged: true
+                    }
                 }
             }
         }

@@ -9,13 +9,15 @@ const QByteArray ContainerGizmo::GizmoId = "Container";
 ContainerGizmo::ContainerGizmo() : SurfaceGizmo(GizmoId)
 {
     addProperty("layout", "Layout", GizmoProperty::Options, QString("Absolute"),
-                {{"options", QStringList{"Absolute", "Vertical", "Horizontal", "Grid"}}});
+                {{"options", QStringList{"Absolute", "Vertical", "Horizontal", "Grid", "Tabs"}}});
     addProperty("spacing", "Spacing", GizmoProperty::Number, 6.0);
     addProperty("columns", "Columns", GizmoProperty::Number, 2.0);
     addProperty("padding", "Padding", GizmoProperty::Number, 8.0);
     // When set, layout children share the container's extent equally instead of
     // using their own width/height (ignored by the Absolute layout).
     addProperty("stretch", "Stretch", GizmoProperty::Boolean, false);
+    // Tab label used when this container is a page inside a Tabs container.
+    addProperty("title", "Title", GizmoProperty::Text, QString());
 
     // Containers default larger than a single control.
     setPropertyValue("width", 320.0);
@@ -30,6 +32,19 @@ ContainerGizmo::~ContainerGizmo()
 const QVector<SurfaceGizmo*> &ContainerGizmo::children() const
 {
     return m_children;
+}
+
+int ContainerGizmo::currentPage() const
+{
+    return m_currentPage;
+}
+
+void ContainerGizmo::setCurrentPage(int t_page)
+{
+    if(m_currentPage == t_page)
+        return;
+    m_currentPage = t_page;
+    emit currentPageChanged();
 }
 
 void ContainerGizmo::addChild(SurfaceGizmo *t_child, int t_index)
