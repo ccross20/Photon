@@ -40,8 +40,6 @@ public:
     void setActive(bool) override;
     bool isActive() const override;
 
-    SurfaceGizmoWidget *createWidget(SurfaceMode mode) override;
-
     void readFromJson(const QJsonObject &, const LoadContext &) override;
     void writeToJson(QJsonObject &) const override;
 

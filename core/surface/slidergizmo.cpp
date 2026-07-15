@@ -1,5 +1,4 @@
 #include "slidergizmo.h"
-#include "viewer/slidergizmowidget.h"
 
 namespace photon {
 
@@ -64,11 +63,5 @@ QVariant SliderGizmo::outputValue(const QByteArray &t_portId) const
     return {};
 }
 
-SurfaceGizmoWidget *SliderGizmo::createWidget(SurfaceMode mode)
-{
-    auto widget = new SliderGizmoWidget(this, mode);
-    connect(this, &SurfaceGizmo::gizmoUpdated, widget, &SurfaceGizmoWidget::updateGizmo);
-    return widget;
-}
 
 } // namespace photon

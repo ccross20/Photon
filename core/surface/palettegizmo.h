@@ -30,8 +30,6 @@ public:
     QVariantList swatchColors() const override;
     void selectSwatch(int) override;
 
-    SurfaceGizmoWidget *createWidget(SurfaceMode mode) override;
-
     void readFromJson(const QJsonObject &, const LoadContext &) override;
     void writeToJson(QJsonObject &) const override;
 

@@ -80,8 +80,6 @@ public:
 
     virtual void processChannels(ProcessContext &);
 
-    virtual SurfaceGizmoWidget *createWidget(SurfaceMode mode);
-
     virtual void restore(Project &);
     virtual void readFromJson(const QJsonObject &, const LoadContext &);
     virtual void writeToJson(QJsonObject &) const;

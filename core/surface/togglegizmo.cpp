@@ -1,5 +1,4 @@
 #include "togglegizmo.h"
-#include "viewer/togglegizmowidget.h"
 
 namespace photon {
 
@@ -112,12 +111,6 @@ QVariant ToggleGizmo::outputValue(const QByteArray &t_portId) const
     return {};
 }
 
-SurfaceGizmoWidget *ToggleGizmo::createWidget(SurfaceMode mode)
-{
-    auto widget = new ToggleGizmoWidget(this, mode);
-    connect(this, &SurfaceGizmo::gizmoUpdated, widget, &SurfaceGizmoWidget::updateGizmo);
-    return widget;
-}
 
 void ToggleGizmo::readFromJson(const QJsonObject &t_json, const LoadContext &t_context)
 {

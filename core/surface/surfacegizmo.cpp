@@ -118,10 +118,6 @@ QVariantList SurfaceGizmo::propertyDefs() const
 }
 
 
-SurfaceGizmoWidget *SurfaceGizmo::createWidget(SurfaceMode mode)
-{
-    return nullptr;
-}
 
 void SurfaceGizmo::addHistoryEvent(const QByteArray &id, const QVariant &value)
 {

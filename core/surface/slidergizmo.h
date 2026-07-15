@@ -26,8 +26,6 @@ public:
 
     QVector<GizmoOutput> outputs() const override;
     QVariant outputValue(const QByteArray &portId) const override;
-
-    SurfaceGizmoWidget *createWidget(SurfaceMode mode) override;
 };
 
 } // namespace photon

@@ -110,7 +110,6 @@ class SurfaceCollection;
 class SurfaceGizmo;
 class SurfaceGizmoContainer;
 class ContainerGizmo;
-class SurfaceGizmoWidget;
 class SurfaceGraph;
 class SurfaceView;
 class State;

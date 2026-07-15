@@ -1,5 +1,4 @@
 #include "palettegizmo.h"
-#include "viewer/palettegizmowidget.h"
 
 namespace photon {
 const QByteArray PaletteGizmo::GizmoId = "Palette";
@@ -89,12 +88,6 @@ QVariant PaletteGizmo::outputValue(const QByteArray &t_portId) const
     return {};
 }
 
-SurfaceGizmoWidget *PaletteGizmo::createWidget(SurfaceMode mode)
-{
-    auto widget = new PaletteGizmoWidget(this, mode);
-    connect(this, &SurfaceGizmo::gizmoUpdated, widget, &SurfaceGizmoWidget::updateGizmo);
-    return widget;
-}
 
 void PaletteGizmo::readFromJson(const QJsonObject &t_json, const LoadContext &t_context)
 {

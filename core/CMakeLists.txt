@@ -497,9 +497,6 @@ add_library(photon-core SHARED ${PROJECT_SOURCES}
     surface/togglegizmo.h surface/togglegizmo.cpp
     surface/surfacegizmocontainer.h surface/surfacegizmocontainer.cpp
     surface/surfacegraph.h surface/surfacegraph.cpp
-    surface/viewer/surfacegizmowidget.h surface/viewer/surfacegizmowidget.cpp
-    surface/viewer/togglegizmowidget.h surface/viewer/togglegizmowidget.cpp
-    surface/viewer/surfacegraphwidget.h surface/viewer/surfacegraphwidget.cpp
     graph/bus/dmxreadernode.h graph/bus/dmxreadernode.cpp
     graph/node/writedmxchannelnode.h graph/node/writedmxchannelnode.cpp
     graph/node/fixture/fixturetreeselection.h graph/node/fixture/fixturetreeselection.cpp
@@ -514,11 +511,8 @@ add_library(photon-core SHARED ${PROJECT_SOURCES}
     gui/panel/surfacecollectionpanel.h gui/panel/surfacecollectionpanel.cpp
     gui/panel/surfacecollectionpanel_p.h
     surface/gizmofactory.h surface/gizmofactory.cpp
-    surface/viewer/togglegizmoeditor.h surface/viewer/togglegizmoeditor.cpp
     gui/color/colorpalettewidget.h gui/color/colorpalettewidget.cpp
     surface/palettegizmo.h surface/palettegizmo.cpp
-    surface/viewer/palettegizmowidget.h surface/viewer/palettegizmowidget.cpp
-    surface/viewer/palettegizmoeditor.h surface/viewer/palettegizmoeditor.cpp
     channel/palettegizmochanneleffect.h channel/palettegizmochanneleffect.cpp
     surface/gizmochanneleffect.h surface/gizmochanneleffect.cpp
     resources/fixtures/betopper-bee-eye.json resources/fixtures/betopper-lb150.json resources/fixtures/betopper-LPC1818.json resources/fixtures/both-lighting-ir-4.json resources/fixtures/Chauvet-Pyxis.json resources/fixtures/proteus-hybrid.json resources/fixtures/shehds-jws-web.json resources/fixtures/shehds-led-18x18.json
@@ -528,12 +522,10 @@ add_library(photon-core SHARED ${PROJECT_SOURCES}
     graph/node/fixture/fixtureglobalsnode.h graph/node/fixture/fixtureglobalsnode.cpp
     resources/fixtures/martin-mac-quantum.json
     surface/slidergizmo.h surface/slidergizmo.cpp
-    surface/viewer/slidergizmowidget.h surface/viewer/slidergizmowidget.cpp
     graph/node/gizmo/slidergizmonode.h graph/node/gizmo/slidergizmonode.cpp
     graph/node/gizmo/gizmovaluenode.h graph/node/gizmo/gizmovaluenode.cpp
     graph/node/fixture/fixturestatenode.h graph/node/fixture/fixturestatenode.cpp
     surface/viewer/fixturestateeditor.h surface/viewer/fixturestateeditor.cpp
-    surface/viewer/slidergizmoeditor.h surface/viewer/slidergizmoeditor.cpp
     fixture/capability/prismrotationcapability.h fixture/capability/prismrotationcapability.cpp
     fixture/capability/prismcapability.h fixture/capability/prismcapability.cpp
     graph/parameter/colorpaletteparameter.h graph/parameter/colorpaletteparameter.cpp
