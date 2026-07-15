@@ -101,7 +101,6 @@ signals:
 
 private:
     friend class Clip;
-    friend class SurfaceAction;
     friend class CanvasLayerGroup;
     class Impl;
     Impl *m_impl;

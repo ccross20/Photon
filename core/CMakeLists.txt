@@ -497,7 +497,6 @@ add_library(photon-core SHARED ${PROJECT_SOURCES}
     surface/togglegizmo.h surface/togglegizmo.cpp
     surface/surfacegizmocontainer.h surface/surfacegizmocontainer.cpp
     surface/surfacegraph.h surface/surfacegraph.cpp
-    surface/viewer/surfacegizmocontainerwidget.h surface/viewer/surfacegizmocontainerwidget.cpp
     surface/viewer/surfacegizmowidget.h surface/viewer/surfacegizmowidget.cpp
     surface/viewer/togglegizmowidget.h surface/viewer/togglegizmowidget.cpp
     surface/viewer/surfacegraphwidget.h surface/viewer/surfacegraphwidget.cpp
@@ -508,13 +507,7 @@ add_library(photon-core SHARED ${PROJECT_SOURCES}
     graph/node/fixture/selectfixturesnode.h graph/node/fixture/selectfixturesnode.cpp
     graph/node/fixture/fixturegroupnode.h graph/node/fixture/fixturegroupnode.cpp
     sequence/baseeffectparent.h
-    surface/surfaceaction.h surface/surfaceaction.cpp
-    surface/surfaceaction_p.h
-    surface/fixtureaction.h surface/fixtureaction.cpp
-    surface/viewer/actionmodel.h surface/viewer/actionmodel.cpp
     data/commonmodel.h data/commonmodel.cpp
-    surface/viewer/actionstructureviewer.h surface/viewer/actionstructureviewer.cpp
-    surface/viewer/actioneditwidget.h surface/viewer/actioneditwidget.cpp
     channel/togglegizmochanneleffect.h channel/togglegizmochanneleffect.cpp
     channel/gizmoretimechanneleffect.h channel/gizmoretimechanneleffect.cpp
     state/wheelslotanglestate.h state/wheelslotanglestate.cpp
@@ -528,9 +521,6 @@ add_library(photon-core SHARED ${PROJECT_SOURCES}
     surface/viewer/palettegizmoeditor.h surface/viewer/palettegizmoeditor.cpp
     channel/palettegizmochanneleffect.h channel/palettegizmochanneleffect.cpp
     surface/gizmochanneleffect.h surface/gizmochanneleffect.cpp
-    surface/viewer/actionsettingswidget.h surface/viewer/actionsettingswidget.cpp
-    surface/canvasaction.h surface/canvasaction.cpp
-    surface/viewer/canvasactionsettingswidget.h surface/viewer/canvasactionsettingswidget.cpp
     resources/fixtures/betopper-bee-eye.json resources/fixtures/betopper-lb150.json resources/fixtures/betopper-LPC1818.json resources/fixtures/both-lighting-ir-4.json resources/fixtures/Chauvet-Pyxis.json resources/fixtures/proteus-hybrid.json resources/fixtures/shehds-jws-web.json resources/fixtures/shehds-led-18x18.json
     graph/node/gizmo/togglegizmonode.h graph/node/gizmo/togglegizmonode.cpp
     graph/node/fixture/fixturesubgraphnode.h graph/node/fixture/fixturesubgraphnode.cpp

@@ -48,7 +48,6 @@ public:
 private:
     friend FixtureClip;
     friend FixtureGizmo;
-    friend FixtureAction;
 
     class Impl;
     Impl *m_impl;

@@ -13,7 +13,6 @@
 #include "state/statecapability.h"
 #include "gui/guimanager.h"
 #include "sequence/fixtureclip.h"
-#include "surface/fixtureaction.h"
 #include "gui/color/colorwheelswatch.h"
 
 namespace photon {
@@ -30,8 +29,6 @@ void StateEditor::setBaseEffectParent(photon::BaseEffectParent* t_effectParent)
     m_baseEffectParent = t_effectParent;
     if(dynamic_cast<FixtureClip*>(t_effectParent))
         selectState(static_cast<FixtureClip*>(t_effectParent)->state());
-    else if(dynamic_cast<FixtureAction*>(t_effectParent))
-        selectState(static_cast<FixtureAction*>(t_effectParent)->state());
 }
 
 void StateEditor::selectState(State *t_state)
@@ -144,8 +141,6 @@ void StateEditor::selectState(State *t_state)
                     {
                         if(dynamic_cast<FixtureClip*>(m_baseEffectParent))
                             static_cast<FixtureClip*>(m_baseEffectParent)->addChannel(stateCapability->availableChannels().at(index));
-                        else if(dynamic_cast<FixtureAction*>(m_baseEffectParent))
-                            static_cast<FixtureAction*>(m_baseEffectParent)->addChannel(stateCapability->availableChannels().at(index));
                     }
 
                 });

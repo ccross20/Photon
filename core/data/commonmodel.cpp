@@ -189,6 +189,11 @@ FalloffEffectData::FalloffEffectData(FalloffEffect *t_effect):AbstractTreeData(t
 
 }
 
+MaskEffectData::MaskEffectData(MaskEffect *t_effect):AbstractTreeData(t_effect->name(), t_effect->uniqueId()),m_effect(t_effect)
+{
+
+}
+
 
 BaseEffectData::BaseEffectData(BaseEffect *t_effect):AbstractTreeData(t_effect->name(), t_effect->uniqueId()),m_effect(t_effect)
 {
