@@ -9,7 +9,7 @@ namespace photon {
 
 // Generic gizmo value source. Reads any gizmo's published output from the
 // surface value bus, with no per-gizmo-type node or dynamic cast. Replaces the
-// type-specific SliderGizmoNode/ToggleGizmoNode pattern.
+// type-specific SliderGizmoNode/ButtonGizmoNode pattern.
 //
 // A single "Source" selector lists every gizmo->output pair on the surface; its
 // value is the bus key "<uniqueId>/<portId>". (A dependent gizmo+port pair of

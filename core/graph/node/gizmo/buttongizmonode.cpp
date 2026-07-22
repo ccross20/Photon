@@ -1,34 +1,34 @@
-#include "togglegizmonode.h"
+#include "buttongizmonode.h"
 #include "surface/surfacegraph.h"
 #include "surface/surface.h"
-#include "surface/togglegizmo.h"
+#include "surface/buttongizmo.h"
 #include "routine/routineevaluationcontext.h"
 #include "graph/bus/surfacenode.h"
 
 namespace photon {
 
 
-const QByteArray ToggleGizmoNode::GizmoId = "gizmoId";
-const QByteArray ToggleGizmoNode::Value = "value";
+const QByteArray ButtonGizmoNode::GizmoId = "gizmoId";
+const QByteArray ButtonGizmoNode::Value = "value";
 
 
 
-keira::NodeInformation ToggleGizmoNode::info()
+keira::NodeInformation ButtonGizmoNode::info()
 {
-    keira::NodeInformation toReturn([](){return new ToggleGizmoNode;});
-    toReturn.name = "Toggle Gizmo";
-    toReturn.nodeId = "photon.gizmo.toggle-gizmo";
+    keira::NodeInformation toReturn([](){return new ButtonGizmoNode;});
+    toReturn.name = "Button Gizmo";
+    toReturn.nodeId = "photon.gizmo.button-gizmo";
     toReturn.categories = {"Gizmo"};
     toReturn.graphs = QByteArrayList{"surface"};
 
     return toReturn;
 }
 
-ToggleGizmoNode::ToggleGizmoNode() : keira::Node("photon.gizmo.toggle-gizmo") {
-    setName("Toggle Gizmo");
+ButtonGizmoNode::ButtonGizmoNode() : keira::Node("photon.gizmo.button-gizmo") {
+    setName("Button Gizmo");
 }
 
-void ToggleGizmoNode::addedToGraph(keira::Graph *t_graph)
+void ButtonGizmoNode::addedToGraph(keira::Graph *t_graph)
 {
     if(m_optionParam->value().toInt() == 0)
     {
@@ -41,7 +41,7 @@ void ToggleGizmoNode::addedToGraph(keira::Graph *t_graph)
     }
 }
 
-void ToggleGizmoNode::createParameters()
+void ButtonGizmoNode::createParameters()
 {
     m_optionParam = new keira::StringOptionParameter(GizmoId,"Gizmo", {},0, keira::AllowMultipleOutput | keira::AllowSingleInput);
     m_optionParam->setOptionLambda([this](){
@@ -56,7 +56,7 @@ void ToggleGizmoNode::createParameters()
 
                 if(surfaceNode->surface())
                 {
-                    auto gizmos = surfaceNode->surface()->gizmosByType(ToggleGizmo::GizmoId);
+                    auto gizmos = surfaceNode->surface()->gizmosByType(ButtonGizmo::GizmoId);
                     for(auto gizmo : gizmos){
                         results.append(std::pair<QString,QString>(gizmo->id(),gizmo->uniqueId()));
                     }
@@ -78,7 +78,7 @@ void ToggleGizmoNode::createParameters()
             auto surfaceNode = static_cast<SurfaceNode*>(node);
             if(surfaceNode->surface())
             {
-                auto gizmos = surfaceNode->surface()->gizmosByType(ToggleGizmo::GizmoId);
+                auto gizmos = surfaceNode->surface()->gizmosByType(ButtonGizmo::GizmoId);
                 if(!gizmos.isEmpty())
                     m_optionParam->setValue(gizmos.first()->uniqueId());
             }
@@ -93,7 +93,7 @@ void ToggleGizmoNode::createParameters()
 
 }
 
-void ToggleGizmoNode::evaluate(keira::EvaluationContext *t_context) const
+void ButtonGizmoNode::evaluate(keira::EvaluationContext *t_context) const
 {
 
     auto context = static_cast<RoutineEvaluationContext*>(t_context);
@@ -102,7 +102,7 @@ void ToggleGizmoNode::evaluate(keira::EvaluationContext *t_context) const
 
     if(context->surface)
     {
-        ToggleGizmo *gizmo = dynamic_cast<ToggleGizmo*>(context->surface->findGizmoWithUniqueId(gizmoId));
+        ButtonGizmo *gizmo = dynamic_cast<ButtonGizmo*>(context->surface->findGizmoWithUniqueId(gizmoId));
         if(gizmo)
         {
             m_valueParam->setValue(gizmo->isPressed());

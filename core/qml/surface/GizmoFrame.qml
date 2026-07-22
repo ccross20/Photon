@@ -34,6 +34,7 @@ Item {
         source: {
             var t = frame.gizmo ? frame.gizmo.gizmoType : "";
             if (t === "Slider") return "SliderGizmo.qml";
+            if (t === "Button") return "ButtonGizmo.qml";
             if (t === "Toggle") return "ToggleGizmo.qml";
             if (t === "Palette") return "PaletteGizmo.qml";
             if (t === "Container") return "ContainerGizmo.qml";
@@ -173,6 +174,47 @@ Item {
                     frame.editContext.endDrag();
             }
             onCentroidChanged: if (active && frame.editContext) frame.editContext.moveDrag(centroid.scenePosition)
+        }
+    }
+
+    // Rotation handle (stalk above top-center), absolute frames only.
+    Item {
+        visible: frame.editMode && frame.selected && !frame.layoutManaged
+        width: 16
+        height: 28
+        x: frame.width / 2 - width / 2
+        y: -height
+        z: 3
+
+        Rectangle {
+            width: 2
+            height: 16
+            color: "#2ecc71"
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.bottom: parent.bottom
+        }
+        Rectangle {
+            width: 14
+            height: 14
+            radius: 7
+            color: "#2ecc71"
+            anchors.top: parent.top
+            anchors.horizontalCenter: parent.horizontalCenter
+        }
+
+        MouseArea {
+            anchors.fill: parent
+            onPositionChanged: (mouse) => {
+                var p = mapToItem(frame.parent, mouse.x, mouse.y);
+                var cx = frame.x + frame.width / 2;
+                var cy = frame.y + frame.height / 2;
+                var deg = Math.atan2(p.y - cy, p.x - cx) * 180 / Math.PI + 90;
+                if (frame.editContext && frame.editContext.snapEnabled)
+                    deg = Math.round(deg / 15) * 15;
+                else
+                    deg = Math.round(deg);
+                frame.gizmo.setPropValue("rotation", deg);
+            }
         }
     }
 }

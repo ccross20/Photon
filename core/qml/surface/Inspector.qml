@@ -156,6 +156,18 @@ Rectangle {
             }
 
             Text {
+                visible: inspector.gizmo && inspector.allDefs.some(function(d) { return d.category === "style"; })
+                text: "Style"
+                color: "#888"
+                font.pixelSize: 11
+                Layout.topMargin: 6
+            }
+            Repeater {
+                model: inspector.allDefs.filter(function(d) { return d.category === "style"; })
+                delegate: PropertyRow { required property var modelData; def: modelData }
+            }
+
+            Text {
                 visible: inspector.gizmo
                 text: "Properties"
                 color: "#888"
@@ -163,7 +175,7 @@ Rectangle {
                 Layout.topMargin: 6
             }
             Repeater {
-                model: inspector.allDefs.filter(function(d) { return d.category !== "layout"; })
+                model: inspector.allDefs.filter(function(d) { return d.category !== "layout" && d.category !== "style"; })
                 delegate: PropertyRow { required property var modelData; def: modelData }
             }
         }

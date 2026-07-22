@@ -45,8 +45,10 @@ Item {
                 if (ly > c.y + c.height / 2) idx++;
             } else if (lt === "Horizontal") {
                 if (lx > c.x + c.width / 2) idx++;
-            } else { // Grid (approximate)
-                if (ly > c.y + c.height || (ly > c.y && lx > c.x + c.width / 2)) idx++;
+            } else { // Grid: reading order (row-major)
+                var below = ly >= c.y + c.height;
+                var sameRow = ly >= c.y && ly < c.y + c.height;
+                if (below || (sameRow && lx > c.x + c.width / 2)) idx++;
             }
         }
         return idx;
@@ -69,8 +71,21 @@ Item {
         enabled: cont.editMode
         onDropped: (drop) => {
             var g = cont.editContext ? cont.editContext.dragGizmo : null;
-            if (g)
-                surfaceView.reparentGizmo(g, cont.gizmo, cont.dropIndex(drop.x, drop.y));
+            if (!g)
+                return;
+            // In an Absolute container, drop where the pointer released.
+            if (cont.layoutType === "Absolute") {
+                var nx = drop.x - cont.pad - g.values.width / 2;
+                var ny = drop.y - cont.pad - g.values.height / 2;
+                if (cont.editContext && cont.editContext.snapEnabled) {
+                    var gs = cont.editContext.gridSize;
+                    nx = Math.round(nx / gs) * gs;
+                    ny = Math.round(ny / gs) * gs;
+                }
+                g.setPropValue("x", nx);
+                g.setPropValue("y", ny);
+            }
+            surfaceView.reparentGizmo(g, cont.gizmo, cont.dropIndex(drop.x, drop.y));
         }
         Rectangle {
             anchors.fill: parent

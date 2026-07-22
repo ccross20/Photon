@@ -1,5 +1,5 @@
-#ifndef TOGGLEGIZMONODE_H
-#define TOGGLEGIZMONODE_H
+#ifndef BUTTONGIZMONODE_H
+#define BUTTONGIZMONODE_H
 #include "model/node.h"
 #include "photon-global.h"
 #include "model/parameter/stringoptionparameter.h"
@@ -7,13 +7,13 @@
 
 namespace photon {
 
-class PHOTONCORE_EXPORT ToggleGizmoNode : public keira::Node
+class PHOTONCORE_EXPORT ButtonGizmoNode : public keira::Node
 {
 public:
     const static QByteArray GizmoId;
     const static QByteArray Value;
 
-    ToggleGizmoNode();
+    ButtonGizmoNode();
 
 
     void createParameters() override;
@@ -31,4 +31,4 @@ private:
 
 } // namespace photon
 
-#endif // TOGGLEGIZMONODE_H
+#endif // BUTTONGIZMONODE_H

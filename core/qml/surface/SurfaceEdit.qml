@@ -38,6 +38,11 @@ Rectangle {
             root.selectedGizmo = null;
         surfaceView.removeGizmo(g);
     }
+
+    Shortcut {
+        sequences: [StandardKey.Delete, StandardKey.Backspace]
+        onActivated: if (root.selectedGizmo) root.removeGizmo(root.selectedGizmo)
+    }
     // Add into the selected container, else the root container.
     function addTarget() {
         return (root.selectedGizmo && root.selectedGizmo.gizmoType === "Container")
@@ -58,6 +63,7 @@ Rectangle {
             spacing: 6
 
             Button { text: "+ Slider";    onClicked: surfaceView.addGizmo("Slider", root.addTarget()) }
+            Button { text: "+ Button";    onClicked: surfaceView.addGizmo("Button", root.addTarget()) }
             Button { text: "+ Toggle";    onClicked: surfaceView.addGizmo("Toggle", root.addTarget()) }
             Button { text: "+ Palette";   onClicked: surfaceView.addGizmo("Palette", root.addTarget()) }
             Button { text: "+ Container"; onClicked: surfaceView.addGizmo("Container", root.addTarget()) }
@@ -102,10 +108,13 @@ Rectangle {
             onHeightChanged: requestPaint()
         }
 
-        // Click empty canvas to deselect (below the container).
+        // Click empty canvas selects the root container itself — the same rule
+        // GizmoFrame applies for nested containers (empty space selects the
+        // container, not nothing), so the root's own layout/stretch/padding are
+        // reachable in the Inspector.
         MouseArea {
             anchors.fill: parent
-            onClicked: root.selectedGizmo = null
+            onClicked: root.selectGizmo(surfaceView.root)
         }
 
         ContainerGizmo {
@@ -113,6 +122,17 @@ Rectangle {
             gizmo: surfaceView.root
             editMode: true
             editContext: root
+        }
+
+        // Selection outline for the root container. Other gizmos get this via
+        // GizmoFrame, but the root has no frame — it can't be moved, resized, or
+        // deleted, only selected to edit its layout properties.
+        Rectangle {
+            anchors.fill: parent
+            color: "transparent"
+            border.color: root.selectedGizmo === surfaceView.root ? "#3daee9" : "#30ffffff"
+            border.width: root.selectedGizmo === surfaceView.root ? 2 : 1
+            z: 999
         }
     }
 

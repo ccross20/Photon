@@ -89,6 +89,12 @@ void Graph::drainCommandQueue()
 // Public mutation API — enqueue to be applied at next frame start
 // ─────────────────────────────────────────────────────────────────────────────
 
+void Graph::runCommand(std::function<void()> t_command)
+{
+    QMutexLocker lock(&m_impl->commandMutex);
+    m_impl->pendingCommands.push_back(std::move(t_command));
+}
+
 void Graph::addNode(Node *t_node)
 {
     QMutexLocker lock(&m_impl->commandMutex);

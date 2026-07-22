@@ -494,6 +494,7 @@ add_library(photon-core SHARED ${PROJECT_SOURCES}
     surface/viewer/surfacewidget.h surface/viewer/surfacewidget.cpp
     gui/panel/surfacepanel.h gui/panel/surfacepanel.cpp
     surface/surfacecollection.h surface/surfacecollection.cpp
+    surface/buttongizmo.h surface/buttongizmo.cpp
     surface/togglegizmo.h surface/togglegizmo.cpp
     surface/surfacegizmocontainer.h surface/surfacegizmocontainer.cpp
     surface/surfacegraph.h surface/surfacegraph.cpp
@@ -516,7 +517,7 @@ add_library(photon-core SHARED ${PROJECT_SOURCES}
     channel/palettegizmochanneleffect.h channel/palettegizmochanneleffect.cpp
     surface/gizmochanneleffect.h surface/gizmochanneleffect.cpp
     resources/fixtures/betopper-bee-eye.json resources/fixtures/betopper-lb150.json resources/fixtures/betopper-LPC1818.json resources/fixtures/both-lighting-ir-4.json resources/fixtures/Chauvet-Pyxis.json resources/fixtures/proteus-hybrid.json resources/fixtures/shehds-jws-web.json resources/fixtures/shehds-led-18x18.json
-    graph/node/gizmo/togglegizmonode.h graph/node/gizmo/togglegizmonode.cpp
+    graph/node/gizmo/buttongizmonode.h graph/node/gizmo/buttongizmonode.cpp
     graph/node/fixture/fixturesubgraphnode.h graph/node/fixture/fixturesubgraphnode.cpp
     graph/parameter/fixturelistparameter.h graph/parameter/fixturelistparameter.cpp
     graph/node/fixture/fixtureglobalsnode.h graph/node/fixture/fixtureglobalsnode.cpp

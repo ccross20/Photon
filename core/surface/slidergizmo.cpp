@@ -10,6 +10,8 @@ SliderGizmo::SliderGizmo():SurfaceGizmo("Slider")
     addProperty("min",  "Min",    GizmoProperty::Number, 0.0);
     addProperty("max",  "Max",    GizmoProperty::Number, 1.0);
     addProperty("value","Value",  GizmoProperty::Number, 0.0);
+    addProperty("orientation", "Orientation", GizmoProperty::Options, QString("Horizontal"),
+                {{"options", QStringList{"Horizontal", "Vertical"}}});
 }
 
 QString SliderGizmo::text() const

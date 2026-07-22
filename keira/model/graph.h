@@ -1,6 +1,7 @@
 #ifndef KEIRA_GRAPH_H
 #define KEIRA_GRAPH_H
 
+#include <functional>
 #include "keira-global.h"
 
 namespace keira {
@@ -25,6 +26,11 @@ public:
     // Drains and applies all commands queued by the UI thread.
     // Called by the eval thread at the start of each frame.
     void drainCommandQueue();
+
+    // Enqueue arbitrary work to run on the eval thread at the next frame start,
+    // for structural changes that must not race the evaluator (e.g. adding or
+    // removing a node's parameters while it is being evaluated).
+    void runCommand(std::function<void()>);
 
     void prepForEvaluation();
     virtual void evaluate(EvaluationContext *) const;

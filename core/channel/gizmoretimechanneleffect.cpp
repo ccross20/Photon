@@ -4,7 +4,7 @@
 #include "sequence/channel.h"
 #include "surface/surfacegizmocontainer.h"
 #include "sequence/viewer/stackedparameterwidget.h"
-#include "surface/togglegizmo.h"
+#include "surface/buttongizmo.h"
 
 namespace photon {
 
@@ -30,7 +30,7 @@ EffectInformation GizmoRetimeChannelEffect::info()
 
 
 
-GizmoRetimeChannelEffect::GizmoRetimeChannelEffect() : GizmoChannelEffect(ToggleGizmo::GizmoId)
+GizmoRetimeChannelEffect::GizmoRetimeChannelEffect() : GizmoChannelEffect(ButtonGizmo::GizmoId)
 {
 
 }
@@ -61,9 +61,9 @@ double GizmoRetimeChannelEffect::processTime(double t_time) const
 
     if(gizmo())
     {
-        ToggleGizmo *toggleGizmo = dynamic_cast<ToggleGizmo*>(gizmo());
-        //qDebug() <<  toggleGizmo->isPressed();
-        return toggleGizmo->timeSincePress();
+        ButtonGizmo *buttonGizmo = dynamic_cast<ButtonGizmo*>(gizmo());
+        //qDebug() <<  buttonGizmo->isPressed();
+        return buttonGizmo->timeSincePress();
     }
 
     return t_time;

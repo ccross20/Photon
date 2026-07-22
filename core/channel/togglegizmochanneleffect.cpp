@@ -4,7 +4,7 @@
 #include "sequence/viewer/stackedparameterwidget.h"
 #include "sequence/channel.h"
 #include "surface/surfacegizmocontainer.h"
-#include "surface/togglegizmo.h"
+#include "surface/buttongizmo.h"
 
 namespace photon {
 
@@ -103,7 +103,7 @@ EffectInformation ToggleGizmoChannelEffect::info()
 
 
 
-ToggleGizmoChannelEffect::ToggleGizmoChannelEffect() : GizmoChannelEffect(ToggleGizmo::GizmoId)
+ToggleGizmoChannelEffect::ToggleGizmoChannelEffect() : GizmoChannelEffect(ButtonGizmo::GizmoId)
 {
 
 }
@@ -126,9 +126,9 @@ float * ToggleGizmoChannelEffect::process(float *value, uint size, double time) 
     bool isPressed = false;
     if(gizmo())
     {
-        ToggleGizmo *toggleGizmo = dynamic_cast<ToggleGizmo*>(gizmo());
-        //qDebug() <<  toggleGizmo->isPressed();
-        isPressed = toggleGizmo->isPressed();
+        ButtonGizmo *buttonGizmo = dynamic_cast<ButtonGizmo*>(gizmo());
+        //qDebug() <<  buttonGizmo->isPressed();
+        isPressed = buttonGizmo->isPressed();
     }
 
     for(int i = 0; i < size; ++i)

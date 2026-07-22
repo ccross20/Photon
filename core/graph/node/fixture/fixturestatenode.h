@@ -26,6 +26,7 @@ public:
     const static QByteArray Enable;
 
     struct EnableSample { double time; bool enabled; };
+    struct ValueSample { double time; QVariant value; };
 
     FixtureStateNode();
     ~FixtureStateNode();
@@ -48,8 +49,6 @@ public:
     void writeToJson(QJsonObject &) const override;
 
 private:
-    struct ValueSample { double time; QVariant value; };
-
     FixtureListParameter *m_fixturesParam = nullptr;
     keira::BooleanParameter *m_enableParam = nullptr;
     State *m_state = nullptr;

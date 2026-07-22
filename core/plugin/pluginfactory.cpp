@@ -36,7 +36,7 @@
 #include "graph/node/math/arithmeticnode.h"
 #include "graph/node/math/delaynode.h"
 #include "graph/node/writedmxchannelnode.h"
-#include "graph/node/gizmo/togglegizmonode.h"
+#include "graph/node/gizmo/buttongizmonode.h"
 #include "graph/node/gizmo/slidergizmonode.h"
 #include "graph/node/gizmo/gizmovaluenode.h"
 #include "graph/node/fixture/fixturesubgraphnode.h"
@@ -211,7 +211,7 @@ void PluginFactory::init()
     registerNode(CanvasWriterNode::info());
     registerNode(CreateTextureNode::info());
     registerNode(WriteDMXChannelNode::info());
-    registerNode(ToggleGizmoNode::info());
+    registerNode(ButtonGizmoNode::info());
     registerNode(SliderGizmoNode::info());
     registerNode(GizmoValueNode::info());
     registerNode(FixtureStateNode::info());

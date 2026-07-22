@@ -61,28 +61,44 @@ void FixtureStateNode::setChannelExposed(StateCapability *t_cap, int t_index, bo
             return;
         auto *param = new keira::AnyParameter(channelId, t_cap->name(),
                                               keira::AllowMultipleOutput | keira::AllowSingleInput);
-        addParameter(param);
-        portsChanged();
+        // Apply the parameter change on the eval thread so it never races the
+        // evaluator iterating this node's parameters.
+        auto apply = [this, param]() { addParameter(param); portsChanged(); };
+        if(graph())
+            graph()->runCommand(apply);
+        else
+            apply();
     }
     else
     {
         if(!existing)
             return;
-        // Drop connections, then retire (not delete) so the eval thread never
-        // touches a freed parameter.
+
         if(graph())
         {
+            // Queue the disconnects first, then the removal, so they drain in
+            // order. Retire (don't delete) the parameter so the eval thread
+            // never touches a freed pointer.
             const auto inputs = existing->inputParameters();
             for(auto *in : inputs)
                 graph()->disconnectParameters(in, existing);
             const auto outputs = existing->outputParameters();
             for(auto *out : outputs)
                 graph()->disconnectParameters(existing, out);
+
+            graph()->runCommand([this, existing, channelId]() {
+                removeParameter(existing);
+                m_inputHistory.remove(channelId);
+                m_retiredParams.append(existing);
+                portsChanged();
+            });
         }
-        removeParameter(existing);
-        m_inputHistory.remove(channelId);
-        m_retiredParams.append(existing);
-        portsChanged();
+        else
+        {
+            removeParameter(existing);
+            m_inputHistory.remove(channelId);
+            m_retiredParams.append(existing);
+        }
     }
 }
 
@@ -116,6 +132,48 @@ static int sampleIndexAt(const std::deque<Sample> &t_history, double t_time)
             hi = mid;
     }
     return lo;
+}
+
+static bool isNumeric(const QVariant &t_value)
+{
+    switch(t_value.typeId())
+    {
+    case QMetaType::Double:
+    case QMetaType::Float:
+    case QMetaType::Int:
+    case QMetaType::UInt:
+    case QMetaType::LongLong:
+    case QMetaType::ULongLong:
+        return true;
+    default:
+        return false;
+    }
+}
+
+// Value of an exposed input at a past time: linearly interpolated for numeric
+// values, nearest-neighbour for everything else (colors, bools, ...).
+static QVariant sampleValueAt(const std::deque<FixtureStateNode::ValueSample> &t_history, double t_time)
+{
+    if(t_history.empty())
+        return QVariant();
+    if(t_history.front().time >= t_time)
+        return t_history.front().value;
+
+    const int lo = sampleIndexAt(t_history, t_time);
+    if(lo + 1 >= static_cast<int>(t_history.size()))
+        return t_history[lo].value;
+
+    const auto &a = t_history[lo];
+    const auto &b = t_history[lo + 1];
+    if(isNumeric(a.value) && isNumeric(b.value))
+    {
+        const double span = b.time - a.time;
+        if(span < 1e-9)
+            return a.value;
+        const double frac = (t_time - a.time) / span;
+        return a.value.toDouble() + frac * (b.value.toDouble() - a.value.toDouble());
+    }
+    return a.value;
 }
 
 // Nearest-neighbour lookup of the Enable value at a past time.
@@ -187,8 +245,7 @@ void FixtureStateNode::evaluate(keira::EvaluationContext *t_context) const
             const auto &history = m_inputHistory[param->id()];
             if(history.empty())
                 continue;
-            const int idx = (history.front().time >= delayedTime) ? 0 : sampleIndexAt(history, delayedTime);
-            local.channelValues[param->id()] = history[idx].value;
+            local.channelValues[param->id()] = sampleValueAt(history, delayedTime);
         }
 
         m_state->evaluate(local);
