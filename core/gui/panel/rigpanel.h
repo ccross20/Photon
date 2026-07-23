@@ -1,5 +1,5 @@
-#ifndef PHOTON_FIXTURECOLLECTIONPANEL_H
-#define PHOTON_FIXTURECOLLECTIONPANEL_H
+#ifndef PHOTON_RIGPANEL_H
+#define PHOTON_RIGPANEL_H
 
 #include <QItemSelection>
 #include "photon-global.h"
@@ -7,11 +7,11 @@
 
 namespace photon {
 
-class FixtureCollectionPanel : public Panel
+class RigPanel : public Panel
 {
 public:
-    FixtureCollectionPanel();
-    ~FixtureCollectionPanel();
+    RigPanel();
+    ~RigPanel();
 
 private slots:
     void addClicked();
@@ -41,4 +41,4 @@ private:
 
 } // namespace photon
 
-#endif // PHOTON_FIXTURECOLLECTIONPANEL_H
+#endif // PHOTON_RIGPANEL_H

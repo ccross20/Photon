@@ -25,7 +25,7 @@ keira::NodeInformation FixtureStateNode::info()
     toReturn.name = "Fixture State";
     toReturn.nodeId = "photon.node.fixture-state";
     toReturn.categories = {"Fixture"};
-    toReturn.graphs = QByteArrayList{"bus", "surface"};
+    toReturn.graphs = QByteArrayList{"bus", "surface", "dmx-subgraph"};
     return toReturn;
 }
 

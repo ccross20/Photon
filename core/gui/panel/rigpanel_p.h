@@ -1,23 +1,22 @@
-#ifndef FIXTURECOLLECTIONPANEL_P_H
-#define FIXTURECOLLECTIONPANEL_P_H
+#ifndef RIGPANEL_P_H
+#define RIGPANEL_P_H
 
 #include <QTreeView>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QPushButton>
-#include "fixturecollectionpanel.h"
+#include "rigpanel.h"
 #include "scene/scenemodel.h"
 
 namespace photon {
 
-class FixtureCollectionPanel::Impl
+class RigPanel::Impl
 {
 public:
     QTreeView *treeView;
     QPushButton *addButton;
     QPushButton *removeButton;
     QPushButton *duplicateButton;
-    QWidget *editorWidget;
     QVBoxLayout *vLayout;
     QHBoxLayout *hLayout;
     SceneModel *sceneModel;
@@ -27,4 +26,4 @@ public:
 
 }
 
-#endif // FIXTURECOLLECTIONPANEL_P_H
+#endif // RIGPANEL_P_H

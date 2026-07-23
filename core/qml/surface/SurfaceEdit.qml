@@ -65,6 +65,10 @@ Rectangle {
             Button { text: "+ Slider";    onClicked: surfaceView.addGizmo("Slider", root.addTarget()) }
             Button { text: "+ Button";    onClicked: surfaceView.addGizmo("Button", root.addTarget()) }
             Button { text: "+ Toggle";    onClicked: surfaceView.addGizmo("Toggle", root.addTarget()) }
+            Button { text: "+ Dial";      onClicked: surfaceView.addGizmo("Dial", root.addTarget()) }
+            Button { text: "+ XY Pad";    onClicked: surfaceView.addGizmo("XYPad", root.addTarget()) }
+            Button { text: "+ Hue";       onClicked: surfaceView.addGizmo("Hue", root.addTarget()) }
+            Button { text: "+ Segmented"; onClicked: surfaceView.addGizmo("Segmented", root.addTarget()) }
             Button { text: "+ Palette";   onClicked: surfaceView.addGizmo("Palette", root.addTarget()) }
             Button { text: "+ Container"; onClicked: surfaceView.addGizmo("Container", root.addTarget()) }
 

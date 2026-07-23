@@ -63,7 +63,8 @@ void GuiManager::Impl::createAppWindow()
     QMenu *windowMenu = new QMenu("Window");
     windowMenu->addAction("Canvas", [](){photonApp->gui()->createFloatingPanel("photon.canvas-collection");});
     windowMenu->addAction("Pixel Layouts", [](){photonApp->gui()->createFloatingPanel("photon.pixellayout-collection");});
-    windowMenu->addAction("Fixture", [](){photonApp->gui()->createFloatingPanel("photon.fixture-collection");});
+    windowMenu->addAction("Rig", [](){photonApp->gui()->createFloatingPanel("photon.rig");});
+    windowMenu->addAction("Properties", [](){photonApp->gui()->createFloatingPanel("photon.properties");});
     windowMenu->addAction("Routine", [](){photonApp->gui()->createFloatingPanel("photon.routine-collection");});
     windowMenu->addAction("Sequence", [](){photonApp->gui()->createFloatingPanel("photon.sequence-collection");});
     windowMenu->addAction("Surfaces", [](){photonApp->gui()->createFloatingPanel("photon.surface-collection");});
@@ -112,7 +113,7 @@ void GuiManager::Impl::createAppWindow()
 /*
     m_ext->createDockedPanel("photon.routine-collection", RightDockWidgetArea);
     m_ext->createDockedPanel("photon.sequence-collection", RightDockWidgetArea);
-    m_ext->createDockedPanel("photon.fixture-collection", RightDockWidgetArea);
+    m_ext->createDockedPanel("photon.rig", RightDockWidgetArea);
     */
 
 
@@ -621,6 +622,14 @@ bool GuiManager::restoreLayout(const QString &t_filename)
 
     for(auto id : ids)
     {
+        // Skip panels that already have a dock widget — notably "photon.bus",
+        // the central panel createAppWindow() always creates, which also gets
+        // included in the saved id list by saveLayout(). Recreating it here
+        // would leave a second CDockWidget with the same object name, which
+        // corrupts the dock manager's internal central-widget pointer and
+        // crashes the next time saveState() runs.
+        if(m_impl->dockManager()->findDockWidget(QString::fromUtf8(id)))
+            continue;
         createDockedPanel(id);
     }
 

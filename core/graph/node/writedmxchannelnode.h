@@ -9,6 +9,7 @@ class PHOTONCORE_EXPORT WriteDMXChannelNode : public keira::Node
 {
 public:
     const static QByteArray ChannelNumber;
+    const static QByteArray ChannelUniverse;
     const static QByteArray ChannelValue;
 
     WriteDMXChannelNode();

@@ -143,6 +143,15 @@ Rectangle {
                 font.pixelSize: 13
             }
 
+            // The gizmo's user-facing name — shown right under the type header
+            // rather than grouped into a labelled section, since it's how this
+            // gizmo will be identified elsewhere (e.g. the Gizmo Value node's
+            // Source dropdown) rather than a configurable behavior.
+            Repeater {
+                model: inspector.allDefs.filter(function(d) { return d.category === "identity"; })
+                delegate: PropertyRow { required property var modelData; def: modelData }
+            }
+
             Text {
                 visible: inspector.gizmo
                 text: "Layout"
@@ -175,7 +184,7 @@ Rectangle {
                 Layout.topMargin: 6
             }
             Repeater {
-                model: inspector.allDefs.filter(function(d) { return d.category !== "layout" && d.category !== "style"; })
+                model: inspector.allDefs.filter(function(d) { return d.category !== "layout" && d.category !== "style" && d.category !== "identity"; })
                 delegate: PropertyRow { required property var modelData; def: modelData }
             }
         }

@@ -1,3 +1,4 @@
+#include <QColor>
 #include "slidergizmo.h"
 
 namespace photon {
@@ -6,12 +7,15 @@ const QByteArray SliderGizmo::GizmoId = "Slider";
 
 SliderGizmo::SliderGizmo():SurfaceGizmo("Slider")
 {
+    const QVariantHash style{{"category", "style"}};
     addProperty("text", "Label",  GizmoProperty::Text,   QString("Slider"));
     addProperty("min",  "Min",    GizmoProperty::Number, 0.0);
     addProperty("max",  "Max",    GizmoProperty::Number, 1.0);
     addProperty("value","Value",  GizmoProperty::Number, 0.0);
     addProperty("orientation", "Orientation", GizmoProperty::Options, QString("Horizontal"),
                 {{"options", QStringList{"Horizontal", "Vertical"}}});
+    addProperty("trackColor", "Track Color", GizmoProperty::Color, QColor(0x33, 0x33, 0x33), style);
+    addProperty("fillColor",  "Fill Color",  GizmoProperty::Color, QColor(0x3d, 0xae, 0xe9), style);
 }
 
 QString SliderGizmo::text() const

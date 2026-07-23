@@ -35,6 +35,18 @@ static Surface *findSurface(const keira::Node *t_node)
     return nullptr;
 }
 
+// A gizmo's display label for the Source dropdown: its user-assigned Name if
+// one was given, otherwise its type plus a short suffix from its GUID — more
+// recognizable than the raw GUID while still disambiguating unnamed controls
+// of the same type.
+static QString gizmoLabelFor(const SurfaceGizmo *t_gizmo)
+{
+    if(!t_gizmo->id().isEmpty())
+        return QString(t_gizmo->id());
+    const QString uniqueId = QString(t_gizmo->uniqueId());
+    return t_gizmo->gizmoTypeString() + " " + uniqueId.right(4);
+}
+
 // Every gizmo->output pair on the surface, as (label, "<uniqueId>/<portId>").
 static QVector<std::pair<QString,QString>> sourceOptions(const keira::Node *t_node)
 {
@@ -45,7 +57,7 @@ static QVector<std::pair<QString,QString>> sourceOptions(const keira::Node *t_no
 
     for(auto *gizmo : surface->gizmos())
     {
-        const QString gizmoLabel = gizmo->id().isEmpty() ? QString(gizmo->uniqueId()) : QString(gizmo->id());
+        const QString gizmoLabel = gizmoLabelFor(gizmo);
         const auto outputs = gizmo->outputs();
         for(const auto &output : outputs)
         {

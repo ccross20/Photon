@@ -3,7 +3,7 @@
 #include <QInputDialog>
 #include <QFileDialog>
 #include <QSettings>
-#include "fixturecollectionpanel_p.h"
+#include "rigpanel_p.h"
 #include "fixture/fixture.h"
 #include "photoncore.h"
 #include "project/project.h"
@@ -19,12 +19,11 @@
 namespace photon {
 
 
-FixtureCollectionPanel::FixtureCollectionPanel() : Panel("photon.fixture-collection"),m_impl(new Impl)
+RigPanel::RigPanel() : Panel("photon.rig"),m_impl(new Impl)
 {
-    m_impl->editorWidget = nullptr;
     m_impl->vLayout = new QVBoxLayout;
     m_impl->hLayout = new QHBoxLayout;
-    setName("Fixtures");
+    setName("Rig");
 
     m_impl->treeView = new QTreeView;
     m_impl->treeView->setSizePolicy(QSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::MinimumExpanding));
@@ -48,31 +47,29 @@ FixtureCollectionPanel::FixtureCollectionPanel() : Panel("photon.fixture-collect
 
     m_impl->vLayout->addLayout(hLayout);
 
-    //vLayout->addWidget(m_impl->editorWidget);
-
     m_impl->hLayout->addLayout(m_impl->vLayout);
 
 
     setPanelLayout(m_impl->hLayout);
 
 
-    connect(m_impl->addButton, &QPushButton::clicked, this, &FixtureCollectionPanel::addClicked);
-    connect(m_impl->removeButton, &QPushButton::clicked, this, &FixtureCollectionPanel::removeClicked);
-    connect(m_impl->duplicateButton, &QPushButton::clicked, this, &FixtureCollectionPanel::duplicateClicked);
-    connect(m_impl->treeView, &QTreeView::doubleClicked, this, &FixtureCollectionPanel::doubleClicked);
+    connect(m_impl->addButton, &QPushButton::clicked, this, &RigPanel::addClicked);
+    connect(m_impl->removeButton, &QPushButton::clicked, this, &RigPanel::removeClicked);
+    connect(m_impl->duplicateButton, &QPushButton::clicked, this, &RigPanel::duplicateClicked);
+    connect(m_impl->treeView, &QTreeView::doubleClicked, this, &RigPanel::doubleClicked);
 }
 
-FixtureCollectionPanel::~FixtureCollectionPanel()
+RigPanel::~RigPanel()
 {
     delete m_impl;
 }
 
-void FixtureCollectionPanel::selectionMoved(QModelIndexList indices)
+void RigPanel::selectionMoved(QModelIndexList indices)
 {
     m_impl->treeView->selectionModel()->select(indices[0], QItemSelectionModel::ClearAndSelect);
 }
 
-void FixtureCollectionPanel::doubleClicked(const QModelIndex &t_index)
+void RigPanel::doubleClicked(const QModelIndex &t_index)
 {
     Fixture *fixture = static_cast<Fixture*>(t_index.internalPointer());
 
@@ -82,7 +79,7 @@ void FixtureCollectionPanel::doubleClicked(const QModelIndex &t_index)
     }
 }
 
-void FixtureCollectionPanel::addClicked()
+void RigPanel::addClicked()
 {
     QMenu menu;
     menu.addAction("Fixture",[this](){addFixture();});
@@ -97,7 +94,7 @@ void FixtureCollectionPanel::addClicked()
     menu.exec(m_impl->addButton->mapToGlobal(m_impl->addButton->rect().bottomLeft()));
 }
 
-void FixtureCollectionPanel::duplicateClicked()
+void RigPanel::duplicateClicked()
 {
     auto fixtures = SceneIterator::FindMany(photonApp->project()->sceneRoot(),[](SceneObject *t_object, bool *t_continue){
        return dynamic_cast<Fixture*>(t_object);
@@ -141,8 +138,8 @@ void FixtureCollectionPanel::duplicateClicked()
     }
 }
 
-void FixtureCollectionPanel::addFixture()
-{    
+void RigPanel::addFixture()
+{
     QString loadPath;
     if(loadPath.isNull())
     {
@@ -175,28 +172,28 @@ void FixtureCollectionPanel::addFixture()
     }
 }
 
-void FixtureCollectionPanel::addGroup()
+void RigPanel::addGroup()
 {
     auto group = new SceneGroup;
     group->setName("Group");
     group->setParentSceneObject(photonApp->project()->sceneRoot());
 }
 
-void FixtureCollectionPanel::addTruss()
+void RigPanel::addTruss()
 {
     auto truss = new Truss;
     truss->setName("Truss");
     truss->setParentSceneObject(photonApp->project()->sceneRoot());
 }
 
-void FixtureCollectionPanel::addArrow()
+void RigPanel::addArrow()
 {
     auto arrow = new SceneArrow;
     arrow->setName("Arrow");
     arrow->setParentSceneObject(photonApp->project()->sceneRoot());
 }
 
-void FixtureCollectionPanel::addWall()
+void RigPanel::addWall()
 {
     auto wall = new SceneSurface;
     wall->setName("Wall");
@@ -207,7 +204,7 @@ void FixtureCollectionPanel::addWall()
     wall->setParentSceneObject(photonApp->project()->sceneRoot());
 }
 
-void FixtureCollectionPanel::addFloor()
+void RigPanel::addFloor()
 {
     auto floor = new SceneSurface;
     floor->setName("Floor");
@@ -219,7 +216,7 @@ void FixtureCollectionPanel::addFloor()
     floor->setParentSceneObject(photonApp->project()->sceneRoot());
 }
 
-void FixtureCollectionPanel::addZone()
+void RigPanel::addZone()
 {
     auto zone = new SceneZone;
     zone->setName("Zone");
@@ -228,14 +225,14 @@ void FixtureCollectionPanel::addZone()
     zone->setParentSceneObject(photonApp->project()->sceneRoot());
 }
 
-void FixtureCollectionPanel::addLightStrip()
+void RigPanel::addLightStrip()
 {
     auto strip = new PixelStrip;
     strip->setName("Pixel Strip");
     strip->setParentSceneObject(photonApp->project()->sceneRoot());
 }
 
-void FixtureCollectionPanel::removeClicked()
+void RigPanel::removeClicked()
 {
     auto indicies = m_impl->treeView->selectionModel()->selectedRows();
 
@@ -254,17 +251,16 @@ void FixtureCollectionPanel::removeClicked()
 
 }
 
-void FixtureCollectionPanel::selectionChanged(const QItemSelection &selected, const QItemSelection &deselected)
+void RigPanel::selectionChanged(const QItemSelection &selected, const QItemSelection &deselected)
 {
     m_impl->removeButton->setEnabled(m_impl->treeView->selectionModel()->hasSelection());
     m_impl->duplicateButton->setEnabled(m_impl->treeView->selectionModel()->hasSelection());
 
     auto selectedIndices = m_impl->treeView->selectionModel()->selectedIndexes();
 
-    if(m_impl->editorWidget)
-        delete m_impl->editorWidget;
-    m_impl->editorWidget = nullptr;
-
+    // Property editing for the selection lives in PropertiesPanel now, which
+    // watches Project::selectedSceneObjectChanged — just publish the
+    // selection here rather than building an editor inline.
     SceneObject *firstSelected = nullptr;
     for(auto index : selectedIndices)
     {
@@ -272,8 +268,6 @@ void FixtureCollectionPanel::selectionChanged(const QItemSelection &selected, co
         if(sceneObj)
         {
             firstSelected = sceneObj;
-            m_impl->editorWidget = sceneObj->createEditor();
-            m_impl->hLayout->addWidget(m_impl->editorWidget);
             break;
         }
     }
@@ -282,7 +276,7 @@ void FixtureCollectionPanel::selectionChanged(const QItemSelection &selected, co
         photonApp->project()->setSelectedSceneObject(firstSelected);
 }
 
-void FixtureCollectionPanel::syncSelectionFromProject(SceneObject *obj)
+void RigPanel::syncSelectionFromProject(SceneObject *obj)
 {
     if (!m_impl->sceneModel)
         return;
@@ -300,28 +294,27 @@ void FixtureCollectionPanel::syncSelectionFromProject(SceneObject *obj)
     m_impl->syncingFromProject = false;
 }
 
-void FixtureCollectionPanel::projectDidOpen(photon::Project* project)
+void RigPanel::projectDidOpen(photon::Project* project)
 {
     m_impl->sceneModel = new SceneModel(project->sceneRoot());
     m_impl->treeView->setModel(m_impl->sceneModel);
-    connect(m_impl->treeView->selectionModel(), &QItemSelectionModel::selectionChanged, this, &FixtureCollectionPanel::selectionChanged);
-    connect(m_impl->sceneModel, &SceneModel::selectionMoved, this, &FixtureCollectionPanel::selectionMoved);
-    connect(project, &Project::selectedSceneObjectChanged, this, &FixtureCollectionPanel::syncSelectionFromProject);
+    connect(m_impl->treeView->selectionModel(), &QItemSelectionModel::selectionChanged, this, &RigPanel::selectionChanged);
+    connect(m_impl->sceneModel, &SceneModel::selectionMoved, this, &RigPanel::selectionMoved);
+    connect(project, &Project::selectedSceneObjectChanged, this, &RigPanel::syncSelectionFromProject);
 
     m_impl->addButton->setEnabled(true);
 }
 
-void FixtureCollectionPanel::projectWillClose(photon::Project* project)
+void RigPanel::projectWillClose(photon::Project* project)
 {
-    disconnect(project, &Project::selectedSceneObjectChanged, this, &FixtureCollectionPanel::syncSelectionFromProject);
-    disconnect(m_impl->treeView->selectionModel(), &QItemSelectionModel::selectionChanged, this, &FixtureCollectionPanel::selectionChanged);
-    disconnect(m_impl->sceneModel, &SceneModel::selectionMoved, this, &FixtureCollectionPanel::selectionMoved);
+    disconnect(project, &Project::selectedSceneObjectChanged, this, &RigPanel::syncSelectionFromProject);
+    disconnect(m_impl->treeView->selectionModel(), &QItemSelectionModel::selectionChanged, this, &RigPanel::selectionChanged);
+    disconnect(m_impl->sceneModel, &SceneModel::selectionMoved, this, &RigPanel::selectionMoved);
     m_impl->treeView->setModel(nullptr);
     delete m_impl->sceneModel;
     m_impl->sceneModel = nullptr;
     m_impl->addButton->setEnabled(false);
     m_impl->removeButton->setEnabled(false);
-    delete m_impl->editorWidget;
 }
 
 

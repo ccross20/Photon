@@ -136,6 +136,8 @@ set(PROJECT_SOURCES
         graph/bus/dmxgeneratematrixnode.cpp
         graph/bus/dmxwriternode.h
         graph/bus/dmxwriternode.cpp
+        graph/bus/dmxsubgraphnode.h
+        graph/bus/dmxsubgraphnode.cpp
         graph/bus/sequencenode.h
         graph/bus/sequencenode.cpp
         graph/node/math/arithmeticnode.h
@@ -196,9 +198,12 @@ set(PROJECT_SOURCES
         gui/panel/canvasviewerpanel.cpp
         gui/panel/dmxviewerpanel.h
         gui/panel/dmxviewerpanel.cpp
-        gui/panel/fixturecollectionpanel.h
-        gui/panel/fixturecollectionpanel_p.h
-        gui/panel/fixturecollectionpanel.cpp
+        gui/panel/rigpanel.h
+        gui/panel/rigpanel_p.h
+        gui/panel/rigpanel.cpp
+        gui/panel/propertiespanel.h
+        gui/panel/propertiespanel_p.h
+        gui/panel/propertiespanel.cpp
         gui/panel/routinecollectionpanel.h
         gui/panel/routinecollectionpanel_p.h
         gui/panel/routinecollectionpanel.cpp
@@ -496,6 +501,10 @@ add_library(photon-core SHARED ${PROJECT_SOURCES}
     surface/surfacecollection.h surface/surfacecollection.cpp
     surface/buttongizmo.h surface/buttongizmo.cpp
     surface/togglegizmo.h surface/togglegizmo.cpp
+    surface/dialgizmo.h surface/dialgizmo.cpp
+    surface/xypadgizmo.h surface/xypadgizmo.cpp
+    surface/huegizmo.h surface/huegizmo.cpp
+    surface/segmentedgizmo.h surface/segmentedgizmo.cpp
     surface/surfacegizmocontainer.h surface/surfacegizmocontainer.cpp
     surface/surfacegraph.h surface/surfacegraph.cpp
     graph/bus/dmxreadernode.h graph/bus/dmxreadernode.cpp

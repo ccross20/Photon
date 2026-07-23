@@ -13,6 +13,10 @@ Item {
     property var gizmo
     property bool editMode: false
     property var editContext: null
+    // Perform-mode interaction hooks (value tooltip), threaded down to leaves
+    // and containers alike so it reaches any depth in the tree; null in edit
+    // mode, where leaf controls are disabled anyway.
+    property var performContext: null
     // True when a layout container owns this frame's position (Vertical/
     // Horizontal/Grid) — move-drag is disabled, only resize/select/delete apply.
     property bool layoutManaged: false
@@ -36,12 +40,21 @@ Item {
             if (t === "Slider") return "SliderGizmo.qml";
             if (t === "Button") return "ButtonGizmo.qml";
             if (t === "Toggle") return "ToggleGizmo.qml";
+            if (t === "Dial") return "DialGizmo.qml";
+            if (t === "XYPad") return "XYPadGizmo.qml";
+            if (t === "Hue") return "HueGizmo.qml";
+            if (t === "Segmented") return "SegmentedGizmo.qml";
             if (t === "Palette") return "PaletteGizmo.qml";
             if (t === "Container") return "ContainerGizmo.qml";
             return "";
         }
         onLoaded: {
             content.item.gizmo = frame.gizmo;
+            // Not every gizmo type declares performContext (only the ones that
+            // show a value tooltip, plus Container to keep threading it down);
+            // feature-detect rather than assigning unconditionally.
+            if ("performContext" in content.item)
+                content.item.performContext = frame.performContext;
             if (frame.isContainer) {
                 content.item.editMode = frame.editMode;
                 content.item.editContext = frame.editContext;

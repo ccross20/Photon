@@ -17,6 +17,12 @@ SurfaceGizmo::SurfaceGizmo(QByteArray t_type, QObject *parent)
     m_impl->type = t_type;
     m_impl->uniqueId = QUuid::createUuid().toString().toLatin1();
 
+    // A user-facing identifier, common to every gizmo. Empty by default; once
+    // set, it's what shows up wherever a gizmo needs to be picked from a list
+    // (e.g. the Gizmo Value node's Source dropdown) instead of its GUID.
+    const QVariantHash identity{{"category", "identity"}};
+    addProperty("id", "Name", GizmoProperty::Text, QString(), identity);
+
     // Free-form layout geometry, common to every gizmo. Tagged "layout" so the
     // inspector can group/separate it from gizmo-specific config later.
     const QVariantHash layout{{"category", "layout"}};
@@ -162,13 +168,12 @@ QByteArray SurfaceGizmo::uniqueId() const
 
 void SurfaceGizmo::setId(const QByteArray &t_value)
 {
-    m_impl->id = t_value;
-    markChanged();
+    setPropertyValue("id", QString::fromUtf8(t_value));
 }
 
 QByteArray SurfaceGizmo::id() const
 {
-    return m_impl->id;
+    return propertyValue("id").toString().toUtf8();
 }
 
 void SurfaceGizmo::markChanged()
@@ -202,7 +207,6 @@ void SurfaceGizmo::readFromJson(const QJsonObject &t_json, const LoadContext &t_
     m_impl->type = t_json.value("type").toString().toLatin1();
     m_impl->uniqueId = t_json.value("uniqueId").toString().toLatin1();
     m_impl->name = t_json.value("name").toString();
-    m_impl->id = t_json.value("id").toString().toLatin1();
 
     if(m_impl->uniqueId.isEmpty())
         m_impl->uniqueId = QUuid::createUuid().toString().toLatin1();
@@ -220,7 +224,6 @@ void SurfaceGizmo::writeToJson(QJsonObject &t_json) const
 {
     t_json.insert("type", QString(m_impl->type));
     t_json.insert("uniqueId", QString(m_impl->uniqueId));
-    t_json.insert("id", QString(m_impl->id));
     t_json.insert("name", QString(m_impl->name));
 
     QJsonArray propArray;

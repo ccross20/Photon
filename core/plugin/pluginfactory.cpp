@@ -9,7 +9,8 @@
 #include "gui/panel/sequencepanel.h"
 #include "gui/panel/sequencecollectionpanel.h"
 #include "gui/panel/routinecollectionpanel.h"
-#include "gui/panel/fixturecollectionpanel.h"
+#include "gui/panel/rigpanel.h"
+#include "gui/panel/propertiespanel.h"
 #include "gui/panel/canvascollectionpanel.h"
 #include "gui/panel/routineeditpanel.h"
 #include "gui/panel/dmxviewerpanel.h"
@@ -21,6 +22,7 @@
 
 #include "graph/bus/dmxgeneratematrixnode.h"
 #include "graph/bus/dmxwriternode.h"
+#include "graph/bus/dmxsubgraphnode.h"
 #include "graph/bus/dmxreadernode.h"
 #include "graph/bus/sequencenode.h"
 #include "graph/bus/surfacenode.h"
@@ -185,7 +187,8 @@ void PluginFactory::init()
     registerPluginPanel("photon.sequence-collection",[](){return new SequenceCollectionPanel;});
     registerPluginPanel("photon.surface-collection",[](){return new SurfaceCollectionPanel;});
     registerPluginPanel("photon.surface",[](){return new SurfacePanel;});
-    registerPluginPanel("photon.fixture-collection",[](){return new FixtureCollectionPanel;});
+    registerPluginPanel("photon.rig",[](){return new RigPanel;});
+    registerPluginPanel("photon.properties",[](){return new PropertiesPanel;});
     registerPluginPanel("photon.canvas-collection",[](){return new CanvasCollectionPanel;});
     registerPluginPanel("photon.routine",[](){return new RoutineEditPanel;});
     registerPluginPanel("photon.dmx-viewer",[](){return new DMXViewerPanel;});
@@ -204,6 +207,7 @@ void PluginFactory::init()
     registerNode(DMXGenerateMatrixNode::info());
     registerNode(SequenceNode::info());
     registerNode(SurfaceNode::info());
+    registerNode(DMXSubGraphNode::info());
     registerNode(NumberInputNode::info());
     registerNode(ColorInputNode::info());
     registerNode(PointInputNode::info());

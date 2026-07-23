@@ -9,6 +9,10 @@
         <file alias="SliderGizmo.qml">qml/surface/SliderGizmo.qml</file>
         <file alias="ButtonGizmo.qml">qml/surface/ButtonGizmo.qml</file>
         <file alias="ToggleGizmo.qml">qml/surface/ToggleGizmo.qml</file>
+        <file alias="DialGizmo.qml">qml/surface/DialGizmo.qml</file>
+        <file alias="XYPadGizmo.qml">qml/surface/XYPadGizmo.qml</file>
+        <file alias="HueGizmo.qml">qml/surface/HueGizmo.qml</file>
+        <file alias="SegmentedGizmo.qml">qml/surface/SegmentedGizmo.qml</file>
         <file alias="PaletteGizmo.qml">qml/surface/PaletteGizmo.qml</file>
     </qresource>
 </RCC>

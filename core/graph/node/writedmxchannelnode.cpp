@@ -6,12 +6,14 @@
 namespace photon {
 
 const QByteArray WriteDMXChannelNode::ChannelNumber = "channelNum";
+const QByteArray WriteDMXChannelNode::ChannelUniverse = "channelUniverse";
 const QByteArray WriteDMXChannelNode::ChannelValue = "channelVal";
 
 class WriteDMXChannelNode::Impl
 {
 public:
     keira::IntegerParameter *channelParam;
+    keira::IntegerParameter *universeParam;
     keira::IntegerParameter *valueParam;
 };
 
@@ -40,6 +42,9 @@ void WriteDMXChannelNode::createParameters()
     m_impl->channelParam = new keira::IntegerParameter(ChannelNumber,"Channel Num",1);
     addParameter(m_impl->channelParam);
 
+    m_impl->universeParam = new keira::IntegerParameter(ChannelUniverse,"Channel Universe",1);
+    addParameter(m_impl->universeParam);
+
     m_impl->valueParam = new keira::IntegerParameter(ChannelValue,"Channel Value",256);
     addParameter(m_impl->valueParam);
 
@@ -53,6 +58,10 @@ void WriteDMXChannelNode::evaluate(keira::EvaluationContext *t_context) const
     if(context->fixture)
     {
         context->dmxMatrix.setValue(context->fixture->universe() - 1, context->fixture->dmxOffset() + (m_impl->channelParam->value().toInt()-1), m_impl->valueParam->value().toInt()-1);
+    }
+    else
+    {
+        context->dmxMatrix.setValue(m_impl->universeParam->value().toInt() - 1, m_impl->channelParam->value().toInt()-1, m_impl->valueParam->value().toInt()-1);
     }
 
 }

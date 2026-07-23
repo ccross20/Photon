@@ -20,6 +20,7 @@
 #include "graph/bus/sequencenode.h"
 #include "graph/bus/surfacenode.h"
 #include "graph/bus/dmxwriternode.h"
+#include "graph/bus/dmxsubgraphnode.h"
 #include "scene/sceneobject.h"
 #include "scene/scenemanager.h"
 #include "state/statecollection.h"
@@ -56,22 +57,31 @@ Project::Impl::Impl()
     DMXGenerateMatrixNode *generateNode = new DMXGenerateMatrixNode;
     generateNode->createParameters();
 
+    // Hosts Fixture State nodes that set fixtures' initial values before the
+    // Surface node's live controls run.
+    DMXSubGraphNode *initialValuesNode = new DMXSubGraphNode;
+    initialValuesNode->setName("Initial Values");
+    initialValuesNode->createParameters();
+    initialValuesNode->setPosition(QPointF(300,0));
+
     SurfaceNode *sequenceNode = new SurfaceNode;
     sequenceNode->createParameters();
-    sequenceNode->setPosition(QPointF(400,0));
+    sequenceNode->setPosition(QPointF(600,0));
 
     DMXWriterNode *writerNode = new DMXWriterNode;
     writerNode->setName("output");
     writerNode->createParameters();
-    writerNode->setPosition(QPointF(800,0));
+    writerNode->setPosition(QPointF(900,0));
 
     bus = new BusGraph;
 
     bus->addNode(generateNode);
+    bus->addNode(initialValuesNode);
     bus->addNode(sequenceNode);
     bus->addNode(writerNode);
 
-    bus->connectParameters(generateNode->findParameter(DMXGenerateMatrixNode::OutputDMX), sequenceNode->findParameter(SurfaceNode::InputDMX));
+    bus->connectParameters(generateNode->findParameter(DMXGenerateMatrixNode::OutputDMX), initialValuesNode->findParameter(DMXSubGraphNode::InputDMX));
+    bus->connectParameters(initialValuesNode->findParameter(DMXSubGraphNode::OutputDMX), sequenceNode->findParameter(SurfaceNode::InputDMX));
     bus->connectParameters(sequenceNode->findParameter(SurfaceNode::OutputDMX), writerNode->findParameter(DMXWriterNode::InputDMX));
 
     State *state = new State();

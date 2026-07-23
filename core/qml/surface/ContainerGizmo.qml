@@ -14,6 +14,9 @@ Item {
     property var gizmo
     property bool editMode: false
     property var editContext: null
+    // Perform-mode interaction hooks (value tooltip); just threaded through to
+    // children here, since containers themselves don't show a tooltip.
+    property var performContext: null
 
     readonly property string layoutType: cont.gizmo ? (cont.gizmo.values.layout || "Absolute") : "Absolute"
     readonly property real pad: cont.gizmo ? (cont.gizmo.values.padding || 0) : 0
@@ -21,6 +24,13 @@ Item {
     readonly property int cols: cont.gizmo ? Math.max(1, cont.gizmo.values.columns || 1) : 1
     readonly property bool stretch: cont.gizmo ? (cont.gizmo.values.stretch || false) : false
     readonly property int count: cont.gizmo ? cont.gizmo.childItems.length : 0
+
+    readonly property string title: cont.gizmo ? (cont.gizmo.values.title || "") : ""
+    readonly property bool hasTitle: cont.title.length > 0
+    readonly property real titleBarHeight: 22
+    // Vertical offset from the container's own top to where its content
+    // (layoutLoader) actually begins — pad, plus the title bar when shown.
+    readonly property real contentTopOffset: cont.pad + (cont.hasTitle ? cont.titleBarHeight : 0)
 
     // Insertion index for a drop at (px,py) in this container's coordinates.
     // Absolute/Tabs append; layouts insert by comparing against child centers.
@@ -35,7 +45,7 @@ Item {
         if (!pos)
             return n;
         var lx = px - cont.pad;
-        var ly = py - cont.pad;
+        var ly = py - cont.contentTopOffset;
         var idx = 0;
         for (var i = 0; i < pos.children.length; i++) {
             var c = pos.children[i];
@@ -76,7 +86,7 @@ Item {
             // In an Absolute container, drop where the pointer released.
             if (cont.layoutType === "Absolute") {
                 var nx = drop.x - cont.pad - g.values.width / 2;
-                var ny = drop.y - cont.pad - g.values.height / 2;
+                var ny = drop.y - cont.contentTopOffset - g.values.height / 2;
                 if (cont.editContext && cont.editContext.snapEnabled) {
                     var gs = cont.editContext.gridSize;
                     nx = Math.round(nx / gs) * gs;
@@ -94,9 +104,39 @@ Item {
         }
     }
 
+    // Small title bar, shown whenever the container has a title, so the label
+    // doesn't overlap the arranged/absolute-positioned children below it.
+    Rectangle {
+        id: titleBar
+        visible: cont.hasTitle
+        anchors.top: parent.top
+        anchors.left: parent.left
+        anchors.right: parent.right
+        height: cont.titleBarHeight
+        color: "#20ffffff"
+        border.color: "#20ffffff"
+        border.width: 1
+
+        Text {
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.leftMargin: 6
+            anchors.rightMargin: 6
+            anchors.verticalCenter: parent.verticalCenter
+            text: cont.title
+            color: "#cccccc"
+            font.pixelSize: 11
+            font.bold: true
+            elide: Text.ElideRight
+        }
+    }
+
     Loader {
         id: layoutLoader
-        anchors.fill: parent
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        anchors.top: cont.hasTitle ? titleBar.bottom : parent.top
         anchors.margins: cont.pad
         sourceComponent: {
             switch (cont.layoutType) {
@@ -121,6 +161,7 @@ Item {
                     gizmo: modelData
                     editMode: cont.editMode
                     editContext: cont.editContext
+                    performContext: cont.performContext
                     layoutManaged: false
                     x: modelData.values.x
                     y: modelData.values.y
@@ -148,6 +189,7 @@ Item {
                     gizmo: modelData
                     editMode: cont.editMode
                     editContext: cont.editContext
+                    performContext: cont.performContext
                     layoutManaged: true
                     width: colPositioner.width
                     height: cont.stretch ? colPositioner.cellH : modelData.values.height
@@ -172,6 +214,7 @@ Item {
                     gizmo: modelData
                     editMode: cont.editMode
                     editContext: cont.editContext
+                    performContext: cont.performContext
                     layoutManaged: true
                     height: rowPositioner.height
                     width: cont.stretch ? rowPositioner.cellW : modelData.values.width
@@ -199,6 +242,7 @@ Item {
                     gizmo: modelData
                     editMode: cont.editMode
                     editContext: cont.editContext
+                    performContext: cont.performContext
                     layoutManaged: true
                     width: cont.stretch ? gridPositioner.cellW : modelData.values.width
                     height: cont.stretch ? gridPositioner.cellH : modelData.values.height
@@ -269,6 +313,7 @@ Item {
                         gizmo: modelData
                         editMode: cont.editMode
                         editContext: cont.editContext
+                        performContext: cont.performContext
                         layoutManaged: true
                     }
                 }

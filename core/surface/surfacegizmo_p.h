@@ -15,7 +15,6 @@ public:
     QByteArray type;
     QByteArray uniqueId;
     QString name;
-    QByteArray id;
     SurfaceGizmo *facade;
     QVector<SurfaceGizmo::GizmoHistoryEvent> histroy;
     QVector<GizmoProperty*> properties;
