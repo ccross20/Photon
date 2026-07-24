@@ -4,7 +4,6 @@
 #include <QCoreApplication>
 #include "scenemodel.h"
 #include "sceneobject.h"
-#include "fixture/fixture.h"
 
 namespace photon {
 
@@ -213,13 +212,16 @@ Qt::ItemFlags SceneModel::flags(const QModelIndex &index) const
     if(index.column() == 0)
         return QAbstractItemModel::flags(index) | Qt::ItemIsEditable | Qt::ItemIsDragEnabled | Qt::ItemIsDropEnabled;
 
+    if(index.column() == 1)
+        return QAbstractItemModel::flags(index) | Qt::ItemIsUserCheckable | Qt::ItemIsDragEnabled | Qt::ItemIsDropEnabled;
+
     return QAbstractItemModel::flags(index) | Qt::ItemIsDragEnabled | Qt::ItemIsDropEnabled;
 }
 
 //! [2]
 int SceneModel::columnCount(const QModelIndex & /* parent */) const
 {
-    return 5;
+    return 3;
 }
 //! [2]
 
@@ -246,41 +248,32 @@ QVariant SceneModel::data(const QModelIndex &index, int role) const
             SceneObject *layer = objectForIndex(index);
             if(layer)
             {
-                auto fixture = dynamic_cast<DMXReceiver*>(layer);
-                if(fixture)
+                switch(index.column())
                 {
-                    switch(index.column())
-                    {
-                        default:
-                            return "";
-                        case 0:
-                            return layer->name();
-                        case 1:
-                            return fixture->universe();
-                        case 2:
-                            return QString::number(fixture->dmxOffset()+1) + "-" + QString::number(fixture->dmxOffset() + fixture->dmxSize()+1);
-                        case 3:
-                            return fixture->dmxSize();
-                        case 4:
-                            return layer->tags().join(", ");
-                    }
-                }
-                else
-                {
-                    if(index.column() == 0)
+                    default:
+                        return "";
+                    case 0:
                         return layer->name();
-                    return "";
+                    case 2:
+                        return layer->tags().join(", ");
                 }
+            }
+        }
+            break;
 
-
+        case Qt::CheckStateRole:
+        {
+            if(index.column() == 1)
+            {
+                SceneObject *layer = objectForIndex(index);
+                if(layer)
+                    return layer->isVisible() ? Qt::Checked : Qt::Unchecked;
             }
         }
             break;
 
         case Qt::SizeHintRole:
-            //if(index.column() > 0 && index.column() <= m_channelCount )
-                return QSize{32,32};
-            //break;
+            return QSize{32,32};
     }
 
     return QVariant();
@@ -298,12 +291,8 @@ QVariant SceneModel::headerData(int section, Qt::Orientation orientation,
             case 0:
                 return "Name";
             case 1:
-                return "Uni";
+                return "Visible";
             case 2:
-                return "Range";
-            case 3:
-                return "Channels";
-            case 4:
                 return "Tags";
         }
 
@@ -313,16 +302,11 @@ QVariant SceneModel::headerData(int section, Qt::Orientation orientation,
     {
         if(section == 0)
             return "Name";
+        if(section == 1)
+            return "Show/hide in the visualizer";
 
         return "";
     }
-/*
-    if(role == Qt::SizeHintRole)
-    {
-        if(section > 0 && section <= m_channelCount )
-            return QSize{32,32};
-    }
-    */
 
     return QVariant();
 }
@@ -381,6 +365,13 @@ int SceneModel::rowCount(const QModelIndex &parent) const
 
 bool SceneModel::setData(const QModelIndex &index, const QVariant &value, int role)
 {
+    if(role == Qt::CheckStateRole && index.column() == 1)
+    {
+        objectForIndex(index)->setVisible(value.toInt() == Qt::Checked);
+        emit dataChanged(index,index);
+        return true;
+    }
+
     if (role != Qt::EditRole)
         return false;
 
@@ -397,7 +388,7 @@ bool SceneModel::setData(const QModelIndex &index, const QVariant &value, int ro
 void SceneModel::objectWasUpdated(photon::SceneObject *t_object)
 {
     QModelIndex index = indexForObject(t_object);
-    dataChanged(createIndex(index.row(),0,t_object),createIndex(index.row(),3,t_object));
+    dataChanged(createIndex(index.row(),0,t_object),createIndex(index.row(),2,t_object));
 }
 
 void SceneModel::childWillBeAdded(photon::SceneObject *t_parent, photon::SceneObject *t_child)

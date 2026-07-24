@@ -1,6 +1,7 @@
 #ifndef KEIRA_PORTITEM_H
 #define KEIRA_PORTITEM_H
 #include <QGraphicsItem>
+#include <QColor>
 #include "keira-global.h"
 
 namespace keira {
@@ -15,6 +16,11 @@ public:
     PortDirection direction() const;
     QRectF boundingRect() const override;
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) override;
+
+    // One consistent color per parameter typeId, shared with WireItem so a
+    // connection reads as the same color as the ports it joins. Unknown
+    // types fall back to the same neutral gray as the generic "any" type.
+    static QColor colorForType(const QByteArray &typeId);
 
 protected:
     void hoverEnterEvent(QGraphicsSceneHoverEvent *event) override;

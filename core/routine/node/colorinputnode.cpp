@@ -28,6 +28,7 @@ keira::NodeInformation ColorInputNode::info()
     toReturn.name = "Color Input";
     toReturn.nodeId = "photon.routine.color-input";
     toReturn.categories = {"Input"};
+    //toReturn.graphs = QByteArrayList{"routine"};
 
     return toReturn;
 }
@@ -47,7 +48,10 @@ void ColorInputNode::markDirty(int t_dirty)
     Node::markDirty(t_dirty);
 
     if(m_impl->defaultValueParam->isDirty() || m_impl->nameParam->isDirty())
-        static_cast<Routine*>(graph())->updateChannel(m_impl->index, channelInfo());
+    {
+        if(auto *routine = dynamic_cast<Routine*>(graph()))
+            routine->updateChannel(m_impl->index, channelInfo());
+    }
 }
 
 ChannelInfo ColorInputNode::channelInfo() const
@@ -89,7 +93,10 @@ void ColorInputNode::setValue(const QByteArray &t_id, const QVariant &t_value)
     keira::Node::setValue(t_id, t_value);
 
     if(t_id == ColorInputNode::Name || t_id == ColorInputNode::DefaultValue)
-        static_cast<Routine*>(graph())->updateChannel(channelIndex(), channelInfo());
+    {
+        if(auto *routine = dynamic_cast<Routine*>(graph()))
+            routine->updateChannel(channelIndex(), channelInfo());
+    }
 
 }
 

@@ -5,6 +5,7 @@
 #include "wireitem.h"
 #include "nodeitem.h"
 #include "portitem.h"
+#include "model/parameter/parameter.h"
 
 namespace keira {
 
@@ -17,8 +18,8 @@ public:
     QPainterPath path;
     QPainterPath hoverStroke;
     QPointF pointA, pointB;
-    PortItem *outPort;
-    PortItem *inPort;
+    PortItem *outPort = nullptr;
+    PortItem *inPort = nullptr;
     QPointF hoverHandlePoint;
     double hoverPercent = 0.0;
     bool isHovering = false;
@@ -164,14 +165,26 @@ QPainterPath WireItem::shape() const
 void WireItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *item, QWidget *widget)
 {
     painter->setRenderHint(QPainter::Antialiasing);
+
+    // Color the wire to match its ports (preferring the source side, since
+    // that's the one whose type is authoritative for an "any" connection).
+    QColor color = PortItem::colorForType("any");
+    if(m_impl->outPort && m_impl->outPort->parameter() && !m_impl->outPort->parameter()->isGeneric())
+        color = PortItem::colorForType(m_impl->outPort->parameter()->typeId());
+    else if(m_impl->inPort && m_impl->inPort->parameter() && !m_impl->inPort->parameter()->isGeneric())
+        color = PortItem::colorForType(m_impl->inPort->parameter()->typeId());
+
+    if(m_impl->isHovering)
+        color = color.lighter(150);
+
     painter->setBrush(Qt::NoBrush);
-    painter->setPen(QPen(QBrush(Qt::red),2.0));
+    painter->setPen(QPen(QBrush(color),2.0));
     painter->drawPath(m_impl->path);
 
     if(m_impl->isHovering)
     {
         painter->setPen(Qt::NoPen);
-        painter->setBrush(Qt::red);
+        painter->setBrush(color);
         painter->drawEllipse(m_impl->hoverHandlePoint, 5,5);
     }
 

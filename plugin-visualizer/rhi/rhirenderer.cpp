@@ -545,6 +545,8 @@ void RhiRenderer::updateMotionPass(SceneObject *obj) const
     if (!obj)
         return;
     for (SceneObject *child : obj->sceneChildren()) {
+        if (!child->isVisible())
+            continue;
         if (child->typeId() == "fixture") {
             float p = 0.0f, t = 0.0f, h = 0.0f;
             updateFixtureMotion(static_cast<Fixture *>(child), p, t, h);
@@ -599,6 +601,8 @@ void RhiRenderer::collectDrawables(SceneObject *obj, QVector<Drawable> &out,
     const QColor highlight(255, 170, 40);
 
     for (SceneObject *child : obj->sceneChildren()) {
+        if (!child->isVisible())
+            continue;
         const QByteArray type = child->typeId();
         const bool sel = (child == m_selected);
         if (type == "fixture") {
@@ -1112,6 +1116,8 @@ void RhiRenderer::collectBeams(SceneObject *obj, QVector<Drawable> &out) const
     const float refTan = std::tan(qDegreesToRadians(kBeamHalfAngle));
 
     for (SceneObject *child : obj->sceneChildren()) {
+        if (!child->isVisible())
+            continue;
         if (child->typeId() == "fixture") {
             auto *fix = static_cast<Fixture *>(child);
 
@@ -1257,6 +1263,8 @@ void RhiRenderer::collectSurfaces(SceneObject *obj, QVector<Drawable> &out) cons
         return;
 
     for (SceneObject *child : obj->sceneChildren()) {
+        if (!child->isVisible())
+            continue;
         if (child->typeId() == "surface") {
             auto *surf = static_cast<SceneSurface *>(child);
             QMatrix4x4 m = child->globalMatrix();
@@ -1272,6 +1280,8 @@ void RhiRenderer::appendZoneWireframes(SceneObject *obj, QByteArray &out) const
     if (!obj)
         return;
     for (SceneObject *child : obj->sceneChildren()) {
+        if (!child->isVisible())
+            continue;
         if (child->typeId() == "zone") {
             auto *zone = static_cast<SceneZone *>(child);
             const QMatrix4x4 m = zone->globalMatrix();
@@ -1307,6 +1317,8 @@ void RhiRenderer::gatherSurfacePlanes(SceneObject *obj) const
     if (obj == m_sceneRoot)
         m_surfacePlanes.clear();
     for (SceneObject *child : obj->sceneChildren()) {
+        if (!child->isVisible())
+            continue;
         if (child->typeId() == "surface") {
             const QMatrix4x4 m = child->globalMatrix();
             const QVector3D point = m.map(QVector3D(0, 0, 0));
@@ -1428,6 +1440,8 @@ void RhiRenderer::pickRecursive(SceneObject *obj, const QVector3D &origin, const
         return;
 
     for (SceneObject *child : obj->sceneChildren()) {
+        if (!child->isVisible())
+            continue;
         QVector3D mn, mx;
         bool haveBounds;
         // Fixtures with a loaded model pick against the model's AABB.

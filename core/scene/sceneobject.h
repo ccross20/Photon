@@ -32,6 +32,10 @@ public:
     void addTag(const QString &);
     void removeTag(const QString &);
 
+    // Whether this object (and, by extension, its subtree) is drawn in the
+    // visualizer. Purely a display toggle — does not affect DMX/evaluation.
+    bool isVisible() const;
+
     SceneObject *parentSceneObject() const;
 
     void generateNewUniqueId();
@@ -54,6 +58,7 @@ public slots:
     void setPosition(const QVector3D &);
     void setRotation(const QVector3D &);
     void setName(const QString &);
+    void setVisible(bool);
 
 signals:
     void positionChanged();

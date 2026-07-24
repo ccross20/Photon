@@ -23,6 +23,10 @@ Routine::Routine(const QString &t_name, QObject *parent)
     : keira::Graph{parent},m_impl(new Impl)
 {
     m_impl->name = t_name;
+    // Lets ColorInputNode/NumberInputNode/PointInputNode restrict themselves
+    // to only being addable inside a Routine — they assume graph() is always
+    // a Routine (see their setValue()/markDirty()) and crash otherwise.
+    setGraphTypeId("routine");
 
     /*
     ChannelInfo info;

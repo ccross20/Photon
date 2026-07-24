@@ -30,6 +30,7 @@ keira::NodeInformation PointInputNode::info()
     toReturn.name = "Point Input";
     toReturn.nodeId = "photon.routine.point-input";
     toReturn.categories = {"Input"};
+    toReturn.graphs = QByteArrayList{"routine"};
 
     return toReturn;
 }
@@ -50,7 +51,10 @@ void PointInputNode::markDirty(int t_dirty)
     Node::markDirty(t_dirty);
 
     if(m_impl->defaultValueParam->isDirty() || m_impl->nameParam->isDirty())
-        static_cast<Routine*>(graph())->updateChannel(m_impl->index, channelInfo());
+    {
+        if(auto *routine = dynamic_cast<Routine*>(graph()))
+            routine->updateChannel(m_impl->index, channelInfo());
+    }
 }
 
 void PointInputNode::setValue(const QByteArray &t_id, const QVariant &t_value)
@@ -58,7 +62,10 @@ void PointInputNode::setValue(const QByteArray &t_id, const QVariant &t_value)
     keira::Node::setValue(t_id, t_value);
 
     if(t_id == PointInputNode::Name || t_id == PointInputNode::DefaultValue)
-        static_cast<Routine*>(graph())->updateChannel(channelIndex(), channelInfo());
+    {
+        if(auto *routine = dynamic_cast<Routine*>(graph()))
+            routine->updateChannel(channelIndex(), channelInfo());
+    }
 
 }
 

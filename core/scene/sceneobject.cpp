@@ -156,6 +156,19 @@ void SceneObject::removeTag(const QString &t_tag)
     emit metadataChanged(this);
 }
 
+bool SceneObject::isVisible() const
+{
+    return m_impl->visible;
+}
+
+void SceneObject::setVisible(bool t_value)
+{
+    if(m_impl->visible == t_value)
+        return;
+    m_impl->visible = t_value;
+    emit metadataChanged(this);
+}
+
 
 SceneObject *SceneObject::clone() const
 {
@@ -331,6 +344,7 @@ void SceneObject::readFromJson(const QJsonObject &t_json, const LoadContext &t_c
                                     static_cast<float>(rotationObj.value("z").toDouble())};
 
     m_impl->tags = jsonToStringList(t_json.value("tags").toArray());
+    m_impl->visible = t_json.contains("visible") ? t_json.value("visible").toBool() : true;
 
     m_impl->rebuildMatrix();
     if(t_json.contains("children"))
@@ -367,6 +381,7 @@ void SceneObject::writeToJson(QJsonObject &t_json) const
     t_json.insert("rotation", rotationObj);
 
     t_json.insert("tags", stringListToJson(m_impl->tags));
+    t_json.insert("visible", m_impl->visible);
 
     if(!m_impl->children.isEmpty())
     {

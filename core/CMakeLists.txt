@@ -509,6 +509,7 @@ add_library(photon-core SHARED ${PROJECT_SOURCES}
     surface/surfacegraph.h surface/surfacegraph.cpp
     graph/bus/dmxreadernode.h graph/bus/dmxreadernode.cpp
     graph/node/writedmxchannelnode.h graph/node/writedmxchannelnode.cpp
+    graph/node/switchnode.h graph/node/switchnode.cpp
     graph/node/fixture/fixturetreeselection.h graph/node/fixture/fixturetreeselection.cpp
     graph/node/fixture/allfixturesnode.h graph/node/fixture/allfixturesnode.cpp
     graph/node/fixture/selectfixturesnode.h graph/node/fixture/selectfixturesnode.cpp
