@@ -15,6 +15,7 @@ add_subdirectory(keira)
 add_subdirectory(keira-playground)
 add_subdirectory(keira-test)
 add_subdirectory(photon-desktop)
+add_subdirectory(rhi-spike)
 
 enable_testing()
 

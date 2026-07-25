@@ -13,6 +13,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(QT NAMES Qt6 COMPONENTS Widgets Network OpenGLWidgets)
 find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Widgets Network OpenGLWidgets)
+find_package(Qt6 REQUIRED COMPONENTS Gui GuiPrivate)  # QRhi (rhi/qrhi.h) for the canvas system
+find_package(Qt6 REQUIRED COMPONENTS ShaderTools)     # qt6_add_shaders for canvas node shaders
 find_package(Qt6 REQUIRED COMPONENTS Quick Qml QuickWidgets)
 find_package(Qt6 REQUIRED COMPONENTS
     3DCore
@@ -552,7 +554,31 @@ add_library(photon-core SHARED ${PROJECT_SOURCES}
     graph/parameter/pixellistparameter.h graph/parameter/pixellistparameter.cpp
     graph/node/pixel/pixelglobalsnode.h graph/node/pixel/pixelglobalsnode.cpp
     virtualdj/virtualdjconnector.h virtualdj/virtualdjconnector.cpp
-    resources/fixtures/elation-dartz-360.json)
+    resources/fixtures/elation-dartz-360.json
+    rhi/rhicontext.h rhi/rhicontext.cpp
+    graph/parameter/rhitextureparameter.h graph/parameter/rhitextureparameter.cpp
+    graph/node/canvas/canvasglobalsnode.h graph/node/canvas/canvasglobalsnode.cpp
+    graph/node/canvas/canvasoutputnode.h graph/node/canvas/canvasoutputnode.cpp
+    graph/node/canvas/canvassubgraphnode.h graph/node/canvas/canvassubgraphnode.cpp
+    graph/node/canvas/canvasrendermanager.h graph/node/canvas/canvasrendermanager.cpp
+    graph/node/canvas/basecanvasnode.h graph/node/canvas/basecanvasnode.cpp
+    graph/node/canvas/canvasfillnode.h graph/node/canvas/canvasfillnode.cpp
+    graph/node/canvas/canvastransformnode.h graph/node/canvas/canvastransformnode.cpp
+    graph/node/canvas/canvasdmxsampler.h graph/node/canvas/canvasdmxsampler.cpp
+    gui/panel/canvaspreviewwindow.h gui/panel/canvaspreviewwindow.cpp
+    gui/panel/canvaspreviewpanel.h gui/panel/canvaspreviewpanel.cpp)
+
+qt6_add_shaders(photon-core "canvas_shaders"
+    PREFIX "/canvas/shaders"
+    BASE "rhi/shaders"
+    FILES
+        rhi/shaders/fullscreen.vert
+        rhi/shaders/fill.frag
+        rhi/shaders/transform.frag
+        rhi/shaders/blit.frag
+        rhi/shaders/gather.vert
+        rhi/shaders/gather.frag
+)
 
 target_include_directories(photon-core PUBLIC ../core)
 target_include_directories(photon-core PUBLIC ../keira)
@@ -573,6 +599,7 @@ target_link_libraries(photon-core PRIVATE
     Qt6::Network
     Qt6::OpenGLWidgets
     Qt6::OpenGL
+    Qt6::GuiPrivate
 )
 target_link_libraries(photon-core PRIVATE Qt6::Core)
 target_link_libraries(photon-core PRIVATE Qt6::Core)

@@ -83,12 +83,22 @@ const QVector<QPointF> &FixturePixelSource::positions() const
     return m_impl->positions;
 }
 
+void FixturePixelSource::collectSampleUVs(QVector<QPointF> &t_out, const QTransform &t_transform) const
+{
+    auto capIt = m_impl->capabilities.cbegin();
+    for(auto it = positions().cbegin(); it != positions().cend() && capIt != m_impl->capabilities.cend(); ++it, ++capIt)
+    {
+        if(dynamic_cast<ColorCapability*>(*capIt))
+            t_out << t_transform.map(*it);
+    }
+}
+
 void FixturePixelSource::process(ProcessContext &t_context, const QTransform &t_transform, double t_blend) const
 {
     auto capIt = m_impl->capabilities.cbegin();
 
 
-        if(!t_context.image)
+        if(!t_context.gatheredColors && !t_context.image)
             return;
 
         for(auto it = positions().cbegin(); it != positions().cend() && capIt != m_impl->capabilities.cend(); it++, capIt++)
@@ -97,24 +107,27 @@ void FixturePixelSource::process(ProcessContext &t_context, const QTransform &t_
             ColorCapability *colorCap = dynamic_cast<ColorCapability*>(*capIt);
             if(colorCap)
             {
-
-
-                auto ptF = t_transform.map((*it));
-                ptF.setX(ptF.x() * t_context.canvas->width());
-                ptF.setY(ptF.y() * t_context.canvas->height());
-
-                auto pt = ptF.toPoint();
-                QRgb color;
-                if(pt.x() < 0 || pt.x() >= t_context.canvas->width() || pt.y() < 0 || pt.y() >= t_context.canvas->height())
+                QColor qc;
+                if(t_context.gatheredColors)
                 {
-                    color = 0;
+                    qc = t_context.gatheredIndex < t_context.gatheredColors->size()
+                             ? t_context.gatheredColors->at(t_context.gatheredIndex++) : QColor(0,0,0);
                 }
                 else
                 {
-                    color = t_context.image->pixel(pt);
-                }
+                    auto ptF = t_transform.map((*it));
+                    ptF.setX(ptF.x() * t_context.image->width());
+                    ptF.setY(ptF.y() * t_context.image->height());
 
-                auto qc = QColor::fromRgb(color);
+                    auto pt = ptF.toPoint();
+                    QRgb color;
+                    if(pt.x() < 0 || pt.x() >= t_context.image->width() || pt.y() < 0 || pt.y() >= t_context.image->height())
+                        color = 0;
+                    else
+                        color = t_context.image->pixel(pt);
+
+                    qc = QColor::fromRgb(color);
+                }
 
                 colorCap->setColor(qc, t_context.dmxMatrix,t_blend);
             }

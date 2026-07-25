@@ -33,6 +33,10 @@ public:
 
     virtual void process(ProcessContext &, const QTransform &, double blend = 1.0) const;
 
+    // Appends this source's canvas-space sample points (transformed), in the same
+    // order process() consumes colours. Used to build the GPU gather list (5b).
+    virtual void collectSampleUVs(QVector<QPointF> &out, const QTransform &transform) const;
+
     virtual void readFromJson(const QJsonObject &, const LoadContext &);
     virtual void writeToJson(QJsonObject &) const;
 

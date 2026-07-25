@@ -85,6 +85,7 @@ class OpenGLShader;
 class OpenGLPlane;
 class OpenGLTexture;
 class OpenGLResources;
+class RhiContext;
 class Panel;
 class PatchBay;
 class PhotonCore;

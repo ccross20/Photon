@@ -18,7 +18,10 @@
 #include "sequence/sequence.h"
 #include "surface/surfacecollection.h"
 #include "opengl/openglresources.h"
+#include "rhi/rhicontext.h"
+#include "graph/node/canvas/canvasrendermanager.h"
 #include "graph/parameter/textureparameter.h"
+#include "graph/parameter/rhitextureparameter.h"
 #include "virtualdj/virtualdjconnector.h"
 
 inline void initPluginResource() { Q_INIT_RESOURCE(resources); }
@@ -46,6 +49,8 @@ public:
     QOffscreenSurface *surface = nullptr;
     OpenGLResources *openGLResources = nullptr;
     QOpenGLContext *context = nullptr;
+    RhiContext *rhiContext = nullptr;
+    CanvasRenderManager *canvasRenderManager = nullptr;
     VirtualDJConnector *djConnector = nullptr;
 };
 
@@ -62,6 +67,8 @@ PhotonCore::Impl::~Impl()
 {
 
     delete djConnector;
+    delete canvasRenderManager;   // stop the render timer before the device it uses
+    delete rhiContext;   // owns its own shared GL context; tear down before ours
     context->makeCurrent(surface);
     openGLResources->destroy(context);
     delete openGLResources;
@@ -85,6 +92,7 @@ PhotonCore::PhotonCore(int &argc, char **argv) : QApplication(argc, argv),
     QQuickWindow::setGraphicsApi(QSGRendererInterface::OpenGL);
 
     qRegisterMetaType<TextureData>();
+    qRegisterMetaType<RhiTextureData>();
     connect(m_impl->resources,&ResourceManager::resourceAdded, this, &PhotonCore::resourceAdded);
     connect(m_impl->settings, &Settings::settingsChanged, this, &PhotonCore::settingsChanged);
 }
@@ -129,6 +137,17 @@ void PhotonCore::init()
 
     initSurface();
     initOpenGLResources();
+
+    // Create the offscreen QRhi device now, on the main thread — canvas nodes are
+    // evaluated on the graph worker thread and must never trigger its (main-thread-
+    // only) creation. The render manager then drives all canvas GPU work here.
+    m_impl->canvasRenderManager = new CanvasRenderManager(rhiContext(), this);
+
+    // Opt-in smoke test of the offscreen QRhi device (set PHOTON_RHI_SELFTEST=1).
+    // Off by default so normal startup doesn't pay for a GPU render+readback; the
+    // standalone rhi-spike target covers this in CI/manual runs.
+    if (qEnvironmentVariableIsSet("PHOTON_RHI_SELFTEST"))
+        rhiContext()->selfTest();
 }
 
 Settings *PhotonCore::settings() const
@@ -178,6 +197,13 @@ void PhotonCore::initOpenGLResources()
 OpenGLResources *PhotonCore::openGLResources() const
 {
     return m_impl->openGLResources;
+}
+
+RhiContext *PhotonCore::rhiContext() const
+{
+    if (!m_impl->rhiContext)
+        m_impl->rhiContext = new RhiContext;
+    return m_impl->rhiContext;
 }
 
 QOffscreenSurface *PhotonCore::surface() const

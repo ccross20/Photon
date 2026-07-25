@@ -16,6 +16,7 @@
 #include "gui/panel/dmxviewerpanel.h"
 #include "gui/panel/dmxpatchpanel.h"
 #include "gui/panel/canvasviewerpanel.h"
+#include "gui/panel/canvaspreviewpanel.h"
 #include "gui/panel/tagcollectionpanel.h"
 #include "gui/panel/pixellayoutcollectionpanel.h"
 #include "gui/panel/surfacepanel.h"
@@ -53,6 +54,11 @@
 #include "gui/panel/fixturegroupcollectionpanel.h"
 #include "graph/node/pixel/pixelgraph.h"
 #include "graph/node/pixel/pixelglobalsnode.h"
+#include "graph/node/canvas/canvassubgraphnode.h"
+#include "graph/node/canvas/canvasglobalsnode.h"
+#include "graph/node/canvas/canvasoutputnode.h"
+#include "graph/node/canvas/canvasfillnode.h"
+#include "graph/node/canvas/canvastransformnode.h"
 
 #include "falloff/constantfalloffeffect.h"
 #include "sequence/constantchanneleffect.h"
@@ -197,6 +203,7 @@ void PluginFactory::init()
     registerPluginPanel("photon.dmx-viewer",[](){return new DMXViewerPanel;});
     registerPluginPanel("photon.dmx-patch",[](){return new DMXPatchPanel;});
     registerPluginPanel("photon.canvas-viewer",[](){return new CanvasViewerPanel;});
+    registerPluginPanel("photon.canvas-preview",[](){return new CanvasPreviewPanel;});
     registerPluginPanel("photon.tag-collection",[](){return new TagCollectionPanel;});
     registerPluginPanel("photon.fixture-group-collection",[](){return new FixtureGroupCollectionPanel;});
     registerPluginPanel("photon.pixellayout-collection",[](){return new PixelLayoutCollectionPanel;});
@@ -232,6 +239,11 @@ void PluginFactory::init()
     registerNode(FixtureGroupNode::info());
     registerNode(PixelGlobalsNode::info());
     registerNode(PixelGraph::info());
+    registerNode(CanvasSubGraphNode::info());
+    registerNode(CanvasGlobalsNode::info());
+    registerNode(CanvasOutputNode::info());
+    registerNode(CanvasFillNode::info());
+    registerNode(CanvasTransformNode::info());
 
     registerFalloffEffect(ConstantFalloffEffect::info());
 

@@ -2,11 +2,13 @@
 #define ROUTINEEVALUATIONCONTEXT_H
 
 #include <QHash>
+#include <QSize>
 #include "photon-global.h"
 #include "data/dmxmatrix.h"
 #include "model/node.h"
 
 class QOpenGLContext;
+class QRhiCommandBuffer;
 namespace photon {
 class OpenGLFrameBuffer;
 
@@ -36,6 +38,9 @@ struct RoutineEvaluationContext : keira::EvaluationContext
         fixtureIndex = o.fixtureIndex;
         timeOffset   = o.timeOffset;
         gizmoValues  = o.gizmoValues;
+        rhiContext        = o.rhiContext;
+        rhiCommandBuffer  = o.rhiCommandBuffer;
+        canvasResolution  = o.canvasResolution;
     }
     DMXMatrix &dmxMatrix;
     DMXTimeMachine *timeMachine = nullptr;
@@ -53,6 +58,14 @@ struct RoutineEvaluationContext : keira::EvaluationContext
     double strength = 1.0;
     int fixtureIndex = 0;
     double timeOffset = 0.0;
+
+    // GPU canvas graph: the shared offscreen device and the command buffer of the
+    // frame the CanvasSubGraphNode has opened. Canvas nodes record their passes on
+    // this command buffer and acquire pooled textures from rhiContext. Null outside
+    // a canvas subgraph evaluation.
+    RhiContext *rhiContext = nullptr;
+    QRhiCommandBuffer *rhiCommandBuffer = nullptr;
+    QSize canvasResolution;   // the sink resolution canvas producer nodes render at
 
     // Surface value bus: "<gizmoUniqueId>/<portId>" -> live value, published by
     // SurfaceNode each frame and read by GizmoValueNode.

@@ -35,6 +35,7 @@ public:
     void initSurface();
     void initOpenGLResources();
     OpenGLResources *openGLResources() const;
+    RhiContext *rhiContext() const;
     VirtualDJConnector *djConnector() const;
 
 

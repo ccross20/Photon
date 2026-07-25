@@ -69,7 +69,7 @@ void GuiManager::Impl::createAppWindow()
     windowMenu->addAction("Routine", [](){photonApp->gui()->createFloatingPanel("photon.routine-collection");});
     windowMenu->addAction("Sequence", [](){photonApp->gui()->createFloatingPanel("photon.sequence-collection");});
     windowMenu->addAction("Surfaces", [](){photonApp->gui()->createFloatingPanel("photon.surface-collection");});
-    windowMenu->addAction("Canvas Viewer", [](){photonApp->gui()->createFloatingPanel("photon.canvas-viewer");});
+    windowMenu->addAction("Canvas Preview", [](){photonApp->gui()->createFloatingPanel("photon.canvas-preview");});
     windowMenu->addAction("Tags", [](){photonApp->gui()->createFloatingPanel("photon.tag-collection");});
     windowMenu->addAction("Fixture Groups", [](){photonApp->gui()->createFloatingPanel("photon.fixture-group-collection");});
     menubar->addMenu(windowMenu);
