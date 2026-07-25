@@ -34,6 +34,8 @@ PixelGraph::PixelGraph() : keira::SubGraphNode("photon.node.pixel-graph") {
     m_globalsNode = new PixelGlobalsNode;
     m_globalsNode->createParameters();
     graph()->addNode(m_globalsNode);
+    graph()->drainCommandQueue(); // apply immediately so the queued addNode never
+                                  // outlives m_globalsNode (see readFromJson below)
     graph()->setName("Pixel Graph");
     graph()->setGraphTypeId("pixel");
 
@@ -92,6 +94,9 @@ void PixelGraph::parameterWasModified(keira::Parameter *t_param)
 void PixelGraph::readFromJson(const QJsonObject &t_json, keira::NodeLibrary *t_library)
 {
     graph()->removeNode(m_globalsNode);
+    graph()->drainCommandQueue(); // apply the removal (and any still-pending addNode
+                                  // from construction) BEFORE freeing the pointer, so
+                                  // no queued command is left referencing freed memory
     delete m_globalsNode;
 
 

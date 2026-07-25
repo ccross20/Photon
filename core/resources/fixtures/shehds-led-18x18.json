@@ -34,7 +34,7 @@
       "lumens": 23000
     },
     "lens": {
-      "degreesMinMax": [2, 40]
+      "degreesMinMax": [2, 25]
     }
   },
   "availableChannels": {

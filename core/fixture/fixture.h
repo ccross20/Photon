@@ -90,6 +90,11 @@ public:
     QString modelType() const;
     void setModelType(const QString &);
 
+    // Visualiser beam style override: "" = Auto (follow the global toggle),
+    // "cones" = basic cone, "volumetric" = raymarched volumetric beam.
+    QString beamStyle() const;
+    void setBeamStyle(const QString &);
+
     void setComments(const QString &);
     void setIdentifier(const QString &);
 

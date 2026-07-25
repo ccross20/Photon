@@ -123,9 +123,9 @@ void RhiViewport::setSceneRoot(SceneObject *root)
     m_window->setSceneRoot(root);
 }
 
-void RhiViewport::setSelectedSceneObject(SceneObject *obj)
+void RhiViewport::setSelectedSceneObjects(const QVector<SceneObject *> &objs)
 {
-    m_window->setSelectedSceneObject(obj);
+    m_window->setSelectedSceneObjects(objs);
 }
 
 void RhiViewport::setDmxState(const DMXMatrix &dmx)

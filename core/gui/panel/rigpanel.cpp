@@ -106,7 +106,7 @@ void RigPanel::duplicateClicked()
         int end = static_cast<Fixture*>(fix)->dmxOffset() + static_cast<Fixture*>(fix)->dmxSize();
 
         if(end > nextDMX)
-            nextDMX = end+1;
+            nextDMX = end;
     }
 
 
@@ -133,7 +133,7 @@ void RigPanel::duplicateClicked()
         {
             auto fix = static_cast<Fixture*>(sceneObj);
             fix->setDMXOffset(nextDMX);
-            nextDMX += fix->dmxSize()+1;
+            nextDMX += fix->dmxSize();
         }
     }
 }
@@ -256,40 +256,43 @@ void RigPanel::selectionChanged(const QItemSelection &selected, const QItemSelec
     m_impl->removeButton->setEnabled(m_impl->treeView->selectionModel()->hasSelection());
     m_impl->duplicateButton->setEnabled(m_impl->treeView->selectionModel()->hasSelection());
 
-    auto selectedIndices = m_impl->treeView->selectionModel()->selectedIndexes();
+    auto selectedIndices = m_impl->treeView->selectionModel()->selectedRows();
 
     // Property editing for the selection lives in PropertiesPanel now, which
     // watches Project::selectedSceneObjectChanged — just publish the
     // selection here rather than building an editor inline.
-    SceneObject *firstSelected = nullptr;
+    QList<SceneObject*> selectedObjects;
     for(auto index : selectedIndices)
     {
-        auto sceneObj = static_cast<SceneObject*>(index.internalPointer());
-        if(sceneObj)
-        {
-            firstSelected = sceneObj;
-            break;
-        }
+        if(auto *sceneObj = static_cast<SceneObject*>(index.internalPointer()))
+            selectedObjects.append(sceneObj);
     }
 
     if (!m_impl->syncingFromProject && photonApp->project())
-        photonApp->project()->setSelectedSceneObject(firstSelected);
+        photonApp->project()->setSelectedSceneObjects(selectedObjects);
 }
 
-void RigPanel::syncSelectionFromProject(SceneObject *obj)
+void RigPanel::syncSelectionFromProject(const QList<SceneObject*> &objs)
 {
     if (!m_impl->sceneModel)
         return;
     m_impl->syncingFromProject = true;
-    if (!obj) {
+    if (objs.isEmpty()) {
         m_impl->treeView->selectionModel()->clearSelection();
     } else {
-        QModelIndex idx = m_impl->sceneModel->indexForObject(obj);
-        if (idx.isValid()) {
-            m_impl->treeView->selectionModel()->select(
-                idx, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
-            m_impl->treeView->scrollTo(idx);
+        QItemSelection selection;
+        for(auto *obj : objs)
+        {
+            QModelIndex idx = m_impl->sceneModel->indexForObject(obj);
+            if (idx.isValid())
+                selection.select(idx, idx);
         }
+        m_impl->treeView->selectionModel()->select(
+            selection, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+
+        QModelIndex last = m_impl->sceneModel->indexForObject(objs.last());
+        if (last.isValid())
+            m_impl->treeView->scrollTo(last);
     }
     m_impl->syncingFromProject = false;
 }
@@ -300,14 +303,14 @@ void RigPanel::projectDidOpen(photon::Project* project)
     m_impl->treeView->setModel(m_impl->sceneModel);
     connect(m_impl->treeView->selectionModel(), &QItemSelectionModel::selectionChanged, this, &RigPanel::selectionChanged);
     connect(m_impl->sceneModel, &SceneModel::selectionMoved, this, &RigPanel::selectionMoved);
-    connect(project, &Project::selectedSceneObjectChanged, this, &RigPanel::syncSelectionFromProject);
+    connect(project, &Project::selectedSceneObjectsChanged, this, &RigPanel::syncSelectionFromProject);
 
     m_impl->addButton->setEnabled(true);
 }
 
 void RigPanel::projectWillClose(photon::Project* project)
 {
-    disconnect(project, &Project::selectedSceneObjectChanged, this, &RigPanel::syncSelectionFromProject);
+    disconnect(project, &Project::selectedSceneObjectsChanged, this, &RigPanel::syncSelectionFromProject);
     disconnect(m_impl->treeView->selectionModel(), &QItemSelectionModel::selectionChanged, this, &RigPanel::selectionChanged);
     disconnect(m_impl->sceneModel, &SceneModel::selectionMoved, this, &RigPanel::selectionMoved);
     m_impl->treeView->setModel(nullptr);

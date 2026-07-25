@@ -138,6 +138,8 @@ set(PROJECT_SOURCES
         graph/bus/dmxwriternode.cpp
         graph/bus/dmxsubgraphnode.h
         graph/bus/dmxsubgraphnode.cpp
+        graph/bus/identifyfixturenode.h
+        graph/bus/identifyfixturenode.cpp
         graph/bus/sequencenode.h
         graph/bus/sequencenode.cpp
         graph/node/math/arithmeticnode.h
@@ -176,6 +178,8 @@ set(PROJECT_SOURCES
         gui/dmxviewer/dmxviewer.cpp
         gui/dmxviewer/dmxviewercells.h
         gui/dmxviewer/dmxviewercells.cpp
+        gui/dmxpatch/dmxpatchgrid.h
+        gui/dmxpatch/dmxpatchgrid.cpp
         gui/gizmo/rectanglegizmo.h
         gui/gizmo/rectanglegizmo.cpp
         gui/fixturefalloff2deditor.h
@@ -198,6 +202,9 @@ set(PROJECT_SOURCES
         gui/panel/canvasviewerpanel.cpp
         gui/panel/dmxviewerpanel.h
         gui/panel/dmxviewerpanel.cpp
+        gui/panel/dmxpatchpanel.h
+        gui/panel/dmxpatchpanel_p.h
+        gui/panel/dmxpatchpanel.cpp
         gui/panel/rigpanel.h
         gui/panel/rigpanel_p.h
         gui/panel/rigpanel.cpp

@@ -21,6 +21,7 @@
 #include "graph/bus/surfacenode.h"
 #include "graph/bus/dmxwriternode.h"
 #include "graph/bus/dmxsubgraphnode.h"
+#include "graph/bus/identifyfixturenode.h"
 #include "scene/sceneobject.h"
 #include "scene/scenemanager.h"
 #include "state/statecollection.h"
@@ -47,7 +48,7 @@ public:
     StateCollection states;
     BusGraph *bus;
     SceneManager *sceneManager;
-    SceneObject *selectedSceneObject = nullptr;
+    QList<SceneObject*> selectedSceneObjects;
 };
 
 Project::Impl::Impl()
@@ -68,6 +69,13 @@ Project::Impl::Impl()
     sequenceNode->createParameters();
     sequenceNode->setPosition(QPointF(600,0));
 
+    // Last in the chain before the output node — overrides one fixture's
+    // dimmer/shutter/color when the DMX Patch panel's Identify toggle is on.
+    IdentifyFixtureNode *identifyNode = new IdentifyFixtureNode;
+    identifyNode->setName("Identify");
+    identifyNode->createParameters();
+    identifyNode->setPosition(QPointF(750,0));
+
     DMXWriterNode *writerNode = new DMXWriterNode;
     writerNode->setName("output");
     writerNode->createParameters();
@@ -78,11 +86,13 @@ Project::Impl::Impl()
     bus->addNode(generateNode);
     bus->addNode(initialValuesNode);
     bus->addNode(sequenceNode);
+    bus->addNode(identifyNode);
     bus->addNode(writerNode);
 
     bus->connectParameters(generateNode->findParameter(DMXGenerateMatrixNode::OutputDMX), initialValuesNode->findParameter(DMXSubGraphNode::InputDMX));
     bus->connectParameters(initialValuesNode->findParameter(DMXSubGraphNode::OutputDMX), sequenceNode->findParameter(SurfaceNode::InputDMX));
-    bus->connectParameters(sequenceNode->findParameter(SurfaceNode::OutputDMX), writerNode->findParameter(DMXWriterNode::InputDMX));
+    bus->connectParameters(sequenceNode->findParameter(SurfaceNode::OutputDMX), identifyNode->findParameter(IdentifyFixtureNode::InputDMX));
+    bus->connectParameters(identifyNode->findParameter(IdentifyFixtureNode::OutputDMX), writerNode->findParameter(DMXWriterNode::InputDMX));
 
     State *state = new State();
     state->setName("Default");
@@ -122,15 +132,26 @@ SceneObject *Project::sceneRoot() const
 
 SceneObject *Project::selectedSceneObject() const
 {
-    return m_impl->selectedSceneObject;
+    return m_impl->selectedSceneObjects.isEmpty() ? nullptr : m_impl->selectedSceneObjects.last();
 }
 
 void Project::setSelectedSceneObject(SceneObject *obj)
 {
-    if (obj == m_impl->selectedSceneObject)
+    setSelectedSceneObjects(obj ? QList<SceneObject*>{obj} : QList<SceneObject*>{});
+}
+
+QList<SceneObject*> Project::selectedSceneObjects() const
+{
+    return m_impl->selectedSceneObjects;
+}
+
+void Project::setSelectedSceneObjects(const QList<SceneObject*> &obj)
+{
+    if (obj == m_impl->selectedSceneObjects)
         return;
-    m_impl->selectedSceneObject = obj;
-    emit selectedSceneObjectChanged(obj);
+    m_impl->selectedSceneObjects = obj;
+    emit selectedSceneObjectsChanged(obj);
+    emit selectedSceneObjectChanged(obj.isEmpty() ? nullptr : obj.last());
 }
 
 SceneManager *Project::scene() const
@@ -366,6 +387,33 @@ void Project::readFromJson(const QJsonObject &json)
     {
         QJsonObject busObj = json.value("bus").toObject();
         m_impl->bus->readFromJson(busObj, photonApp->plugins()->nodeLibrary());
+    }
+
+    // Projects saved before the Identify node existed won't have one in their
+    // bus graph — splice one in between the Surface node and the output node
+    // so upgraded projects still get the DMX Patch panel's identify feature.
+    if(!m_impl->bus->findNode("Identify"))
+    {
+        auto *surfaceNode = m_impl->bus->findNode("Surface");
+        auto *outputNode = m_impl->bus->findNode("output");
+        if(surfaceNode && outputNode)
+        {
+            auto *surfaceOut = surfaceNode->findParameter(SurfaceNode::OutputDMX);
+            auto *writerIn = outputNode->findParameter(DMXWriterNode::InputDMX);
+            if(surfaceOut && writerIn)
+            {
+                auto *identifyNode = new IdentifyFixtureNode;
+                identifyNode->setName("Identify");
+                identifyNode->createParameters();
+                identifyNode->setPosition(surfaceNode->position() + QPointF(150, 100));
+
+                m_impl->bus->addNode(identifyNode);
+                m_impl->bus->disconnectParameters(surfaceOut, writerIn);
+                m_impl->bus->connectParameters(surfaceOut, identifyNode->findParameter(IdentifyFixtureNode::InputDMX));
+                m_impl->bus->connectParameters(identifyNode->findParameter(IdentifyFixtureNode::OutputDMX), writerIn);
+                m_impl->bus->drainCommandQueue();
+            }
+        }
     }
 }
 

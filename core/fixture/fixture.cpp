@@ -32,6 +32,7 @@ public:
     QString identifier;
     QStringList categories;   // from the OpenFixture definition
     QString modelType;        // per-fixture model override ("" = auto from category)
+    QString beamStyle;        // per-fixture beam style override ("" = follow global toggle)
     int dmxOffset = 0;
     int dmxSize = 0;
     int universe = 1;
@@ -264,6 +265,19 @@ void Fixture::setModelType(const QString &t_value)
     if(m_impl->modelType == t_value)
         return;
     m_impl->modelType = t_value;
+    emit metadataChanged(this);
+}
+
+QString Fixture::beamStyle() const
+{
+    return m_impl->beamStyle;
+}
+
+void Fixture::setBeamStyle(const QString &t_value)
+{
+    if(m_impl->beamStyle == t_value)
+        return;
+    m_impl->beamStyle = t_value;
     emit metadataChanged(this);
 }
 
@@ -728,6 +742,7 @@ void Fixture::readFromJson(const QJsonObject &json, const LoadContext &t_context
     m_impl->manufacturer = json.value("manufacturer").toString();
     m_impl->comments = json.value("comments").toString();
     m_impl->modelType = json.value("modelType").toString();
+    m_impl->beamStyle = json.value("beamStyle").toString();
     m_impl->identifier = json.value("identifier").toString();
     m_impl->definitionPath = json.value("definitionPath").toString();
     m_impl->uniqueIndex = json.value("uniqueIndex").toInt(0);
@@ -753,6 +768,7 @@ void Fixture::writeToJson(QJsonObject &json) const
     json.insert("manufacturer", m_impl->manufacturer);
     json.insert("comments", m_impl->comments);
     json.insert("modelType", m_impl->modelType);
+    json.insert("beamStyle", m_impl->beamStyle);
     json.insert("identifier", m_impl->identifier);
     json.insert("selectedMode", m_impl->selectedMode);
     json.insert("definitionPath", m_impl->definitionPath);

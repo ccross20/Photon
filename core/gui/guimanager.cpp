@@ -64,6 +64,7 @@ void GuiManager::Impl::createAppWindow()
     windowMenu->addAction("Canvas", [](){photonApp->gui()->createFloatingPanel("photon.canvas-collection");});
     windowMenu->addAction("Pixel Layouts", [](){photonApp->gui()->createFloatingPanel("photon.pixellayout-collection");});
     windowMenu->addAction("Rig", [](){photonApp->gui()->createFloatingPanel("photon.rig");});
+    windowMenu->addAction("DMX Patch", [](){photonApp->gui()->createFloatingPanel("photon.dmx-patch");});
     windowMenu->addAction("Properties", [](){photonApp->gui()->createFloatingPanel("photon.properties");});
     windowMenu->addAction("Routine", [](){photonApp->gui()->createFloatingPanel("photon.routine-collection");});
     windowMenu->addAction("Sequence", [](){photonApp->gui()->createFloatingPanel("photon.sequence-collection");});

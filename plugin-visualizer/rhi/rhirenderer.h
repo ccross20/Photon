@@ -77,8 +77,12 @@ public:
 
     // Ray-pick the nearest selectable scene object (world-space ray). Null = miss.
     SceneObject *pick(const QVector3D &origin, const QVector3D &dir) const;
-    void setSelection(SceneObject *obj);
-    SceneObject *selection() const { return m_selected; }
+    // Replaces the whole selection; the gizmo attaches to the last (primary) entry.
+    void setSelection(const QVector<SceneObject *> &objs);
+    // The primary (most-recently-selected) object, or null if nothing is selected.
+    SceneObject *selection() const { return m_selectedObjects.isEmpty() ? nullptr : m_selectedObjects.last(); }
+    const QVector<SceneObject *> &selectionList() const { return m_selectedObjects; }
+    bool isSelected(SceneObject *obj) const { return obj && m_selectedObjects.contains(obj); }
 
     RhiGizmo &gizmo() { return m_gizmo; }
 
@@ -96,6 +100,7 @@ private:
         float      split = -2.0f;   // beams only: color split boundary x in [-1,1] (<-1 = none)
         QVector4D  fadePlane;       // volumetric beams: xyz = plane normal (toward apex),
                                     // w = offset (signed dist = dot(n,X)+w); zero = no fade
+        bool       volumetric = false; // beams only: raymarched (true) vs flat cone (false)
     };
 
     void collectDrawables(SceneObject *obj, QVector<Drawable> &out,
@@ -118,6 +123,29 @@ private:
     // Reads the fixture's live color and 0..1 intensity from the current DMX state.
     // Returns false if the fixture has no color/dimmer capability to read.
     bool evaluateFixture(Fixture *fixture, QColor &outColor, float &outIntensity) const;
+
+    // A multi-cell fixture (LED bar / pixel strip): more than one colour cell,
+    // each with its own channels. Rendered as a row of per-cell lenses + beams
+    // rather than a single emitter.
+    static bool isMultiCell(Fixture *fixture);
+    // One resolved LED cell of a multi-cell fixture.
+    struct BarCell {
+        QVector3D localPos;    // position in the fixture/model local frame (row along X)
+        QColor    color;       // live emitted colour (already scaled by dim/shutter)
+        float     intensity;   // 0..1 brightness
+    };
+    // Lays out a multi-cell fixture's cells along the model's local-X row (or the
+    // fixture width when there's no model), reading each cell's live colour. The
+    // shared local->world frame (cells emit down its local -Y) and the per-cell
+    // lens radius are returned so both the lens discs and the beams can place
+    // themselves consistently. Cells are ordered by colour index.
+    void collectBarCells(Fixture *fixture, RhiModel *model, QVector<BarCell> &out,
+                         QMatrix4x4 &outFrame, float &outLensRadius) const;
+
+    // Resolves whether a fixture's beams render volumetric: its per-fixture
+    // beamStyle override ("cones"/"volumetric") wins, else "" (Auto) follows the
+    // renderer's global beam mode.
+    bool beamVolumetricFor(Fixture *fixture) const;
 
     // Current shutter/strobe output multiplier (0..1) from the active shutter channel:
     // 1 when open or absent, 0 when closed, a time-driven flash/pulse when strobing.
@@ -181,6 +209,7 @@ private:
     RhiMesh *m_grid = nullptr;
     RhiMesh *m_beamCone = nullptr;
     RhiMesh *m_plane = nullptr;
+    RhiMesh *m_disc = nullptr;    // per-cell LED lens (multi-cell bar fixtures)
 
     // Per-truss geometry, rebuilt when a truss's parameters change.
     QHash<SceneObject *, RhiMesh *>  m_trussMeshes;
@@ -231,7 +260,7 @@ private:
 
     RhiGizmo     m_gizmo;
     SceneObject *m_sceneRoot = nullptr;
-    SceneObject *m_selected = nullptr;
+    QVector<SceneObject *> m_selectedObjects;
     BeamMode     m_beamMode = BeamMode::Basic;
     int          m_goboIndex = 0;
     QElapsedTimer m_clock;   // drives gobo rotation

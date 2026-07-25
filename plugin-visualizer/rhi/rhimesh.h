@@ -50,6 +50,9 @@ public:
     // carries a per-vertex alpha factor (bright apex → faint base) for additive
     // blending rather than a normal.
     static RhiMesh *createCone(int sides);
+    // A unit-radius filled disc in the local XY plane, normal +Z (lit pos+normal
+    // layout). Scale/orient via the model matrix. Used for per-cell LED lenses.
+    static RhiMesh *createDisc(int sides);
 
 private:
     QByteArray   m_vertexData;

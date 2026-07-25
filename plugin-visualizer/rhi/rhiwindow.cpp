@@ -41,11 +41,11 @@ void RhiWindow::setSceneRoot(SceneObject *root)
         m_renderer->setSceneRoot(root);
 }
 
-void RhiWindow::setSelectedSceneObject(SceneObject *obj)
+void RhiWindow::setSelectedSceneObjects(const QVector<SceneObject *> &objs)
 {
-    if (!m_renderer || m_renderer->selection() == obj)
+    if (!m_renderer || m_renderer->selectionList() == objs)
         return;
-    m_renderer->setSelection(obj);
+    m_renderer->setSelection(objs);
     requestUpdate();
 }
 
@@ -282,11 +282,33 @@ void RhiWindow::mouseReleaseEvent(QMouseEvent *event)
         m_gizmoActive = false;
         requestUpdate();
     } else if (event->button() == Qt::LeftButton && !m_dragged && m_renderer) {
-        // A left click that did not drag is a selection.
+        // A left click that did not drag is a selection. Shift adds, Ctrl
+        // toggles, plain click replaces (matching the Rig panel / DMX Patch
+        // grid's multi-select convention) — shift is also used for camera
+        // panning, but only once a drag actually happens, so a shift-click
+        // with no movement is unambiguously a selection add.
         QVector3D origin, dir;
         rayFor(m_camera, event->position(), devicePixelRatio(), origin, dir);
-        m_renderer->setSelection(m_renderer->pick(origin, dir));
-        emit selectionChanged(m_renderer->selection());
+        SceneObject *hit = m_renderer->pick(origin, dir);
+
+        QVector<SceneObject *> selection = m_renderer->selectionList();
+        const auto modifiers = event->modifiers();
+        if (modifiers & Qt::ShiftModifier) {
+            if (hit) {
+                selection.removeAll(hit);
+                selection.append(hit);
+            }
+        } else if (modifiers & Qt::ControlModifier) {
+            if (hit && selection.removeAll(hit) == 0)
+                selection.append(hit);
+        } else {
+            selection.clear();
+            if (hit)
+                selection.append(hit);
+        }
+
+        m_renderer->setSelection(selection);
+        emit selectionChanged(selection);
         requestUpdate();
     }
 
@@ -307,8 +329,8 @@ void RhiWindow::keyPressEvent(QKeyEvent *event)
     case Qt::Key_R: setGizmoMode(RhiGizmo::Scale);     break;
     case Qt::Key_Q: setGizmoMode(RhiGizmo::None);      break;
     case Qt::Key_Escape:
-        m_renderer->setSelection(nullptr);
-        emit selectionChanged(nullptr);
+        m_renderer->setSelection({});
+        emit selectionChanged({});
         setGizmoMode(RhiGizmo::None);
         break;
     default:

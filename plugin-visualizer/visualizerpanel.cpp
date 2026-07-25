@@ -29,17 +29,17 @@ void VisualizerPanel::projectDidOpen(Project *project)
 {
     m_viewport->setSceneRoot(project->sceneRoot());
     connect(m_viewport, &RhiViewport::selectionChanged,
-            project, &Project::setSelectedSceneObject);
-    connect(project, &Project::selectedSceneObjectChanged,
-            m_viewport, &RhiViewport::setSelectedSceneObject);
+            project, &Project::setSelectedSceneObjects);
+    connect(project, &Project::selectedSceneObjectsChanged,
+            m_viewport, &RhiViewport::setSelectedSceneObjects);
 }
 
 void VisualizerPanel::projectWillClose(Project *project)
 {
     disconnect(m_viewport, &RhiViewport::selectionChanged,
-               project, &Project::setSelectedSceneObject);
-    disconnect(project, &Project::selectedSceneObjectChanged,
-               m_viewport, &RhiViewport::setSelectedSceneObject);
+               project, &Project::setSelectedSceneObjects);
+    disconnect(project, &Project::selectedSceneObjectsChanged,
+               m_viewport, &RhiViewport::setSelectedSceneObjects);
     m_viewport->setSceneRoot(nullptr);
 }
 

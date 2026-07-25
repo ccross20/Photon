@@ -35,7 +35,7 @@ public:
     ~RhiWindow() override;
 
     void setSceneRoot(SceneObject *root);
-    void setSelectedSceneObject(SceneObject *obj);
+    void setSelectedSceneObjects(const QVector<SceneObject *> &objs);
     void setGizmoMode(RhiGizmo::Mode mode);
     void setGizmoSpace(RhiGizmo::Space space);
     void setDmxState(const DMXMatrix &dmx);
@@ -44,7 +44,7 @@ public:
     int goboCount() const;
 
 signals:
-    void selectionChanged(photon::SceneObject *obj);
+    void selectionChanged(const QVector<photon::SceneObject *> &objs);
     void gizmoModeChanged(RhiGizmo::Mode mode);
 
 protected:

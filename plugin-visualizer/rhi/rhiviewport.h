@@ -2,6 +2,7 @@
 #define PHOTON_RHIVIEWPORT_H
 
 #include <QWidget>
+#include <QVector>
 #include "rhigizmo.h"
 
 class QButtonGroup;
@@ -23,11 +24,11 @@ public:
     explicit RhiViewport(QWidget *parent = nullptr);
 
     void setSceneRoot(SceneObject *root);
-    void setSelectedSceneObject(SceneObject *obj);
+    void setSelectedSceneObjects(const QVector<SceneObject *> &objs);
     void setDmxState(const DMXMatrix &dmx);
 
 signals:
-    void selectionChanged(photon::SceneObject *obj);
+    void selectionChanged(const QVector<photon::SceneObject *> &objs);
 
 private slots:
     void onGizmoModeChanged(RhiGizmo::Mode mode);

@@ -192,9 +192,19 @@ void GraphEvaluator::setPostEvalCallback(PostEvalCallback callback)
 
 void GraphEvaluator::setGraph(keira::Graph *t_graph)
 {
+    // Swap the graph synchronously: block until the worker has applied it (and
+    // finished any in-progress tick). Callers rely on this so they can safely
+    // delete the previously-evaluated graph the moment setGraph() returns — an
+    // async post would let the eval thread keep ticking the old (about-to-be-
+    // freed) graph. Guard against being called from the eval thread itself,
+    // where a blocking queued call would deadlock.
+    if (QThread::currentThread() == m_impl->thread) {
+        m_impl->worker->setGraph(t_graph);
+        return;
+    }
     QMetaObject::invokeMethod(m_impl->worker, [w = m_impl->worker, t_graph]() {
         w->setGraph(t_graph);
-    });
+    }, Qt::BlockingQueuedConnection);
 }
 
 void GraphEvaluator::setIsEnabled(bool t_value)

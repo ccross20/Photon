@@ -28,6 +28,7 @@ private slots:
     void setMode(int index);
     void setDefaultState(int index);
     void setModelType(int index);
+    void setBeamStyle(int index);
     void setPosition(const QVector3D &);
     void setRotation(const QVector3D &);
     void refreshTransform();

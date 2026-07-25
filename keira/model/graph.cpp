@@ -160,6 +160,8 @@ void Graph::disconnectNode(Node *t_node)
 
 void Graph::addNodeInternal(Node *t_node)
 {
+    if(!t_node)
+        return;
     if(m_impl->nodes.contains(t_node))
         return;
     m_impl->nodes.append(t_node);
@@ -174,6 +176,8 @@ void Graph::addNodeInternal(Node *t_node)
 
 void Graph::removeNodeInternal(Node *t_node)
 {
+    if(!t_node)
+        return;
     if(!m_impl->nodes.contains(t_node))
         return;
     disconnectNodeInternal(t_node);

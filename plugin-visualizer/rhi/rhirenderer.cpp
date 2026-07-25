@@ -56,6 +56,13 @@ constexpr float kBeamThrowMax  = 2.0f;    // throw scale clamp (tight spots)
 
 constexpr int    kGoboSize     = 1024;    // gobo texture layer resolution
 
+// Multi-cell (LED bar / pixel strip) rendering.
+constexpr float  kBarRowInset      = 0.9f;   // fraction of the model width the LED row spans
+constexpr float  kBarLensRadius    = 0.42f;  // lens disc radius as a fraction of cell pitch
+constexpr float  kBarLensLift      = 0.6f;   // lift the lens off the body (× lens radius) so it doesn't z-fight the mesh
+constexpr float  kBarDefaultLength = 1.0f;   // row length (world units) when the fixture has no model
+constexpr float  kBarLensBaseGlow  = 0.06f;  // dark-glass base so an unlit cell reads dark, not black
+
 // Prisms: each active prism splits a beam into N copies fanned off-axis.
 constexpr float  kPrismDeflect   = 4.0f;  // per-copy deflection off the beam axis (deg)
 constexpr float  kPrismRevPerSec = 0.3f;  // full-speed prism rotation (rev/s)
@@ -153,6 +160,7 @@ RhiRenderer::~RhiRenderer()
     delete m_grid;
     delete m_beamCone;
     delete m_plane;
+    delete m_disc;
     qDeleteAll(m_models);
     m_models.clear();
 }
@@ -184,6 +192,7 @@ void RhiRenderer::releaseResources()
     if (m_grid)     m_grid->release();
     if (m_beamCone) m_beamCone->release();
     if (m_plane)    m_plane->release();
+    if (m_disc)     m_disc->release();
     for (RhiModel *model : m_models)
         if (model) model->releaseGpu();
 
@@ -276,6 +285,8 @@ void RhiRenderer::initialize(QRhi *rhi, QRhiRenderPassDescriptor *rpDesc, int sa
         m_beamCone = RhiMesh::createCone(28);
     if (!m_plane)
         m_plane = RhiMesh::createPlane();
+    if (!m_disc)
+        m_disc = RhiMesh::createDisc(20);
 
     // Per-object slot strides must satisfy the uniform-buffer offset alignment.
     m_objectSlotSize = m_rhi->ubufAlignment();
@@ -385,13 +396,17 @@ void RhiRenderer::initialize(QRhi *rhi, QRhiRenderPassDescriptor *rpDesc, int sa
     m_linePipeline->create();
 
     // Beam pipeline: additive translucent cones. Same vertex layout and per-object
-    // SRB as the mesh pass, but additive blending with depth-write disabled so beams
-    // glow over the scene and over each other without occluding.
+    // SRB as the mesh pass, with depth-write disabled so beams glow over the scene
+    // and over each other without occluding. "Screen" blending — out = src*(1-dst) +
+    // dst = 1-(1-src)(1-dst) — instead of pure additive: a single beam is unchanged
+    // (dst≈0 → out=src), but stacked beams roll off toward white gracefully rather
+    // than summing past 1.0 and hard-clamping to a flat white blob. Commutative, so
+    // it stays order-independent (no depth sorting needed).
     QRhiGraphicsPipeline::TargetBlend beamBlend;
     beamBlend.enable = true;
-    beamBlend.srcColor = QRhiGraphicsPipeline::One;
+    beamBlend.srcColor = QRhiGraphicsPipeline::OneMinusDstColor;
     beamBlend.dstColor = QRhiGraphicsPipeline::One;
-    beamBlend.srcAlpha = QRhiGraphicsPipeline::One;
+    beamBlend.srcAlpha = QRhiGraphicsPipeline::OneMinusDstColor;
     beamBlend.dstAlpha = QRhiGraphicsPipeline::One;
 
     m_beamPipeline = m_rhi->newGraphicsPipeline();
@@ -604,7 +619,7 @@ void RhiRenderer::collectDrawables(SceneObject *obj, QVector<Drawable> &out,
         if (!child->isVisible())
             continue;
         const QByteArray type = child->typeId();
-        const bool sel = (child == m_selected);
+        const bool sel = isSelected(child);
         if (type == "fixture") {
             auto *fix = static_cast<Fixture *>(child);
             RhiModel *model = modelForFixture(fix);
@@ -648,6 +663,28 @@ void RhiRenderer::collectDrawables(SceneObject *obj, QVector<Drawable> &out,
                 out.append({ m_box, fix->globalMatrix(), tint });
                 m_emitterWorld.remove(fix);
             }
+
+            // Multi-cell fixtures (LED bars / pixel strips): a row of emissive
+            // lens discs, each glowing its own cell colour over a dark base.
+            if (isMultiCell(fix)) {
+                QVector<BarCell> cells;
+                QMatrix4x4 frame;
+                float lensR = 0.02f;
+                collectBarCells(fix, model, cells, frame, lensR);
+                for (const BarCell &c : cells) {
+                    const QColor glow = QColor::fromRgbF(
+                        qMin(1.0f, kBarLensBaseGlow + float(c.color.redF())),
+                        qMin(1.0f, kBarLensBaseGlow + float(c.color.greenF())),
+                        qMin(1.0f, kBarLensBaseGlow + float(c.color.blueF())));
+                    QMatrix4x4 m = frame;
+                    m.translate(c.localPos);
+                    m.rotate(90.0f, 1.0f, 0.0f, 0.0f);   // face the disc down local -Y
+                    m.scale(lensR, lensR, lensR);
+                    Drawable d{ m_disc, m, glow };
+                    d.emissive = true;                    // glow unlit, like a lit lens
+                    out.append(d);
+                }
+            }
         } else if (type == "truss") {
             seenTrusses.insert(child);
             out.append({ trussMeshFor(child), child->globalMatrix(), sel ? highlight : QColor(150, 150, 155) });
@@ -690,6 +727,74 @@ bool RhiRenderer::evaluateFixture(Fixture *fixture, QColor &outColor, float &out
     outColor = QColor::fromRgbF(r, g, b);
     outIntensity = qMax(r, qMax(g, b));
     return true;
+}
+
+bool RhiRenderer::isMultiCell(Fixture *fixture)
+{
+    return fixture && fixture->colorCount() > 1;
+}
+
+bool RhiRenderer::beamVolumetricFor(Fixture *fixture) const
+{
+    const QString style = fixture->beamStyle();
+    if (style == QLatin1String("volumetric"))
+        return true;
+    if (style == QLatin1String("cones"))
+        return false;
+    return m_beamMode == BeamMode::Volumetric;   // Auto → global toggle
+}
+
+void RhiRenderer::collectBarCells(Fixture *fixture, RhiModel *model, QVector<BarCell> &out,
+                                  QMatrix4x4 &outFrame, float &outLensRadius) const
+{
+    const int cells = fixture->colorCount();
+    if (cells <= 0)
+        return;
+
+    // Local row geometry: span the model's local-X extent (the same space the
+    // geometry lives in, so no unit conversion), placed at its front (-Y) face.
+    // With no model, fall back to a default-length row centred on the fixture.
+    float cx = 0.0f, faceY = 0.0f, cz = 0.0f, width = kBarDefaultLength;
+    if (model) {
+        const QVector3D lo = model->boundsMin();
+        const QVector3D hi = model->boundsMax();
+        cx    = 0.5f * (lo.x() + hi.x());
+        cz    = 0.5f * (lo.z() + hi.z());
+        faceY = lo.y();                      // emit from the bottom (-Y) face
+        width = qMax(0.01f, hi.x() - lo.x());
+    }
+
+    const float span  = width * kBarRowInset;
+    const float pitch = span / float(cells);
+    outLensRadius = pitch * kBarLensRadius;
+    outFrame = fixtureModelMatrix(fixture, model);
+
+    // Sit the lenses just proud of the emitting (-Y) face so they don't
+    // intersect / z-fight the fixture body. The beams start from here too.
+    faceY -= outLensRadius * kBarLensLift;
+
+    // Shared level: master dimmer × shutter gate (per-cell colour carries the rest).
+    const float shutter = shutterFactor(fixture);
+    const auto dimmerCaps = fixture->findCapability(Capability_Dimmer);
+    const float dim = dimmerCaps.isEmpty()
+        ? 1.0f
+        : float(static_cast<DimmerCapability *>(dimmerCaps.first())->getPercent(m_dmx));
+    const float lvl = dim * shutter;
+
+    out.reserve(cells);
+    for (int i = 0; i < cells; ++i) {
+        ColorCapability *cap = fixture->colorAtIndex(i);
+        const QColor base = cap ? cap->getColor(m_dmx) : QColor(0, 0, 0);
+        const float r = qBound(0.0f, float(base.redF())   * lvl, 1.0f);
+        const float g = qBound(0.0f, float(base.greenF()) * lvl, 1.0f);
+        const float b = qBound(0.0f, float(base.blueF())  * lvl, 1.0f);
+
+        BarCell cell;
+        cell.localPos = QVector3D(cx - span * 0.5f + pitch * (float(i) + 0.5f), faceY, cz);
+        cell.color = QColor::fromRgbF(r, g, b);
+        cell.intensity = qMax(r, qMax(g, b));
+        out.append(cell);
+    }
 }
 
 float RhiRenderer::shutterFactor(Fixture *fixture) const
@@ -1118,7 +1223,44 @@ void RhiRenderer::collectBeams(SceneObject *obj, QVector<Drawable> &out) const
     for (SceneObject *child : obj->sceneChildren()) {
         if (!child->isVisible())
             continue;
-        if (child->typeId() == "fixture") {
+        if (child->typeId() == "fixture" && isMultiCell(static_cast<Fixture *>(child))) {
+            // Multi-cell fixture: one static cone per lit LED cell, sharing the
+            // fixture's orientation (parallel beams). No motion/gobo/prism/colour-
+            // wheel work — just the cell colour, which is the efficiency win.
+            auto *fix = static_cast<Fixture *>(child);
+            RhiModel *model = modelForFixture(fix);
+
+            QVector<BarCell> cells;
+            QMatrix4x4 frame;
+            float lensR = 0.02f;
+            collectBarCells(fix, model, cells, frame, lensR);
+
+            const float halfAngle = beamHalfAngleFor(fix);
+            const float tanHalf = std::tan(qDegreesToRadians(halfAngle));
+            const float length = kBeamLength
+                * qBound(kBeamThrowMin, refTan / tanHalf, kBeamThrowMax);
+            const float baseRadius = length * tanHalf;
+            const QVector3D axis = frame.mapVector(QVector3D(0, -1, 0)).normalized();
+            const bool volumetric = beamVolumetricFor(fix);
+
+            for (const BarCell &c : cells) {
+                if (c.intensity <= kBeamMinLevel)
+                    continue;
+                Drawable beam;
+                beam.mesh = m_beamCone;
+                beam.volumetric = volumetric;
+                beam.color = QColor::fromRgbF(float(c.color.redF()), float(c.color.greenF()),
+                                              float(c.color.blueF()), kBeamGain);
+                beam.color2 = beam.color;
+                QMatrix4x4 m = frame;
+                m.translate(c.localPos);
+                m.scale(baseRadius, length, baseRadius);
+                beam.model = m;
+                const QVector3D apex = frame.map(c.localPos);
+                beam.fadePlane = fadePlaneFor(apex, axis, length);
+                out.append(beam);
+            }
+        } else if (child->typeId() == "fixture") {
             auto *fix = static_cast<Fixture *>(child);
 
             // Smoothed motor values (already advanced once this frame by updateMotionPass).
@@ -1184,6 +1326,7 @@ void RhiRenderer::collectBeams(SceneObject *obj, QVector<Drawable> &out) const
                 // Common per-copy properties.
                 Drawable beam;
                 beam.mesh = m_beamCone;
+                beam.volumetric = beamVolumetricFor(fix);
                 beam.color = QColor::fromRgbF(float(colA.redF()), float(colA.greenF()),
                                               float(colA.blueF()), kBeamGain);
                 beam.gobo = gA;
@@ -1286,7 +1429,7 @@ void RhiRenderer::appendZoneWireframes(SceneObject *obj, QByteArray &out) const
             auto *zone = static_cast<SceneZone *>(child);
             const QMatrix4x4 m = zone->globalMatrix();
             const QVector3D h = zone->size() * 0.5f;
-            const QColor c = (child == m_selected) ? QColor(255, 170, 40) : zone->color();
+            const QColor c = isSelected(child) ? QColor(255, 170, 40) : zone->color();
             const float r = float(c.redF()), g = float(c.greenF()), b = float(c.blueF());
 
             // 8 corners, bit2=x bit1=y bit0=z.
@@ -1360,10 +1503,10 @@ QVector4D RhiRenderer::fadePlaneFor(const QVector3D &apex, const QVector3D &axis
 // Picking
 // ─────────────────────────────────────────────────────────────────────────────
 
-void RhiRenderer::setSelection(SceneObject *obj)
+void RhiRenderer::setSelection(const QVector<SceneObject *> &objs)
 {
-    m_selected = obj;
-    m_gizmo.setTarget(obj);
+    m_selectedObjects = objs;
+    m_gizmo.setTarget(objs.isEmpty() ? nullptr : objs.last());
 }
 
 bool RhiRenderer::localBounds(SceneObject *obj, QVector3D &outMin, QVector3D &outMax)
@@ -1505,15 +1648,21 @@ void RhiRenderer::render(QRhiCommandBuffer *cb, QRhiRenderTarget *rt, const RhiC
     QVector<Drawable> surfaces;
     collectSurfaces(m_sceneRoot, surfaces);
 
-    const bool volumetric = (m_beamMode == BeamMode::Volumetric);
+    // Beam mode is per-fixture now, so a frame can carry a mix. Partition the
+    // beams into basic (flat cone) and volumetric (raymarched) groups; each has
+    // its own buffer + draw pass.
+    QVector<int> basicBeams, volBeams;   // indices into `beams`
+    basicBeams.reserve(beams.size());
+    for (int j = 0; j < beams.size(); ++j)
+        (beams[j].volumetric ? volBeams : basicBeams).append(j);
 
     // Object buffer layout: [meshes][surfaces][basic beams]. Volumetric beams use a
     // separate param buffer, so they don't take object slots.
     const int surfaceBase = drawables.size();
     const int beamBase = surfaceBase + surfaces.size();
-    ensureObjectBuffer(beamBase + (volumetric ? 0 : beams.size()));
-    if (volumetric && !beams.isEmpty())
-        ensureBeamBuffer(beams.size());
+    ensureObjectBuffer(beamBase + basicBeams.size());
+    if (!volBeams.isEmpty())
+        ensureBeamBuffer(volBeams.size());
 
     // Drop geometry for trusses no longer in the scene.
     for (auto it = m_trussMeshes.begin(); it != m_trussMeshes.end(); ) {
@@ -1637,49 +1786,47 @@ void RhiRenderer::render(QRhiCommandBuffer *cb, QRhiRenderTarget *rt, const RhiC
     }
 
     // Beam uniforms. Basic beams append to the per-object buffer after the meshes
-    // and surfaces; volumetric beams write to the dedicated beam buffer.
-    if (volumetric) {
-        for (int j = 0; j < beams.size(); ++j) {
-            const Drawable &d = beams[j];
+    // and surfaces; volumetric beams write to the dedicated beam buffer. Both are
+    // filled each frame since a mix of modes can be present.
+    for (int vi = 0; vi < volBeams.size(); ++vi) {
+        const Drawable &d = beams[volBeams[vi]];
 
-            QVector3D apex, axis;
-            float cosH = 0.0f, length = 0.0f;
-            beamConeFromModel(d.model, apex, axis, cosH, length);
+        QVector3D apex, axis;
+        float cosH = 0.0f, length = 0.0f;
+        beamConeFromModel(d.model, apex, axis, cosH, length);
 
-            float slot[40] = { 0.0f };
-            std::memcpy(slot, d.model.constData(), 16 * sizeof(float));
-            slot[16] = float(d.color.redF());
-            slot[17] = float(d.color.greenF());
-            slot[18] = float(d.color.blueF());
-            slot[19] = float(d.color.alphaF());
-            slot[20] = apex.x(); slot[21] = apex.y(); slot[22] = apex.z();
-            slot[23] = d.gobo2;     // apex.w  = second gobo layer (wheel wipe)
-            slot[24] = axis.x(); slot[25] = axis.y(); slot[26] = axis.z();
-            slot[27] = cosH;
-            slot[28] = length;
-            slot[29] = d.gobo;      // params.y = gobo layer A
-            slot[30] = d.goboRot;   // params.z = gobo rotation (radians)
-            slot[31] = d.split;     // params.w = color split position (-1..1, <-1 = none)
-            slot[32] = float(d.color2.redF());
-            slot[33] = float(d.color2.greenF());
-            slot[34] = float(d.color2.blueF());
-            slot[35] = d.goboSplit; // color2.w = gobo wipe boundary (-1..1, <-1 = none)
-            slot[36] = d.fadePlane.x(); slot[37] = d.fadePlane.y();
-            slot[38] = d.fadePlane.z(); slot[39] = d.fadePlane.w();  // surface fade plane
-            u->updateDynamicBuffer(m_beamBuffer, j * m_beamSlotSize, kBeamPayload, slot);
-        }
-    } else {
-        for (int j = 0; j < beams.size(); ++j) {
-            const Drawable &d = beams[j];
-            float slot[20];
-            std::memcpy(slot, d.model.constData(), 16 * sizeof(float));
-            slot[16] = float(d.color.redF());
-            slot[17] = float(d.color.greenF());
-            slot[18] = float(d.color.blueF());
-            slot[19] = float(d.color.alphaF());
-            u->updateDynamicBuffer(m_objectBuffer, (beamBase + j) * m_objectSlotSize,
-                                   kObjectPayload, slot);
-        }
+        float slot[40] = { 0.0f };
+        std::memcpy(slot, d.model.constData(), 16 * sizeof(float));
+        slot[16] = float(d.color.redF());
+        slot[17] = float(d.color.greenF());
+        slot[18] = float(d.color.blueF());
+        slot[19] = float(d.color.alphaF());
+        slot[20] = apex.x(); slot[21] = apex.y(); slot[22] = apex.z();
+        slot[23] = d.gobo2;     // apex.w  = second gobo layer (wheel wipe)
+        slot[24] = axis.x(); slot[25] = axis.y(); slot[26] = axis.z();
+        slot[27] = cosH;
+        slot[28] = length;
+        slot[29] = d.gobo;      // params.y = gobo layer A
+        slot[30] = d.goboRot;   // params.z = gobo rotation (radians)
+        slot[31] = d.split;     // params.w = color split position (-1..1, <-1 = none)
+        slot[32] = float(d.color2.redF());
+        slot[33] = float(d.color2.greenF());
+        slot[34] = float(d.color2.blueF());
+        slot[35] = d.goboSplit; // color2.w = gobo wipe boundary (-1..1, <-1 = none)
+        slot[36] = d.fadePlane.x(); slot[37] = d.fadePlane.y();
+        slot[38] = d.fadePlane.z(); slot[39] = d.fadePlane.w();  // surface fade plane
+        u->updateDynamicBuffer(m_beamBuffer, vi * m_beamSlotSize, kBeamPayload, slot);
+    }
+    for (int bi = 0; bi < basicBeams.size(); ++bi) {
+        const Drawable &d = beams[basicBeams[bi]];
+        float slot[20];
+        std::memcpy(slot, d.model.constData(), 16 * sizeof(float));
+        slot[16] = float(d.color.redF());
+        slot[17] = float(d.color.greenF());
+        slot[18] = float(d.color.blueF());
+        slot[19] = float(d.color.alphaF());
+        u->updateDynamicBuffer(m_objectBuffer, (beamBase + bi) * m_objectSlotSize,
+                               kObjectPayload, slot);
     }
 
     // Gizmo line geometry (world space), rebuilt each frame.
@@ -1736,23 +1883,25 @@ void RhiRenderer::render(QRhiCommandBuffer *cb, QRhiRenderTarget *rt, const RhiC
     }
 
     // Light beams: additive over the scene (depth-tested, no depth write). Basic
-    // mode draws the flat-alpha cone; volumetric raymarches the cone per fragment.
+    // beams draw the flat-alpha cone; volumetric ones raymarch the cone per
+    // fragment. Both passes run so per-fixture modes can be mixed in one frame.
     if (!beams.isEmpty() && m_beamCone->vertexBuffer() && m_beamCone->isIndexed()) {
         const QRhiCommandBuffer::VertexInput vin(m_beamCone->vertexBuffer(), 0);
-        if (volumetric) {
-            cb->setGraphicsPipeline(m_beamVolPipeline);
-            for (int j = 0; j < beams.size(); ++j) {
-                const QRhiCommandBuffer::DynamicOffset off(1, quint32(j) * m_beamSlotSize);
-                cb->setShaderResources(m_beamSrb, 1, &off);
+        if (!basicBeams.isEmpty()) {
+            cb->setGraphicsPipeline(m_beamPipeline);
+            for (int bi = 0; bi < basicBeams.size(); ++bi) {
+                const QRhiCommandBuffer::DynamicOffset off(1, quint32(beamBase + bi) * m_objectSlotSize);
+                cb->setShaderResources(m_meshSrb, 1, &off);
                 cb->setVertexInput(0, 1, &vin, m_beamCone->indexBuffer(), 0,
                                    QRhiCommandBuffer::IndexUInt16);
                 cb->drawIndexed(m_beamCone->indexCount());
             }
-        } else {
-            cb->setGraphicsPipeline(m_beamPipeline);
-            for (int j = 0; j < beams.size(); ++j) {
-                const QRhiCommandBuffer::DynamicOffset off(1, quint32(beamBase + j) * m_objectSlotSize);
-                cb->setShaderResources(m_meshSrb, 1, &off);
+        }
+        if (!volBeams.isEmpty()) {
+            cb->setGraphicsPipeline(m_beamVolPipeline);
+            for (int vi = 0; vi < volBeams.size(); ++vi) {
+                const QRhiCommandBuffer::DynamicOffset off(1, quint32(vi) * m_beamSlotSize);
+                cb->setShaderResources(m_beamSrb, 1, &off);
                 cb->setVertexInput(0, 1, &vin, m_beamCone->indexBuffer(), 0,
                                    QRhiCommandBuffer::IndexUInt16);
                 cb->drawIndexed(m_beamCone->indexCount());

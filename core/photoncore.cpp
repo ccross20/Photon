@@ -246,6 +246,11 @@ void PhotonCore::closeProject()
     m_impl->sequences->clear();
     emit projectWillClose(m_impl->project);
 
+    // Detach the evaluator from this project's bus BEFORE deleting it, so the
+    // eval thread can't tick a freed graph during the swap (setBus is now
+    // synchronous — it returns only once the eval thread has let go of the bus).
+    m_impl->busEvaluator->setBus(nullptr);
+
     delete m_impl->project;
 
     m_impl->project = nullptr;

@@ -291,4 +291,34 @@ RhiMesh *RhiMesh::createCone(int sides)
     return mesh;
 }
 
+RhiMesh *RhiMesh::createDisc(int sides)
+{
+    sides = qMax(3, sides);
+
+    QByteArray verts;
+    QByteArray indices;
+
+    // Lit-mesh layout (pos + normal), like createPlane: a unit-radius filled
+    // circle in the local XY plane, normal +Z. Used for per-cell LED lenses,
+    // drawn emissive and tinted with each cell's live colour.
+    const QVector3D n(0.0f, 0.0f, 1.0f);
+    pushVec3(verts, QVector3D(0, 0, 0)); pushVec3(verts, n);   // vertex 0 = centre
+    for (int s = 0; s < sides; ++s) {
+        const float a = (2.0f * kPi) * float(s) / float(sides);
+        pushVec3(verts, QVector3D(std::cos(a), std::sin(a), 0.0f)); pushVec3(verts, n);
+    }
+
+    for (int s = 0; s < sides; ++s) {
+        const quint16 r0 = quint16(1 + s);
+        const quint16 r1 = quint16(1 + (s + 1) % sides);
+        const quint16 idx[3] = { 0, r0, r1 };
+        indices.append(reinterpret_cast<const char *>(idx), sizeof(idx));
+    }
+
+    auto *mesh = new RhiMesh;
+    mesh->setVertexData(verts, sides + 1);
+    mesh->setIndexData(indices, sides * 3);
+    return mesh;
+}
+
 } // namespace photon

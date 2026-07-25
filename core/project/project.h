@@ -26,8 +26,15 @@ public:
     FixtureGroupCollection *groups() const;
     SurfaceCollection *surfaces() const;
 
+    // The primary (most-recently-selected) object — the last entry of
+    // selectedSceneObjects(), or nullptr if nothing is selected.
     SceneObject *selectedSceneObject() const;
+    // Convenience for single-selection: replaces the whole selection with
+    // just this object (or clears it, for nullptr).
     void setSelectedSceneObject(SceneObject *obj);
+
+    QList<SceneObject*> selectedSceneObjects() const;
+    void setSelectedSceneObjects(const QList<SceneObject*> &objs);
 
     void save(const QString &path = QString{}) const;
     void load(const QString &path = QString{});
@@ -36,7 +43,11 @@ public:
     void writeToJson(QJsonObject &json) const;
 
 signals:
+    // Fired whenever the selection changes, alongside selectedSceneObjectsChanged
+    // — carries just the primary object, for consumers that only care about a
+    // single selected object (e.g. the Properties panel, the visualizer).
     void selectedSceneObjectChanged(photon::SceneObject *);
+    void selectedSceneObjectsChanged(const QList<photon::SceneObject*> &objs);
 
 private:
     class Impl;
