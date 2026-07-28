@@ -27,8 +27,7 @@ protected:
     QByteArray fragmentShaderName() const override { return "transform"; }
     quint32 uniformSize() const override { return 16; }   // 1 * vec4
     void writeUniforms(QByteArray &out, const QSize &size) const override;
-    bool samplesInput() const override { return true; }
-    RhiTextureData currentInput() const override;
+    QVector<RhiTextureData> inputs() const override;
 
 private:
     RhiTextureParameter *m_input = nullptr;

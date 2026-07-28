@@ -47,6 +47,8 @@ set(PROJECT_SOURCES
         model/node.cpp
         view/nodeitem.h
         view/nodeitem.cpp
+        view/numberscrubfield.h
+        view/numberscrubfield.cpp
         view/portitem.h
         view/portitem.cpp
         view/scene.h

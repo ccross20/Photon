@@ -231,6 +231,8 @@ set(PROJECT_SOURCES
         gui/pixellayouteditor.cpp
         gui/pointedit.h
         gui/pointedit.cpp
+        gui/xypad.h
+        gui/xypad.cpp
         gui/sceneobjectselector.h
         gui/sceneobjectselector_p.h
         gui/sceneobjectselector.cpp
@@ -454,6 +456,12 @@ set(PROJECT_SOURCES
         util/noisegenerator.cpp
         util/utils.h
         util/utils.cpp
+        util/gradient.h
+        util/gradient.cpp
+        graph/parameter/gradientparameter.h
+        graph/parameter/gradientparameter.cpp
+        gui/color/gradientwidget.h
+        gui/color/gradientwidget.cpp
         resources.qrc
 )
 
@@ -557,6 +565,7 @@ add_library(photon-core SHARED ${PROJECT_SOURCES}
     resources/fixtures/elation-dartz-360.json
     rhi/rhicontext.h rhi/rhicontext.cpp
     graph/parameter/rhitextureparameter.h graph/parameter/rhitextureparameter.cpp
+    graph/parameter/pixellayoutlistparameter.h graph/parameter/pixellayoutlistparameter.cpp
     graph/node/canvas/canvasglobalsnode.h graph/node/canvas/canvasglobalsnode.cpp
     graph/node/canvas/canvasoutputnode.h graph/node/canvas/canvasoutputnode.cpp
     graph/node/canvas/canvassubgraphnode.h graph/node/canvas/canvassubgraphnode.cpp
@@ -564,6 +573,20 @@ add_library(photon-core SHARED ${PROJECT_SOURCES}
     graph/node/canvas/basecanvasnode.h graph/node/canvas/basecanvasnode.cpp
     graph/node/canvas/canvasfillnode.h graph/node/canvas/canvasfillnode.cpp
     graph/node/canvas/canvastransformnode.h graph/node/canvas/canvastransformnode.cpp
+    graph/node/canvas/canvasnoisenode.h graph/node/canvas/canvasnoisenode.cpp
+    graph/node/canvas/canvaslevelsnode.h graph/node/canvas/canvaslevelsnode.cpp
+    graph/node/canvas/canvascompositenode.h graph/node/canvas/canvascompositenode.cpp
+    graph/node/canvas/canvasshapenode.h graph/node/canvas/canvasshapenode.cpp
+    graph/node/canvas/canvastilenode.h graph/node/canvas/canvastilenode.cpp
+    graph/node/canvas/canvasmasknode.h graph/node/canvas/canvasmasknode.cpp
+    graph/node/canvas/canvaswipenode.h graph/node/canvas/canvaswipenode.cpp
+    graph/node/canvas/canvasgradientnode.h graph/node/canvas/canvasgradientnode.cpp
+    graph/node/canvas/canvasgradientmapnode.h graph/node/canvas/canvasgradientmapnode.cpp
+    graph/node/canvas/palettetogradientnode.h graph/node/canvas/palettetogradientnode.cpp
+    graph/node/canvas/gradientreversenode.h graph/node/canvas/gradientreversenode.cpp
+    graph/node/canvas/gradientremapnode.h graph/node/canvas/gradientremapnode.cpp
+    graph/node/canvas/gradientsamplenode.h graph/node/canvas/gradientsamplenode.cpp
+    graph/node/canvas/gradientmixnode.h graph/node/canvas/gradientmixnode.cpp
     graph/node/canvas/canvasdmxsampler.h graph/node/canvas/canvasdmxsampler.cpp
     gui/panel/canvaspreviewwindow.h gui/panel/canvaspreviewwindow.cpp
     gui/panel/canvaspreviewpanel.h gui/panel/canvaspreviewpanel.cpp)
@@ -578,6 +601,15 @@ qt6_add_shaders(photon-core "canvas_shaders"
         rhi/shaders/blit.frag
         rhi/shaders/gather.vert
         rhi/shaders/gather.frag
+        rhi/shaders/noise.frag
+        rhi/shaders/levels.frag
+        rhi/shaders/composite.frag
+        rhi/shaders/shape.frag
+        rhi/shaders/tile.frag
+        rhi/shaders/mask.frag
+        rhi/shaders/wipe.frag
+        rhi/shaders/gradient.frag
+        rhi/shaders/gradientmap.frag
 )
 
 target_include_directories(photon-core PUBLIC ../core)

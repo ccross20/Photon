@@ -48,9 +48,9 @@ void CanvasTransformNode::createParameters()
     addParameter(m_outputParam);
 }
 
-RhiTextureData CanvasTransformNode::currentInput() const
+QVector<RhiTextureData> CanvasTransformNode::inputs() const
 {
-    return m_input->value().value<RhiTextureData>();
+    return { m_input->value().value<RhiTextureData>() };
 }
 
 void CanvasTransformNode::writeUniforms(QByteArray &out, const QSize &) const

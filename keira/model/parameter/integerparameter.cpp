@@ -1,11 +1,18 @@
-#include <QSpinBox>
 #include <QLabel>
 #include "integerparameter.h"
+#include "decimalparameter.h"
 #include "view/nodeeditor.h"
+#include "view/numberscrubfield.h"
 
 namespace keira {
 
 const QByteArray IntegerParameter::ParameterId = "integer";
+
+bool IntegerParameter::acceptsConnectionFrom(const Parameter *source) const
+{
+    return Parameter::acceptsConnectionFrom(source)
+        || source->typeId() == DecimalParameter::ParameterId;
+}
 
 class IntegerParameter::Impl
 {
@@ -50,23 +57,18 @@ QWidget *IntegerParameter::createWidget(NodeEditor *item) const
         label->setSizePolicy(QSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::Minimum));
         return label;
     }
-    QSpinBox *spin = new QSpinBox();
-    spin->setMaximumHeight(30);
-    spin->setMaximum(m_impl->maximum);
-    spin->setMinimum(m_impl->minimum);
-    spin->setMinimumWidth(50);
-    spin->setValue(value().toInt());
-
-    spin->setSizePolicy(QSizePolicy(QSizePolicy::Maximum, QSizePolicy::Minimum));
-
-    spin->setReadOnly(isReadOnly());
-    if(isReadOnly())
-        spin->setButtonSymbols(QAbstractSpinBox::NoButtons);
+    NumberScrubField *field = new NumberScrubField();
+    field->setMaximumHeight(30);
+    field->setMinimumWidth(50);
+    field->setIsInteger(true);
+    field->setRange(m_impl->minimum, m_impl->maximum);
+    field->setValue(value().toInt());
+    field->setReadOnly(isReadOnly());
 
     const IntegerParameter *param = this;
-    QSpinBox::connect(spin, &QSpinBox::editingFinished, spin,[item, spin, param](){item->widgetUpdated(spin, param);});
-    QSpinBox::connect(spin, &QSpinBox::valueChanged, spin,[item, spin, param](int){item->widgetUpdated(spin, param);});
-    return spin;
+    NumberScrubField::connect(field, &NumberScrubField::editingFinished, field,[item, field, param](){item->widgetUpdated(field, param);});
+    NumberScrubField::connect(field, &NumberScrubField::valueChanged, field,[item, field, param](double){item->widgetUpdated(field, param);});
+    return field;
 }
 
 void IntegerParameter::updateWidget(QWidget *t_widget) const
@@ -78,8 +80,8 @@ void IntegerParameter::updateWidget(QWidget *t_widget) const
     }
     else
     {
-        QSpinBox *spinBox = static_cast<QSpinBox*>(t_widget);
-        spinBox->setValue(value().toInt());
+        NumberScrubField *field = static_cast<NumberScrubField*>(t_widget);
+        field->setValue(value().toInt());
     }
 
 }
@@ -88,7 +90,7 @@ QVariant IntegerParameter::updateValue(QWidget *t_widget) const
 {
     if(isReadOnly())
         return static_cast<QLabel*>(t_widget)->text();
-    return static_cast<QSpinBox*>(t_widget)->value();
+    return static_cast<int>(static_cast<NumberScrubField*>(t_widget)->value());
 }
 
 void IntegerParameter::readFromJson(const QJsonObject &t_json)

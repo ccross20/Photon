@@ -59,6 +59,20 @@
 #include "graph/node/canvas/canvasoutputnode.h"
 #include "graph/node/canvas/canvasfillnode.h"
 #include "graph/node/canvas/canvastransformnode.h"
+#include "graph/node/canvas/canvasnoisenode.h"
+#include "graph/node/canvas/canvaslevelsnode.h"
+#include "graph/node/canvas/canvascompositenode.h"
+#include "graph/node/canvas/canvasshapenode.h"
+#include "graph/node/canvas/canvastilenode.h"
+#include "graph/node/canvas/canvasmasknode.h"
+#include "graph/node/canvas/canvaswipenode.h"
+#include "graph/node/canvas/canvasgradientnode.h"
+#include "graph/node/canvas/canvasgradientmapnode.h"
+#include "graph/node/canvas/palettetogradientnode.h"
+#include "graph/node/canvas/gradientreversenode.h"
+#include "graph/node/canvas/gradientremapnode.h"
+#include "graph/node/canvas/gradientsamplenode.h"
+#include "graph/node/canvas/gradientmixnode.h"
 
 #include "falloff/constantfalloffeffect.h"
 #include "sequence/constantchanneleffect.h"
@@ -87,7 +101,10 @@
 #include "graph/parameter/point2dparameter.h"
 #include "graph/parameter/fixturelistparameter.h"
 #include "graph/parameter/pixellistparameter.h"
+#include "graph/parameter/rhitextureparameter.h"
+#include "graph/parameter/pixellayoutlistparameter.h"
 #include "graph/parameter/colorpaletteparameter.h"
+#include "graph/parameter/gradientparameter.h"
 
 #include "sequence/fixtureclip.h"
 #include "sequence/canvasclip.h"
@@ -244,6 +261,20 @@ void PluginFactory::init()
     registerNode(CanvasOutputNode::info());
     registerNode(CanvasFillNode::info());
     registerNode(CanvasTransformNode::info());
+    registerNode(CanvasNoiseNode::info());
+    registerNode(CanvasLevelsNode::info());
+    registerNode(CanvasCompositeNode::info());
+    registerNode(CanvasShapeNode::info());
+    registerNode(CanvasTileNode::info());
+    registerNode(CanvasMaskNode::info());
+    registerNode(CanvasWipeNode::info());
+    registerNode(CanvasGradientNode::info());
+    registerNode(CanvasGradientMapNode::info());
+    registerNode(PaletteToGradientNode::info());
+    registerNode(GradientReverseNode::info());
+    registerNode(GradientRemapNode::info());
+    registerNode(GradientSampleNode::info());
+    registerNode(GradientMixNode::info());
 
     registerFalloffEffect(ConstantFalloffEffect::info());
 
@@ -278,7 +309,10 @@ void PluginFactory::init()
     m_impl->nodeLibrary.registerParameter(Point2DParameter::ParameterId,[](){return new Point2DParameter();});
     m_impl->nodeLibrary.registerParameter(FixtureListParameter::ParameterId,[](){return new FixtureListParameter();});
     m_impl->nodeLibrary.registerParameter(ColorPaletteParameter::ParameterId,[](){return new ColorPaletteParameter();});
+    m_impl->nodeLibrary.registerParameter(GradientParameter::ParameterId,[](){return new GradientParameter();});
     m_impl->nodeLibrary.registerParameter(PixelListParameter::ParameterId,[](){return new PixelListParameter();});
+    m_impl->nodeLibrary.registerParameter(RhiTextureParameter::ParameterId,[](){return new RhiTextureParameter();});
+    m_impl->nodeLibrary.registerParameter(PixelLayoutListParameter::ParameterId,[](){return new PixelLayoutListParameter();});
 
     //qDebug() << "Node Count:" << m_impl->nodeHash.size();
 }

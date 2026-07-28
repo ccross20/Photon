@@ -16,13 +16,13 @@ class QOffscreenSurface;
 
 namespace photon {
 
-class CanvasSubGraphNode;
+class CanvasOutputNode;
 class CanvasRenderManager;
 
-// A QWindow that displays a canvas subgraph's sink texture. It owns its own QRhi
-// (OpenGL, in the global share group like the visualizer's RhiWindow), so it can
-// import the canvas's sink texture by its shared GL id — no CPU roundtrip — and
-// draw it fullscreen. Embedded in CanvasPreviewPanel via createWindowContainer.
+// A QWindow that displays a canvas Output node's input texture. It owns its own
+// QRhi (OpenGL, in the global share group like the visualizer's RhiWindow), so it
+// can import the texture by its shared GL id — no CPU roundtrip — and draw it
+// fullscreen. Embedded in CanvasPreviewPanel via createWindowContainer.
 // See [[canvas-gpu-pipeline]].
 class PHOTONCORE_EXPORT CanvasPreviewWindow : public QWindow
 {
@@ -31,8 +31,8 @@ public:
     CanvasPreviewWindow();
     ~CanvasPreviewWindow() override;
 
-    // Which canvas to show (validated against the render manager each frame).
-    void setCanvas(CanvasSubGraphNode *node);
+    // Which Output node to show (validated against the render manager each frame).
+    void setOutputNode(CanvasOutputNode *node);
 
 protected:
     void exposeEvent(QExposeEvent *) override;
@@ -56,7 +56,7 @@ private:
     quint64 m_importedId = 0;
     QSize   m_importedSize;
 
-    CanvasSubGraphNode  *m_node = nullptr;
+    CanvasOutputNode    *m_output = nullptr;
     CanvasRenderManager *m_manager = nullptr;
 
     bool m_initialized = false;

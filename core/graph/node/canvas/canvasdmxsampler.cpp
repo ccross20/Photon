@@ -40,11 +40,12 @@ CanvasDmxSampler::~CanvasDmxSampler()
     QRhiShaderResourceBindings *srb = m_srb;
     QRhiSampler *samp = m_sampler;
     QRhiBuffer *vbuf = m_vbuf;
+    QRhiBuffer *ubuf = m_ubuf;
     QRhiTextureRenderTarget *rt = m_rt;
     QRhiTexture *tex = m_target;
     QRhiRenderPassDescriptor *rp = m_rp;
-    auto destroy = [pipe, srb, samp, vbuf, rt, tex, rp]() {
-        delete pipe; delete srb; delete samp; delete vbuf; delete rt; delete tex; delete rp;
+    auto destroy = [pipe, srb, samp, vbuf, ubuf, rt, tex, rp]() {
+        delete pipe; delete srb; delete samp; delete vbuf; delete ubuf; delete rt; delete tex; delete rp;
     };
     if (pipe || tex) {
         if (QThread::isMainThread())
@@ -89,11 +90,17 @@ bool CanvasDmxSampler::ensureSrb(QRhi *rhi, QRhiTexture *sink)
         if (!m_sampler->create())
             return false;
     }
+    if (!m_ubuf) {
+        m_ubuf = rhi->newBuffer(QRhiBuffer::Dynamic, QRhiBuffer::UniformBuffer, 4 * sizeof(float));
+        if (!m_ubuf->create())
+            return false;
+    }
     if (!m_srb || m_lastSink != sink) {
         delete m_srb;
         m_srb = rhi->newShaderResourceBindings();
         m_srb->setBindings({
-            QRhiShaderResourceBinding::sampledTexture(0, QRhiShaderResourceBinding::FragmentStage, sink, m_sampler)
+            QRhiShaderResourceBinding::sampledTexture(0, QRhiShaderResourceBinding::FragmentStage, sink, m_sampler),
+            QRhiShaderResourceBinding::uniformBuffer(1, QRhiShaderResourceBinding::FragmentStage, m_ubuf)
         });
         if (!m_srb->create())
             return false;
@@ -146,7 +153,8 @@ bool CanvasDmxSampler::ensureVertexBuffer(QRhi *rhi, int vertexCount)
 }
 
 void CanvasDmxSampler::recordGather(QRhi *rhi, QRhiCommandBuffer *cb, QRhiTexture *sink,
-                                    const QVector<QPointF> &uvs, QRhiResourceUpdateBatch *preBatch)
+                                    const QVector<QPointF> &uvs, const QColor &background,
+                                    QRhiResourceUpdateBatch *preBatch)
 {
     m_pending = false;
     m_pointCount = 0;
@@ -167,8 +175,9 @@ void CanvasDmxSampler::recordGather(QRhi *rhi, QRhiCommandBuffer *cb, QRhiTextur
         return;
     }
 
-    // Vertex data: place point i at packed texel (i%w, i/w); sample uv (with the
-    // canvas' bottom-up flip so it matches on-screen/CPU sampling).
+    // Vertex data: place point i at packed texel (i%w, i/w); sample uv directly.
+    // The canvas is presented y-down (see blit.frag), so a layout point's y maps
+    // straight to the sample uv.y — keeping fixtures aligned with the preview.
     QVector<float> verts(n * 4);
     for (int i = 0; i < n; ++i) {
         const int px = i % w;
@@ -176,10 +185,14 @@ void CanvasDmxSampler::recordGather(QRhi *rhi, QRhiCommandBuffer *cb, QRhiTextur
         verts[i * 4 + 0] = (float(px) + 0.5f) / float(w) * 2.0f - 1.0f;
         verts[i * 4 + 1] = (float(py) + 0.5f) / float(h) * 2.0f - 1.0f;
         verts[i * 4 + 2] = float(uvs[i].x());
-        verts[i * 4 + 3] = 1.0f - float(uvs[i].y());
+        verts[i * 4 + 3] = float(uvs[i].y());
     }
     QRhiResourceUpdateBatch *batch = preBatch ? preBatch : rhi->nextResourceUpdateBatch();
     batch->updateDynamicBuffer(m_vbuf, 0, quint32(n) * 4 * sizeof(float), verts.constData());
+
+    const float bg[4] = { float(background.redF()), float(background.greenF()),
+                          float(background.blueF()), 1.0f };
+    batch->updateDynamicBuffer(m_ubuf, 0, sizeof(bg), bg);
 
     cb->beginPass(m_rt, QColor(0, 0, 0, 0), { 1.0f, 0 }, batch);
     cb->setGraphicsPipeline(m_pipeline);

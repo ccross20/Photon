@@ -29,7 +29,6 @@ const QByteArray CanvasSubGraphNode::Width = "width";
 const QByteArray CanvasSubGraphNode::Height = "height";
 const QByteArray CanvasSubGraphNode::Enabled = "enabled";
 const QByteArray CanvasSubGraphNode::Background = "background";
-const QByteArray CanvasSubGraphNode::DmxOutput = "dmxOutput";
 const QByteArray CanvasSubGraphNode::CanvasSubGraphId = "canvas";
 
 keira::NodeInformation CanvasSubGraphNode::info()
@@ -75,8 +74,6 @@ CanvasSubGraphNode::~CanvasSubGraphNode()
 
     // Globals/Output nodes are owned by the inner graph and freed by ~SubGraphNode.
     releaseSink();
-    delete m_dmxSampler;   // its dtor defers GPU teardown to the main thread if needed
-    m_dmxSampler = nullptr;
 }
 
 void CanvasSubGraphNode::createParameters()
@@ -94,9 +91,6 @@ void CanvasSubGraphNode::createParameters()
     m_enabledParam = new keira::BooleanParameter(Enabled, "Enabled", true);
     addParameter(m_enabledParam);
 
-    m_dmxOutputParam = new keira::BooleanParameter(DmxOutput, "DMX Output", false);
-    addParameter(m_dmxOutputParam);
-
     m_backgroundParam = new ColorParameter(Background, "Background", QColor(0, 0, 0, 255));
     addParameter(m_backgroundParam);
 }
@@ -104,7 +98,7 @@ void CanvasSubGraphNode::createParameters()
 bool CanvasSubGraphNode::isBuiltInParam(keira::Parameter *t_param) const
 {
     return t_param == m_widthParam || t_param == m_heightParam || t_param == m_enabledParam
-        || t_param == m_dmxOutputParam || t_param == m_backgroundParam;
+        || t_param == m_backgroundParam;
 }
 
 void CanvasSubGraphNode::parameterWasAdded(keira::Parameter *t_param)
@@ -215,52 +209,32 @@ void CanvasSubGraphNode::evaluate(keira::EvaluationContext *t_context) const
     sampleDmx(context);
 }
 
+QColor CanvasSubGraphNode::backgroundColor() const
+{
+    return m_backgroundParam ? m_backgroundParam->value().value<QColor>() : QColor(0, 0, 0, 255);
+}
+
+QVector<CanvasOutputNode *> CanvasSubGraphNode::outputNodes() const
+{
+    QVector<CanvasOutputNode *> outputs;
+    for (auto *node : graph()->nodes())
+        if (auto *out = dynamic_cast<CanvasOutputNode *>(node))
+            outputs << out;
+    return outputs;
+}
+
 void CanvasSubGraphNode::sampleDmx(RoutineEvaluationContext *context) const
 {
-    if (!m_dmxOutputParam || !m_dmxOutputParam->value().toBool())
-        return;
-
-    // qobject_cast (not the photonApp macro) so headless tests, where qApp is a
-    // plain QApplication, safely get null instead of a bad static_cast.
+    // DMX is driven per Output node: each writes the colours it gathered from its
+    // own input texture to the layouts assigned to it.
     auto *app = qobject_cast<PhotonCore *>(QCoreApplication::instance());
-    if (!app || !app->project())
-        return;
-
-    QVector<QColor> colors;
-    {
-        QMutexLocker lock(&m_gatheredMutex);
-        colors = m_gatheredColors;   // implicitly shared; cheap copy
-    }
-    if (colors.isEmpty())
-        return;
-
     ProcessContext pc(context->dmxMatrix);
-    pc.gatheredColors = &colors;
-    pc.gatheredIndex = 0;
-    pc.project = app->project();
+    pc.project = app ? app->project() : nullptr;
     pc.globalTime = context->globalTime;
     pc.relativeTime = context->relativeTime;
 
-    // Iterate layouts in the SAME order buildSampleUVs() did, so each source pops
-    // the colours gathered for its own positions.
-    // NOTE: samples every project pixel layout — per-canvas selection is a follow-up.
-    for (auto *layout : app->project()->pixelLayouts()->layouts())
-        layout->process(pc);
-}
-
-QVector<QPointF> CanvasSubGraphNode::buildSampleUVs() const
-{
-    QVector<QPointF> uvs;
-    auto *app = qobject_cast<PhotonCore *>(QCoreApplication::instance());
-    if (!app || !app->project())
-        return uvs;
-
-    for (auto *layout : app->project()->pixelLayouts()->layouts())
-        for (auto *sourceLayout : layout->sourceLayouts())
-            if (sourceLayout->source())
-                sourceLayout->source()->collectSampleUVs(uvs, sourceLayout->transform());
-
-    return uvs;
+    for (auto *output : outputNodes())
+        output->writeDmx(pc);
 }
 
 void CanvasSubGraphNode::renderMainThread() const
@@ -314,39 +288,22 @@ void CanvasSubGraphNode::renderMainThread() const
     // their output params; the Output node stashes whatever is wired into it.
     SubGraphNode::evaluate(&inner);
 
-    // Composite the Output node's texture into the sink. When DMX output is on,
-    // gather just the pixel-sample colours on the GPU (5b) instead of reading the
-    // whole canvas back.
-    const bool dmxOut = m_dmxOutputParam && m_dmxOutputParam->value().toBool();
+    // Composite the auto Output node's texture into the sink (the preview source).
+    // Output nodes with assigned layouts already recorded their DMX gather passes
+    // during the inner-graph evaluation above.
     const RhiTextureData out = m_outputNode->inputTexture();
-
-    QVector<QPointF> uvs;
-    if (dmxOut)
-        uvs = buildSampleUVs();
-
     QRhiResourceUpdateBatch *u = rhi->nextResourceUpdateBatch();
     if (out.texture && out.size == size) {
         QRhiTextureCopyDescription copyDesc;   // whole level 0
         u->copyTexture(m_canvasTexture, out.texture, copyDesc);
     }
+    cb->resourceUpdate(u);
 
-    if (dmxOut && !uvs.isEmpty()) {
-        if (!m_dmxSampler)
-            m_dmxSampler = new CanvasDmxSampler;
-        m_dmxSampler->recordGather(rhi, cb, m_canvasTexture, uvs, u);   // applies u
-    } else {
-        cb->resourceUpdate(u);
-    }
+    rhi->endOffscreenFrame();   // blocks; Output-node gather readbacks are ready after
 
-    rhi->endOffscreenFrame();   // blocks; the gather readback is ready afterwards
-
-    if (dmxOut && !uvs.isEmpty() && m_dmxSampler) {
-        QVector<QColor> colors;
-        if (m_dmxSampler->takeColors(colors)) {
-            QMutexLocker lock(&m_gatheredMutex);
-            m_gatheredColors.swap(colors);
-        }
-    }
+    // Pull each Output node's gathered colours for the worker thread to write.
+    for (auto *output : outputNodes())
+        output->collectGatheredColors();
 }
 
 void CanvasSubGraphNode::readFromJson(const QJsonObject &t_json, keira::NodeLibrary *t_library)

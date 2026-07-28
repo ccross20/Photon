@@ -5,6 +5,7 @@
 #include <QDebug>
 #include "canvaspreviewwindow.h"
 #include "graph/node/canvas/canvassubgraphnode.h"
+#include "graph/node/canvas/canvasoutputnode.h"
 #include "graph/node/canvas/canvasrendermanager.h"
 
 namespace photon {
@@ -37,9 +38,9 @@ CanvasPreviewWindow::~CanvasPreviewWindow()
     releaseRhi();
 }
 
-void CanvasPreviewWindow::setCanvas(CanvasSubGraphNode *node)
+void CanvasPreviewWindow::setOutputNode(CanvasOutputNode *node)
 {
-    m_node = node;
+    m_output = node;
     requestUpdate();
 }
 
@@ -148,6 +149,17 @@ bool CanvasPreviewWindow::ensurePipeline()
     m_pipeline->setDepthWrite(false);
     m_pipeline->setCullMode(QRhiGraphicsPipeline::None);
     m_pipeline->setTopology(QRhiGraphicsPipeline::Triangles);
+
+    // Straight-alpha blending so transparent/masked regions show the backdrop
+    // instead of appearing opaque.
+    QRhiGraphicsPipeline::TargetBlend blend;
+    blend.enable = true;
+    blend.srcColor = QRhiGraphicsPipeline::SrcAlpha;
+    blend.dstColor = QRhiGraphicsPipeline::OneMinusSrcAlpha;
+    blend.srcAlpha = QRhiGraphicsPipeline::One;
+    blend.dstAlpha = QRhiGraphicsPipeline::OneMinusSrcAlpha;
+    m_pipeline->setTargetBlends({ blend });
+
     return m_pipeline->create();
 }
 
@@ -169,12 +181,22 @@ void CanvasPreviewWindow::renderFrame()
         return;
     }
 
-    // Resolve the canvas texture to show (validate the node is still live).
+    // Resolve the output node's texture to show, validating it still belongs to a
+    // live canvas (it lives inside a registered canvas subgraph's inner graph), and
+    // grab that canvas's background colour as the backdrop.
     QRhiTexture *canvasTex = nullptr;
     QSize canvasSize;
-    if (m_node && (!m_manager || m_manager->isRegistered(m_node))) {
-        canvasTex = m_node->outputTexture();
-        canvasSize = m_node->canvasSize();
+    QColor backdrop(24, 24, 28);
+    if (m_output && m_manager) {
+        for (auto *canvas : m_manager->canvases()) {
+            if (canvas->outputNodes().contains(m_output)) {
+                const RhiTextureData tex = m_output->inputTexture();
+                canvasTex = tex.texture;
+                canvasSize = tex.size;
+                backdrop = canvas->backgroundColor();
+                break;
+            }
+        }
     }
 
     // (Re)import the canvas sink texture by its shared GL id when it changes.
@@ -203,8 +225,9 @@ void CanvasPreviewWindow::renderFrame()
     QRhiCommandBuffer *cb = m_swapChain->currentFrameCommandBuffer();
     QRhiRenderTarget  *rt = m_swapChain->currentFrameRenderTarget();
 
-    const QColor clear(24, 24, 28);   // dark backdrop when nothing to show
-    cb->beginPass(rt, clear, { 1.0f, 0 });
+    // Clear to the canvas's background colour; the texture (straight alpha) is then
+    // blended over it, so transparent/masked regions show the background.
+    cb->beginPass(rt, backdrop, { 1.0f, 0 });
     if (m_imported && ensurePipeline()) {
         const QSize px = rt->pixelSize();
         cb->setGraphicsPipeline(m_pipeline);

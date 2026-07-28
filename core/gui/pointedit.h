@@ -16,11 +16,12 @@ public:
     void setValue(const QPointF &);
     QPointF value() const;
 
+    // Optional finite range; enables the pad's absolute mode and the axis
+    // fields' fill bars. Unset (default) = relative scrubbing.
+    void setRange(const QPointF &minimum, const QPointF &maximum);
+
 signals:
     void valueChanged(QPointF );
-
-private slots:
-    void inputChanged(double);
 
 protected:
     virtual void changeEvent(QEvent *event) override;

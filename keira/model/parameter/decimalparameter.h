@@ -20,6 +20,9 @@ public:
 
     void setValue(const QVariant &) override;
 
+    // Also accept an integer source (widened losslessly to a double).
+    bool acceptsConnectionFrom(const Parameter *source) const override;
+
     QWidget *createWidget(NodeEditor *) const override;
     void updateWidget(QWidget *) const override;
     QVariant updateValue(QWidget *) const override;

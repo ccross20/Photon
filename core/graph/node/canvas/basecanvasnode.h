@@ -3,6 +3,7 @@
 
 #include <QByteArray>
 #include <QSize>
+#include <QVector>
 #include "model/node.h"
 #include "photon-global.h"
 #include "graph/parameter/rhitextureparameter.h"
@@ -39,15 +40,16 @@ protected:
     virtual quint32 uniformSize() const = 0;
     // Fill the (pre-sized, zeroed) uniform block for this frame.
     virtual void writeUniforms(QByteArray &out, const QSize &size) const = 0;
-    // Effects override to true and return their input texture each frame.
-    virtual bool samplesInput() const { return false; }
-    virtual RhiTextureData currentInput() const { return {}; }
+    // Input textures this node samples, in binding order (fragment bindings 1..N).
+    // Default: none. If any listed input is null, the node produces no output;
+    // subclasses wanting custom null handling override evaluate().
+    virtual QVector<RhiTextureData> inputs() const { return {}; }
 
     // The output parameter the subclass creates in createParameters(); base sets it.
     RhiTextureParameter *m_outputParam = nullptr;
 
 private:
-    bool ensureResources(QRhi *rhi, const QSize &size, QRhiTexture *inputTex) const;
+    bool ensureResources(QRhi *rhi, const QSize &size, const QVector<QRhiTexture *> &textures) const;
     void releaseAll() const;
 
     mutable QRhiTexture *m_output = nullptr;
@@ -58,7 +60,7 @@ private:
     mutable QRhiBuffer *m_ubuf = nullptr;
     mutable QRhiSampler *m_sampler = nullptr;
     mutable QSize m_size;
-    mutable QRhiTexture *m_lastInput = nullptr;   // input handle the current SRB binds
+    mutable QVector<QRhiTexture *> m_lastTextures;   // input handles the current SRB binds
 };
 
 } // namespace photon

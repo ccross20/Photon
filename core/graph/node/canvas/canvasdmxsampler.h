@@ -34,7 +34,8 @@ public:
     // each uv and queues a readback. `preBatch` (e.g. the sink-composite batch) is
     // applied before the pass. Call once per frame, before endOffscreenFrame().
     void recordGather(QRhi *rhi, QRhiCommandBuffer *cb, QRhiTexture *sink,
-                      const QVector<QPointF> &uvs, QRhiResourceUpdateBatch *preBatch);
+                      const QVector<QPointF> &uvs, const QColor &background,
+                      QRhiResourceUpdateBatch *preBatch);
 
     // After endOffscreenFrame(), fills `out` with the N gathered colours (in uv
     // order). Returns false if no gather was recorded / readback is empty.
@@ -53,6 +54,7 @@ private:
     QRhiShaderResourceBindings *m_srb = nullptr;
     QRhiSampler              *m_sampler = nullptr;
     QRhiBuffer               *m_vbuf = nullptr;
+    QRhiBuffer               *m_ubuf = nullptr;   // background colour (binding 1)
 
     QSize m_targetSize;         // packed WxH
     int   m_vbufCapacity = 0;   // vertices the buffer can hold

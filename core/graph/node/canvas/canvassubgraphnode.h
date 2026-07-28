@@ -42,7 +42,6 @@ public:
     const static QByteArray Height;
     const static QByteArray Enabled;
     const static QByteArray Background;
-    const static QByteArray DmxOutput;
     const static QByteArray CanvasSubGraphId;
 
     CanvasSubGraphNode();
@@ -72,6 +71,12 @@ public:
     QRhiTexture *outputTexture() const;
     QSize canvasSize() const;
 
+    // The CanvasOutputNodes in the inner graph (auto "Output" + any user-added).
+    QVector<CanvasOutputNode *> outputNodes() const;
+
+    // The canvas background colour (what transparent regions flatten onto).
+    QColor backgroundColor() const;
+
 protected:
     // Exposes parameters added to this node on the inner graph's Globals node (as
     // outputs inner nodes can read), and relays their values each frame. Same
@@ -88,18 +93,13 @@ private:
     // True for the node's own built-in params (not passed through to Globals).
     bool isBuiltInParam(keira::Parameter *) const;
 
-    // Worker-thread: write the latest GPU-gathered colours into the frame's DMX
-    // matrix via the project's pixel layouts (when DMX output is enabled).
+    // Worker-thread: each Output node writes the colours it gathered into the
+    // frame's DMX matrix via its assigned layouts.
     void sampleDmx(RoutineEvaluationContext *context) const;
-
-    // Main-thread: the pixel-sample UVs of every project pixel layout, in the same
-    // order the layouts write DMX (drives the GPU gather).
-    QVector<QPointF> buildSampleUVs() const;
 
     keira::IntegerParameter *m_widthParam = nullptr;
     keira::IntegerParameter *m_heightParam = nullptr;
     keira::BooleanParameter *m_enabledParam = nullptr;
-    keira::BooleanParameter *m_dmxOutputParam = nullptr;
     ColorParameter *m_backgroundParam = nullptr;
 
     CanvasGlobalsNode *m_globalsNode = nullptr;
@@ -131,12 +131,6 @@ private:
     mutable QRhiRenderPassDescriptor *m_canvasRP = nullptr;
     mutable QSize m_canvasSize;
 
-    // GPU gather (5b): the sampler owns the gather pipeline/target; the latest
-    // gathered colours are produced on the main thread and consumed on the worker
-    // thread for DMX sampling.
-    mutable CanvasDmxSampler *m_dmxSampler = nullptr;
-    mutable QVector<QColor> m_gatheredColors;
-    mutable QMutex m_gatheredMutex;
 };
 
 } // namespace photon

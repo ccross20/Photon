@@ -30,7 +30,7 @@ BaseCanvasNode::~BaseCanvasNode()
     releaseAll();
 }
 
-bool BaseCanvasNode::ensureResources(QRhi *rhi, const QSize &size, QRhiTexture *inputTex) const
+bool BaseCanvasNode::ensureResources(QRhi *rhi, const QSize &size, const QVector<QRhiTexture *> &textures) const
 {
     if (!m_ubuf) {
         m_ubuf = rhi->newBuffer(QRhiBuffer::Dynamic, QRhiBuffer::UniformBuffer, uniformSize());
@@ -40,7 +40,7 @@ bool BaseCanvasNode::ensureResources(QRhi *rhi, const QSize &size, QRhiTexture *
         }
     }
 
-    if (samplesInput() && !m_sampler) {
+    if (!textures.isEmpty() && !m_sampler) {
         m_sampler = rhi->newSampler(QRhiSampler::Linear, QRhiSampler::Linear, QRhiSampler::None,
                                     QRhiSampler::ClampToEdge, QRhiSampler::ClampToEdge);
         if (!m_sampler->create())
@@ -74,27 +74,21 @@ bool BaseCanvasNode::ensureResources(QRhi *rhi, const QSize &size, QRhiTexture *
         m_size = size;
     }
 
-    // Shader resource bindings. For effects the input texture can change frame to
-    // frame, so rebuild when its handle changes (layout stays identical).
-    if (samplesInput()) {
-        if (!m_srb || m_lastInput != inputTex) {
-            delete m_srb;
-            m_srb = rhi->newShaderResourceBindings();
-            m_srb->setBindings({
-                QRhiShaderResourceBinding::uniformBuffer(0, QRhiShaderResourceBinding::FragmentStage, m_ubuf),
-                QRhiShaderResourceBinding::sampledTexture(1, QRhiShaderResourceBinding::FragmentStage, inputTex, m_sampler)
-            });
-            if (!m_srb->create())
-                return false;
-            m_lastInput = inputTex;
-        }
-    } else if (!m_srb) {
+    // Shader resource bindings: uniform buffer at 0, one sampled texture per input
+    // at bindings 1..N. Inputs can change frame to frame, so rebuild when the
+    // texture list changes (layout stays identical).
+    if (!m_srb || m_lastTextures != textures) {
+        delete m_srb;
         m_srb = rhi->newShaderResourceBindings();
-        m_srb->setBindings({
-            QRhiShaderResourceBinding::uniformBuffer(0, QRhiShaderResourceBinding::FragmentStage, m_ubuf)
-        });
+        QVector<QRhiShaderResourceBinding> bindings;
+        bindings.append(QRhiShaderResourceBinding::uniformBuffer(0, QRhiShaderResourceBinding::FragmentStage, m_ubuf));
+        for (int i = 0; i < textures.size(); ++i)
+            bindings.append(QRhiShaderResourceBinding::sampledTexture(
+                1 + i, QRhiShaderResourceBinding::FragmentStage, textures[i], m_sampler));
+        m_srb->setBindings(bindings.cbegin(), bindings.cend());
         if (!m_srb->create())
             return false;
+        m_lastTextures = textures;
     }
 
     if (!m_pipeline) {
@@ -134,18 +128,20 @@ void BaseCanvasNode::evaluate(keira::EvaluationContext *t_context) const
     if (size.isEmpty())
         return;
 
-    RhiTextureData in;
-    if (samplesInput()) {
-        in = currentInput();
+    const QVector<RhiTextureData> ins = inputs();
+    QVector<QRhiTexture *> textures;
+    textures.reserve(ins.size());
+    for (const auto &in : ins) {
         if (!in.texture) {
-            // Nothing wired in — produce nothing.
+            // A required input is missing — produce nothing.
             if (m_outputParam)
                 m_outputParam->setValue(RhiTextureData{});
             return;
         }
+        textures.append(in.texture);
     }
 
-    if (!ensureResources(rhi, size, in.texture))
+    if (!ensureResources(rhi, size, textures))
         return;
 
     QByteArray ub(int(uniformSize()), '\0');
@@ -203,7 +199,7 @@ void BaseCanvasNode::releaseAll() const
     m_rt = nullptr;
     m_output = nullptr;
     m_rp = nullptr;
-    m_lastInput = nullptr;
+    m_lastTextures.clear();
     m_size = QSize();
 }
 

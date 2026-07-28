@@ -88,8 +88,20 @@ void Viewer::mousePressEvent(QMouseEvent *event)
     m_impl->lastPosition = event->pos();
 
     if(event->buttons() & Qt::MiddleButton || m_impl->key == Qt::Key_Space)
+    {
+        setDragMode(QGraphicsView::NoDrag);
         return;
+    }
 
+    // Starting on a port or wire begins a wire drag (handled below), so keep the
+    // view passive there. Anywhere else, enable the rubber-band so a drag over
+    // empty canvas draws a selection rectangle; pressing a movable node still
+    // moves it (Qt prefers item drags over the rubber-band).
+    auto pressItem = itemAt(event->pos());
+    if(dynamic_cast<PortItem*>(pressItem) || dynamic_cast<WireItem*>(pressItem))
+        setDragMode(QGraphicsView::NoDrag);
+    else
+        setDragMode(QGraphicsView::RubberBandDrag);
 
     QGraphicsView::mousePressEvent(event);
 

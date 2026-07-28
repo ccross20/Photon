@@ -1,11 +1,18 @@
-#include <QDoubleSpinBox>
 #include <QLabel>
 #include "decimalparameter.h"
+#include "integerparameter.h"
 #include "view/nodeeditor.h"
+#include "view/numberscrubfield.h"
 
 namespace keira {
 
 const QByteArray DecimalParameter::ParameterId = "decimal";
+
+bool DecimalParameter::acceptsConnectionFrom(const Parameter *source) const
+{
+    return Parameter::acceptsConnectionFrom(source)
+        || source->typeId() == IntegerParameter::ParameterId;
+}
 
 class DecimalParameter::Impl
 {
@@ -63,24 +70,19 @@ QWidget *DecimalParameter::createWidget(NodeEditor *item) const
         label->setSizePolicy(QSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::Minimum));
         return label;
     }
-    QDoubleSpinBox *spin = new QDoubleSpinBox();
-    spin->setMaximumHeight(30);
-    spin->setMaximum(m_impl->maximum);
-    spin->setMinimum(m_impl->minimum);
-    spin->setMinimumWidth(50);
-    spin->setDecimals(m_impl->precision);
-    spin->setValue(value().toDouble());
-
-    spin->setSizePolicy(QSizePolicy(QSizePolicy::Maximum, QSizePolicy::Minimum));
-
-    spin->setReadOnly(isReadOnly());
-    if(isReadOnly())
-        spin->setButtonSymbols(QAbstractSpinBox::NoButtons);
+    NumberScrubField *field = new NumberScrubField();
+    field->setMaximumHeight(30);
+    field->setMinimumWidth(50);
+    field->setIsInteger(false);
+    field->setDecimals(m_impl->precision);
+    field->setRange(m_impl->minimum, m_impl->maximum);
+    field->setValue(value().toDouble());
+    field->setReadOnly(isReadOnly());
 
     const DecimalParameter *param = this;
-    QDoubleSpinBox::connect(spin, &QDoubleSpinBox::editingFinished, spin,[item, spin, param](){item->widgetUpdated(spin, param);});
-    QDoubleSpinBox::connect(spin, &QDoubleSpinBox::valueChanged, spin,[item, spin, param](double){item->widgetUpdated(spin, param);});
-    return spin;
+    NumberScrubField::connect(field, &NumberScrubField::editingFinished, field,[item, field, param](){item->widgetUpdated(field, param);});
+    NumberScrubField::connect(field, &NumberScrubField::valueChanged, field,[item, field, param](double){item->widgetUpdated(field, param);});
+    return field;
 }
 
 void DecimalParameter::updateWidget(QWidget *t_widget) const
@@ -92,8 +94,8 @@ void DecimalParameter::updateWidget(QWidget *t_widget) const
     }
     else
     {
-        QDoubleSpinBox *spinBox = static_cast<QDoubleSpinBox*>(t_widget);
-        spinBox->setValue(value().toDouble());
+        NumberScrubField *field = static_cast<NumberScrubField*>(t_widget);
+        field->setValue(value().toDouble());
     }
 
 }
@@ -102,7 +104,7 @@ QVariant DecimalParameter::updateValue(QWidget *t_widget) const
 {
     if(isReadOnly())
         return static_cast<QLabel*>(t_widget)->text();
-    return static_cast<QDoubleSpinBox*>(t_widget)->value();
+    return static_cast<NumberScrubField*>(t_widget)->value();
 }
 
 void DecimalParameter::readFromJson(const QJsonObject &t_json)

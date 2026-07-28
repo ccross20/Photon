@@ -17,6 +17,9 @@ public:
     void setMinimum(int);
     void setMaximum(int);
 
+    // Also accept a decimal source (its value is truncated/rounded on read).
+    bool acceptsConnectionFrom(const Parameter *source) const override;
+
     QWidget *createWidget(NodeEditor *) const override;
     void updateWidget(QWidget *) const override;
     QVariant updateValue(QWidget *) const override;
