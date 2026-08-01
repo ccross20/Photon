@@ -5,6 +5,8 @@
 
 namespace photon {
 
+class StateCapability;
+
 class PHOTONCORE_EXPORT FixtureClip : public Clip
 {
     Q_OBJECT
@@ -29,6 +31,18 @@ public:
     double falloff(Fixture *t_fixture) const;
 
     State *state() const;
+    Routine *contentGraph() const override;
+
+    // Expose a capability's channel for timeline control: exposes the capability
+    // as an input port on the graph's FixtureStateNode, wires a matching input
+    // node into it, and adds a clip channel bound to that input node. After this
+    // the clip channel animates the capability over the clip's timeline.
+    void exposeCapabilityChannel(StateCapability *, int channelIndex);
+    // Reverse of exposeCapabilityChannel: removes the input node feeding the
+    // capability's port (which drops the bound channel via sync) and unexposes it.
+    void unexposeCapabilityChannel(StateCapability *, int channelIndex);
+    // Whether the capability's channel is currently exposed for timeline control.
+    bool isCapabilityChannelExposed(StateCapability *, int channelIndex) const;
 
     virtual void processChannels(ProcessContext &) override;
     virtual bool timeIsValid(double) const override;
@@ -54,6 +68,11 @@ signals:
     void falloffUpdated(photon::FalloffEffect *);
 
 private:
+    // Reconcile the clip's channels against the graph's input ports (by portId):
+    // add a channel for each input node that lacks one, remove channels whose port
+    // is gone. Channel 0 (strength) is preserved.
+    void syncChannelsFromGraph();
+
     class Impl;
     Impl *m_impl;
 };

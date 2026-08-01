@@ -60,13 +60,6 @@ void MasterLayerEffectEditor::comboChanged(int t_index)
     }
 }
 
-void MasterLayerEffectEditor::relayout(const QRectF &t_sceneRect)
-{
-
-}
-
-
-
 EffectInformation MasterLayerChannelEffect::info()
 {
     EffectInformation toReturn([](){return new MasterLayerChannelEffect;});

@@ -58,6 +58,11 @@ public:
 
     Node *createNode(const QByteArray &nodeId);
 
+    // The nodeId of a registered GraphInputNode that exposes a port of the given
+    // parameter typeId, or empty if none. Used to auto-create an input node when a
+    // wire is dropped on a subgraph.
+    QByteArray inputNodeForParameterType(const QByteArray &parameterType) const;
+
 private:
     class Impl;
     Impl *m_impl;

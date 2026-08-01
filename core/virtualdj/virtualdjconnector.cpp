@@ -139,6 +139,18 @@ void VirtualDJConnector::processLine(const QByteArray &line)
         songLength = obj.value("songlength").toDouble();
     if (obj.contains("sample1Pos"))
         sample1Pos = obj.value("sample1Pos").toDouble();
+    if (obj.contains("level"))
+        level = obj.value("level").toDouble();
+    if (obj.contains("stemVocal"))
+        stemVocal = obj.value("stemVocal").toDouble();
+    if (obj.contains("stemInstru"))
+        stemInstru = obj.value("stemInstru").toDouble();
+    if (obj.contains("stemBass"))
+        stemBass = obj.value("stemBass").toDouble();
+    if (obj.contains("stemKick"))
+        stemKick = obj.value("stemKick").toDouble();
+    if (obj.contains("stemHiHat"))
+        stemHiHat = obj.value("stemHiHat").toDouble();
 
     if (obj.contains("path")) {
         const QString p = obj.value("path").toString();
@@ -186,6 +198,45 @@ void VirtualDJConnector::processLine(const QByteArray &line)
             queue.append(entry);
         }
     }
+
+    emit dataUpdated();
+}
+
+void VirtualDJConnector::sendCommand(const QJsonObject &t_command)
+{
+    if (!socket)
+        return;
+    socket->write(QJsonDocument(t_command).toJson(QJsonDocument::Compact) + "\n");
+}
+
+void VirtualDJConnector::sendPlay()
+{
+    sendCommand(QJsonObject{{"cmd", "play"}});
+}
+
+void VirtualDJConnector::sendPause()
+{
+    sendCommand(QJsonObject{{"cmd", "pause"}});
+}
+
+void VirtualDJConnector::sendRestart()
+{
+    sendCommand(QJsonObject{{"cmd", "restart"}});
+}
+
+void VirtualDJConnector::sendSeek(double t_seconds)
+{
+    sendCommand(QJsonObject{{"cmd", "seek"}, {"time", t_seconds}});
+}
+
+void VirtualDJConnector::sendCaptureStart()
+{
+    sendCommand(QJsonObject{{"cmd", "capture_start"}});
+}
+
+void VirtualDJConnector::sendCaptureStop()
+{
+    sendCommand(QJsonObject{{"cmd", "capture_stop"}});
 }
 
 } // namespace photon

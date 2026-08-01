@@ -9,7 +9,7 @@
 
 namespace photon {
 
-class FixtureGlobalsNode;
+class GraphContextNode;
 
 class PHOTONCORE_EXPORT FixtureSubGraphNode: public keira::SubGraphNode
 {
@@ -30,8 +30,7 @@ public:
     virtual void readFromJson(const QJsonObject &, keira::NodeLibrary *library) override;
 
 protected:
-    void parameterWasAdded(keira::Parameter*) override;
-    void parameterWasRemoved(keira::Parameter*) override;
+    keira::NodeLibrary *nodeLibrary() const override;
     void parameterWasModified(keira::Parameter*) override;
 
 private:
@@ -40,14 +39,12 @@ private:
     keira::IntegerParameter *m_priortyParam;
     keira::BooleanParameter *m_enabledParam;
     FixtureListParameter *m_fixturesParam;
-    FixtureGlobalsNode *m_globalsNode;
-    QVector<keira::Parameter*> m_passThroughParams;
-    QVector<keira::Parameter*> m_globalsParams;
+    GraphContextNode *m_globalsNode;
 
     // One cloned subgraph per fixture — each has independent node parameter
     // instances so the parallel fixture loop has no shared write state.
     mutable QVector<keira::Graph*> m_subgraphPool;
-    mutable QVector<FixtureGlobalsNode*> m_globalsPool;
+    mutable QVector<GraphContextNode*> m_globalsPool;
 
     // Set when the source subgraph changes (e.g. a node's parameter is edited),
     // so the pool is re-cloned on the next evaluate(). Without this, node-internal

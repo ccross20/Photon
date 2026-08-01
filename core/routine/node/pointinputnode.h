@@ -1,13 +1,13 @@
 #ifndef PHOTON_POINTINPUTNODE_H
 #define PHOTON_POINTINPUTNODE_H
 
-#include "model/node.h"
+#include "model/graphinputnode.h"
 #include "photon-global.h"
 #include "sequence/channel.h"
 
 namespace photon {
 
-class PHOTONCORE_EXPORT PointInputNode : public keira::Node
+class PHOTONCORE_EXPORT PointInputNode : public keira::GraphInputNode
 {
 public:
     const static QByteArray Value;
@@ -24,6 +24,8 @@ public:
     uint channelIndex() const;
 
     ChannelInfo channelInfo() const;
+
+    QString portName() const override;
 
     static keira::NodeInformation info();
     void setValue(const QByteArray &t_id, const QVariant &t_value) override;

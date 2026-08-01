@@ -2,11 +2,13 @@
 #define PHOTON_CONSTANTCHANNELEFFECT_H
 
 #include "sequence/channeleffect.h"
-#include "gui/gizmo/rectanglegizmo.h"
+#include "gui/gizmo/gizmogroup.h"
 
 namespace photon {
 
 class ConstantChannelEffect;
+class GizmoGroup;
+class GizmoHandle;
 
 class ConstantEffectEditor : public ChannelEffectEditor
 {
@@ -23,10 +25,10 @@ protected:
 
 private:
     ConstantChannelEffect *m_effect;
-    QGraphicsRectItem *m_parentItem;
-    RectangleGizmo *m_originHandle;
-    RectangleGizmo *m_rateHandle;
-    QGraphicsPathItem *m_pathItem;
+    double m_referenceTime = 0;
+    GizmoGroup *m_gizmos;
+    GizmoHandle *m_valueHandle;
+    GizmoHandle *m_rateHandle;
 
 };
 

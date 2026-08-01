@@ -47,6 +47,13 @@ public:
     int index() const;
     virtual float * process(float *value, uint size, double time) const;
     virtual double processTime(double time) const;
+
+    // Whether this effect's own contribution can be meaningfully isolated as
+    // (chain with it) - (chain without it) and drawn as the gizmo's cyan preview
+    // curve, centred on zero. True only for additive generators (sine, sawtooth,
+    // ...); false for time-warps and modifiers where that difference isn't a clean
+    // standalone shape. Off by default.
+    virtual bool providesIsolatedContribution() const { return false; }
     virtual ChannelEffectEditor *createEditor() {return new ChannelEffectEditor(this);}
     void updated();
 

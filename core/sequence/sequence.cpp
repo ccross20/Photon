@@ -16,6 +16,17 @@
 
 namespace photon {
 
+namespace {
+    // The song-analysis sidecar sits next to the .seq, sharing its base name.
+    QString songDataSidecarPath(const QString &t_sequencePath)
+    {
+        if(t_sequencePath.isEmpty())
+            return QString();
+        const QFileInfo info(t_sequencePath);
+        return info.dir().filePath(info.completeBaseName() + ".song");
+    }
+}
+
 Sequence::Impl::Impl(Sequence *t_facade):facade(t_facade)
 {
 
@@ -90,6 +101,17 @@ void Sequence::save(const QString &t_path) const
     saveFile.write(QJsonDocument(jsonObj).toJson());
 
     qDebug() << "Saved to: " << saveFile.fileName();
+
+    // Write the song-analysis sidecar alongside (binary). Skip when there's nothing
+    // to store so we don't leave empty .song files next to plain sequences.
+    const QString sidecar = songDataSidecarPath(savePath);
+    if(!sidecar.isEmpty())
+    {
+        if(!m_impl->songData.isEmpty())
+            m_impl->songData.save(sidecar);
+        else if(QFile::exists(sidecar))
+            QFile::remove(sidecar);
+    }
 }
 
 void Sequence::load(const QString &t_path)
@@ -132,6 +154,12 @@ void Sequence::load(const QString &t_path)
 
     readFromJson(loadDoc.object(), context);
     restore(*photonApp->project());
+
+    // Load the song-analysis sidecar if present; otherwise start with an empty one.
+    m_impl->songData = SongData();
+    const QString sidecar = songDataSidecarPath(loadPath);
+    if(!sidecar.isEmpty() && QFile::exists(sidecar))
+        m_impl->songData.load(sidecar);
 
     qDebug() << "Load from: " << loadFile.fileName();
 }
@@ -182,6 +210,17 @@ bool Sequence::snapToBeat(float time, float *outTime, float tolerance) const
     *outTime = time;
     bool hasSnap = false;
     float winner = 100000000.f;
+
+    // The analysed beat grid is always a snap source once a file has been loaded
+    // and analysed - it's derived data, not a user-toggleable layer like custom
+    // cues below.
+    double gridBeat = 0.0;
+    if(m_impl->songData.beats().nearestBeat(time, &gridBeat, tolerance))
+    {
+        winner = static_cast<float>(gridBeat);
+        hasSnap = true;
+    }
+
     for(auto beatLayer : m_impl->beatLayers)
     {
         if(beatLayer->isSnappable())
@@ -189,7 +228,7 @@ bool Sequence::snapToBeat(float time, float *outTime, float tolerance) const
             float snapTime = 0;
             if(beatLayer->snapToBeat(time, &snapTime, tolerance))
             {
-                if(abs(snapTime - time) < winner)
+                if(abs(snapTime - time) < abs(winner - time) || !hasSnap)
                 {
                     winner = snapTime;
                     hasSnap = true;
@@ -247,6 +286,21 @@ Project *Sequence::project() const
     return photonApp->project();
 }
 
+SongData *Sequence::songData() const
+{
+    return &m_impl->songData;
+}
+
+double Sequence::previewTime() const
+{
+    return m_impl->previewTime.load(std::memory_order_relaxed);
+}
+
+void Sequence::setPreviewTime(double t_value)
+{
+    m_impl->previewTime.store(t_value, std::memory_order_relaxed);
+}
+
 const QVector<Layer*> &Sequence::layers() const
 {
     return m_impl->layers;
@@ -298,19 +352,6 @@ void Sequence::processChannels(ProcessContext &t_context, double lastTime)
     StateEvaluationContext localContext(t_context.dmxMatrix);
     localContext.globalTime = t_context.globalTime;
     localContext.relativeTime = t_context.globalTime;
-
-
-
-    for(auto fixture : t_context.project->fixtures()->fixtures())
-    {
-        localContext.fixture = fixture;
-        auto defState = fixture->defaultState();
-        if(defState)
-        {
-            defState->initializeValues(localContext);
-            defState->evaluate(localContext);
-        }
-    }
 
 
     for(auto layer : m_impl->layers)

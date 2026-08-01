@@ -27,6 +27,8 @@ public:
 
     void setIsInteger(bool);
     void setRange(double minimum, double maximum);
+    void setMinimum(double);   // convenience: keeps the current maximum
+    void setMaximum(double);   // convenience: keeps the current minimum
     void setDecimals(int);
     void setReadOnly(bool);
 

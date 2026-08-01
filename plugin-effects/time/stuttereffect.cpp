@@ -1,12 +1,12 @@
 #include <QHBoxLayout>
 #include <QLabel>
-#include <QDoubleSpinBox>
 #include <qmath.h>
-#include <QDoubleSpinBox>
+#include "view/numberscrubfield.h"
 #include "stuttereffect.h"
 #include "sequence/channel.h"
 #include "sequence/clip.h"
 #include "sequence/viewer/stackedparameterwidget.h"
+#include "gui/gizmo/gizmohandle.h"
 
 
 namespace photon {
@@ -14,14 +14,16 @@ namespace photon {
 StutterEffectEditor::StutterEffectEditor(StutterEffect *t_effect):ChannelEffectEditor(t_effect),m_effect(t_effect)
 {
 
-    QDoubleSpinBox *durationSpin = new QDoubleSpinBox;
+    keira::NumberScrubField *durationSpin = new keira::NumberScrubField;
+    durationSpin->setMinimum(.001);   // a zero stutter duration divides by zero
     durationSpin->setValue(m_effect->duration());
-    connect(durationSpin, &QDoubleSpinBox::valueChanged, this, &StutterEffectEditor::durationChanged);
+    connect(durationSpin, &keira::NumberScrubField::valueChanged, this, &StutterEffectEditor::durationChanged);
 
 
-    QDoubleSpinBox *gapSpin = new QDoubleSpinBox;
+    keira::NumberScrubField *gapSpin = new keira::NumberScrubField;
+    gapSpin->setMinimum(0);
     gapSpin->setValue(m_effect->gap());
-    connect(gapSpin, &QDoubleSpinBox::valueChanged, this, &StutterEffectEditor::gapChanged);
+    connect(gapSpin, &keira::NumberScrubField::valueChanged, this, &StutterEffectEditor::gapChanged);
 
     StackedParameterWidget *paramWidget = new StackedParameterWidget;
     paramWidget->addWidget(durationSpin, "Duration");
@@ -29,22 +31,33 @@ StutterEffectEditor::StutterEffectEditor(StutterEffect *t_effect):ChannelEffectE
 
     addWidget(paramWidget, "Stutter");
 
+    // Handles laid out along the time axis: origin, then the duration span, then
+    // the gap span. Declared in data space; the group maps them to the view.
+    m_gizmos = new GizmoGroup(scene(), this);
 
-    m_parentItem = new QGraphicsRectItem(0,0,0,0);
-    addItem(m_parentItem);
+    m_originHandle = m_gizmos->addHandle();
+    m_originHandle->setDataGetter([this]{ return QPointF(m_referenceTime, 0); });
 
-
-    m_durationHandle = new RectangleGizmo(QRectF(-5,-5,10,10),[this, durationSpin](QPointF pt){
-        m_effect->setDuration(pt.x()/scale().x());
+    m_durationHandle = m_gizmos->addHandle(GizmoHandle::Anchor, Qt::Horizontal);
+    m_durationHandle->setDataGetter([this]{
+        return QPointF(m_referenceTime + m_effect->duration(), 0);
+    });
+    m_durationHandle->setDataSetter([this, durationSpin](QPointF pt){
+        m_effect->setDuration(std::max(.001, pt.x() - m_referenceTime));
         durationSpin->setValue(m_effect->duration());
     });
-    m_durationHandle->setParentItem(m_parentItem);
 
-    m_gapHandle = new RectangleGizmo(QRectF(-5,-5,10,10),[this, gapSpin](QPointF pt){
-        m_effect->setGap(pt.x()/scale().x());
-            gapSpin->setValue(m_effect->gap());
+    m_gapHandle = m_gizmos->addHandle(GizmoHandle::Anchor, Qt::Horizontal);
+    m_gapHandle->setDataGetter([this]{
+        return QPointF(m_referenceTime + m_effect->duration() + m_effect->gap(), 0);
     });
-    m_gapHandle->setParentItem(m_durationHandle);
+    m_gapHandle->setDataSetter([this, gapSpin](QPointF pt){
+        m_effect->setGap(std::max(0.0, pt.x() - (m_referenceTime + m_effect->duration())));
+        gapSpin->setValue(m_effect->gap());
+    });
+
+    m_gizmos->connectLine(m_originHandle, m_durationHandle);
+    m_gizmos->connectLine(m_durationHandle, m_gapHandle);
 }
 
 void StutterEffectEditor::durationChanged(double t_value)
@@ -59,30 +72,17 @@ void StutterEffectEditor::gapChanged(double t_value)
 
 void StutterEffectEditor::relayout(const QRectF &t_sceneRect)
 {
-    auto t = transform();
-
-    double gap = m_effect->gap();
-    double duration = m_effect->duration();
+    // Anchor to the first stutter period (duration + gap) visible in the view.
+    double period = m_effect->duration() + m_effect->gap();
     double startTime = m_effect->channel()->startTime();
 
     double x = startTime;
+    if(t_sceneRect.left() > startTime && period > 0)
+        x = (ceil((t_sceneRect.left() - startTime) / period) * period) + startTime;
 
-    if(t_sceneRect.left() > startTime)
-    {
-        x = (ceil((t_sceneRect.left() - startTime) / gap) * gap) + startTime;
-    }
-    m_parentItem->setPos(t.map(QPointF(x,0)));
+    m_referenceTime = x;
 
-    m_gapHandle->setPos(QPointF(gap * scale().x(),0));
-    m_durationHandle->setPos(QPointF(duration * scale().x(),0));
-
-    /*
-    QPainterPath path;
-    path.moveTo(m_frequencyHandle->pos());
-    path.lineTo(m_originHandle->pos());
-    path.lineTo(m_amplitudeHandle->pos());
-    m_pathItem->setPath(path);
-    */
+    m_gizmos->setTransform(transform());
 }
 
 

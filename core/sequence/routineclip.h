@@ -15,6 +15,7 @@ public:
     void processChannels(ProcessContext &) override;
     void setRoutine(Routine *);
     Routine *routine() const;
+    Routine *contentGraph() const override;
 
     void restore(Project &) override;
     void readFromJson(const QJsonObject &, const LoadContext &) override;

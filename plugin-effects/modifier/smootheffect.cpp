@@ -1,8 +1,9 @@
 #include <QHBoxLayout>
 #include <QLabel>
-#include <QDoubleSpinBox>
-#include <QSpinBox>
 #include <qmath.h>
+#include <vector>
+#include <algorithm>
+#include "view/numberscrubfield.h"
 #include "smootheffect.h"
 #include "sequence/viewer/stackedparameterwidget.h"
 
@@ -12,22 +13,23 @@ namespace photon {
 SmoothEffectEditor::SmoothEffectEditor(SmoothEffect *t_effect):ChannelEffectEditor(t_effect),m_effect(t_effect)
 {
 
-    QSpinBox *samplesSpin = new QSpinBox;
+    auto *samplesSpin = new keira::NumberScrubField;
+    samplesSpin->setIsInteger(true);
     samplesSpin->setMinimum(3);
     samplesSpin->setValue(m_effect->samples());
-    connect(samplesSpin, &QSpinBox::valueChanged, this, &SmoothEffectEditor::samplesChanged);
+    connect(samplesSpin, &keira::NumberScrubField::valueChanged, this, [this](double v){ samplesChanged(int(v)); });
 
 
-    QDoubleSpinBox *spreadSpin = new QDoubleSpinBox;
+    auto *spreadSpin = new keira::NumberScrubField;
     spreadSpin->setMinimum(.0001);
     spreadSpin->setValue(m_effect->spread());
-    connect(spreadSpin, &QDoubleSpinBox::valueChanged, this, &SmoothEffectEditor::spreadChanged);
+    connect(spreadSpin, &keira::NumberScrubField::valueChanged, this, &SmoothEffectEditor::spreadChanged);
 
     StackedParameterWidget *paramWidget = new StackedParameterWidget;
     paramWidget->addWidget(samplesSpin, "Samples");
     paramWidget->addWidget(spreadSpin, "Spread");
 
-    addWidget(paramWidget, "Sinewave");
+    addWidget(paramWidget, "Smooth");
 }
 
 void SmoothEffectEditor::samplesChanged(int t_value)
@@ -76,29 +78,48 @@ void SmoothEffect::setSpread(double t_value)
 
 float * SmoothEffect::process(float *value, uint size, double time) const
 {
+    ChannelEffect *prev = previousEffect();
+    if(!prev)
+        return value;
 
-    if(previousEffect())
+    const int samples = std::max(m_samples, 1);
+    if(samples == 1)
+        return prev->process(value, size, time);
+
+    const double interval = m_spread / (samples - 1);
+    const double halfSpread = m_spread / 2.0;
+
+    // Gaussian kernel: taps near the centre count most, so a step edge smooths into
+    // a rounded S-curve instead of a straight ramp. sigma = spread/6 puts the window
+    // edges at +/-3 sigma, where the weight has effectively faded to zero.
+    const double sigma = std::max(m_spread / 6.0, 1e-9);
+    const double invTwoSigmaSq = 1.0 / (2.0 * sigma * sigma);
+
+    // The incoming buffer is the seed the chain starts from. process() mutates its
+    // input in place, so each tap must start from a fresh copy of that seed -
+    // otherwise taps compound instead of being independent samples.
+    std::vector<float> seed(value, value + size);
+    std::vector<float> scratch(size);
+    std::vector<double> sum(size, 0.0);
+    double weightSum = 0.0;
+
+    // The chain evaluation depends only on the tap's time, not on the element
+    // index, so evaluate it once per tap (not once per element) and accumulate.
+    for(int i = 0; i < samples; ++i)
     {
-        double interval = m_spread / (m_samples-1);
-        double halfSpread = m_spread / 2.0;
+        const double offset = -halfSpread + interval * i;
+        const double weight = std::exp(-(offset * offset) * invTwoSigmaSq);
+        weightSum += weight;
 
-        for(int k = 0; k < size; ++k)
-        {
-
-            double total = 0.0;
-
-            for(int i = 0; i < m_samples; ++i)
-            {
-                total += previousEffect()->process(value, size, time - halfSpread + (interval * i))[k];
-            }
-
-
-            value[k] = total / static_cast<double>(m_samples);
-        }
-
-
+        std::copy(seed.begin(), seed.end(), scratch.begin());
+        float *result = prev->process(scratch.data(), size, time + offset);
+        for(uint k = 0; k < size; ++k)
+            sum[k] += weight * result[k];
     }
 
+    const double invWeight = weightSum > 0.0 ? 1.0 / weightSum : 0.0;
+    for(uint k = 0; k < size; ++k)
+        value[k] = static_cast<float>(sum[k] * invWeight);
 
     return value;
 }

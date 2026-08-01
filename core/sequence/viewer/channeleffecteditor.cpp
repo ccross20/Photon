@@ -1,6 +1,11 @@
+#include <cmath>
+#include <algorithm>
+#include <limits>
+#include <vector>
 #include <QPainter>
 #include <QResizeEvent>
 #include <QVBoxLayout>
+#include <QGroupBox>
 #include <QGraphicsLinearLayout>
 #include "channeleffecteditor_p.h"
 #include "sequence/channeleffect.h"
@@ -8,6 +13,8 @@
 #include "sequence/clip.h"
 #include "sequence/viewer/stackedparameterwidget.h"
 #include "channel/parameter/colorchannelparameter.h"
+#include "project/project.h"
+#include "photoncore.h"
 
 namespace photon {
 
@@ -223,20 +230,42 @@ void EffectEditorViewer::drawBackgroundNumber(QPainter *painter, const QRectF &r
 
     m_pathsDirty = false;
 
-    if(m_path.isEmpty())
+    if(m_effectBands.isEmpty() && m_channelBand.isEmpty())
         return;
-
 
     painter->resetTransform();
 
-    painter->setRenderHint(QPainter::Antialiasing);
+    // Draw each cached min/max envelope as a stack of 1px-wide vertical bars, the
+    // way the waveform widget does. No path, no per-paint transform copy, no
+    // antialiasing — smooth regions collapse to a thin band that reads like a
+    // line, dense oscillation fills as a band. Cost is bounded by column count.
+    auto drawBand = [painter](const CurveBand &band, const QColor &color, float minThickness){
+        for(int c = 0; c < band.topY.size(); ++c)
+        {
+            float top = band.topY[c];
+            float bottom = band.bottomY[c];
+            if(top > bottom)
+                std::swap(top, bottom);
+            float h = bottom - top;
+            if(h < minThickness)
+            {
+                const float mid = (top + bottom) * 0.5f;
+                top = mid - minThickness * 0.5f;
+                h = minThickness;
+            }
+            painter->fillRect(QRectF(band.startX + c, top, 1.0, h), color);
+        }
+    };
 
-    painter->setPen(QPen(QColor(255,255,255,127), 2));
-    painter->drawPath(m_transform.map(m_channelPath));
+    // Composed context, dimmed: the final channel value and the chain up to here.
+    drawBand(m_channelBand, QColor(255,255,255,90), 2.0f);
+    for(const CurveBand &band : m_effectBands)
+        drawBand(band, QColor(140,140,140), 2.0f);
 
-
-    painter->setPen(QPen(QColor(200,200,200), 2));
-    painter->drawPath(m_transform.map(m_path));
+    // The selected effect's own contribution, in the gizmo's colour and on top, so
+    // the gizmo visibly rides the shape it controls.
+    for(const CurveBand &band : m_selectedBands)
+        drawBand(band, QColor(0,220,220,220), 2.0f);
 }
 
 void EffectEditorViewer::drawForeground(QPainter *painter, const QRectF &rect)
@@ -451,16 +480,23 @@ void EffectEditorViewer::wheelEvent(QWheelEvent *event)
     m_startXPos = (m_startPt.x() + m_xOffset) / m_xScale;
     m_startYPos = (m_yOffset - m_startPt.y()) / m_yScale;
 
+    // Some platforms report the wheel on the x axis when a modifier is held (Alt
+    // is the horizontal-scroll modifier), so take whichever axis is non-zero.
+    const int wheelDelta = event->angleDelta().y() != 0 ? event->angleDelta().y()
+                                                        : event->angleDelta().x();
+
+    // Ctrl zooms TIME (x), matching the other views. Alt zooms the VALUE range (y),
+    // which is unique to this editor.
     if(event->modifiers() & Qt::ControlModifier)
     {
 
         double newScaleY = m_yScale;
         double newScaleX = m_xScale;
 
-        if(event->angleDelta().y() > 0)
-            newScaleY *= 1.24;
+        if(wheelDelta > 0)
+            newScaleX *= 1.24;
         else
-            newScaleY /= 1.24;
+            newScaleX /= 1.24;
 
         setScale(QPointF(newScaleX, newScaleY));
 
@@ -481,10 +517,10 @@ void EffectEditorViewer::wheelEvent(QWheelEvent *event)
         double newScaleY = m_yScale;
         double newScaleX = m_xScale;
 
-        if(event->angleDelta().x() > 0)
-            newScaleX *= 1.24;
+        if(wheelDelta > 0)
+            newScaleY *= 1.24;
         else
-            newScaleX /= 1.24;
+            newScaleY /= 1.24;
 
         setScale(QPointF(newScaleX, newScaleY));
 
@@ -497,6 +533,20 @@ void EffectEditorViewer::wheelEvent(QWheelEvent *event)
         m_startYPos = (m_yOffset - m_startPt.y()) / newScaleY;
 
         remakeTransform();
+    }
+
+    if(!(event->modifiers() & (Qt::ControlModifier | Qt::AltModifier)))
+    {
+        // Plain wheel: horizontal pan through setOffset, matching the layer and
+        // waveform views and keeping all three in sync.
+        const QPoint pixels = event->pixelDelta();
+        double delta;
+        if(!pixels.isNull())
+            delta = pixels.y() != 0 ? pixels.y() : pixels.x();
+        else
+            delta = (wheelDelta / 120.0) * 40.0;   // ~40px per wheel notch
+
+        setOffset(m_xOffset - delta);
     }
 }
 
@@ -548,100 +598,191 @@ void EffectEditorViewer::rebuildColors()
 
 void EffectEditorViewer::rebuildPaths()
 {
-    m_path.clear();
-    m_channelPath.clear();
+    m_effectBands.clear();
+    m_selectedBands.clear();
+    m_channelBand = CurveBand{};
 
-    if(m_effect)
+    if(!m_effect)
+        return;
+
+    Channel *channel = m_effect->channel();
+    const double initialValue = channel->info().defaultValue.toDouble();
+    const double startTime = channel->startTime();
+    const double endTime = channel->endTime();
+
+    if(startTime > m_sceneBounds.right() || endTime < m_sceneBounds.left() + (1 / m_xScale))
+        return;
+
+    const double left = std::max(m_sceneBounds.left(), startTime);
+    const double right = std::min(m_sceneBounds.right(), endTime);
+    if(right <= left)
+        return;
+
+    // On-screen pixel span of the curve. We build a min/max envelope one entry
+    // per pixel column, exactly like the waveform renderer, so the amount of work
+    // (and drawn primitives) is bounded by screen resolution regardless of how
+    // fast the effect oscillates.
+    int startX = static_cast<int>(std::floor(m_transform.map(QPointF(left, 0.0)).x()));
+    int endX   = static_cast<int>(std::ceil(m_transform.map(QPointF(right, 0.0)).x()));
+    startX = std::clamp(startX, 0, width());
+    endX   = std::clamp(endX, 0, width());
+    const int columns = endX - startX;
+    if(columns <= 0)
+        return;
+
+    const QTransform inv = m_transform.inverted();
+
+    // Value -> screen-y. The transform has no shear, so y depends only on value.
+    auto valueToY = [this](double v) -> float {
+        return static_cast<float>(m_transform.map(QPointF(0.0, v)).y());
+    };
+
+    // Sub-sample within each column so oscillation faster than one pixel still
+    // registers as a min/max band. Total evals stay within a fixed budget.
+    const int kBudget = 4000;
+    const int subSamples = std::clamp(kBudget / columns, 2, 16);
+    const double subDiv = subSamples - 1;
+
+    // Two bands per subchannel:
+    //  - m_effectBands   : the fully composed chain up to and including this effect
+    //                      (what actually reaches the output), drawn as context.
+    //  - m_selectedBands : just THIS effect's own contribution, i.e. the chain with
+    //                      and without it, differenced and re-centred on zero. That
+    //                      is the curve the gizmo describes (e.g. a sine of the set
+    //                      amplitude around 0), so drawing it lets the gizmo ride on
+    //                      the shape it controls regardless of what upstream does.
+    // Isolating this way (rather than detaching previousEffect) keeps us off the
+    // shared effect state the eval thread may be using.
+    const int subChannelCount = std::max(channel->subChannelCount(), 1);
+    const bool wantIsolated = m_effect->providesIsolatedContribution();
+    ChannelEffect *previous = m_effect->previousEffect();
+
+    m_effectBands.resize(subChannelCount);
+    for(CurveBand &band : m_effectBands)
     {
-        double initialValue = m_effect->channel()->info().defaultValue.toDouble();
-
-        double startTime = m_effect->channel()->startTime();
-        double endTime = m_effect->channel()->endTime();
-
-        if(startTime > m_sceneBounds.right() || endTime < m_sceneBounds.left() + (1 / m_xScale))
-            return;
-
-        double left = std::max(m_sceneBounds.left(), startTime);
-        double right = std::min(m_sceneBounds.right(), m_effect->channel()->endTime());
-
-        double interval = (right - left)/width();
-
-        auto subChannelCount = std::max(m_effect->channel()->subChannelCount(),1);
-
-        if(subChannelCount > 0)
+        band.startX = startX;
+        band.topY.resize(columns);
+        band.bottomY.resize(columns);
+    }
+    if(wantIsolated)
+    {
+        m_selectedBands.resize(subChannelCount);
+        for(CurveBand &band : m_selectedBands)
         {
-            float *tempValues = new float[subChannelCount];
-            std::vector<std::vector<float>> values(width()+5,std::vector<float>(subChannelCount));
+            band.startX = startX;
+            band.topY.resize(columns);
+            band.bottomY.resize(columns);
+        }
+    }
 
-            for(int v = 0; v < subChannelCount; ++v)
+    float *fullValues = new float[subChannelCount];
+    float *upstreamValues = new float[subChannelCount];
+    std::vector<double> colMin(subChannelCount);
+    std::vector<double> colMax(subChannelCount);
+    std::vector<double> selMin(subChannelCount);
+    std::vector<double> selMax(subChannelCount);
+
+    for(int c = 0; c < columns; ++c)
+    {
+        const int x = startX + c;
+        const double tL = inv.map(QPointF(x, 0.0)).x();
+        const double tR = inv.map(QPointF(x + 1, 0.0)).x();
+
+        for(int k = 0; k < subChannelCount; ++k)
+        {
+            colMin[k] = std::numeric_limits<double>::max();
+            colMax[k] = std::numeric_limits<double>::lowest();
+            selMin[k] = std::numeric_limits<double>::max();
+            selMax[k] = std::numeric_limits<double>::lowest();
+        }
+
+        for(int s = 0; s < subSamples; ++s)
+        {
+            const double t = tL + (tR - tL) * (s / subDiv);
+            const double localTime = t - startTime;
+
+            for(int k = 0; k < subChannelCount; ++k)
+                fullValues[k] = initialValue;
+            fullValues = m_effect->process(fullValues, subChannelCount, localTime);
+
+            if(wantIsolated && previous)
             {
-                tempValues[v] = initialValue;
+                for(int k = 0; k < subChannelCount; ++k)
+                    upstreamValues[k] = initialValue;
+                upstreamValues = previous->process(upstreamValues, subChannelCount, localTime);
             }
-
-            tempValues = m_effect->process(tempValues,subChannelCount,left-startTime);
-
-            for(int v = 0; v < subChannelCount; ++v)
-            {
-                values[0][v] = tempValues[v];
-            }
-
-
-            //qDebug() << left << right << (right - left) / interval;
-            int counter = 1;
-            double d = left;
-            while( d < right )
-            {
-                for(int v = 0; v < subChannelCount; ++v)
-                {
-                    tempValues[v] = initialValue;
-                }
-
-                d += interval;
-                tempValues = m_effect->process(tempValues,subChannelCount, d - startTime);
-
-                for(int v = 0; v < subChannelCount; ++v)
-                {
-                    values[counter][v] = tempValues[v];
-                }
-                counter++;
-            }
-
-            delete[] tempValues;
-
 
             for(int k = 0; k < subChannelCount; ++k)
             {
-                m_path.moveTo(left,values[0][k]);
-                for(int i = 1; i < width(); ++i)
+                const double full = fullValues[k];
+                if(std::isfinite(full))
                 {
+                    colMin[k] = std::min(colMin[k], full);
+                    colMax[k] = std::max(colMax[k], full);
+                }
 
-                    m_path.lineTo(left,values[i][k]);
-
-
+                if(wantIsolated)
+                {
+                    // This effect's own contribution, centred on zero.
+                    const double upstream = previous ? upstreamValues[k] : initialValue;
+                    const double isolated = full - upstream;
+                    if(std::isfinite(isolated))
+                    {
+                        selMin[k] = std::min(selMin[k], isolated);
+                        selMax[k] = std::max(selMax[k], isolated);
+                    }
                 }
             }
         }
 
-
-
-
-        auto channel = m_effect->channel();
-        auto channelType = channel->info().type;
-
-        if(channelType == ChannelInfo::ChannelTypeBool ||
-            channelType == ChannelInfo::ChannelTypeInteger ||
-            channelType == ChannelInfo::ChannelTypeIntegerStep ||
-            channelType == ChannelInfo::ChannelTypeNumber)
+        for(int k = 0; k < subChannelCount; ++k)
         {
-            interval = (right - left)/width();
-            m_channelPath.moveTo(left,channel->processValue(left - startTime).toDouble());
+            if(colMax[k] < colMin[k]) { colMin[k] = 0; colMax[k] = 0; }
+            m_effectBands[k].topY[c]    = valueToY(colMax[k]);
+            m_effectBands[k].bottomY[c] = valueToY(colMin[k]);
 
-            double d = left;
-            while( d < right )
+            if(wantIsolated)
             {
-                d += interval;
-                m_channelPath.lineTo(d, channel->processValue(d - startTime).toDouble());
+                if(selMax[k] < selMin[k]) { selMin[k] = 0; selMax[k] = 0; }
+                m_selectedBands[k].topY[c]    = valueToY(selMax[k]);
+                m_selectedBands[k].bottomY[c] = valueToY(selMin[k]);
             }
+        }
+    }
+    delete[] fullValues;
+    delete[] upstreamValues;
+
+    // ---- channel value band ----
+    const auto channelType = channel->info().type;
+    if(channelType == ChannelInfo::ChannelTypeBool ||
+       channelType == ChannelInfo::ChannelTypeInteger ||
+       channelType == ChannelInfo::ChannelTypeIntegerStep ||
+       channelType == ChannelInfo::ChannelTypeNumber)
+    {
+        m_channelBand.startX = startX;
+        m_channelBand.topY.resize(columns);
+        m_channelBand.bottomY.resize(columns);
+
+        for(int c = 0; c < columns; ++c)
+        {
+            const int x = startX + c;
+            const double tL = inv.map(QPointF(x, 0.0)).x();
+            const double tR = inv.map(QPointF(x + 1, 0.0)).x();
+
+            double mn = std::numeric_limits<double>::max();
+            double mx = std::numeric_limits<double>::lowest();
+            for(int s = 0; s < subSamples; ++s)
+            {
+                const double t = tL + (tR - tL) * (s / subDiv);
+                const double v = channel->processValue(t - startTime).toDouble();
+                if(!std::isfinite(v))
+                    continue;
+                mn = std::min(mn, v);
+                mx = std::max(mx, v);
+            }
+            if(mx < mn) { mn = 0; mx = 0; }
+            m_channelBand.topY[c]    = valueToY(mx);
+            m_channelBand.bottomY[c] = valueToY(mn);
         }
     }
 }
@@ -711,6 +852,12 @@ void ChannelEffectEditor::fitY()
 
 ChannelEffectEditor::~ChannelEffectEditor()
 {
+    // If the Properties panel is still showing our widgets (wired to this editor),
+    // clear it so the Project deletes our container before we're gone.
+    if(m_impl->propertiesContainer &&
+       photonApp->project()->propertiesWidget() == m_impl->propertiesContainer)
+        photonApp->project()->setPropertiesWidget(nullptr);
+
     delete m_impl;
 }
 
@@ -721,15 +868,25 @@ void ChannelEffectEditor::addItem(QGraphicsItem *t_item)
 
 void ChannelEffectEditor::addWidget(QWidget *t_widget, const QString &t_name)
 {
-    WidgetContainer *container = new WidgetContainer(t_widget, t_name);
-    m_impl->scene->addItem(container);
-    container->addedToScene(m_impl->scene);
+    // Property widgets go to the shared Properties panel rather than a floating box
+    // on the curve, keeping the canvas to just the waveform + gizmos.
+    if(!m_impl->propertiesContainer)
+    {
+        m_impl->propertiesContainer = new QWidget;
+        auto *containerLayout = new QVBoxLayout(m_impl->propertiesContainer);
+        containerLayout->setContentsMargins(4,4,4,4);
+        containerLayout->addStretch(1);
+    }
 
-    m_impl->containers.append(container);
+    auto *group = new QGroupBox(t_name);
+    auto *groupLayout = new QVBoxLayout(group);
+    groupLayout->setContentsMargins(6,6,6,6);
+    groupLayout->addWidget(t_widget);
 
-    auto r = container->rect();
+    auto *containerLayout = static_cast<QVBoxLayout*>(m_impl->propertiesContainer->layout());
+    containerLayout->insertWidget(containerLayout->count() - 1, group);   // before the trailing stretch
 
-    container->setPos(QPointF(width() -(r.width() + 10), 10));
+    photonApp->project()->setPropertiesWidget(m_impl->propertiesContainer);
 }
 
 void ChannelEffectEditor::removeWidget(QWidget *t_widget)

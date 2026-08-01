@@ -1,6 +1,6 @@
 #include <QHBoxLayout>
 #include <QLabel>
-#include <QDoubleSpinBox>
+#include "view/numberscrubfield.h"
 #include <QCheckBox>
 #include "loopeffect.h"
 #include "sequence/viewer/stackedparameterwidget.h"
@@ -9,9 +9,10 @@ namespace photon {
 
 LoopEffectEditor::LoopEffectEditor(LoopEffect *t_effect):ChannelEffectEditor(t_effect),m_effect(t_effect)
 {
-    QDoubleSpinBox *durationSpin = new QDoubleSpinBox;
+    keira::NumberScrubField *durationSpin = new keira::NumberScrubField;
+    durationSpin->setMinimum(.001);   // a zero loop duration divides by zero
     durationSpin->setValue(m_effect->duration());
-    connect(durationSpin, &QDoubleSpinBox::valueChanged, this, &LoopEffectEditor::durationChanged);
+    connect(durationSpin, &keira::NumberScrubField::valueChanged, this, &LoopEffectEditor::durationChanged);
 
 
     QCheckBox *mirrorCheck = new QCheckBox;

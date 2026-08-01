@@ -29,6 +29,8 @@ protected:
     void mouseMoveEvent(QGraphicsSceneMouseEvent *event) override;
 
 private:
+    void updateCursor();
+
     int m_orientation = Qt::Horizontal | Qt::Vertical;
     std::function<void(QPointF)> m_callback;
     QRectF m_rect;

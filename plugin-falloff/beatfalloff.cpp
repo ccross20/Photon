@@ -1,7 +1,7 @@
 #include "beatfalloff.h"
 #include "sequence/fixtureclip.h"
 #include "sequence/sequence.h"
-#include "sequence/beatlayer.h"
+#include "audio/songdata.h"
 
 namespace photon {
 
@@ -32,8 +32,11 @@ double BeatFalloff::falloff(Fixture *t_fixture) const
     if(!clip)
         return 0.0;
 
-    const auto &layers = clip->sequence()->beatLayers();
-    if(layers.empty())
+    // Beats come from the sequence's analysed beat grid, not a BeatLayer: layers
+    // are reserved for user-authored custom cues, while the beat grid is derived
+    // data that's always present once a file has been loaded and analysed.
+    SongData *songData = clip->sequence()->songData();
+    if(!songData || songData->beats().isEmpty())
         return 0.0;
 
     QVector<double> m_offsets;
@@ -50,11 +53,11 @@ double BeatFalloff::falloff(Fixture *t_fixture) const
     std::sort(fixtures.begin(), fixtures.end(),[m_map](Fixture *a, Fixture *b){return m_map.value(a) < m_map.value(b);});
     m_map.clear();
 
-    const auto &layer = layers.front();
+    const QVector<double> &beats = songData->beats().beats();
     double start = clip->startTime();
 
     auto fixIt = fixtures.cbegin();
-    for(auto it = layer->beats().constBegin(); it != layer->beats().constEnd() && fixIt != fixtures.cend(); ++it)
+    for(auto it = beats.constBegin(); it != beats.constEnd() && fixIt != fixtures.cend(); ++it)
     {
         if(*it < start)
         {

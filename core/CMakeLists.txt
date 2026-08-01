@@ -49,6 +49,12 @@ set(PROJECT_SOURCES
         photon-global.h
         audio/audioprocessor.h
         audio/audioprocessor.cpp
+        audio/songdata.h
+        audio/songdata.cpp
+        audio/levelanalysisprocess.h
+        audio/levelanalysisprocess.cpp
+        audio/virtualdjcaptureprocess.h
+        audio/virtualdjcaptureprocess.cpp
         parametereditor.h
         parametereditor.cpp
         channel/parameter/boolchannelparameter.h
@@ -176,6 +182,12 @@ set(PROJECT_SOURCES
         gui/color/simpleswatch.cpp
         gui/dialog/canvasdialog.h
         gui/dialog/canvasdialog.cpp
+        gui/dialog/settingsdialog.h
+        gui/dialog/settingsdialog.cpp
+        gui/dialog/appsettingspage.h
+        gui/dialog/appsettingspage.cpp
+        gui/dialog/generalsettingspage.h
+        gui/dialog/generalsettingspage.cpp
         gui/dmxviewer/dmxviewer.h
         gui/dmxviewer/dmxviewer.cpp
         gui/dmxviewer/dmxviewercells.h
@@ -184,6 +196,10 @@ set(PROJECT_SOURCES
         gui/dmxpatch/dmxpatchgrid.cpp
         gui/gizmo/rectanglegizmo.h
         gui/gizmo/rectanglegizmo.cpp
+        gui/gizmo/gizmohandle.h
+        gui/gizmo/gizmohandle.cpp
+        gui/gizmo/gizmogroup.h
+        gui/gizmo/gizmogroup.cpp
         gui/fixturefalloff2deditor.h
         gui/fixturefalloff2deditor_p.h
         gui/fixturefalloff2deditor.cpp
@@ -400,6 +416,8 @@ set(PROJECT_SOURCES
         settings/settings.cpp
         settings/settingspage.h
         settings/settingspage.cpp
+        settings/applicationsettings.h
+        settings/applicationsettings.cpp
         state/colorstate.h
         state/colorstate.cpp
         state/colorwheelstate.h
@@ -533,21 +551,17 @@ add_library(photon-core SHARED ${PROJECT_SOURCES}
     graph/node/fixture/fixturegroupnode.h graph/node/fixture/fixturegroupnode.cpp
     sequence/baseeffectparent.h
     data/commonmodel.h data/commonmodel.cpp
-    channel/togglegizmochanneleffect.h channel/togglegizmochanneleffect.cpp
-    channel/gizmoretimechanneleffect.h channel/gizmoretimechanneleffect.cpp
     state/wheelslotanglestate.h state/wheelslotanglestate.cpp
     gui/panel/surfacecollectionpanel.h gui/panel/surfacecollectionpanel.cpp
     gui/panel/surfacecollectionpanel_p.h
     surface/gizmofactory.h surface/gizmofactory.cpp
     gui/color/colorpalettewidget.h gui/color/colorpalettewidget.cpp
     surface/palettegizmo.h surface/palettegizmo.cpp
-    channel/palettegizmochanneleffect.h channel/palettegizmochanneleffect.cpp
-    surface/gizmochanneleffect.h surface/gizmochanneleffect.cpp
     resources/fixtures/betopper-bee-eye.json resources/fixtures/betopper-lb150.json resources/fixtures/betopper-LPC1818.json resources/fixtures/both-lighting-ir-4.json resources/fixtures/Chauvet-Pyxis.json resources/fixtures/proteus-hybrid.json resources/fixtures/shehds-jws-web.json resources/fixtures/shehds-led-18x18.json
     graph/node/gizmo/buttongizmonode.h graph/node/gizmo/buttongizmonode.cpp
     graph/node/fixture/fixturesubgraphnode.h graph/node/fixture/fixturesubgraphnode.cpp
     graph/parameter/fixturelistparameter.h graph/parameter/fixturelistparameter.cpp
-    graph/node/fixture/fixtureglobalsnode.h graph/node/fixture/fixtureglobalsnode.cpp
+    graph/node/graphcontextnode.h graph/node/graphcontextnode.cpp
     resources/fixtures/martin-mac-quantum.json
     surface/slidergizmo.h surface/slidergizmo.cpp
     graph/node/gizmo/slidergizmonode.h graph/node/gizmo/slidergizmonode.cpp
@@ -560,13 +574,11 @@ add_library(photon-core SHARED ${PROJECT_SOURCES}
     data/dmxtimemachine.h data/dmxtimemachine.cpp
     graph/node/pixel/pixelgraph.h graph/node/pixel/pixelgraph.cpp
     graph/parameter/pixellistparameter.h graph/parameter/pixellistparameter.cpp
-    graph/node/pixel/pixelglobalsnode.h graph/node/pixel/pixelglobalsnode.cpp
     virtualdj/virtualdjconnector.h virtualdj/virtualdjconnector.cpp
     resources/fixtures/elation-dartz-360.json
     rhi/rhicontext.h rhi/rhicontext.cpp
     graph/parameter/rhitextureparameter.h graph/parameter/rhitextureparameter.cpp
     graph/parameter/pixellayoutlistparameter.h graph/parameter/pixellayoutlistparameter.cpp
-    graph/node/canvas/canvasglobalsnode.h graph/node/canvas/canvasglobalsnode.cpp
     graph/node/canvas/canvasoutputnode.h graph/node/canvas/canvasoutputnode.cpp
     graph/node/canvas/canvassubgraphnode.h graph/node/canvas/canvassubgraphnode.cpp
     graph/node/canvas/canvasrendermanager.h graph/node/canvas/canvasrendermanager.cpp

@@ -30,15 +30,17 @@ keira::NodeInformation PointInputNode::info()
     toReturn.name = "Point Input";
     toReturn.nodeId = "photon.routine.point-input";
     toReturn.categories = {"Input"};
-    toReturn.graphs = QByteArrayList{"routine"};
+    toReturn.graphs = QByteArrayList{"routine","fixture","canvas","pixel"};
+    toReturn.inputParameterType = Point2DParameter::ParameterId;
 
     return toReturn;
 }
 
-PointInputNode::PointInputNode() : keira::Node("photon.routine.point-input"),m_impl(new Impl)
+PointInputNode::PointInputNode() : keira::GraphInputNode("photon.routine.point-input"),m_impl(new Impl)
 {
     setName("Point Input");
     setWidth(300);
+    setValuePortId(Value);
 }
 
 PointInputNode::~PointInputNode()
@@ -54,7 +56,13 @@ void PointInputNode::markDirty(int t_dirty)
     {
         if(auto *routine = dynamic_cast<Routine*>(graph()))
             routine->updateChannel(m_impl->index, channelInfo());
+        notifyInterfaceChanged();
     }
+}
+
+QString PointInputNode::portName() const
+{
+    return m_impl->nameParam->value().toString();
 }
 
 void PointInputNode::setValue(const QByteArray &t_id, const QVariant &t_value)
@@ -65,6 +73,7 @@ void PointInputNode::setValue(const QByteArray &t_id, const QVariant &t_value)
     {
         if(auto *routine = dynamic_cast<Routine*>(graph()))
             routine->updateChannel(channelIndex(), channelInfo());
+        notifyInterfaceChanged();
     }
 
 }
@@ -103,11 +112,10 @@ void PointInputNode::createParameters()
     addParameter(m_impl->defaultValueParam);
 }
 
-void PointInputNode::evaluate(keira::EvaluationContext *t_context) const
+void PointInputNode::evaluate(keira::EvaluationContext *) const
 {
-    //RoutineEvaluationContext *context = static_cast<RoutineEvaluationContext*>(t_context);
-
-    //m_impl->valueParam->setValue(context->channelValues.value(uniqueId(),m_impl->defaultValueParam->value()));
+    // Subgraph path relies on the enclosing SubGraphNode's applyInputs() having
+    // set the value port already; see NumberInputNode::evaluate.
 }
 
 void PointInputNode::readFromJson(const QJsonObject &t_object, keira::NodeLibrary *t_library)

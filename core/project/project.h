@@ -3,6 +3,8 @@
 
 #include "photon-global.h"
 
+class QWidget;
+
 namespace photon {
 
 class SceneManager;
@@ -36,6 +38,13 @@ public:
     QList<SceneObject*> selectedSceneObjects() const;
     void setSelectedSceneObjects(const QList<SceneObject*> &objs);
 
+    // The widget shown in the Properties/Attributes panel. Any editor (scene-object
+    // selection, a selected channel effect, ...) can set it; the Project owns it and
+    // deletes the previous one. Set nullptr to clear. This lets one shared panel
+    // serve multiple selection sources.
+    QWidget *propertiesWidget() const;
+    void setPropertiesWidget(QWidget *widget);
+
     void save(const QString &path = QString{}) const;
     void load(const QString &path = QString{});
     void restore(Project &);
@@ -48,6 +57,9 @@ signals:
     // single selected object (e.g. the Properties panel, the visualizer).
     void selectedSceneObjectChanged(photon::SceneObject *);
     void selectedSceneObjectsChanged(const QList<photon::SceneObject*> &objs);
+    // The Properties-panel widget changed. The panel displays the new widget; the
+    // Project owns and deletes the old one.
+    void propertiesWidgetChanged(QWidget *);
 
 private:
     class Impl;

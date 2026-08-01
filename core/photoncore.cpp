@@ -65,6 +65,15 @@ PhotonCore::Impl::Impl(PhotonCore *t_core):
 
 PhotonCore::Impl::~Impl()
 {
+    // Stop the eval thread (and let go of the project's bus) before anything it
+    // might reference starts getting torn down below - otherwise a tick landing
+    // mid-shutdown dereferences already-freed state. Mirrors the ordering
+    // PhotonCore::closeProject() uses when switching projects; unlike that path
+    // there's no one left to notify, so this skips straight to the delete.
+    // BusEvaluator's destructor synchronously stops/joins its eval thread before
+    // returning, so the project below is guaranteed nothing can tick it anymore.
+    delete busEvaluator;
+    delete project;
 
     delete djConnector;
     delete canvasRenderManager;   // stop the render timer before the device it uses

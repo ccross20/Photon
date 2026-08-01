@@ -3,7 +3,6 @@
 
 #include <QComboBox>
 #include "sequence/channeleffect.h"
-#include "gui/gizmo/rectanglegizmo.h"
 
 namespace photon {
 
@@ -18,14 +17,9 @@ public:
 private slots:
     void comboChanged(int);
 
-protected:
-    void relayout(const QRectF &) override;
-
 private:
     QComboBox *m_combo;
     MasterLayerChannelEffect *m_effect;
-    RectangleGizmo *m_originHandle;
-    QGraphicsPathItem *m_pathItem;
 
 };
 

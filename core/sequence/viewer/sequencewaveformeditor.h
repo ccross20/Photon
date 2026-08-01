@@ -3,6 +3,8 @@
 #include "gui/waveformwidget.h"
 #include "photon-global.h"
 
+class QPainter;
+
 namespace photon {
 
 class SequenceWaveformEditor : public WaveformWidget
@@ -31,6 +33,8 @@ protected:
     virtual void keyPressEvent(QKeyEvent*) override;
 
 private:
+    void drawFeatureOverlay(QPainter &painter);
+
     class Impl;
     Impl *m_impl;
 };

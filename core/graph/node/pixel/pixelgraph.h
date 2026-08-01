@@ -9,7 +9,7 @@
 
 namespace photon {
 
-class PixelGlobalsNode;
+class GraphContextNode;
 
 class PHOTONCORE_EXPORT PixelGraph: public keira::SubGraphNode
 {
@@ -31,8 +31,7 @@ public:
     virtual void readFromJson(const QJsonObject &, keira::NodeLibrary *library) override;
 
 protected:
-    void parameterWasAdded(keira::Parameter*) override;
-    void parameterWasRemoved(keira::Parameter*) override;
+    keira::NodeLibrary *nodeLibrary() const override;
     void parameterWasModified(keira::Parameter*) override;
 
 private:
@@ -40,9 +39,7 @@ private:
     keira::BooleanParameter *m_enabledParam;
     keira::BooleanParameter *m_useTimeMachineParam;
     PixelListParameter *m_pixelsParam;
-    PixelGlobalsNode *m_globalsNode;
-    QVector<keira::Parameter*> m_passThroughParams;
-    QVector<keira::Parameter*> m_globalsParams;
+    GraphContextNode *m_globalsNode;
     DMXTimeMachine *m_timeMachine;
 };
 

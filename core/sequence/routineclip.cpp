@@ -5,6 +5,8 @@
 #include "routine/routinecollection.h"
 #include "project/project.h"
 #include "sequence.h"
+#include "model/graphinputnode.h"
+#include "sequence/channel.h"
 
 namespace photon {
 
@@ -12,35 +14,15 @@ class RoutineClip::Impl
 {
 public:
     ~Impl();
-    void processFixture(Fixture *, RoutineEvaluationContext &, double);
     Routine *routine = nullptr;
     RoutineClip *facade;
 };
 
 RoutineClip::Impl::~Impl()
 {
-    if(routine)
-        delete routine;
-}
-
-void RoutineClip::Impl::processFixture(Fixture *t_fixture, RoutineEvaluationContext &t_context, double initialRelativeTime)
-{
-    t_context.relativeTime = initialRelativeTime - facade->falloff(t_fixture);
-    if(t_context.relativeTime < 0)
-        return;
-
-    t_context.fixture = t_fixture;
-    t_context.strength = facade->strengthAtTime(t_context.relativeTime);
-
-    /*
-    t_context.channelValues.clear();
-    for(const auto &channel : facade->channels())
-    {
-        t_context.channelValues.insert(channel->uniqueId(), channel->processValue(t_context.relativeTime));
-    }
-*/
-    routine->evaluate(&t_context);
-    routine->markClean();
+    // The routine is shared — owned by the project's RoutineCollection and
+    // referenced by multiple clips ("edit one updates all"). The clip must not
+    // delete it.
 }
 
 RoutineClip::RoutineClip(QObject *t_parent) : FixtureClip(t_parent),m_impl(new Impl)
@@ -67,16 +49,34 @@ void RoutineClip::processChannels(ProcessContext &t_context)
 
     double initialRelativeTime = t_context.globalTime - startTime();
 
+    // Drive the routine's exposed inputs from this clip's channels — the timeline
+    // automation. Values are constant across fixtures, so set them once before the
+    // fixture loop. Bound by portId (== the channel's uniqueId, which is the input
+    // node's id), not by index.
+    const auto clipChannels = channels();
+    for(auto *port : m_impl->routine->inputPorts())
+    {
+        for(auto *channel : clipChannels)
+        {
+            if(channel->uniqueId() == port->portId())
+            {
+                port->setPortValue(channel->processValue(initialRelativeTime));
+                break;
+            }
+        }
+    }
+
     RoutineEvaluationContext localContext(t_context.dmxMatrix);
     localContext.globalTime = t_context.globalTime;
     localContext.relativeTime = initialRelativeTime;
-    localContext.fixture = t_context.fixture;
     localContext.project = t_context.project;
+    localContext.strength = strengthAtTime(initialRelativeTime);
 
-    for(auto fixture : maskedFixtures())
-    {
-        m_impl->processFixture(fixture, localContext, initialRelativeTime);
-    }
+    // Model (b): evaluate the graph once. A FixtureStateNode inside iterates its
+    // own fixture list and applies per-fixture offset — there is no clip-side
+    // fixture loop. The clip's strength/ease envelope flows in via context.strength.
+    m_impl->routine->evaluate(&localContext);
+    m_impl->routine->markClean();
 }
 
 void RoutineClip::setRoutine(Routine *t_routine)
@@ -85,6 +85,12 @@ void RoutineClip::setRoutine(Routine *t_routine)
         return;
 
     clearChannels();
+
+    // Channel 0 is always the clip's strength envelope (the base Clip constructor
+    // creates it; clearChannels() above removed it). strengthAtTime() reads
+    // channel 0, so recreate it before the routine's channels.
+    addChannel(ChannelInfo(ChannelInfo::ChannelTypeNumber, "Strength", "Strength", 1.0));
+
     m_impl->routine = t_routine;
 
     for(const auto &info : m_impl->routine->channelInfo())
@@ -103,20 +109,27 @@ void RoutineClip::setRoutine(Routine *t_routine)
 
 void RoutineClip::routineChannelUpdatedSlot(int t_index)
 {
-    channels()[t_index]->updateInfo(m_impl->routine->channelInfoAtIndex(t_index));
+    // Clip channel 0 is the strength envelope, so routine channel i lives at i+1.
+    channels()[t_index + 1]->updateInfo(m_impl->routine->channelInfoAtIndex(t_index));
 }
 
 void RoutineClip::channelAddedSlot(int t_index)
 {
+    // Appends after the strength channel and any existing routine channels.
     addChannel(m_impl->routine->channelInfoAtIndex(t_index), t_index);
 }
 
 void RoutineClip::channelRemovedSlot(int t_index)
 {
-    removeChannel(t_index);
+    removeChannel(t_index + 1);
 }
 
 Routine *RoutineClip::routine() const
+{
+    return m_impl->routine;
+}
+
+Routine *RoutineClip::contentGraph() const
 {
     return m_impl->routine;
 }

@@ -25,7 +25,7 @@ keira::NodeInformation FixtureStateNode::info()
     toReturn.name = "Fixture State";
     toReturn.nodeId = "photon.node.fixture-state";
     toReturn.categories = {"Fixture"};
-    toReturn.graphs = QByteArrayList{"bus", "surface", "dmx-subgraph"};
+    toReturn.graphs = QByteArrayList{"bus", "surface", "dmx-subgraph", "routine"};
     return toReturn;
 }
 
@@ -192,6 +192,20 @@ void FixtureStateNode::evaluate(keira::EvaluationContext *t_context) const
     const auto fixtures = m_fixturesParam->value().value<QVector<FixtureParameterData>>();
 
     const double now = context->globalTime;
+
+    // A backward jump in time (scrub, rewind, loop replay) breaks the assumption
+    // below that samples are appended in increasing time order: sampleValueAt/
+    // enabledAt binary-search the deque assuming ascending time, so pushing an
+    // older timestamp onto the back of a deque still full of samples from the end
+    // of the previous playthrough corrupts every lookup until those stale entries
+    // age out - which, since nothing here is currently increasing `now`, is never.
+    // Simplest correct fix: a time jump invalidates the lookback window outright,
+    // so just wipe it and let it rebuild from here.
+    if(!m_enableHistory.empty() && now < m_enableHistory.back().time - 1e-6)
+    {
+        m_enableHistory.clear();
+        m_inputHistory.clear();
+    }
 
     // Prune histories older than the largest offset we might look back to.
     double maxOffset = 0.0;

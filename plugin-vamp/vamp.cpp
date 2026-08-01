@@ -42,7 +42,7 @@ void Vamp::audioError(QAudioDecoder::Error error)
 }
 
 
-const QList<float> &Vamp::beats()
+const QList<BeatEvent> &Vamp::beats()
 {
     return m_beats;
 }
@@ -57,7 +57,7 @@ toSeconds(const RealTime &time)
 void
 printFeatures(int frame, int sr,
               const Plugin::OutputDescriptor &output, int outputNo,
-              const Plugin::FeatureSet &features, QBuffer *out, bool useFrames, QList<float> &beats)
+              const Plugin::FeatureSet &features, QBuffer *out, bool useFrames, QList<BeatEvent> &beats)
 {
     QDataStream stream(out);
     static int featureCount = -1;
@@ -84,6 +84,10 @@ printFeatures(int frame, int sr,
             featureCount = n;
         }
 
+        // Some outputs (e.g. qm-barbeattracker's "beats") label each event with its
+        // 1-based position in the bar as a plain string. 0 when absent/unparseable.
+        const int barPosition = f.label.empty() ? 0 : QString::fromStdString(f.label).toInt();
+
         if (useFrames) {
 
             int displayFrame = frame;
@@ -97,7 +101,7 @@ printFeatures(int frame, int sr,
                 displayFrame = RealTime::realTime2Frame(f.duration, sr);
             }
 
-            beats << displayFrame;
+            beats << BeatEvent{double(displayFrame), barPosition};
 
         } else {
 
@@ -110,24 +114,33 @@ printFeatures(int frame, int sr,
                 m_rt = f.duration;
             }
 
-            beats << m_rt.sec + m_rt.msec()/1000.0f;
+            beats << BeatEvent{m_rt.sec + m_rt.msec()/1000.0, barPosition};
 
         }
-/*
-        for (unsigned int j = 0; j < f.values.size(); ++j) {
-            qDebug() << " " << f.values[j];
-        }
-        qDebug() << " " << QString::fromStdString(f.label);
-*/
 
     }
 }
 
 void Vamp::bufferReady()
 {
+    if(m_failed)
+        return;
+
     auto buffer = m_decoder->read();
     if(!m_started)
-        startReading(buffer);
+    {
+        if(!startReading(buffer))
+        {
+            // Plugin failed to load (e.g. not installed/discoverable). m_blockSize,
+            // m_plugbuf etc. were never set up, so bail out here rather than falling
+            // through to processPlugin() and dereferencing a null m_plugin.
+            m_failed = true;
+            qWarning() << "Vamp: plugin failed to load, aborting analysis.";
+            m_decoder->stop();
+            emit processingComplete();
+            return;
+        }
+    }
 
     m_count += buffer.frameCount();
 
@@ -180,6 +193,8 @@ void Vamp::processPlugin(int t_frames)
 
 void Vamp::finished()
 {
+    if(m_failed)
+        return;   // already reported via bufferReady(); nothing left to flush
 
     processPlugin(m_count);
     m_rt = RealTime::frame2RealTime(m_currentStep * m_stepSize, m_sampleRate);

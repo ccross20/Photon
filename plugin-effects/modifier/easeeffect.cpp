@@ -1,7 +1,7 @@
 #include <QVBoxLayout>
 #include <QLabel>
 #include <QComboBox>
-#include <QDoubleSpinBox>
+#include "view/numberscrubfield.h"
 #include <QStyleOptionGraphicsItem>
 #include <QPainter>
 #include "easeeffect.h"
@@ -16,17 +16,17 @@ EaseEffectEditor::EaseEffectEditor(EaseEffect *t_effect):ChannelEffectEditor(t_e
     //setMaximumHeight(40);
 
 
-    QDoubleSpinBox *easeInDurationSpin = new QDoubleSpinBox;
+    keira::NumberScrubField *easeInDurationSpin = new keira::NumberScrubField;
     easeInDurationSpin->setMinimum(.001);
     easeInDurationSpin->setMaximum(9999);
     easeInDurationSpin->setValue(m_effect->easeInDuration());
-    connect(easeInDurationSpin, &QDoubleSpinBox::valueChanged, this, &EaseEffectEditor::easeInDurationChanged);
+    connect(easeInDurationSpin, &keira::NumberScrubField::valueChanged, this, &EaseEffectEditor::easeInDurationChanged);
 
-    QDoubleSpinBox *easeOutDurationSpin = new QDoubleSpinBox;
+    keira::NumberScrubField *easeOutDurationSpin = new keira::NumberScrubField;
     easeOutDurationSpin->setMinimum(.001);
     easeOutDurationSpin->setMaximum(9999);
     easeOutDurationSpin->setValue(m_effect->easeOutDuration());
-    connect(easeOutDurationSpin, &QDoubleSpinBox::valueChanged, this, &EaseEffectEditor::easeOutDurationChanged);
+    connect(easeOutDurationSpin, &keira::NumberScrubField::valueChanged, this, &EaseEffectEditor::easeOutDurationChanged);
 
     QStringList easeStrings;
     easeStrings << "Linear";
@@ -98,17 +98,6 @@ EaseEffectEditor::EaseEffectEditor(EaseEffect *t_effect):ChannelEffectEditor(t_e
     paramWidget->addWidget(easeOutCombo, "Ease Out");
 
     addWidget(paramWidget, "Ease");
-
-
-    m_parentItem = new QGraphicsRectItem(0,0,0,0);
-    addItem(m_parentItem);
-
-
-
-    m_pathItem = new QGraphicsPathItem(m_parentItem);
-    m_pathItem->setPen(QPen(Qt::cyan, 2));
-    m_pathItem->setBrush(Qt::NoBrush);
-    //addItem(m_originHandle);
 }
 
 void EaseEffectEditor::easeInDurationChanged(double t_value)
@@ -129,37 +118,6 @@ void EaseEffectEditor::easeInChanged(int t_ease)
 void EaseEffectEditor::easeOutChanged(int t_ease)
 {
     m_effect->setEaseOutType(static_cast<QEasingCurve::Type>(t_ease));
-}
-
-void EaseEffectEditor::relayout(const QRectF &t_sceneRect)
-{
-    /*
-    auto t = transform();
-
-    double scaledFreq = m_effect->frequency();
-    double startTime = m_effect->channel()->startTime();
-
-    double x = startTime;
-
-    if(t_sceneRect.left() > startTime)
-    {
-        x = (ceil((t_sceneRect.left() - startTime) / scaledFreq) * scaledFreq) + startTime;
-    }
-
-    m_referencePt = QPoint(x,0);
-
-    m_parentItem->setPos(t.map(QPointF(x,0)));
-
-    m_originHandle->setPos(QPointF(0,0));
-    m_frequencyHandle->setPos(QPointF(scaledFreq * scale().x(),0));
-    m_amplitudeHandle->setPos(QPointF(0, m_effect->amplitude() * scale().y()));
-
-    QPainterPath path;
-    path.moveTo(m_frequencyHandle->pos());
-    path.lineTo(m_originHandle->pos());
-    path.lineTo(m_amplitudeHandle->pos());
-    m_pathItem->setPath(path);
-    */
 }
 
 EffectInformation EaseEffect::info()

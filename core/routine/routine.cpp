@@ -84,7 +84,7 @@ const QVector<ChannelInfo> &Routine::channelInfo() const
 
 void Routine::evaluate(keira::EvaluationContext *t_context) const
 {
-    auto routineContext = static_cast<RoutineEvaluationContext*>(t_context);
+    auto routineContext = dynamic_cast<RoutineEvaluationContext*>(t_context);
 
     if(routineContext)
     {
@@ -98,8 +98,15 @@ void Routine::evaluate(keira::EvaluationContext *t_context) const
     }
     else
     {
+        // No routine context (e.g. the node-editor's live preview passes a plain
+        // EvaluationContext). Wrap a scratch DMX matrix and carry the clock time
+        // through so time-based nodes (e.g. FixtureStateNode's per-fixture history)
+        // advance and stay bounded, and the preview animates.
         DMXMatrix matrix;
         RoutineEvaluationContext localContext(matrix);
+        localContext.globalTime   = t_context->time.elapsed;
+        localContext.relativeTime = t_context->time.elapsed;
+        localContext.frame        = static_cast<qlonglong>(t_context->time.frame);
 
         Graph::evaluate(&localContext);
     }

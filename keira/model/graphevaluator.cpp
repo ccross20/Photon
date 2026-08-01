@@ -55,12 +55,11 @@ public slots:
     void setEnabled(bool enabled)
     {
         m_enabled = enabled;
-        if (!m_timer)
-            return;
-        if (enabled && !m_timer->isActive())
+        // Keep the timer running even when disabled so queued structural edits
+        // (add/remove node, connect) still drain and apply — the editor must stay
+        // usable with auto-evaluate off. tick() skips only the evaluation itself.
+        if (m_timer && !m_timer->isActive())
             m_timer->start(FrameBudgetMs);
-        else if (!enabled)
-            m_timer->stop();
     }
 
     void setContextFactory(ContextFactory factory)
@@ -81,10 +80,16 @@ private slots:
 
         m_clock.tick(delta);
 
-        if (!m_enabled || !m_graph)
+        if (!m_graph)
             return;
 
+        // Apply queued structural edits every tick, even when paused, so the
+        // editor stays usable with auto-evaluate off.
         m_graph->drainCommandQueue();
+
+        if (!m_enabled)
+            return;
+
         m_graph->prepForEvaluation();
 
         const FrameTime frameTime = m_clock.currentTime();

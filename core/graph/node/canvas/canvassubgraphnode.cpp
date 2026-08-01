@@ -5,7 +5,7 @@
 #include <QCoreApplication>
 #include <QDebug>
 #include "canvassubgraphnode.h"
-#include "canvasglobalsnode.h"
+#include "graph/node/graphcontextnode.h"
 #include "canvasoutputnode.h"
 #include "canvasrendermanager.h"
 #include "canvasdmxsampler.h"
@@ -46,8 +46,8 @@ CanvasSubGraphNode::CanvasSubGraphNode() : keira::SubGraphNode("photon.node.canv
 {
     setName("Canvas Graph");
 
-    m_globalsNode = new CanvasGlobalsNode;
-    m_globalsNode->createParameters();
+    m_globalsNode = new GraphContextNode;
+    m_globalsNode->configure(GraphContextNode::canvasPorts());
     graph()->addNode(m_globalsNode);
 
     m_outputNode = new CanvasOutputNode;
@@ -95,35 +95,10 @@ void CanvasSubGraphNode::createParameters()
     addParameter(m_backgroundParam);
 }
 
-bool CanvasSubGraphNode::isBuiltInParam(keira::Parameter *t_param) const
+keira::NodeLibrary *CanvasSubGraphNode::nodeLibrary() const
 {
-    return t_param == m_widthParam || t_param == m_heightParam || t_param == m_enabledParam
-        || t_param == m_backgroundParam;
-}
-
-void CanvasSubGraphNode::parameterWasAdded(keira::Parameter *t_param)
-{
-    if (isBuiltInParam(t_param) || !m_globalsNode)
-        return;
-
     auto *app = qobject_cast<PhotonCore *>(QCoreApplication::instance());
-    if (!app)   // headless: no node library to clone through
-        return;
-
-    // Mirror the added parameter onto the Globals node as an output that inner
-    // nodes can wire from; its value is relayed each frame in renderMainThread().
-    auto *clone = t_param->clone(app->plugins()->nodeLibrary());
-    clone->setConnectionOptions(keira::AllowMultipleOutput);
-    m_globalsNode->addParameter(clone);
-    graph()->drainCommandQueue();
-
-    m_globalsParams.append(t_param);
-    m_passThroughParams.append(clone);
-}
-
-void CanvasSubGraphNode::parameterWasRemoved(keira::Parameter *)
-{
-    // Matches FixtureSubGraphNode/PixelGraph, which don't prune the Globals clone.
+    return app ? app->plugins()->nodeLibrary() : nullptr;
 }
 
 bool CanvasSubGraphNode::ensureSink(QRhi *rhi, const QSize &size) const
@@ -255,16 +230,9 @@ void CanvasSubGraphNode::renderMainThread() const
     if (!ensureSink(rhi, size))
         return;
 
-    // Push per-frame constants onto the Globals node for inner nodes to read.
-    m_globalsNode->setValue(CanvasGlobalsNode::WidthParam, size.width());
-    m_globalsNode->setValue(CanvasGlobalsNode::HeightParam, size.height());
-    m_globalsNode->setValue(CanvasGlobalsNode::TimeParam, m_relativeTime);
-    m_globalsNode->setValue(CanvasGlobalsNode::GlobalTimeParam, m_globalTime);
-
-    // Relay pass-through parameters (values wired into this node from the outer
-    // graph) onto their Globals-node clones for inner nodes to read.
-    for (int i = 0; i < m_passThroughParams.size(); ++i)
-        m_passThroughParams[i]->setValue(m_globalsParams[i]->value());
+    // The Globals (context) node publishes resolution/time to inner nodes from the
+    // inner evaluation context below; exposed graph inputs are relayed by the base
+    // SubGraphNode::applyInputs during evaluate().
 
     QRhiCommandBuffer *cb = nullptr;
     if (rhi->beginOffscreenFrame(&cb) != QRhi::FrameOpSuccess || !cb)
@@ -318,26 +286,10 @@ void CanvasSubGraphNode::readFromJson(const QJsonObject &t_json, keira::NodeLibr
 
     keira::SubGraphNode::readFromJson(t_json, t_library);
 
-    m_globalsNode = dynamic_cast<CanvasGlobalsNode *>(graph()->findNode("Globals"));
+    m_globalsNode = dynamic_cast<GraphContextNode *>(graph()->findNode("Globals"));
     m_outputNode = dynamic_cast<CanvasOutputNode *>(graph()->findNode("Output"));
     if (!m_globalsNode || !m_outputNode)
         qWarning() << "CanvasSubGraphNode: could not relink Globals/Output after load";
-
-    // Relink pass-through parameters to their Globals-node clones (both were
-    // restored by the load) by matching id.
-    m_globalsParams.clear();
-    m_passThroughParams.clear();
-    for (auto *param : parameters()) {
-        if (isBuiltInParam(param))
-            continue;
-        auto *nodeParam = m_globalsNode ? m_globalsNode->findParameter(param->id()) : nullptr;
-        if (nodeParam) {
-            m_globalsParams.append(param);
-            m_passThroughParams.append(nodeParam);
-        } else {
-            qWarning() << "CanvasSubGraphNode: could not relink pass-through param" << param->id();
-        }
-    }
 }
 
 QRhiTexture *CanvasSubGraphNode::outputTexture() const

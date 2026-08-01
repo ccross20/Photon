@@ -40,6 +40,9 @@ public:
     QByteArray uniqueId() const;
     Sequence *sequence() const;
     ClipLayer *layer() const;
+    // The clip's content graph (its inline routine or a referenced shared routine),
+    // or null for clips that aren't graph-backed. Lets the editor open it.
+    virtual Routine *contentGraph() const;
     virtual void processChannels(ProcessContext &);
     virtual bool timeIsValid(double) const;
     QByteArray type() const;

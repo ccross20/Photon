@@ -11,6 +11,7 @@ class PHOTONCORE_EXPORT SequenceNode : public keira::Node
 public:
     const static QByteArray InputDMX;
     const static QByteArray OutputDMX;
+    const static QByteArray SequenceParam;
 
     SequenceNode();
     ~SequenceNode();

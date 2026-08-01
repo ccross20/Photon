@@ -5,6 +5,7 @@
 #include "sequenceclip.h"
 #include "sequence/clip.h"
 #include "sequence/cliplayer.h"
+#include "photoncore.h"
 
 namespace photon {
 
@@ -176,6 +177,15 @@ void SequenceClip::contextMenuEvent(QGraphicsSceneContextMenuEvent *event)
     Clip *clip = m_impl->clip;
 
     QMenu menu;
+
+    if(clip->contentGraph())
+    {
+        menu.addAction("Open Graph", [clip](){
+            photonApp->editRoutine(clip->contentGraph());
+        });
+        menu.addSeparator();
+    }
+
     menu.addAction("Remove Clip", [clip](){
         clip->layer()->removeClip(clip);
         delete clip;

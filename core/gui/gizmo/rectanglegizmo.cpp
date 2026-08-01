@@ -11,6 +11,7 @@ RectangleGizmo::RectangleGizmo(const QRectF &t_rect, std::function<void(QPointF)
 {
     setFlags(QGraphicsItem::ItemIsMovable | QGraphicsItem::ItemSendsScenePositionChanges);
     setAcceptHoverEvents(true);
+    updateCursor();
 }
 
 void RectangleGizmo::setRect(const QRectF &t_rect)
@@ -22,6 +23,20 @@ void RectangleGizmo::setRect(const QRectF &t_rect)
 void RectangleGizmo::setOrientation(Qt::Orientation t_orientation)
 {
     m_orientation = t_orientation;
+    updateCursor();
+}
+
+void RectangleGizmo::updateCursor()
+{
+    // Cursor advertises which way the handle moves.
+    const bool horizontal = m_orientation & Qt::Horizontal;
+    const bool vertical   = m_orientation & Qt::Vertical;
+    if(horizontal && vertical)
+        setCursor(Qt::SizeAllCursor);
+    else if(horizontal)
+        setCursor(Qt::SizeHorCursor);
+    else
+        setCursor(Qt::SizeVerCursor);
 }
 
 QRectF RectangleGizmo::boundingRect() const
@@ -64,12 +79,12 @@ QVariant RectangleGizmo::itemChange(QGraphicsItem::GraphicsItemChange change, co
     if (change == ItemPositionChange && scene()) {
 
         QPointF newPos = value.toPointF();
-        /*
+        // Lock to the handle's axis: a horizontal-only handle can't move in y, a
+        // vertical-only handle can't move in x. (Default is free 2D movement.)
+        if(!(m_orientation & Qt::Horizontal))
+            newPos.setX(pos().x());
         if(!(m_orientation & Qt::Vertical))
             newPos.setY(pos().y());
-        if(!(m_orientation == Qt::Horizontal))
-            newPos.setX(pos().x());
-            */
         return newPos;
     }
 

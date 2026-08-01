@@ -23,6 +23,11 @@ struct KEIRA_EXPORT NodeInformation
     QString name;
     std::function<Node*()> callback;
 
+    // If set, this is a GraphInputNode that exposes a port of this parameter
+    // typeId. Lets the editor auto-create the right input node when a wire of that
+    // type is dropped on a subgraph. Empty for ordinary nodes.
+    QByteArray inputParameterType;
+
     NodeCategoryList categories;
 };
 

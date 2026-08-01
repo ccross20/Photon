@@ -3,7 +3,6 @@
 
 #include <QEasingCurve>
 #include "sequence/channeleffect.h"
-#include "gui/gizmo/rectanglegizmo.h"
 
 namespace photon {
 
@@ -21,16 +20,8 @@ private slots:
     void easeInChanged(int);
     void easeOutChanged(int);
 
-protected:
-    void relayout(const QRectF &) override;
-
 private:
     EaseEffect *m_effect;
-    QPointF m_referencePt;
-    RectangleGizmo *m_startHandle;
-    RectangleGizmo *m_endHandle;
-    QGraphicsRectItem *m_parentItem;
-    QGraphicsPathItem *m_pathItem;
 
 };
 

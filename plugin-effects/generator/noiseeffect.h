@@ -3,12 +3,14 @@
 
 #include <QGraphicsItem>
 #include "sequence/channeleffect.h"
-#include "gui/gizmo/rectanglegizmo.h"
+#include "gui/gizmo/gizmogroup.h"
 #include "util/noisegenerator.h"
 
 namespace photon {
 
 class NoiseEffect;
+class GizmoGroup;
+class GizmoHandle;
 
 
 class NoiseEffectEditor : public ChannelEffectEditor
@@ -28,12 +30,11 @@ protected:
 
 private:
     NoiseEffect *m_effect;
-    QPointF m_referencePt;
-    QGraphicsRectItem *m_parentItem;
-    RectangleGizmo *m_originHandle;
-    RectangleGizmo *m_frequencyHandle;
-    RectangleGizmo *m_amplitudeHandle;
-    QGraphicsPathItem *m_pathItem;
+    double m_referenceTime = 0;
+    GizmoGroup *m_gizmos;
+    GizmoHandle *m_originHandle;
+    GizmoHandle *m_frequencyHandle;
+    GizmoHandle *m_amplitudeHandle;
 
 };
 
@@ -52,6 +53,7 @@ public:
     int seed() const{return m_seed;}
     int type() const{return m_noiseType;}
     float * process(float *value, uint size, double time) const override;
+    bool providesIsolatedContribution() const override { return true; }
     ChannelEffectEditor *createEditor() override;
 
     void readFromJson(const QJsonObject &) override;

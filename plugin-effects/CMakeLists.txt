@@ -15,6 +15,8 @@ find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Widgets)
 set(SOURCES
     generator/beatintegereffect.h
     generator/beatintegereffect.cpp
+    generator/songfeatureeffect.h
+    generator/songfeatureeffect.cpp
     generator/noiseeffect.h
     generator/noiseeffect.cpp
     generator/pulseeffect.h
@@ -29,6 +31,12 @@ set(SOURCES
     mask/treemaskeffect.cpp
     modifier/easeeffect.h
     modifier/easeeffect.cpp
+    modifier/comparatoreffect.h
+    modifier/comparatoreffect.cpp
+    modifier/peakholdeffect.h
+    modifier/peakholdeffect.cpp
+    modifier/channelremapeffect.h
+    modifier/channelremapeffect.cpp
     modifier/smootheffect.h
     modifier/smootheffect.cpp
     time/loopeffect.h
@@ -41,8 +49,7 @@ set(SOURCES
 
 add_library(plugin-effects SHARED ${SOURCES}
     mask/tagmaskeffect.h mask/tagmaskeffect.cpp
-    generator/stepeffect.h generator/stepeffect.cpp
-    modifier/gizmoeaseeffect.h modifier/gizmoeaseeffect.cpp)
+    generator/stepeffect.h generator/stepeffect.cpp)
 
 
 
@@ -59,6 +66,7 @@ include_directories("${PROJECT_SOURCE_DIR}/third-party")
 #target_compile_definitions(plugin-visualizer PRIVATE PLUGINVISUALIZER_LIBRARY)
 
 target_link_libraries(plugin-effects PRIVATE photon-core)
+target_link_libraries(plugin-effects PRIVATE keira)
 
 set_target_properties(plugin-effects PROPERTIES
                       RUNTIME_OUTPUT_DIRECTORY_DEBUG "${PROJECT_BINARY_DIR}/../photon-desktop/extensions/channel-effects/"

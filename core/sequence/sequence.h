@@ -33,6 +33,17 @@ public:
     const QVector<Layer*> &layers() const;
     Project *project() const;
 
+    // The sequence's song analysis (beats, level/frequency envelopes). Owned here;
+    // persisted to a binary sidecar next to the .seq on save/load.
+    SongData *songData() const;
+
+    // Editor playhead position, updated by whichever SequenceWidget has this
+    // sequence open (or by a live preview driver) and read by anything wanting to
+    // preview the sequence at "wherever the timeline is right now" - e.g.
+    // SequenceNode. Thread-safe: safe to call from any thread.
+    double previewTime() const;
+    void setPreviewTime(double);
+
     void processChannels(ProcessContext &, double lastTime);
 
 

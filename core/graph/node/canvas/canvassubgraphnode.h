@@ -19,7 +19,7 @@ class QRhiRenderPassDescriptor;
 
 namespace photon {
 
-class CanvasGlobalsNode;
+class GraphContextNode;
 class CanvasOutputNode;
 class CanvasRenderManager;
 class CanvasDmxSampler;
@@ -78,20 +78,13 @@ public:
     QColor backgroundColor() const;
 
 protected:
-    // Exposes parameters added to this node on the inner graph's Globals node (as
-    // outputs inner nodes can read), and relays their values each frame. Same
-    // pass-through pattern as FixtureSubGraphNode/PixelGraph.
-    void parameterWasAdded(keira::Parameter *) override;
-    void parameterWasRemoved(keira::Parameter *) override;
+    keira::NodeLibrary *nodeLibrary() const override;
 
 private:
     // (Re)creates the sink texture + render target when missing or resized. Runs
     // inside evaluate(), on the shared device. Returns false if creation failed.
     bool ensureSink(QRhi *rhi, const QSize &size) const;
     void releaseSink() const;
-
-    // True for the node's own built-in params (not passed through to Globals).
-    bool isBuiltInParam(keira::Parameter *) const;
 
     // Worker-thread: each Output node writes the colours it gathered into the
     // frame's DMX matrix via its assigned layouts.
@@ -102,14 +95,8 @@ private:
     keira::BooleanParameter *m_enabledParam = nullptr;
     ColorParameter *m_backgroundParam = nullptr;
 
-    CanvasGlobalsNode *m_globalsNode = nullptr;
+    GraphContextNode *m_globalsNode = nullptr;
     CanvasOutputNode *m_outputNode = nullptr;
-
-    // Parameter pass-through: for each user-added parameter on this node, a clone
-    // lives on the Globals node (output). m_globalsParams holds the originals on
-    // this node; m_passThroughParams holds the Globals-node clones, index-aligned.
-    QVector<keira::Parameter *> m_globalsParams;
-    QVector<keira::Parameter *> m_passThroughParams;
 
     // Non-null in the app (registered for main-thread rendering); null in headless
     // tests, where evaluate() renders inline.

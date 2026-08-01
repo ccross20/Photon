@@ -2,6 +2,8 @@
 #include "parameter/parameter_p.h"
 #include "parameter/anyparameter.h"
 #include "graphsorter.h"
+#include "graphinputnode.h"
+#include "graphoutputnode.h"
 #include "node_p.h"
 #include "library/nodelibrary.h"
 
@@ -76,12 +78,23 @@ void Graph::drainCommandQueue()
         commands = std::move(m_impl->pendingCommands);
     }
 
-    for (auto &cmd : commands)
-        cmd();
+    QVector<Node*> nodesSnapshot;
+    {
+        // Commands (addNodeInternal/removeNodeInternal/connectParametersInternal's
+        // resort, ...) mutate `nodes` - hold the lock across them and take the
+        // post-mutation snapshot in the same critical section, so evaluate() et al.
+        // never see a half-applied node list.
+        QMutexLocker lock(&m_impl->nodesMutex);
+        for (auto &cmd : commands)
+            cmd();
+        nodesSnapshot = m_impl->nodes;
+    }
 
     // Recurse into subgraph nodes after our own commands run, so any
-    // nodes added by those commands are included in the traversal.
-    for (Node *node : m_impl->nodes)
+    // nodes added by those commands are included in the traversal. Iterate the
+    // snapshot, not m_impl->nodes, so this doesn't hold nodesMutex across
+    // arbitrary/virtual node code.
+    for (Node *node : nodesSnapshot)
         node->drainCommandQueue();
 }
 
@@ -171,6 +184,9 @@ void Graph::addNodeInternal(Node *t_node)
     nodeAdded(t_node);
     emit nodeWasAdded(t_node);
 
+    if(dynamic_cast<GraphInputNode*>(t_node) || dynamic_cast<GraphOutputNode*>(t_node))
+        emit interfaceChanged();
+
     markDirty(Dirty_Structure);
 }
 
@@ -184,6 +200,10 @@ void Graph::removeNodeInternal(Node *t_node)
     m_impl->nodes.removeOne(t_node);
     nodeRemoved(t_node);
     emit nodeWasRemoved(t_node);
+
+    if(dynamic_cast<GraphInputNode*>(t_node) || dynamic_cast<GraphOutputNode*>(t_node))
+        emit interfaceChanged();
+
     markDirty(Dirty_Structure);
 }
 
@@ -240,11 +260,60 @@ void Graph::resortGraphInternal()
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Read-only queries and evaluation (no locking — eval thread owns these)
+// Read-only queries and evaluation. The per-tick hot path (prepForEvaluation,
+// evaluate, evaluateAll, markClean, inputPorts, outputPorts - the last two via
+// SubGraphNode::applyInputs/readOutputs, called every tick from evaluate())
+// snapshots `nodes` under nodesMutex before iterating, since drainCommandQueue()
+// can be forced from the GUI thread out-of-band (see
+// SubGraphNode::exposeInputForType) while the eval thread is concurrently
+// mid-tick on the same graph. The remaining queries here are only ever called
+// from whichever thread already owns the relevant graph/editor and are left
+// unlocked, same as before.
 // ─────────────────────────────────────────────────────────────────────────────
 
 void Graph::nodeAdded(keira::Node *)   {}
 void Graph::nodeRemoved(keira::Node *) {}
+
+QVector<GraphInputNode*> Graph::inputPorts() const
+{
+    // Also hot-path: called every tick from SubGraphNode::applyInputs() on the
+    // eval thread, on a graph an editor action (e.g. exposeInputForType) can
+    // mutate from the GUI thread at the same time - needs the same protection
+    // as evaluate() et al., not just the editor-only queries below.
+    QVector<Node*> nodesSnapshot;
+    {
+        QMutexLocker lock(&m_impl->nodesMutex);
+        nodesSnapshot = m_impl->nodes;
+    }
+
+    QVector<GraphInputNode*> results;
+    for(Node *node : nodesSnapshot)
+        if(auto *input = dynamic_cast<GraphInputNode*>(node))
+            results.append(input);
+    return results;
+}
+
+QVector<GraphOutputNode*> Graph::outputPorts() const
+{
+    // See inputPorts() - called every tick from SubGraphNode::readOutputs() on
+    // the eval thread, same race.
+    QVector<Node*> nodesSnapshot;
+    {
+        QMutexLocker lock(&m_impl->nodesMutex);
+        nodesSnapshot = m_impl->nodes;
+    }
+
+    QVector<GraphOutputNode*> results;
+    for(Node *node : nodesSnapshot)
+        if(auto *output = dynamic_cast<GraphOutputNode*>(node))
+            results.append(output);
+    return results;
+}
+
+void Graph::notifyInterfaceChanged()
+{
+    emit interfaceChanged();
+}
 
 const QVector<Node*> &Graph::nodes() const
 {
@@ -286,16 +355,27 @@ Parameter *Graph::findParameter(const QByteArray &t_query)
 
 void Graph::prepForEvaluation()
 {
-    if(m_impl->dirty & Dirty_Priority)
-        resortGraphInternal();
+    QVector<Node*> nodesSnapshot;
+    {
+        QMutexLocker lock(&m_impl->nodesMutex);
+        if(m_impl->dirty & Dirty_Priority)
+            resortGraphInternal();
+        nodesSnapshot = m_impl->nodes;
+    }
 
-    for(Node *node : m_impl->nodes)
+    for(Node *node : nodesSnapshot)
         node->prepForEvaluation();
 }
 
 void Graph::evaluate(EvaluationContext *t_context) const
 {
-    for(Node *node : m_impl->nodes)
+    QVector<Node*> nodesSnapshot;
+    {
+        QMutexLocker lock(&m_impl->nodesMutex);
+        nodesSnapshot = m_impl->nodes;
+    }
+
+    for(Node *node : nodesSnapshot)
     {
         if(node->isDirty())
             node->evaluate(t_context);
@@ -304,7 +384,13 @@ void Graph::evaluate(EvaluationContext *t_context) const
 
 void Graph::evaluateAll(EvaluationContext *t_context) const
 {
-    for(Node *node : m_impl->nodes)
+    QVector<Node*> nodesSnapshot;
+    {
+        QMutexLocker lock(&m_impl->nodesMutex);
+        nodesSnapshot = m_impl->nodes;
+    }
+
+    for(Node *node : nodesSnapshot)
         node->evaluate(t_context);
 }
 
@@ -324,7 +410,13 @@ void Graph::markClean()
 {
     m_impl->dirty = Dirty_Eval;
 
-    for(Node *node : m_impl->nodes)
+    QVector<Node*> nodesSnapshot;
+    {
+        QMutexLocker lock(&m_impl->nodesMutex);
+        nodesSnapshot = m_impl->nodes;
+    }
+
+    for(Node *node : nodesSnapshot)
         node->markClean();
 }
 
@@ -371,6 +463,8 @@ void Graph::readFromJson(const QJsonObject &t_json, NodeLibrary *library)
     m_impl->graphTypeId = t_json["graphTypeId"].toString(m_impl->graphTypeId).toLatin1();
     m_impl->uniqueId    = t_json["uniqueId"].toString(m_impl->uniqueId).toLatin1();
     m_impl->name        = t_json["name"].toString();
+
+    emit interfaceChanged();
 }
 
 void Graph::writeToJson(QJsonObject &t_json) const

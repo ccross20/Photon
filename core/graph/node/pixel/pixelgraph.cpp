@@ -1,5 +1,5 @@
 #include "pixelgraph.h"
-#include "pixelglobalsnode.h"
+#include "graph/node/graphcontextnode.h"
 #include "model/graph.h"
 #include "graph/parameter/pixellistparameter.h"
 #include "photoncore.h"
@@ -31,8 +31,8 @@ keira::NodeInformation PixelGraph::info()
 PixelGraph::PixelGraph() : keira::SubGraphNode("photon.node.pixel-graph") {
     setName("Pixel Graph");
 
-    m_globalsNode = new PixelGlobalsNode;
-    m_globalsNode->createParameters();
+    m_globalsNode = new GraphContextNode;
+    m_globalsNode->configure(GraphContextNode::pixelPorts());
     graph()->addNode(m_globalsNode);
     graph()->drainCommandQueue(); // apply immediately so the queued addNode never
                                   // outlives m_globalsNode (see readFromJson below)
@@ -64,21 +64,9 @@ void PixelGraph::createParameters()
     addParameter(m_priortyParam);
 }
 
-void PixelGraph::parameterWasAdded(keira::Parameter *t_param)
+keira::NodeLibrary *PixelGraph::nodeLibrary() const
 {
-    if(m_pixelsParam == t_param || m_enabledParam == t_param || t_param == m_priortyParam || t_param == m_useTimeMachineParam)
-        return;
-
-    auto clonedParam = t_param->clone(photonApp->plugins()->nodeLibrary());
-    clonedParam->setConnectionOptions(keira::AllowMultipleOutput);
-    m_globalsNode->addParameter(clonedParam);
-    m_passThroughParams.append(clonedParam);
-    m_globalsParams.append(t_param);
-}
-
-void PixelGraph::parameterWasRemoved(keira::Parameter *t_param)
-{
-
+    return photonApp->plugins()->nodeLibrary();
 }
 
 void PixelGraph::parameterWasModified(keira::Parameter *t_param)
@@ -102,23 +90,7 @@ void PixelGraph::readFromJson(const QJsonObject &t_json, keira::NodeLibrary *t_l
 
     keira::SubGraphNode::readFromJson(t_json, t_library);
 
-    m_globalsNode = dynamic_cast<PixelGlobalsNode*>(graph()->findNode("Globals"));
-
-    for(auto param : parameters())
-    {
-        if(m_pixelsParam == param || param == m_priortyParam || param == m_useTimeMachineParam)
-            continue;
-
-        auto nodeParam = m_globalsNode->findParameter(param->id());
-        if(nodeParam)
-        {
-            m_globalsParams.append(param);
-            m_passThroughParams.append(nodeParam);
-        }
-        else
-            qWarning() << "Could not relink parameter: " << param->id();
-
-    }
+    m_globalsNode = dynamic_cast<GraphContextNode*>(graph()->findNode("Globals"));
 }
 
 void PixelGraph::prepForEvaluation()
@@ -145,16 +117,9 @@ void PixelGraph::evaluate(keira::EvaluationContext *t_context) const
 
     auto pixels = m_pixelsParam->value().value<QVector<PixelParameterData>>();
 
-    //m_globalsNode->setValue(FixtureGlobalsNode::DMXParam, context->dmxMatrix);
-    m_globalsNode->setValue(PixelGlobalsNode::TimeParam, context->globalTime);
-    m_globalsNode->setValue(PixelGlobalsNode::PixelTotalParam, pixels.length());
-    m_globalsNode->setValue(PixelGlobalsNode::GlobalTimeParam, context->globalTime);
-
-    for(int i = 0; i < m_passThroughParams.length(); ++i)
-    {
-        m_passThroughParams[i]->setValue(m_globalsParams[i]->value());
-    }
-
+    // Total pixel count is constant across the loop; the context node fills the
+    // per-frame/per-pixel context ports (time/fixture/index) itself during eval.
+    m_globalsNode->setValue(GraphContextNode::PixelTotalPort, pixels.length());
 
     Fixture *lastFixture = nullptr;
     int index = 0;
@@ -173,15 +138,15 @@ void PixelGraph::evaluate(keira::EvaluationContext *t_context) const
         {
             lastFixture = fix;
             context->fixture = fix;
+            context->fixtureIndex = fixtureCounter;
             context->relativeTime = context->globalTime;
+            context->timeOffset = 0;
             if(useTimeMachine)
                 m_timeMachine->setTargetFrame(context->frame);
-            m_globalsNode->setValue(PixelGlobalsNode::FixtureParam, pixel.fixtureId);
-            m_globalsNode->setValue(PixelGlobalsNode::FixtureIndexParam, fixtureCounter);
-            m_globalsNode->setValue(PixelGlobalsNode::PixelIndexParam, pixel.index);
-            m_globalsNode->setValue(PixelGlobalsNode::PixelGlobalIndexParam, index);
-            m_globalsNode->setValue(PixelGlobalsNode::TimeOffsetParam, 0);
-            m_globalsNode->setValue(PixelGlobalsNode::TimeParam, context->globalTime );
+            // Pixel-specific ports aren't carried on the eval context — set them
+            // directly; the context node fills fixture/index/time from the context.
+            m_globalsNode->setValue(GraphContextNode::PixelIndexPort, pixel.index);
+            m_globalsNode->setValue(GraphContextNode::PixelGlobalIndexPort, index);
 
             //qDebug() << "Eval" << pixel.index;
             SubGraphNode::evaluate(context);

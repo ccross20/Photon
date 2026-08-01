@@ -136,13 +136,18 @@ void StateEditor::selectState(State *t_state)
                 QPushButton *channelButton = new QPushButton("Channel");
                 channelButton->setCheckable(true);
                 channelButton->setSizePolicy(QSizePolicy(QSizePolicy::Minimum, QSizePolicy::MinimumExpanding));
+                // Reflect the current exposed state — set before connecting so it
+                // doesn't fire the toggle handler during construction.
+                if(auto *clip = dynamic_cast<FixtureClip*>(m_baseEffectParent))
+                    channelButton->setChecked(clip->isCapabilityChannelExposed(stateCapability, index));
                 connect(channelButton, &QPushButton::toggled,this,[this, stateCapability, index](bool value){
-                    if(value)
+                    if(auto *clip = dynamic_cast<FixtureClip*>(m_baseEffectParent))
                     {
-                        if(dynamic_cast<FixtureClip*>(m_baseEffectParent))
-                            static_cast<FixtureClip*>(m_baseEffectParent)->addChannel(stateCapability->availableChannels().at(index));
+                        if(value)
+                            clip->exposeCapabilityChannel(stateCapability, index);
+                        else
+                            clip->unexposeCapabilityChannel(stateCapability, index);
                     }
-
                 });
                 gridLayout->addWidget(channelButton,row,4,Qt::AlignLeft | Qt::AlignTop);
             }

@@ -1,5 +1,5 @@
 #include "fixturesubgraphnode.h"
-#include "fixtureglobalsnode.h"
+#include "graph/node/graphcontextnode.h"
 #include "model/graph.h"
 #include "surface/surfacegraph.h"
 #include "photoncore.h"
@@ -31,8 +31,8 @@ keira::NodeInformation FixtureSubGraphNode::info()
 FixtureSubGraphNode::FixtureSubGraphNode() : keira::SubGraphNode("photon.node.fixture-graph") {
     setName("Fixture Graph");
 
-    m_globalsNode = new FixtureGlobalsNode;
-    m_globalsNode->createParameters();
+    m_globalsNode = new GraphContextNode;
+    m_globalsNode->configure(GraphContextNode::fixturePorts());
     graph()->addNode(m_globalsNode);
     graph()->drainCommandQueue(); // apply immediately — eval thread not running yet
     graph()->setName("Fixture Graph");
@@ -59,6 +59,11 @@ FixtureSubGraphNode::~FixtureSubGraphNode()
     qDeleteAll(m_subgraphPool);
 }
 
+keira::NodeLibrary *FixtureSubGraphNode::nodeLibrary() const
+{
+    return photonApp->plugins()->nodeLibrary();
+}
+
 void FixtureSubGraphNode::createParameters()
 {
     m_fixturesParam = new FixtureListParameter(FixtureSubGraphNode::Fixtures, "Fixtures",
@@ -71,28 +76,6 @@ void FixtureSubGraphNode::createParameters()
 
     m_priortyParam = new keira::IntegerParameter("priority", "Priority", 0);
     addParameter(m_priortyParam);
-}
-
-void FixtureSubGraphNode::parameterWasAdded(keira::Parameter *t_param)
-{
-    if(m_fixturesParam == t_param || m_enabledParam == t_param || t_param == m_priortyParam)
-        return;
-
-    auto clonedParam = t_param->clone(photonApp->plugins()->nodeLibrary());
-    clonedParam->setConnectionOptions(keira::AllowMultipleOutput);
-    m_globalsNode->addParameter(clonedParam);
-    graph()->drainCommandQueue();
-    m_passThroughParams.append(clonedParam);
-    m_globalsParams.append(t_param);
-
-    // Pool is stale — rebuild on next evaluate()
-    qDeleteAll(m_subgraphPool);
-    m_subgraphPool.clear();
-    m_globalsPool.clear();
-}
-
-void FixtureSubGraphNode::parameterWasRemoved(keira::Parameter *)
-{
 }
 
 void FixtureSubGraphNode::parameterWasModified(keira::Parameter *t_param)
@@ -112,27 +95,13 @@ void FixtureSubGraphNode::readFromJson(const QJsonObject &t_json, keira::NodeLib
 
     keira::SubGraphNode::readFromJson(t_json, t_library);
 
-    m_globalsNode = dynamic_cast<FixtureGlobalsNode*>(graph()->findNode("Globals"));
-
-    for(auto param : parameters())
-    {
-        if(m_fixturesParam == param || param == m_priortyParam)
-            continue;
-
-        auto nodeParam = m_globalsNode->findParameter(param->id());
-        if(nodeParam)
-        {
-            m_globalsParams.append(param);
-            m_passThroughParams.append(nodeParam);
-        }
-        else
-            qWarning() << "Could not relink parameter: " << param->id();
-    }
+    m_globalsNode = dynamic_cast<GraphContextNode*>(graph()->findNode("Globals"));
 
     // Pool must be rebuilt after deserialization
     qDeleteAll(m_subgraphPool);
     m_subgraphPool.clear();
     m_globalsPool.clear();
+    m_poolStale = true;
 }
 
 void FixtureSubGraphNode::prepForEvaluation()
@@ -167,7 +136,7 @@ void FixtureSubGraphNode::syncSubgraphPool(int count) const
         auto *clone = new keira::Graph;
         clone->readFromJson(subgraphJson, library);
 
-        auto *globals = dynamic_cast<FixtureGlobalsNode*>(clone->findNode("Globals"));
+        auto *globals = dynamic_cast<GraphContextNode*>(clone->findNode("Globals"));
         m_subgraphPool.append(clone);
         m_globalsPool.append(globals);
     }
@@ -192,24 +161,20 @@ void FixtureSubGraphNode::evaluate(keira::EvaluationContext *t_context) const
     if(m_subgraphPool.isEmpty())
         return;
 
-    // Push values that are constant across all fixtures into each clone's globals.
+    // Push values that are constant across all fixtures into each clone: the full
+    // fixture list onto the context node, and the exposed graph inputs (relayed
+    // from our outer mirror parameters by the base SubGraphNode).
     const QVariant fixtureListValue = m_fixturesParam->value();
     for(int i = 0; i < m_subgraphPool.size(); ++i)
     {
-        if(!m_globalsPool[i])
-            continue;
-        m_globalsPool[i]->setValue(FixtureGlobalsNode::FixtureListParam, fixtureListValue);
-
-        for(int p = 0; p < m_passThroughParams.size(); ++p)
-        {
-            auto *cloneParam = m_globalsPool[i]->findParameter(m_passThroughParams[p]->id());
-            if(cloneParam)
-                cloneParam->setValue(m_globalsParams[p]->value());
-        }
+        if(m_globalsPool[i])
+            m_globalsPool[i]->setValue(GraphContextNode::FixtureListPort, fixtureListValue);
+        applyInputs(m_subgraphPool[i]);
     }
 
-    // Parallel fixture evaluation — each fixture uses its own pool clone so
-    // node parameter writes never race between threads.
+    // Parallel fixture evaluation — each fixture uses its own pool clone so node
+    // parameter writes never race between threads. The context node fills its
+    // per-fixture ports (fixture/index/time) from each fixtureCtx during eval.
     QVector<int> indices(fixtures.size());
     std::iota(indices.begin(), indices.end(), 0);
 

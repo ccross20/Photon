@@ -47,15 +47,13 @@
 #include "graph/node/gizmo/gizmovaluenode.h"
 #include "graph/node/fixture/fixturesubgraphnode.h"
 #include "graph/node/fixture/fixturestatenode.h"
-#include "graph/node/fixture/fixtureglobalsnode.h"
+#include "graph/node/graphcontextnode.h"
 #include "graph/node/fixture/allfixturesnode.h"
 #include "graph/node/fixture/selectfixturesnode.h"
 #include "graph/node/fixture/fixturegroupnode.h"
 #include "gui/panel/fixturegroupcollectionpanel.h"
 #include "graph/node/pixel/pixelgraph.h"
-#include "graph/node/pixel/pixelglobalsnode.h"
 #include "graph/node/canvas/canvassubgraphnode.h"
-#include "graph/node/canvas/canvasglobalsnode.h"
 #include "graph/node/canvas/canvasoutputnode.h"
 #include "graph/node/canvas/canvasfillnode.h"
 #include "graph/node/canvas/canvastransformnode.h"
@@ -79,9 +77,8 @@
 #include "sequence/gradientchanneleffect.h"
 #include "sequence/masterlayerchanneleffect.h"
 #include "channel/splinechanneleffect.h"
-#include "channel/togglegizmochanneleffect.h"
-#include "channel/palettegizmochanneleffect.h"
-#include "channel/gizmoretimechanneleffect.h"
+#include "audio/levelanalysisprocess.h"
+#include "audio/virtualdjcaptureprocess.h"
 
 #include "model/parameter/anyparameter.h"
 #include "model/parameter/booleanparameter.h"
@@ -250,14 +247,25 @@ void PluginFactory::init()
     registerNode(GizmoValueNode::info());
     registerNode(FixtureStateNode::info());
     registerNode(FixtureSubGraphNode::info());
-    registerNode(FixtureGlobalsNode::info());
+    registerNode(GraphContextNode::info());
+    // Load-compat: pre-migration graphs serialized their Globals node under a
+    // per-domain id; map those ids to the unified GraphContextNode so they still
+    // deserialize (the saved params restore the right ports).
+    {
+        keira::NodeInformation alias([](){ return new GraphContextNode; });
+        alias.graphs = QByteArrayList{"__internal"};   // keep out of the Add Node menu
+        alias.nodeId = "photon.fixture.globals";
+        registerNode(alias);
+        alias.nodeId = "photon.canvas.globals";
+        registerNode(alias);
+        alias.nodeId = "photon.pixel.globals";
+        registerNode(alias);
+    }
     registerNode(AllFixturesNode::info());
     registerNode(SelectFixturesNode::info());
     registerNode(FixtureGroupNode::info());
-    registerNode(PixelGlobalsNode::info());
     registerNode(PixelGraph::info());
     registerNode(CanvasSubGraphNode::info());
-    registerNode(CanvasGlobalsNode::info());
     registerNode(CanvasOutputNode::info());
     registerNode(CanvasFillNode::info());
     registerNode(CanvasTransformNode::info());
@@ -282,9 +290,9 @@ void PluginFactory::init()
     registerChannelEffect(GradientChannelEffect::info());
     registerChannelEffect(MasterLayerChannelEffect::info());
     registerChannelEffect(SplineChannelEffect::info());
-    registerChannelEffect(ToggleGizmoChannelEffect::info());
-    registerChannelEffect(GizmoRetimeChannelEffect::info());
-    registerChannelEffect(PaletteGizmoChannelEffect::info());
+
+    registerAudioProcessor(LevelAnalysisProcess::info());
+    registerAudioProcessor(VirtualDJCaptureProcess::info());
 
     registerClipEffect(CanvasRoutineClipEffect::info());
 

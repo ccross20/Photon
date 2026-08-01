@@ -32,6 +32,7 @@ public slots:
 
 private slots:
     void tick();
+    void waveformRangeChanged(double start, double end);
     void detailsSplitterMoved(int, int);
     void editorSplitterMoved(int, int);
     void horizontalSplitterMoved(int, int);
@@ -45,6 +46,9 @@ private slots:
     void selectClipEffect(photon::BaseEffect *);
     void selectState(photon::State *);
     void clearEditor();
+    void toggleCapture();
+    void cancelCapture();
+    void toggleVdjSync(bool);
 
 signals:
     void addedToSelection(photon::Clip*);

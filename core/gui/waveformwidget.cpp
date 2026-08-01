@@ -9,6 +9,7 @@
 #include <limits.h>
 #include <math.h>
 #include <stdlib.h>
+#include <algorithm>
 
 
 
@@ -183,6 +184,14 @@ private:
             numSamples -= numSamplesThisIteration;
         }
 
+        // No samples fell in this pixel (e.g. zoomed in past 1 sample/pixel):
+        // leave a flat line instead of drawing the sentinel full-height block.
+        if (_max < _min)
+        {
+            _min = 0;
+            _max = 0;
+        }
+
         *resultMin = _min;
         *resultMax = _max;
     }
@@ -325,66 +334,85 @@ public:
 
     void read(const QAudioBuffer& t_buffer)
     {
+        const QAudioFormat format = t_buffer.format();
+
         if(m_numChannels == 0)// initialize
         {
-            m_numChannels = t_buffer.format().channelCount();
-            m_channels = new SoundChannel* [m_numChannels];
-                for (int i = 0; i < m_numChannels; i++)
-                    m_channels[i] = new SoundChannel;
-
-        }
-        const qint16 *buf = t_buffer.data<qint16>();
-
-        m_duration += t_buffer.duration();
-
-
-        unsigned bytesPerGroup = t_buffer.format().bytesPerFrame();
-
-        if(bytesPerGroup == 0)
-            return;
-
-        unsigned dataChunkSize = t_buffer.byteCount();
-
-        unsigned numGroups = dataChunkSize / bytesPerGroup;
-        unsigned numBlocks = numGroups / SampleBlock::MAX_SAMPLES;
-        if (numGroups % SampleBlock::MAX_SAMPLES != 0)
-            numBlocks++;
-
-        if(m_numChannels == 0)
-        {
+            m_numChannels = format.channelCount();
             m_channels = new SoundChannel* [m_numChannels];
             for (int i = 0; i < m_numChannels; i++)
                 m_channels[i] = new SoundChannel;
         }
 
+        m_duration += t_buffer.duration();
 
+        const int channels = m_numChannels;
+        if(channels == 0)
+            return;
 
-        for (unsigned blockCount = 0; blockCount < numBlocks; blockCount++)
-        {
-            unsigned bytesToRead = bytesPerGroup * SampleBlock::MAX_SAMPLES;
-            if (blockCount + 1 == numBlocks)
-                bytesToRead = (numGroups % SampleBlock::MAX_SAMPLES) * bytesPerGroup;
-            uint bytesRead = bytesToRead;
-            uint groupsRead = bytesRead / bytesPerGroup;
+        const int frameCount = t_buffer.frameCount();
+        if(frameCount <= 0)
+            return;
 
-            for (int chan_idx = 0; chan_idx < m_numChannels; chan_idx++)
+        // Qt 6.5+ hands us the decoder's native format (commonly 32-bit float),
+        // not the interleaved Int16 this renderer used to assume. Normalise every
+        // supported sample format down to int16 so the min/max LUTs stay valid.
+        const QAudioFormat::SampleFormat sampleFormat = format.sampleFormat();
+        const char *bytes = t_buffer.constData<char>();
+
+        auto sampleAt = [&](int frame, int chan) -> int16_t {
+            const int idx = frame * channels + chan;
+            switch(sampleFormat)
             {
-                SoundChannel *chan = m_channels[chan_idx];
+            case QAudioFormat::UInt8:
+            {
+                const quint8 *p = reinterpret_cast<const quint8 *>(bytes);
+                return static_cast<int16_t>((static_cast<int>(p[idx]) - 128) << 8);
+            }
+            case QAudioFormat::Int16:
+            {
+                const qint16 *p = reinterpret_cast<const qint16 *>(bytes);
+                return p[idx];
+            }
+            case QAudioFormat::Int32:
+            {
+                const qint32 *p = reinterpret_cast<const qint32 *>(bytes);
+                return static_cast<int16_t>(p[idx] >> 16);
+            }
+            case QAudioFormat::Float:
+            {
+                const float *p = reinterpret_cast<const float *>(bytes);
+                float v = std::clamp(p[idx], -1.0f, 1.0f);
+                return static_cast<int16_t>(v * 32767.0f);
+            }
+            default:
+                return 0;
+            }
+        };
+
+        int frameOffset = 0;
+        int framesRemaining = frameCount;
+        while(framesRemaining > 0)
+        {
+            const int framesThisBlock = std::min(framesRemaining,
+                                                 static_cast<int>(SampleBlock::MAX_SAMPLES));
+
+            for (int chan_idx = 0; chan_idx < channels; chan_idx++)
+            {
                 SampleBlock *block = new SampleBlock;
 
-                for (size_t i = 0; i < groupsRead; i++)
-                {
-                    block->m_samples[i] = buf[i * m_numChannels + chan_idx];
-                }
+                for (int i = 0; i < framesThisBlock; i++)
+                    block->m_samples[i] = sampleAt(frameOffset + i, chan_idx);
 
-                block->m_len = groupsRead;
+                block->m_len = framesThisBlock;
                 block->RecalcLuts();
 
-                chan->m_blocks.push_back(block);
-
+                m_channels[chan_idx]->m_blocks.push_back(block);
             }
-        }
 
+            frameOffset += framesThisBlock;
+            framesRemaining -= framesThisBlock;
+        }
     }
 
     void Complete()
@@ -487,6 +515,14 @@ void WaveformWidget::setSelectionColor(const QColor &t_color)
 }
 
 
+void WaveformWidget::setShowWaveform(bool t_value)
+{
+    if(m_showWaveform == t_value)
+        return;
+    m_showWaveform = t_value;
+    update();
+}
+
 void WaveformWidget::loadAudio(const QString &path)
 {
     if(m_sound)
@@ -526,16 +562,19 @@ void WaveformWidget::paintEvent(QPaintEvent *event)
     }
 
 
-    double vZoomRatio = (double)height() / (65536 * m_sound->m_numChannels);
-
-    if(m_redrawWaveform)
+    if(m_showWaveform)
     {
-        m_cachedWaveform.fill(Qt::transparent);
-        QPainter waveformPainter{&m_cachedWaveform};
-        RenderWaveform(&waveformPainter, vZoomRatio);
-        m_redrawWaveform = false;
+        double vZoomRatio = (double)height() / (65536 * m_sound->m_numChannels);
+
+        if(m_redrawWaveform)
+        {
+            m_cachedWaveform.fill(Qt::transparent);
+            QPainter waveformPainter{&m_cachedWaveform};
+            RenderWaveform(&waveformPainter, vZoomRatio);
+            m_redrawWaveform = false;
+        }
+        painter.drawImage(0,0,m_cachedWaveform);
     }
-    painter.drawImage(0,0,m_cachedWaveform);
 
     if(m_showSelection)
     {
@@ -553,10 +592,10 @@ void WaveformWidget::paintEvent(QPaintEvent *event)
 
 void WaveformWidget::frameAll()
 {
-    if(!m_sound)
-        return;
-
-    frameTime(0, m_sound->GetLength() / m_sound->m_samplesPerSecond);
+    if(m_sound)
+        frameTime(0, m_sound->GetLength() / m_sound->m_samplesPerSecond);
+    else if(m_referenceDuration > 0.0)
+        frameTime(0, m_referenceDuration);
 }
 
 void WaveformWidget::frameTime(double start, double end)
@@ -567,14 +606,18 @@ void WaveformWidget::frameTime(double start, double end)
     m_visibleRange.start = start;
     m_visibleRange.end = end;
 
-    if(!m_sound)
-        return;
-
     double w = end - start;
     m_redrawWaveform = true;
-    m_hZoomRatio = (w * m_sound->m_samplesPerSecond) / (double)width();
-    m_hOffset = start * m_sound->m_samplesPerSecond;
+    m_hZoomRatio = (w * m_referenceRate) / (double)width();
+    m_hOffset = start * m_referenceRate;
     update();
+}
+
+void WaveformWidget::setDuration(double t_seconds)
+{
+    m_referenceDuration = t_seconds;
+    if(!m_sound && m_referenceDuration > 0.0)
+        frameAll();
 }
 
 void WaveformWidget::bufferReady()
@@ -589,6 +632,9 @@ void WaveformWidget::finished()
     m_sound->Complete();
     m_redrawWaveform = true;
     m_isRenderable = true;
+
+    if(m_sound->m_samplesPerSecond > 0.0)
+        m_referenceRate = m_sound->m_samplesPerSecond;
 
     if(m_visibleRange.end == 0)
         frameAll();
@@ -615,16 +661,12 @@ void WaveformWidget::resizeEvent(QResizeEvent *t_event)
 
 double WaveformWidget::xToTime(int t_x) const
 {
-    if(!m_sound)
-        return 0.0;
-    return ((t_x *  m_hZoomRatio) + m_hOffset)/m_sound->m_samplesPerSecond;
+    return ((t_x * m_hZoomRatio) + m_hOffset) / m_referenceRate;
 }
 
 double WaveformWidget::timeToX(double time) const
 {
-    if(!m_sound)
-        return 0.0;
-    return ((time * m_sound->m_samplesPerSecond) - m_hOffset) / m_hZoomRatio;
+    return ((time * m_referenceRate) - m_hOffset) / m_hZoomRatio;
 }
 
 void WaveformWidget::setPlayhead(double time)
@@ -682,6 +724,13 @@ void WaveformWidget::mouseMoveEvent(QMouseEvent *t_event)
         m_hOffset += -delta.x() * m_hZoomRatio;
         m_redrawWaveform = true;
 
+        if(m_hZoomRatio > 0)
+        {
+            m_visibleRange.start = xToTime(0);
+            m_visibleRange.end   = xToTime(width());
+            emit visibleRangeChanged(m_visibleRange.start, m_visibleRange.end);
+        }
+
         update();
     }
     m_lastPosition = t_event->pos();
@@ -695,20 +744,48 @@ void WaveformWidget::mouseReleaseEvent(QMouseEvent *t_event)
 
 void WaveformWidget::wheelEvent(QWheelEvent *t_event)
 {
-    double underCursor = t_event->position().x() * m_hZoomRatio;
-    double const ZOOM_INCREMENT = 1.3;
+    const QPoint angle = t_event->angleDelta();
+    const QPoint pixels = t_event->pixelDelta();
 
-    if(t_event->angleDelta().y() > 0)
-        m_hZoomRatio *= ZOOM_INCREMENT;
+    if(t_event->modifiers() & Qt::ControlModifier)
+    {
+        // Ctrl: zoom around the cursor (wheel up zooms in, matching the other views).
+        const double underCursor = t_event->position().x() * m_hZoomRatio;
+        const double ZOOM_INCREMENT = 1.3;
+        const int a = angle.y() != 0 ? angle.y() : angle.x();
+        if(a > 0)
+            m_hZoomRatio /= ZOOM_INCREMENT;
+        else
+            m_hZoomRatio *= ZOOM_INCREMENT;
+
+        const double nowUnderCursor = t_event->position().x() * m_hZoomRatio;
+        m_hOffset -= (nowUnderCursor - underCursor);
+    }
     else
-        m_hZoomRatio /= ZOOM_INCREMENT;
+    {
+        // Plain wheel: horizontal pan, consistent with the layer and channel views.
+        double delta;
+        if(!pixels.isNull())
+            delta = pixels.y() != 0 ? pixels.y() : pixels.x();
+        else
+        {
+            const int a = angle.y() != 0 ? angle.y() : angle.x();
+            delta = (a / 120.0) * 40.0;   // ~40px per wheel notch
+        }
+        m_hOffset -= delta * m_hZoomRatio;
+    }
 
-    double nowUnderCursor = t_event->position().x() * m_hZoomRatio;
-
-    m_hOffset -= (nowUnderCursor - underCursor);
     m_redrawWaveform = true;
 
+    if(m_hZoomRatio > 0)
+    {
+        m_visibleRange.start = xToTime(0);
+        m_visibleRange.end   = xToTime(width());
+        emit visibleRangeChanged(m_visibleRange.start, m_visibleRange.end);
+    }
+
     update();
+    t_event->accept();
 }
 
 void WaveformWidget::RenderWaveform(QPainter *t_painter, double v_zoom_ratio)

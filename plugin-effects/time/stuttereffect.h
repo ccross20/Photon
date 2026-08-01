@@ -2,12 +2,14 @@
 #define PHOTON_STUTTEREFFECT_H
 
 #include "sequence/channeleffect.h"
-#include "gui/gizmo/rectanglegizmo.h"
+#include "gui/gizmo/gizmogroup.h"
 
 namespace photon {
 
 
 class StutterEffect;
+class GizmoGroup;
+class GizmoHandle;
 
 class StutterEffectEditor : public ChannelEffectEditor
 {
@@ -24,9 +26,11 @@ protected:
 
 private:
     StutterEffect *m_effect;
-    QGraphicsRectItem *m_parentItem;
-    RectangleGizmo *m_gapHandle;
-    RectangleGizmo *m_durationHandle;
+    double m_referenceTime = 0;
+    GizmoGroup *m_gizmos;
+    GizmoHandle *m_originHandle;
+    GizmoHandle *m_gapHandle;
+    GizmoHandle *m_durationHandle;
 };
 
 class StutterEffect : public ChannelEffect

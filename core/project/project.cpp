@@ -2,6 +2,7 @@
 #include <QFile>
 #include <QFileDialog>
 #include <QSettings>
+#include <QWidget>
 #include "project.h"
 #include "fixture/fixturecollection.h"
 #include "fixture/fixture.h"
@@ -49,6 +50,7 @@ public:
     BusGraph *bus;
     SceneManager *sceneManager;
     QList<SceneObject*> selectedSceneObjects;
+    QWidget *propertiesWidget = nullptr;
 };
 
 Project::Impl::Impl()
@@ -152,6 +154,24 @@ void Project::setSelectedSceneObjects(const QList<SceneObject*> &obj)
     m_impl->selectedSceneObjects = obj;
     emit selectedSceneObjectsChanged(obj);
     emit selectedSceneObjectChanged(obj.isEmpty() ? nullptr : obj.last());
+}
+
+QWidget *Project::propertiesWidget() const
+{
+    return m_impl->propertiesWidget;
+}
+
+void Project::setPropertiesWidget(QWidget *t_widget)
+{
+    if(m_impl->propertiesWidget == t_widget)
+        return;
+    QWidget *old = m_impl->propertiesWidget;
+    m_impl->propertiesWidget = t_widget;
+    // The panel detaches `old` from its layout in response to this signal, so it is
+    // safe to delete afterwards. deleteLater avoids freeing it mid-signal.
+    emit propertiesWidgetChanged(t_widget);
+    if(old)
+        old->deleteLater();
 }
 
 SceneManager *Project::scene() const

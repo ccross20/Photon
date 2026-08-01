@@ -97,10 +97,22 @@ private:
     void drawBackgroundColor(QPainter *painter, const QRectF &rect);
     void drawBackgroundNumber(QPainter *painter, const QRectF &rect);
 
+    // Per-screen-column min/max envelope (waveform-style) rather than a dense
+    // point-sampled QPainterPath. Bounds work to the on-screen pixel span and
+    // renders fast oscillation as a filled band instead of an aliased zigzag.
+    struct CurveBand
+    {
+        int startX = 0;
+        QVector<float> topY;     // screen-y of the column's max value
+        QVector<float> bottomY;  // screen-y of the column's min value
+        bool isEmpty() const { return topY.isEmpty(); }
+    };
+
     QHash<QByteArray, EffectViewerState> m_states;
     QVector<QRgb> m_colors;
-    QPainterPath m_path;
-    QPainterPath m_channelPath;
+    QVector<CurveBand> m_effectBands;    // composed chain up to this effect (context)
+    QVector<CurveBand> m_selectedBands;  // this effect's own contribution, centred on 0
+    CurveBand m_channelBand;
     QRectF m_sceneBounds;
     QTransform m_transform;
     ChannelEffect *m_effect;
@@ -129,6 +141,9 @@ public:
     QRectF sceneBounds;
     QPointF scale;
     double offset;
+    // The property widgets for this effect, shown in the shared Properties panel
+    // (owned by the Project once set). Built lazily on the first addWidget().
+    QWidget *propertiesContainer = nullptr;
 
 };
 

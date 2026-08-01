@@ -28,14 +28,16 @@ keira::NodeInformation ColorInputNode::info()
     toReturn.name = "Color Input";
     toReturn.nodeId = "photon.routine.color-input";
     toReturn.categories = {"Input"};
-    //toReturn.graphs = QByteArrayList{"routine"};
+    toReturn.graphs = QByteArrayList{"routine","fixture","canvas","pixel"};
+    toReturn.inputParameterType = ColorParameter::ParameterId;
 
     return toReturn;
 }
 
-ColorInputNode::ColorInputNode() : keira::Node("photon.routine.color-input"),m_impl(new Impl)
+ColorInputNode::ColorInputNode() : keira::GraphInputNode("photon.routine.color-input"),m_impl(new Impl)
 {
     setName("Color Input");
+    setValuePortId(Value);
 }
 
 ColorInputNode::~ColorInputNode()
@@ -51,7 +53,13 @@ void ColorInputNode::markDirty(int t_dirty)
     {
         if(auto *routine = dynamic_cast<Routine*>(graph()))
             routine->updateChannel(m_impl->index, channelInfo());
+        notifyInterfaceChanged();
     }
+}
+
+QString ColorInputNode::portName() const
+{
+    return m_impl->nameParam->value().toString();
 }
 
 ChannelInfo ColorInputNode::channelInfo() const
@@ -96,17 +104,15 @@ void ColorInputNode::setValue(const QByteArray &t_id, const QVariant &t_value)
     {
         if(auto *routine = dynamic_cast<Routine*>(graph()))
             routine->updateChannel(channelIndex(), channelInfo());
+        notifyInterfaceChanged();
     }
 
 }
 
-void ColorInputNode::evaluate(keira::EvaluationContext *t_context) const
+void ColorInputNode::evaluate(keira::EvaluationContext *) const
 {
-    //RoutineEvaluationContext *context = static_cast<RoutineEvaluationContext*>(t_context);
-
-    //m_impl->valueParam->setValue(context->channelValues.value(uniqueId(),m_impl->defaultValueParam->value()));
-
-    //qDebug() << context->strength << context->relativeTime;
+    // Subgraph path relies on the enclosing SubGraphNode's applyInputs() having
+    // set the value port already; see NumberInputNode::evaluate.
 }
 
 void ColorInputNode::readFromJson(const QJsonObject &t_object, keira::NodeLibrary *t_library)

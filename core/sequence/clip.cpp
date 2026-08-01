@@ -1,4 +1,5 @@
 #include <QJsonArray>
+#include <algorithm>
 #include "clip_p.h"
 #include "cliplayer_p.h"
 #include "falloff/falloffeffect_p.h"
@@ -113,6 +114,11 @@ ClipLayer *Clip::layer() const
     return m_impl->layer;
 }
 
+Routine *Clip::contentGraph() const
+{
+    return nullptr;
+}
+
 void Clip::markChanged()
 {
     m_impl->markChanged();
@@ -174,6 +180,11 @@ void Clip::setEndTime(double t_value)
 
 void Clip::setDuration(double t_value)
 {
+    // A zero/negative duration is invalid regardless of caller (it can feed into
+    // unguarded division elsewhere in the effect chain) - clamp here so every
+    // caller is protected, not just the ones that remember to check.
+    t_value = std::max(t_value, 0.0001);
+
     if(m_impl->duration == t_value)
         return;
     m_impl->duration = t_value;

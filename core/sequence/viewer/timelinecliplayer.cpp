@@ -189,6 +189,16 @@ void TimelineClipLayer::contextMenuEvent(QGraphicsSceneContextMenuEvent *event)
         static_cast<ClipLayer*>(layer())->addClip(clip);
     });
 
+    // Routine clips reference a shared routine from the project's collection.
+    const auto routines = photonApp->project()->routines()->routines();
+    QMenu *routineMenu = menu.addMenu("Add Routine");
+    routineMenu->setEnabled(!routines.isEmpty());
+    for(auto routine : routines)
+    {
+        connect(routineMenu->addAction(routine->name()), &QAction::triggered, this,
+                [routine, time, this](){ addRoutine(routine, time); });
+    }
+
     menu.addSeparator();
     QAction *removeLayer = menu.addAction("Remove Layer");
     connect(removeLayer, &QAction::triggered, this, &TimelineClipLayer::removeLayer);

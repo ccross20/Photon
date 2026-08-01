@@ -18,6 +18,7 @@ public:
 
 private slots:
     void selectedObjectChanged(photon::SceneObject *obj);
+    void propertiesWidgetChanged(QWidget *widget);
 
 protected:
     void projectDidOpen(photon::Project *project) override;

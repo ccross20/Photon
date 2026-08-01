@@ -1,7 +1,8 @@
 #include <QPen>
-#include <QDoubleSpinBox>
+#include "view/numberscrubfield.h"
 #include "constantchanneleffect.h"
 #include "sequence/viewer/stackedparameterwidget.h"
+#include "gui/gizmo/gizmohandle.h"
 
 namespace photon {
 
@@ -10,17 +11,17 @@ ConstantEffectEditor::ConstantEffectEditor(ConstantChannelEffect *t_effect):Chan
     //setMaximumHeight(40);
 
 
-    QDoubleSpinBox *constantSpin = new QDoubleSpinBox;
+    keira::NumberScrubField *constantSpin = new keira::NumberScrubField;
     constantSpin->setMinimum(-10000);
     constantSpin->setMaximum(10000);
     constantSpin->setValue(m_effect->value());
-    connect(constantSpin, &QDoubleSpinBox::valueChanged, this, &ConstantEffectEditor::valueChanged);
+    connect(constantSpin, &keira::NumberScrubField::valueChanged, this, &ConstantEffectEditor::valueChanged);
 
-    QDoubleSpinBox *rateSpin = new QDoubleSpinBox;
+    keira::NumberScrubField *rateSpin = new keira::NumberScrubField;
     rateSpin->setMinimum(-10000);
     rateSpin->setMaximum(10000);
     rateSpin->setValue(m_effect->rate()*100);
-    connect(rateSpin, &QDoubleSpinBox::valueChanged, this, &ConstantEffectEditor::rateChanged);
+    connect(rateSpin, &keira::NumberScrubField::valueChanged, this, &ConstantEffectEditor::rateChanged);
 
     StackedParameterWidget *paramWidget = new StackedParameterWidget;
     paramWidget->addWidget(constantSpin, "Value");
@@ -28,30 +29,30 @@ ConstantEffectEditor::ConstantEffectEditor(ConstantChannelEffect *t_effect):Chan
 
     addWidget(paramWidget, "Constant");
 
-    m_parentItem = new QGraphicsRectItem(0,0,0,0);
-    addItem(m_parentItem);
+    m_gizmos = new GizmoGroup(scene(), this);
 
-
-    m_originHandle = new RectangleGizmo(QRectF(-5,-5,10,10),[this, constantSpin](QPointF pt){
-
-
-            m_effect->setValue(transform().inverted().map(pt).y());
-        constantSpin->setValue(m_effect->value());
-        }, RectangleGizmo::PositionAbsolute);
-    m_originHandle->setParentItem(m_parentItem);
-    //m_originHandle->setOrientation(Qt::Vertical | Qt::Horizontal);
-    addItem(m_originHandle);
-
-    m_rateHandle = new RectangleGizmo(QRectF(-5,-5,10,10),[this, rateSpin](QPointF pt){
-        m_effect->setRate( ((pt.y())/-scale().y())/5.0);
-        rateSpin->setValue(m_effect->rate()*100.0);
+    // Value: drag vertically to set the constant level.
+    m_valueHandle = m_gizmos->addHandle(GizmoHandle::Anchor, Qt::Vertical);
+    m_valueHandle->setDataGetter([this]{
+        return QPointF(m_referenceTime, m_effect->value());
     });
-    m_rateHandle->setParentItem(m_parentItem);
+    m_valueHandle->setDataSetter([this, constantSpin](QPointF pt){
+        m_effect->setValue(pt.y());
+        constantSpin->setValue(m_effect->value());
+    });
 
-    m_pathItem = new QGraphicsPathItem();
-    m_pathItem->setPen(QPen(Qt::cyan, 2));
-    m_pathItem->setBrush(Qt::NoBrush);
-    addItem(m_pathItem);
+    // Rate: sits five time-units to the right; its height above the value handle
+    // is the slope over those five units, so dragging it sets the rate.
+    m_rateHandle = m_gizmos->addHandle(GizmoHandle::Anchor, Qt::Vertical);
+    m_rateHandle->setDataGetter([this]{
+        return QPointF(m_referenceTime + 5, m_effect->value() + m_effect->rate() * 5.0);
+    });
+    m_rateHandle->setDataSetter([this, rateSpin](QPointF pt){
+        m_effect->setRate((pt.y() - m_effect->value()) / 5.0);
+        rateSpin->setValue(m_effect->rate() * 100.0);
+    });
+
+    m_gizmos->connectLine(m_valueHandle, m_rateHandle);
 }
 
 void ConstantEffectEditor::valueChanged(double t_value)
@@ -66,24 +67,9 @@ void ConstantEffectEditor::rateChanged(double t_value)
 
 void ConstantEffectEditor::relayout(const QRectF &t_sceneRect)
 {
-    auto t = transform();
-
-    double y = m_effect->value();
-
-
-    m_parentItem->setPos(t.map(QPointF(t_sceneRect.center().x(),y)));
-    m_originHandle->setPos(QPointF(0,0));
-
-    QPainterPath path;
-    path.moveTo(t.map(QPointF(t_sceneRect.left(), y)));
-    path.lineTo(t.map(QPointF(t_sceneRect.right(), y)));
-    m_pathItem->setPath(path);
-
-
-    m_rateHandle->setPos(QPointF{5* scale().x(),m_effect->rate()*5.0 * -scale().y()});
-
-    path.moveTo(t.map(m_originHandle->pos()));
-    path.lineTo(t.map(m_rateHandle->pos()));
+    // Anchor the handles to the horizontal centre of the visible range.
+    m_referenceTime = t_sceneRect.center().x();
+    m_gizmos->setTransform(transform());
 }
 
 

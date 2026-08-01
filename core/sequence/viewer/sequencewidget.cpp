@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <QVBoxLayout>
 #include <QElapsedTimer>
 #include <QSplitter>
@@ -11,6 +12,7 @@
 #include <QMediaMetaData>
 #include <QAudioDevice>
 #include <QAudioOutput>
+#include <QProgressBar>
 #include "sequencewidget.h"
 #include "timelineviewer.h"
 #include "timelinescene.h"
@@ -35,6 +37,11 @@
 #include "sequence/baseeffect.h"
 #include "fixture/maskeffect.h"
 #include "sequencewaveformeditor.h"
+#include "plugin/pluginfactory.h"
+#include "audio/audioprocessor.h"
+#include "audio/virtualdjcaptureprocess.h"
+#include "audio/songdata.h"
+#include "virtualdj/virtualdjconnector.h"
 
 namespace photon {
 
@@ -70,6 +77,11 @@ public:
     double offset = 0;
     double scale = 20.0;
     bool isPlaying = false;
+    bool vdjSyncEnabled = false;
+    VirtualDJCaptureProcess *captureProcess = nullptr;
+    QAction *captureAction = nullptr;
+    QAction *cancelCaptureAction = nullptr;
+    QProgressBar *captureProgress = nullptr;
 };
 
 double SequenceWidget::Impl::visibleStartTime() const
@@ -123,6 +135,27 @@ SequenceWidget::SequenceWidget(QWidget *parent)
     connect(playAction, &QAction::toggled, this, &SequenceWidget::togglePlay);
     connect(m_impl->timeToolBar->addAction("Load"), &QAction::triggered, this, &SequenceWidget::pickFile);
 
+    // VirtualDJ capture: a plain trigger (not checkable) since it's a start-a-process
+    // action, not a state toggle - Cancel is the separate way to stop it early.
+    m_impl->captureAction = m_impl->timeToolBar->addAction("Capture");
+    connect(m_impl->captureAction, &QAction::triggered, this, &SequenceWidget::toggleCapture);
+
+    m_impl->cancelCaptureAction = m_impl->timeToolBar->addAction("Cancel");
+    m_impl->cancelCaptureAction->setVisible(false);
+    connect(m_impl->cancelCaptureAction, &QAction::triggered, this, &SequenceWidget::cancelCapture);
+
+    m_impl->captureProgress = new QProgressBar;
+    m_impl->captureProgress->setVisible(false);
+    m_impl->captureProgress->setMaximumWidth(120);
+    m_impl->captureProgress->setTextVisible(false);
+    m_impl->timeToolBar->addWidget(m_impl->captureProgress);
+
+    // VDJ Sync: while checked, Photon's transport (scrub, play/pause, rewind) is
+    // mirrored to VirtualDJ - independent of Capture, useful any time during editing.
+    auto vdjSyncAction = m_impl->timeToolBar->addAction("VDJ Sync");
+    vdjSyncAction->setCheckable(true);
+    connect(vdjSyncAction, &QAction::toggled, this, &SequenceWidget::toggleVdjSync);
+
 
 
     QVBoxLayout *vLayout = new QVBoxLayout;
@@ -166,11 +199,23 @@ SequenceWidget::SequenceWidget(QWidget *parent)
     connect(m_impl->details, &TimelineHeader::editLayer, this, &SequenceWidget::editLayer);
 
     connect(m_impl->player, &QMediaPlayer::positionChanged, this, &SequenceWidget::positionChanged);
+    connect(m_impl->waveform, &WaveformWidget::visibleRangeChanged, this, &SequenceWidget::waveformRangeChanged);
 
 }
 
 SequenceWidget::~SequenceWidget()
 {
+    // A capture isn't QObject-parented to this widget (so Qt's parent/child cleanup
+    // won't reach it), and its completed() handler captures [this] - stop it and
+    // disconnect before the widget goes away, so a signal arriving later can't run
+    // that lambda against a dangling this.
+    if(m_impl->captureProcess)
+    {
+        m_impl->captureProcess->disconnect(this);
+        m_impl->captureProcess->stopCapture();
+        delete m_impl->captureProcess;
+    }
+
     delete m_impl;
 }
 
@@ -182,6 +227,11 @@ void SequenceWidget::setSequence(Sequence *t_sequence)
     m_impl->player->setSource(t_sequence->filePath());
     m_impl->waveform->setSequence(t_sequence);
     m_impl->waveformHeader->setSequence(t_sequence);
+
+    // setSequence() (re)loads the waveform's audio/feature data, which leaves it at
+    // its own internal default zoom/offset - align it to whatever range this widget
+    // is already showing, the same way every other scale/data change here does.
+    m_impl->waveform->frameTime(m_impl->visibleStartTime(), m_impl->visibleEndTime());
 }
 
 Sequence *SequenceWidget::sequence() const
@@ -203,6 +253,9 @@ void SequenceWidget::editLayer(photon::Layer *t_layer)
 
 void SequenceWidget::setScale(double t_scale)
 {
+    // The coordinator owns the scale clamp so every view agrees on the limit and
+    // none can diverge at the zoom boundary.
+    t_scale = std::max(t_scale, 2.0);
     m_impl->scale = t_scale;
     m_impl->timebar->setScale(t_scale);
     m_impl->viewer->setScale(t_scale);
@@ -216,6 +269,7 @@ void SequenceWidget::setScale(double t_scale)
 
 void SequenceWidget::setScalePoint(QPointF t_scale)
 {
+    t_scale.setX(std::max(t_scale.x(), 2.0));
     m_impl->scale = t_scale.x();
     m_impl->timebar->setScale(t_scale.x());
     m_impl->viewer->setScale(t_scale.x());
@@ -421,10 +475,14 @@ void SequenceWidget::gotoTime(double t_time)
     m_impl->startTimeMS = QDateTime::currentMSecsSinceEpoch();
     m_impl->lastCurrentTime = t_time;
     m_impl->timer.restart();
+    sequence()->setPreviewTime(m_impl->currentTime);
     m_impl->viewer->movePlayheadTo(m_impl->currentTime);
 
     m_impl->player->setPosition(m_impl->currentTime*1000);
     m_impl->waveform->setPlayhead(m_impl->currentTime);
+
+    if(m_impl->vdjSyncEnabled)
+        photonApp->djConnector()->sendSeek(t_time);
 }
 
 void SequenceWidget::positionChanged(qint64 t_time)
@@ -440,6 +498,18 @@ void SequenceWidget::positionChanged(qint64 t_time)
 
 void SequenceWidget::tick()
 {
+    // Drives independently of Photon's own play state - a VDJ capture advances via
+    // VDJ's playback, not Photon's local wall-clock simulation below.
+    if(m_impl->captureProcess)
+    {
+        VirtualDJConnector *connector = photonApp->djConnector();
+        if(connector->songLength > 0.0)
+        {
+            m_impl->captureProgress->setRange(0, static_cast<int>(connector->songLength));
+            m_impl->captureProgress->setValue(static_cast<int>(connector->time));
+        }
+    }
+
     if(!m_impl->isPlaying)
         return;
 /*
@@ -452,8 +522,24 @@ void SequenceWidget::tick()
 
     m_impl->currentTime = m_impl->lastCurrentTime + (deltaTime / 1000.0);
     m_impl->timer.restart();
+    sequence()->setPreviewTime(m_impl->currentTime);
     m_impl->viewer->movePlayheadTo(m_impl->currentTime);
     m_impl->waveform->setPlayhead(m_impl->currentTime);
+}
+
+void SequenceWidget::waveformRangeChanged(double start, double end)
+{
+    // The waveform was panned/zoomed directly — convert its new visible time range
+    // into the shared scale/offset so every view follows. setScale clamps, and the
+    // resulting frameTime() call re-aligns the waveform to the clamped values.
+    if(end <= start)
+        return;
+    const double w = m_impl->waveform->width();
+    if(w <= 0)
+        return;
+
+    setScale(w / (end - start));
+    setOffset(start * m_impl->scale);
 }
 
 void SequenceWidget::detailsSplitterMoved(int pos, int index)
@@ -487,6 +573,7 @@ DMXMatrix SequenceWidget::getDMX()
 
     m_impl->currentTime = m_impl->lastCurrentTime + (deltaTime / 1000.0);
     m_impl->timer.restart();
+    sequence()->setPreviewTime(m_impl->currentTime);
 
     DMXMatrix matrix;
     ProcessContext context{matrix};
@@ -515,6 +602,22 @@ void SequenceWidget::togglePlay(bool t_value)
         m_impl->player->play();
     else
         m_impl->player->pause();
+
+    if(m_impl->vdjSyncEnabled)
+    {
+        if(m_impl->isPlaying)
+        {
+            // Make sure VDJ starts from exactly where Photon is showing, not wherever
+            // it happened to be left - sync may not have been the thing that put it
+            // there (e.g. it was only just enabled).
+            photonApp->djConnector()->sendSeek(m_impl->currentTime);
+            photonApp->djConnector()->sendPlay();
+        }
+        else
+        {
+            photonApp->djConnector()->sendPause();
+        }
+    }
 }
 
 void SequenceWidget::rewind()
@@ -522,8 +625,56 @@ void SequenceWidget::rewind()
     m_impl->currentTime = 0.0;
     m_impl->lastCurrentTime = 0.0;
     m_impl->startTimeMS = QDateTime::currentMSecsSinceEpoch();
+    sequence()->setPreviewTime(m_impl->currentTime);
     m_impl->viewer->movePlayheadTo(m_impl->currentTime);
     m_impl->player->setPosition(0);
+
+    if(m_impl->vdjSyncEnabled)
+        photonApp->djConnector()->sendRestart();
+}
+
+void SequenceWidget::toggleCapture()
+{
+    if(m_impl->captureProcess)
+        return;   // a capture is already running; the action is disabled meanwhile anyway
+
+    m_impl->captureProcess = new VirtualDJCaptureProcess;
+    m_impl->captureProcess->init(sequence());
+
+    connect(m_impl->captureProcess, &AudioProcessor::completed, this, [this](){
+        m_impl->captureAction->setEnabled(true);
+        m_impl->cancelCaptureAction->setVisible(false);
+        m_impl->captureProgress->setVisible(false);
+        m_impl->captureProcess->deleteLater();
+        m_impl->captureProcess = nullptr;
+
+        // SongData carries no change signal by design (see songdata.h) - the
+        // waveform reads it fresh on every paint, but nothing else prompts a
+        // repaint, so the newly captured beats won't appear until the view is
+        // told to redraw. setDuration() is also how a no-local-file sequence's time
+        // axis gets framed in the first place (a no-op if a real file is already
+        // loaded, since it only takes effect when nothing has been decoded).
+        m_impl->waveform->setDuration(sequence()->songData()->duration());
+        m_impl->waveform->update();
+    });
+
+    m_impl->captureAction->setEnabled(false);
+    m_impl->cancelCaptureAction->setVisible(true);
+    m_impl->captureProgress->setVisible(true);
+    m_impl->captureProgress->setRange(0, 0);   // indeterminate until songLength is known
+
+    m_impl->captureProcess->startProcessing();
+}
+
+void SequenceWidget::cancelCapture()
+{
+    if(m_impl->captureProcess)
+        m_impl->captureProcess->stopCapture();
+}
+
+void SequenceWidget::toggleVdjSync(bool t_value)
+{
+    m_impl->vdjSyncEnabled = t_value;
 }
 
 void SequenceWidget::pickFile()
@@ -537,6 +688,14 @@ void SequenceWidget::pickFile()
         m_impl->scene->sequence()->setAudioPath(fileName);
         m_impl->player->setSource(fileName);
         m_impl->waveform->loadAudio(fileName);
+
+        // Automatically derive beats and the level/frequency envelopes for the
+        // newly assigned track, so the waveform view has something to show without
+        // the user having to run each audio process manually from its menu. This
+        // is a deliberate "new file" action, so re-running (and replacing any
+        // previous analysis) is exactly what's wanted here.
+        m_impl->waveformHeader->addAudioProcessor(photonApp->plugins()->createAudioProcessor("photon.audio-process.beat"));
+        m_impl->waveformHeader->addAudioProcessor(photonApp->plugins()->createAudioProcessor("photon.audio-process.levels"));
     }
 
 }

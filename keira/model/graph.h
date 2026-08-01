@@ -6,6 +6,9 @@
 
 namespace keira {
 
+class GraphInputNode;
+class GraphOutputNode;
+
 class KEIRA_EXPORT Graph : public QObject
 {
     Q_OBJECT
@@ -22,6 +25,16 @@ public:
     const QVector<Node*> &nodes() const;
     QByteArray graphTypeId() const;
     void setGraphTypeId(const QByteArray &);
+
+    // The graph's interface: the input and output ports it exposes, declared by
+    // GraphInputNode / GraphOutputNode instances it contains. Derived on demand;
+    // an enclosing SubGraphNode mirrors these as its outer parameters and a clip
+    // editor reads them to build its front-end. interfaceChanged() fires when a
+    // port is added, removed, or its metadata changes.
+    QVector<GraphInputNode*> inputPorts() const;
+    QVector<GraphOutputNode*> outputPorts() const;
+    // Called by interface nodes when their port metadata changes.
+    void notifyInterfaceChanged();
 
     // Drains and applies all commands queued by the UI thread.
     // Called by the eval thread at the start of each frame.
@@ -72,6 +85,9 @@ signals:
     // A node's parameter set changed at runtime (ports added/removed); the view
     // should rebuild that node's ports.
     void nodePortsChanged(keira::Node *);
+    // The graph's exposed interface (input/output ports) changed — a port was
+    // added, removed, or its metadata changed. Enclosing SubGraphNodes re-mirror.
+    void interfaceChanged();
 
 private:
     friend class Node;

@@ -1,29 +1,48 @@
 #include <QNetworkInterface>
+#include <QCoreApplication>
+#include <QDir>
+#include <algorithm>
 #include "pluginvamp.h"
+#include "vamp.h"
 #include "plugin/pluginfactory.h"
 #include "beatdetectionprocess.h"
 
 namespace photon {
 
+namespace {
+    // Vamp discovers plugins via VAMP_PATH (or a platform default when that's
+    // unset). Our bundled plugins (e.g. vamp-example-plugins) ship next to the
+    // executable, but VAMP_PATH is developer/machine-specific and easily stale or
+    // absent - which silently breaks analysis rather than failing to build. Ensure
+    // our own directory is always searched, on top of whatever Vamp would otherwise
+    // use, so this doesn't depend on external environment configuration.
+    void ensureVampPluginPath()
+    {
+        std::vector<std::string> path = PluginHostAdapter::getPluginPath();
+
+        const std::string appDir = QCoreApplication::applicationDirPath().toStdString();
+        if(std::find(path.begin(), path.end(), appDir) == path.end())
+            path.insert(path.begin(), appDir);
+
+        QString joined;
+        for(size_t i = 0; i < path.size(); ++i)
+        {
+            if(i)
+                joined += QDir::listSeparator();
+            joined += QString::fromStdString(path[i]);
+        }
+
+        qputenv("VAMP_PATH", joined.toLocal8Bit());
+    }
+}
+
 bool PluginVamp::initialize(const PluginContext &context)
 {
-    //initPluginResource();
     Q_UNUSED(context)
-    qDebug() << "Vamp initialized";
 
-
-    //vamp.printPluginCategoryList();
-
-    vamp.setPluginName("vamp-example-plugins");
-    vamp.setPluginId("percussiononsets");
-    vamp.setFile(QUrl::fromLocalFile("C:\\Users\\Carter\\Desktop\\click_short.wav"));
-    //vamp.start();
-
+    ensureVampPluginPath();
 
     photonApp->plugins()->registerAudioProcessor(BeatDetectionProcess::info());
-    //vamp.runPlugin("test","vamp-example-plugins","percussiononsets","out",1,"C:\\Users\\Carter\\Desktop\\click_short.wav","outtest",true);
-    //vamp.runPlugin("test","vamp-example-plugins","fixedtempo","out",1,"C:\\Users\\Carter\\Downloads\\01 - Running On Empty.mp3","outtest",true);
-
 
     return true;
 }

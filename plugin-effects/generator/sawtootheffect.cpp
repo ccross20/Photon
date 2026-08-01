@@ -2,7 +2,7 @@
 
 #include <QHBoxLayout>
 #include <QLabel>
-#include <QDoubleSpinBox>
+#include "view/numberscrubfield.h"
 #include "sawtootheffect.h"
 #include "sequence/viewer/stackedparameterwidget.h"
 
@@ -11,14 +11,15 @@ namespace photon {
 SawtoothEffectEditor::SawtoothEffectEditor(SawtoothEffect *t_effect):ChannelEffectEditor(t_effect),m_effect(t_effect)
 {
 
-    QDoubleSpinBox *freqSpin = new QDoubleSpinBox;
+    keira::NumberScrubField *freqSpin = new keira::NumberScrubField;
+    freqSpin->setMinimum(.001);   // frequency of 0 divides by zero → NaN
     freqSpin->setValue(m_effect->frequency());
-    connect(freqSpin, &QDoubleSpinBox::valueChanged, this, &SawtoothEffectEditor::frequencyChanged);
+    connect(freqSpin, &keira::NumberScrubField::valueChanged, this, &SawtoothEffectEditor::frequencyChanged);
 
 
-    QDoubleSpinBox *ampSpin = new QDoubleSpinBox;
+    keira::NumberScrubField *ampSpin = new keira::NumberScrubField;
     ampSpin->setValue(m_effect->amplitude());
-    connect(ampSpin, &QDoubleSpinBox::valueChanged, this, &SawtoothEffectEditor::amplitudeChanged);
+    connect(ampSpin, &keira::NumberScrubField::valueChanged, this, &SawtoothEffectEditor::amplitudeChanged);
 
     StackedParameterWidget *paramWidget = new StackedParameterWidget;
     paramWidget->addWidget(freqSpin, "Frequency");

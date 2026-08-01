@@ -1,5 +1,6 @@
 #include <QJsonArray>
 #include <QUuid>
+#include <algorithm>
 #include "channel_p.h"
 #include "channeleffect_p.h"
 #include "sequence.h"
@@ -218,6 +219,11 @@ QString Channel::parentName() const
 
 void Channel::setDuration(double t_duration)
 {
+    // A zero/negative duration is invalid regardless of caller (it can feed into
+    // unguarded division elsewhere in the effect chain) - clamp here so every
+    // caller is protected, not just the ones that remember to check.
+    t_duration = std::max(t_duration, 0.0001);
+
     if(m_impl->duration == t_duration)
         return;
     m_impl->duration = t_duration;

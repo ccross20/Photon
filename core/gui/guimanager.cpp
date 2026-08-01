@@ -13,6 +13,7 @@
 #include "plugin/pluginfactory.h"
 #include "sequence/sequencecollection.h"
 #include "panel_p.h"
+#include "gui/dialog/settingsdialog.h"
 /*
 #include "settings/settings.h"
 #include "menu/menufactory.h"
@@ -57,6 +58,8 @@ void GuiManager::Impl::createAppWindow()
     window->setMenuBar(menubar);
 
     QMenu *fileMenu = new QMenu("File");
+    fileMenu->addAction("Settings...", [](){ SettingsDialog dialog; dialog.exec(); });
+    fileMenu->addSeparator();
     fileMenu->addAction("Quit");
     menubar->addMenu(fileMenu);
 

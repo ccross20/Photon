@@ -28,14 +28,16 @@ keira::NodeInformation NumberInputNode::info()
     toReturn.name = "Number Input";
     toReturn.nodeId = "photon.routine.number-input";
     toReturn.categories = {"Input"};
-    toReturn.graphs = QByteArrayList{"routine"};
+    toReturn.graphs = QByteArrayList{"routine","fixture","canvas","pixel"};
+    toReturn.inputParameterType = keira::DecimalParameter::ParameterId;
 
     return toReturn;
 }
 
-NumberInputNode::NumberInputNode() : keira::Node("photon.routine.number-input"),m_impl(new Impl)
+NumberInputNode::NumberInputNode() : keira::GraphInputNode("photon.routine.number-input"),m_impl(new Impl)
 {
     setName("Number Input");
+    setValuePortId(Value);
 }
 
 NumberInputNode::~NumberInputNode()
@@ -51,7 +53,13 @@ void NumberInputNode::markDirty(int t_dirty)
     {
         if(auto *routine = dynamic_cast<Routine*>(graph()))
             routine->updateChannel(m_impl->index, channelInfo());
+        notifyInterfaceChanged();
     }
+}
+
+QString NumberInputNode::portName() const
+{
+    return m_impl->nameParam->value().toString();
 }
 
 void NumberInputNode::setValue(const QByteArray &t_id, const QVariant &t_value)
@@ -62,6 +70,7 @@ void NumberInputNode::setValue(const QByteArray &t_id, const QVariant &t_value)
     {
         if(auto *routine = dynamic_cast<Routine*>(graph()))
             routine->updateChannel(channelIndex(), channelInfo());
+        notifyInterfaceChanged();
     }
 
 }
@@ -100,11 +109,11 @@ void NumberInputNode::createParameters()
     addParameter(m_impl->defaultValueParam);
 }
 
-void NumberInputNode::evaluate(keira::EvaluationContext *t_context) const
+void NumberInputNode::evaluate(keira::EvaluationContext *) const
 {
-    //RoutineEvaluationContext *context = static_cast<RoutineEvaluationContext*>(t_context);
-
-    //m_impl->valueParam->setValue(context->channelValues.value(uniqueId(),m_impl->defaultValueParam->value()));
+    // Inside a subgraph the enclosing SubGraphNode relays the outer value onto the
+    // value port via applyInputs() before this runs, so there is nothing to do.
+    // (Driving a routine's inputs from clip channels is wired up in the clip work.)
 }
 
 void NumberInputNode::readFromJson(const QJsonObject &t_object, keira::NodeLibrary *t_library)

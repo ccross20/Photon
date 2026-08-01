@@ -4,11 +4,13 @@
 #include <QGraphicsItem>
 #include <QEasingCurve>
 #include "sequence/channeleffect.h"
-#include "gui/gizmo/rectanglegizmo.h"
+#include "gui/gizmo/gizmogroup.h"
 
 namespace photon {
 
 class PulseEffect;
+class GizmoGroup;
+class GizmoHandle;
 
 class PulseEffectEditor : public ChannelEffectEditor
 {
@@ -31,13 +33,12 @@ protected:
 
 private:
     PulseEffect *m_effect;
-    QPointF m_referencePt;
-    QGraphicsRectItem *m_parentItem;
-    RectangleGizmo *m_originHandle;
-    RectangleGizmo *m_frequencyHandle;
-    RectangleGizmo *m_durationHandle;
-    RectangleGizmo *m_amplitudeHandle;
-    QGraphicsPathItem *m_pathItem;
+    double m_referenceTime = 0;
+    GizmoGroup *m_gizmos;
+    GizmoHandle *m_originHandle;
+    GizmoHandle *m_frequencyHandle;
+    GizmoHandle *m_durationHandle;
+    GizmoHandle *m_amplitudeHandle;
 
 };
 

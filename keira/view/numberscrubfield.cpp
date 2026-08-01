@@ -62,6 +62,16 @@ void NumberScrubField::setRange(double t_min, double t_max)
     update();
 }
 
+void NumberScrubField::setMinimum(double t_min)
+{
+    setRange(t_min, m_maximum);
+}
+
+void NumberScrubField::setMaximum(double t_max)
+{
+    setRange(m_minimum, t_max);
+}
+
 void NumberScrubField::setDecimals(int t_decimals)
 {
     m_decimals = qMax(0, t_decimals);

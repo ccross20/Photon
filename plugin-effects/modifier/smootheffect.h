@@ -41,7 +41,7 @@ public:
     static EffectInformation info();
 
 private:
-    int m_samples = 5.0;
+    int m_samples = 32;   // enough taps that a smoothed edge reads as a curve, not a staircase
     double m_spread = 0.1;
 };
 

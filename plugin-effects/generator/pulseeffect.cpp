@@ -1,7 +1,7 @@
 #include <QVBoxLayout>
 #include <QLabel>
 #include <QComboBox>
-#include <QDoubleSpinBox>
+#include "view/numberscrubfield.h"
 #include <QStyleOptionGraphicsItem>
 #include <QPainter>
 #include <QEasingCurve>
@@ -9,6 +9,7 @@
 #include "sequence/channel.h"
 #include "sequence/viewer/stackedparameterwidget.h"
 #include "sequence/sequence.h"
+#include "gui/gizmo/gizmohandle.h"
 #include "util/utils.h"
 
 namespace photon {
@@ -17,45 +18,45 @@ PulseEffectEditor::PulseEffectEditor(PulseEffect *t_effect):ChannelEffectEditor(
 {
     //setMaximumHeight(40);
 
-    QDoubleSpinBox *freqSpin = new QDoubleSpinBox;
+    keira::NumberScrubField *freqSpin = new keira::NumberScrubField;
     freqSpin->setMinimum(.001);
     freqSpin->setMaximum(9999);
     freqSpin->setValue(m_effect->frequency());
-    connect(freqSpin, &QDoubleSpinBox::valueChanged, this, &PulseEffectEditor::frequencyChanged);
+    connect(freqSpin, &keira::NumberScrubField::valueChanged, this, &PulseEffectEditor::frequencyChanged);
 
 
-    QDoubleSpinBox *durationSpin = new QDoubleSpinBox;
+    keira::NumberScrubField *durationSpin = new keira::NumberScrubField;
     durationSpin->setMinimum(.001);
     durationSpin->setMaximum(9999);
     durationSpin->setValue(m_effect->duration());
-    connect(durationSpin, &QDoubleSpinBox::valueChanged, this, &PulseEffectEditor::durationChanged);
+    connect(durationSpin, &keira::NumberScrubField::valueChanged, this, &PulseEffectEditor::durationChanged);
 
 
-    QDoubleSpinBox *offsetSpin = new QDoubleSpinBox;
+    keira::NumberScrubField *offsetSpin = new keira::NumberScrubField;
     offsetSpin->setMinimum(-9999);
     offsetSpin->setMaximum(9999);
     offsetSpin->setValue(m_effect->offset());
-    connect(offsetSpin, &QDoubleSpinBox::valueChanged, this, &PulseEffectEditor::timeOffsetChanged);
+    connect(offsetSpin, &keira::NumberScrubField::valueChanged, this, &PulseEffectEditor::timeOffsetChanged);
 
 
-    QDoubleSpinBox *ampSpin = new QDoubleSpinBox;
+    keira::NumberScrubField *ampSpin = new keira::NumberScrubField;
     ampSpin->setMinimum(-255);
     ampSpin->setMaximum(255);
     ampSpin->setValue(m_effect->amplitude());
-    connect(ampSpin, &QDoubleSpinBox::valueChanged, this, &PulseEffectEditor::amplitudeChanged);
+    connect(ampSpin, &keira::NumberScrubField::valueChanged, this, &PulseEffectEditor::amplitudeChanged);
 
 
-    QDoubleSpinBox *easeInDurationSpin = new QDoubleSpinBox;
+    keira::NumberScrubField *easeInDurationSpin = new keira::NumberScrubField;
     easeInDurationSpin->setMinimum(.001);
     easeInDurationSpin->setMaximum(9999);
     easeInDurationSpin->setValue(m_effect->easeInDuration());
-    connect(easeInDurationSpin, &QDoubleSpinBox::valueChanged, this, &PulseEffectEditor::easeInDurationChanged);
+    connect(easeInDurationSpin, &keira::NumberScrubField::valueChanged, this, &PulseEffectEditor::easeInDurationChanged);
 
-    QDoubleSpinBox *easeOutDurationSpin = new QDoubleSpinBox;
+    keira::NumberScrubField *easeOutDurationSpin = new keira::NumberScrubField;
     easeOutDurationSpin->setMinimum(.001);
     easeOutDurationSpin->setMaximum(9999);
     easeOutDurationSpin->setValue(m_effect->easeOutDuration());
-    connect(easeOutDurationSpin, &QDoubleSpinBox::valueChanged, this, &PulseEffectEditor::easeOutDurationChanged);
+    connect(easeOutDurationSpin, &keira::NumberScrubField::valueChanged, this, &PulseEffectEditor::easeOutDurationChanged);
 
     QStringList easeList = easeStrings();
 
@@ -82,40 +83,40 @@ PulseEffectEditor::PulseEffectEditor(PulseEffect *t_effect):ChannelEffectEditor(
 
     addWidget(paramWidget, "Pulse");
 
+    m_gizmos = new GizmoGroup(scene(), this);
 
-    m_parentItem = new QGraphicsRectItem(0,0,0,0);
-    addItem(m_parentItem);
+    m_originHandle = m_gizmos->addHandle();
+    m_originHandle->setDataGetter([this]{ return QPointF(m_referenceTime, 0); });
 
-    m_frequencyHandle = new RectangleGizmo(QRectF(-5,-5,10,10),[this, freqSpin](QPointF pt){
-        m_effect->setFrequency(pt.x()/scale().x());
+    m_frequencyHandle = m_gizmos->addHandle(GizmoHandle::Anchor, Qt::Horizontal);
+    m_frequencyHandle->setDataGetter([this]{
+        return QPointF(m_referenceTime + m_effect->frequency(), 0);
+    });
+    m_frequencyHandle->setDataSetter([this, freqSpin](QPointF pt){
+        m_effect->setFrequency(std::max(.001, pt.x() - m_referenceTime));
         freqSpin->setValue(m_effect->frequency());
     });
-    m_frequencyHandle->setParentItem(m_parentItem);
 
-
-    m_durationHandle = new RectangleGizmo(QRectF(-5,-5,10,10),[this, durationSpin](QPointF pt){
-        m_effect->setDuration(pt.x()/scale().x());
+    m_durationHandle = m_gizmos->addHandle(GizmoHandle::Anchor, Qt::Horizontal);
+    m_durationHandle->setDataGetter([this]{
+        return QPointF(m_referenceTime + m_effect->duration(), 0);
+    });
+    m_durationHandle->setDataSetter([this, durationSpin](QPointF pt){
+        m_effect->setDuration(std::max(.001, pt.x() - m_referenceTime));
         durationSpin->setValue(m_effect->duration());
     });
-    m_durationHandle->setParentItem(m_parentItem);
 
-
-    m_amplitudeHandle = new RectangleGizmo(QRectF(-5,-5,10,10),[this, ampSpin](QPointF pt){
-        m_effect->setAmplitude(pt.y()/scale().y());
+    m_amplitudeHandle = m_gizmos->addHandle(GizmoHandle::Anchor, Qt::Vertical);
+    m_amplitudeHandle->setDataGetter([this]{
+        return QPointF(m_referenceTime, m_effect->amplitude());
+    });
+    m_amplitudeHandle->setDataSetter([this, ampSpin](QPointF pt){
+        m_effect->setAmplitude(pt.y());
         ampSpin->setValue(m_effect->amplitude());
     });
-    m_amplitudeHandle->setOrientation(Qt::Vertical);
-    m_amplitudeHandle->setParentItem(m_parentItem);
 
-    m_originHandle = new RectangleGizmo(QRectF(-5,-5,10,10),[](QPointF pt){
-
-    });
-    m_originHandle->setParentItem(m_parentItem);
-
-    m_pathItem = new QGraphicsPathItem(m_parentItem);
-    m_pathItem->setPen(QPen(Qt::cyan, 2));
-    m_pathItem->setBrush(Qt::NoBrush);
-    //addItem(m_originHandle);
+    m_gizmos->connectLine(m_frequencyHandle, m_originHandle);
+    m_gizmos->connectLine(m_originHandle, m_amplitudeHandle);
 }
 
 void PulseEffectEditor::frequencyChanged(double t_value)
@@ -160,31 +161,16 @@ void PulseEffectEditor::easeOutChanged(int t_ease)
 
 void PulseEffectEditor::relayout(const QRectF &t_sceneRect)
 {
-    auto t = transform();
-
-    double scaledFreq = m_effect->frequency();
+    double freq = m_effect->frequency();
     double startTime = m_effect->channel()->startTime();
 
     double x = startTime;
+    if(t_sceneRect.left() > startTime && freq > 0)
+        x = (ceil((t_sceneRect.left() - startTime) / freq) * freq) + startTime;
 
-    if(t_sceneRect.left() > startTime)
-    {
-        x = (ceil((t_sceneRect.left() - startTime) / scaledFreq) * scaledFreq) + startTime;
-    }
+    m_referenceTime = x;
 
-    m_referencePt = QPoint(x,0);
-
-    m_parentItem->setPos(t.map(QPointF(x,0)));
-
-    m_originHandle->setPos(QPointF(0,0));
-    m_frequencyHandle->setPos(QPointF(scaledFreq * scale().x(),0));
-    m_amplitudeHandle->setPos(QPointF(0, m_effect->amplitude() * scale().y()));
-
-    QPainterPath path;
-    path.moveTo(m_frequencyHandle->pos());
-    path.lineTo(m_originHandle->pos());
-    path.lineTo(m_amplitudeHandle->pos());
-    m_pathItem->setPath(path);
+    m_gizmos->setTransform(transform());
 }
 
 

@@ -1,7 +1,7 @@
 #include <QVBoxLayout>
 #include <QMenu>
 #include "routineeditpanel.h"
-#include "view/viewer.h"
+#include "view/graphwidget.h"
 #include "view/scene.h"
 #include "routine/routine.h"
 #include "photoncore.h"
@@ -13,12 +13,12 @@ class RoutineEditPanel::Impl
 {
 public:
     keira::Scene *scene;
-    keira::Viewer *viewer;
+    keira::GraphWidget *viewer;
 };
 
 RoutineEditPanel::RoutineEditPanel() : Panel("photon.routine"),m_impl(new Impl)
 {
-    m_impl->viewer = new keira::Viewer(photonApp->plugins()->nodeLibrary());
+    m_impl->viewer = new keira::GraphWidget(photonApp->plugins()->nodeLibrary());
     setPanelWidget(m_impl->viewer);
     setName("Routine");
 

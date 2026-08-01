@@ -26,6 +26,15 @@ enum Verbosity {
     PluginInformationDetailed
 };
 
+// One detected event from a VariableSampleRate output. barPosition carries the
+// feature's label parsed as an int (e.g. qm-barbeattracker labels each beat with
+// its 1-based position in the bar); 0 when the output doesn't label events.
+struct BeatEvent
+{
+    double time = 0.0;
+    int barPosition = 0;
+};
+
 class Vamp : public QObject
 {
     Q_OBJECT
@@ -40,7 +49,7 @@ public:
 
     void start();
 
-    const QList<float> &beats();
+    const QList<BeatEvent> &beats();
 
 signals:
     void processingComplete();
@@ -57,7 +66,7 @@ private:
     bool initPlugin();
     bool startReading(QAudioBuffer &);
     void processPlugin(int frames);
-    QList<float> m_beats;
+    QList<BeatEvent> m_beats;
     QAudioDecoder *m_decoder;
     Plugin::OutputList m_outputs;
     Plugin::OutputDescriptor m_od;
@@ -69,20 +78,21 @@ private:
     QUrl m_file;
     int m_channelCount = 0;
     int m_sampleRate = 0;
-    int m_blockSize;
-    int m_stepSize;
-    int m_overlapSize;
+    int m_blockSize = 0;
+    int m_stepSize = 0;
+    int m_overlapSize = 0;
     int m_outputNo = 1;
-    int m_finalStepsRemaining;
+    int m_finalStepsRemaining = 0;
     int m_count = 0;
     qint64 m_currentStep = 0;
     bool m_started = false;
+    bool m_failed = false;
     bool m_useFrames = false;
     Plugin *m_plugin = nullptr;
-    QBuffer *m_out;
+    QBuffer *m_out = nullptr;
     std::vector<float> m_cache;
-    float *m_filebuf;
-    float **m_plugbuf;
+    float *m_filebuf = nullptr;
+    float **m_plugbuf = nullptr;
 
 };
 

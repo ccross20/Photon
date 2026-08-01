@@ -4,7 +4,6 @@
 #include <QObject>
 #include <QtPlugin>
 #include "plugin/iplugin.h"
-#include "vamp.h"
 
 namespace photon {
 
@@ -20,7 +19,6 @@ public:
     QString name() override;
     QString description() override;
     QString id() override;
-    Vamp vamp;
 };
 
 }// photon namespace

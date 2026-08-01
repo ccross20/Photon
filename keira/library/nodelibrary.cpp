@@ -110,4 +110,12 @@ Node *NodeLibrary::createNode(const QByteArray &nodeId)
 
 }
 
+QByteArray NodeLibrary::inputNodeForParameterType(const QByteArray &t_parameterType) const
+{
+    for(const auto &info : m_impl->nodes)
+        if(info.inputParameterType == t_parameterType)
+            return info.nodeId;
+    return QByteArray();
+}
+
 } // namespace keira

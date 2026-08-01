@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <QScrollBar>
 #include <QMouseEvent>
 #include <QWheelEvent>
@@ -10,6 +11,14 @@
 #include "sequence/sequence.h"
 
 namespace photon {
+
+namespace {
+    // A clip can never shrink to zero/negative duration - that's a nonsensical
+    // state nothing downstream guards against. Dragging a resize handle past the
+    // clip's opposite edge (an easy, fast mouse motion) would otherwise drive
+    // duration negative with no floor.
+    constexpr double kMinClipDuration = 0.01;
+}
 
 class ClipMoveData
 {
@@ -277,11 +286,11 @@ void TimelineViewer::mouseMoveEvent(QMouseEvent *event)
                 else if(m_impl->interactionMode == Impl::InteractionResizeStart)
                 {
                     data.clip->setStartTime(data.startTime + delta.x());
-                    data.clip->setDuration(data.startDuration - delta.x());
+                    data.clip->setDuration(std::max(kMinClipDuration, data.startDuration - delta.x()));
                 }
                 else if(m_impl->interactionMode == Impl::InteractionResizeEnd)
                 {
-                    data.clip->setDuration(data.startDuration + delta.x());
+                    data.clip->setDuration(std::max(kMinClipDuration, data.startDuration + delta.x()));
                 }
                 else if(m_impl->interactionMode == Impl::InteractionResizeEaseIn && clipItem)
                 {
@@ -358,18 +367,40 @@ void TimelineViewer::mouseReleaseEvent(QMouseEvent *event)
 
 void TimelineViewer::wheelEvent(QWheelEvent *event)
 {
-    QGraphicsView::wheelEvent(event);
-
     if(event->modifiers() & Qt::ControlModifier)
     {
-        m_impl->scale += event->angleDelta().y() / 10.0;
+        // Zoom around the cursor while preserving the pan. Route through
+        // setScale/setOffset so the offset-preserving transform is applied and the
+        // host keeps the other views in sync. (The old path used fromScale(), which
+        // dropped the offset and desynced the views.)
+        const double cursorX = event->position().x();
+        const double cursorTime = (cursorX + m_impl->xOffset) / m_impl->scale;
 
-        if(m_impl->scale < .001)
-            m_impl->scale = .25;
+        const double factor = event->angleDelta().y() > 0 ? 1.1 : (1.0 / 1.1);
+        setScale(m_impl->scale * factor);
+        setOffset(cursorTime * m_impl->scale - cursorX);
+        event->accept();
+    }
+    else
+    {
+        // Horizontal pan. Route through setOffset so xOffset updates and
+        // offsetChanged fires, keeping the waveform and channel views in sync. The
+        // default QGraphicsView wheel handler scrolls this view's own scroll area,
+        // which moves only this view and desyncs the others.
+        const QPoint pixels = event->pixelDelta();
+        const QPoint angle = event->angleDelta();
 
-        setTransform(QTransform::fromScale(m_impl->scale, 1.0));
+        double delta;
+        if(!pixels.isNull())
+            delta = pixels.y() != 0 ? pixels.y() : pixels.x();
+        else
+        {
+            const int a = angle.y() != 0 ? angle.y() : angle.x();
+            delta = (a / 120.0) * 40.0;   // ~40px per wheel notch
+        }
 
-        emit scaleChanged(m_impl->scale);
+        setOffset(m_impl->xOffset - delta);
+        event->accept();
     }
 }
 

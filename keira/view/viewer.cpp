@@ -241,17 +241,35 @@ void Viewer::mouseReleaseEvent(QMouseEvent *event)
                 {
                     if(nodeItem->node()->isContainer())
                     {
-                        auto param = m_impl->startPort->parameter()->clone(m_impl->library);
-                        param->setId(QUuid::createUuid().toByteArray(QUuid::WithoutBraces));
-                        param->setConnectionOptions(keira::AllowSingleInput);
-                        param->setName(m_impl->startPort->parameter()->node()->name() + ":" + param->name());
-                        nodeItem->node()->addParameter(param);
-                        nodeItem->addPort();
+                        Parameter *mirror = nullptr;
+                        auto *subGraph = dynamic_cast<SubGraphNode*>(nodeItem->node());
 
-                        if(m_impl->startPort->direction() == Output)
-                            graph()->connectParameters(m_impl->startPort->parameter(), param);
+                        // Dropping an OUTPUT wire onto a subgraph creates the matching
+                        // input node inside the graph and connects to its auto-mirrored
+                        // outer port — so a parameter can be exposed from either side.
+                        if(subGraph && m_impl->startPort->direction() == Output)
+                            mirror = subGraph->exposeInputForType(m_impl->startPort->parameter()->typeId());
+
+                        if(mirror)
+                        {
+                            graph()->connectParameters(m_impl->startPort->parameter(), mirror);
+                        }
                         else
-                            graph()->connectParameters(param, m_impl->startPort->parameter());
+                        {
+                            // Fallback (unsupported type, or an input-direction drop):
+                            // clone the parameter straight onto the node as before.
+                            auto param = m_impl->startPort->parameter()->clone(m_impl->library);
+                            param->setId(QUuid::createUuid().toByteArray(QUuid::WithoutBraces));
+                            param->setConnectionOptions(keira::AllowSingleInput);
+                            param->setName(m_impl->startPort->parameter()->node()->name() + ":" + param->name());
+                            nodeItem->node()->addParameter(param);
+                            nodeItem->addPort();
+
+                            if(m_impl->startPort->direction() == Output)
+                                graph()->connectParameters(m_impl->startPort->parameter(), param);
+                            else
+                                graph()->connectParameters(param, m_impl->startPort->parameter());
+                        }
 
                         QGraphicsView::mouseReleaseEvent(event);
                     }

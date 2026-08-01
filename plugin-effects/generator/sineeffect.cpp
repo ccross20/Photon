@@ -1,11 +1,12 @@
 #include <QVBoxLayout>
 #include <QLabel>
-#include <QDoubleSpinBox>
 #include <QStyleOptionGraphicsItem>
 #include <QPainter>
 #include "sineeffect.h"
 #include "sequence/channel.h"
 #include "sequence/viewer/stackedparameterwidget.h"
+#include "gui/gizmo/gizmohandle.h"
+#include "view/numberscrubfield.h"
 
 namespace photon {
 
@@ -16,18 +17,16 @@ SineEffectEditor::SineEffectEditor(SineEffect *t_effect):ChannelEffectEditor(t_e
 {
     //setMaximumHeight(40);
 
-    QDoubleSpinBox *freqSpin = new QDoubleSpinBox;
-    freqSpin->setMinimum(.001);
-    freqSpin->setMaximum(9999);
+    auto *freqSpin = new keira::NumberScrubField;
+    freqSpin->setRange(.001, 9999);
     freqSpin->setValue(m_effect->frequency());
-    connect(freqSpin, &QDoubleSpinBox::valueChanged, this, &SineEffectEditor::frequencyChanged);
+    connect(freqSpin, &keira::NumberScrubField::valueChanged, this, &SineEffectEditor::frequencyChanged);
 
 
-    QDoubleSpinBox *ampSpin = new QDoubleSpinBox;
-    ampSpin->setMinimum(-255);
-    ampSpin->setMaximum(255);
+    auto *ampSpin = new keira::NumberScrubField;
+    ampSpin->setRange(-255, 255);
     ampSpin->setValue(m_effect->amplitude());
-    connect(ampSpin, &QDoubleSpinBox::valueChanged, this, &SineEffectEditor::amplitudeChanged);
+    connect(ampSpin, &keira::NumberScrubField::valueChanged, this, &SineEffectEditor::amplitudeChanged);
 
     StackedParameterWidget *paramWidget = new StackedParameterWidget;
     paramWidget->addWidget(freqSpin, "Frequency");
@@ -35,33 +34,36 @@ SineEffectEditor::SineEffectEditor(SineEffect *t_effect):ChannelEffectEditor(t_e
 
     addWidget(paramWidget, "Sinewave");
 
+    // Handles are declared in data space (time, value); the group maps them to and
+    // from the view transform, so there's no pixel math here.
+    m_gizmos = new GizmoGroup(scene(), this);
 
-    m_parentItem = new QGraphicsRectItem(0,0,0,0);
-    addItem(m_parentItem);
+    // Origin: a read-only marker at the start of the first visible period.
+    m_originHandle = m_gizmos->addHandle();
+    m_originHandle->setDataGetter([this]{ return QPointF(m_referenceTime, 0); });
 
-    m_frequencyHandle = new RectangleGizmo(QRectF(-5,-5,10,10),[this, freqSpin](QPointF pt){
-        m_effect->setFrequency(pt.x()/scale().x());
+    // Frequency: drag horizontally; the distance from the origin is the period.
+    m_frequencyHandle = m_gizmos->addHandle(GizmoHandle::Anchor, Qt::Horizontal);
+    m_frequencyHandle->setDataGetter([this]{
+        return QPointF(m_referenceTime + m_effect->frequency(), 0);
+    });
+    m_frequencyHandle->setDataSetter([this, freqSpin](QPointF pt){
+        m_effect->setFrequency(std::max(.001, pt.x() - m_referenceTime));
         freqSpin->setValue(m_effect->frequency());
     });
-    m_frequencyHandle->setParentItem(m_parentItem);
 
-
-    m_amplitudeHandle = new RectangleGizmo(QRectF(-5,-5,10,10),[this, ampSpin](QPointF pt){
-        m_effect->setAmplitude(pt.y()/scale().y());
+    // Amplitude: drag vertically.
+    m_amplitudeHandle = m_gizmos->addHandle(GizmoHandle::Anchor, Qt::Vertical);
+    m_amplitudeHandle->setDataGetter([this]{
+        return QPointF(m_referenceTime, m_effect->amplitude());
+    });
+    m_amplitudeHandle->setDataSetter([this, ampSpin](QPointF pt){
+        m_effect->setAmplitude(pt.y());
         ampSpin->setValue(m_effect->amplitude());
     });
-    m_amplitudeHandle->setOrientation(Qt::Vertical);
-    m_amplitudeHandle->setParentItem(m_parentItem);
 
-    m_originHandle = new RectangleGizmo(QRectF(-5,-5,10,10),[](QPointF pt){
-
-    });
-    m_originHandle->setParentItem(m_parentItem);
-
-    m_pathItem = new QGraphicsPathItem(m_parentItem);
-    m_pathItem->setPen(QPen(Qt::cyan, 2));
-    m_pathItem->setBrush(Qt::NoBrush);
-    //addItem(m_originHandle);
+    m_gizmos->connectLine(m_frequencyHandle, m_originHandle);
+    m_gizmos->connectLine(m_originHandle, m_amplitudeHandle);
 }
 
 void SineEffectEditor::frequencyChanged(double t_value)
@@ -76,31 +78,18 @@ void SineEffectEditor::amplitudeChanged(double t_value)
 
 void SineEffectEditor::relayout(const QRectF &t_sceneRect)
 {
-    auto t = transform();
-
-    double scaledFreq = m_effect->frequency();
+    // Anchor the gizmo to the first period boundary visible in the current view,
+    // then let the group place every handle from its data getter.
+    double freq = m_effect->frequency();
     double startTime = m_effect->channel()->startTime();
 
     double x = startTime;
+    if(t_sceneRect.left() > startTime && freq > 0)
+        x = (ceil((t_sceneRect.left() - startTime) / freq) * freq) + startTime;
 
-    if(t_sceneRect.left() > startTime)
-    {
-        x = (ceil((t_sceneRect.left() - startTime) / scaledFreq) * scaledFreq) + startTime;
-    }
+    m_referenceTime = x;
 
-    m_referencePt = QPoint(x,0);
-
-    m_parentItem->setPos(t.map(QPointF(x,0)));
-
-    m_originHandle->setPos(QPointF(0,0));
-    m_frequencyHandle->setPos(QPointF(scaledFreq * scale().x(),0));
-    m_amplitudeHandle->setPos(QPointF(0, m_effect->amplitude() * scale().y()));
-
-    QPainterPath path;
-    path.moveTo(m_frequencyHandle->pos());
-    path.lineTo(m_originHandle->pos());
-    path.lineTo(m_amplitudeHandle->pos());
-    m_pathItem->setPath(path);
+    m_gizmos->setTransform(transform());
 }
 
 
