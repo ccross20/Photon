@@ -3,7 +3,6 @@
 #include "sequence/channeleffect.h"
 #include "falloff/falloffeffect.h"
 #include "fixture/maskeffect.h"
-#include "sequence/baseeffect.h"
 
 namespace photon {
 
@@ -190,44 +189,6 @@ FalloffEffectData::FalloffEffectData(FalloffEffect *t_effect):AbstractTreeData(t
 }
 
 MaskEffectData::MaskEffectData(MaskEffect *t_effect):AbstractTreeData(t_effect->name(), t_effect->uniqueId()),m_effect(t_effect)
-{
-
-}
-
-
-BaseEffectData::BaseEffectData(BaseEffect *t_effect):AbstractTreeData(t_effect->name(), t_effect->uniqueId()),m_effect(t_effect)
-{
-    connect(t_effect, &BaseEffect::channelAdded, this, &BaseEffectData::channelAdded);
-    connect(t_effect, &BaseEffect::channelRemoved, this, &BaseEffectData::channelRemoved);
-
-    for(int i = 0; i < t_effect->channelCount(); ++i)
-    {
-        auto channelData = new ChannelData(t_effect->channelAtIndex(i));
-        addChild(channelData);
-    }
-}
-
-void BaseEffectData::channelAdded(photon::Channel *t_channel)
-{
-    qDebug() << "Added";
-    auto channelData = new ChannelData(t_channel);
-    addChild(channelData);
-}
-
-void BaseEffectData::channelRemoved(photon::Channel *t_channel)
-{
-    for(auto child : children())
-    {
-        auto channelChild = dynamic_cast<ChannelData*>(child);
-        if(channelChild && channelChild->channel() == t_channel)
-        {
-            removeChild(child);
-            return;
-        }
-    }
-}
-
-void BaseEffectData::channelMoved(photon::Channel *)
 {
 
 }

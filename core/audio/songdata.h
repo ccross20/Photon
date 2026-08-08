@@ -14,7 +14,7 @@ namespace photon {
  * A named, regularly-sampled continuous signal over song time - a level or
  * frequency-band envelope, etc. Values are stored as raw floats at a fixed sample
  * rate; effects query value(time) with linear interpolation and normalise as they
- * see fit. This is the piece the current audio path lacks: BeatLayer already holds
+ * see fit. This is the piece the current audio path lacks: CueLayer already holds
  * beats, but nothing holds a level/spectrum envelope over time.
  */
 class PHOTONCORE_EXPORT FeatureTrack

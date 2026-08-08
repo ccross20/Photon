@@ -12,7 +12,6 @@
 #include <QMediaMetaData>
 #include <QAudioDevice>
 #include <QAudioOutput>
-#include <QProgressBar>
 #include "sequencewidget.h"
 #include "timelineviewer.h"
 #include "timelinescene.h"
@@ -34,13 +33,12 @@
 #include "gui/waveformwidget.h"
 #include "sequence/viewer/stateeditor.h"
 #include "sequence/fixtureclip.h"
-#include "sequence/baseeffect.h"
 #include "fixture/maskeffect.h"
 #include "sequencewaveformeditor.h"
 #include "plugin/pluginfactory.h"
-#include "audio/audioprocessor.h"
-#include "audio/virtualdjcaptureprocess.h"
-#include "audio/songdata.h"
+#include "routine/routine.h"
+#include "view/graphwidget.h"
+#include "view/scene.h"
 #include "virtualdj/virtualdjconnector.h"
 
 namespace photon {
@@ -78,10 +76,6 @@ public:
     double scale = 20.0;
     bool isPlaying = false;
     bool vdjSyncEnabled = false;
-    VirtualDJCaptureProcess *captureProcess = nullptr;
-    QAction *captureAction = nullptr;
-    QAction *cancelCaptureAction = nullptr;
-    QProgressBar *captureProgress = nullptr;
 };
 
 double SequenceWidget::Impl::visibleStartTime() const
@@ -135,21 +129,6 @@ SequenceWidget::SequenceWidget(QWidget *parent)
     connect(playAction, &QAction::toggled, this, &SequenceWidget::togglePlay);
     connect(m_impl->timeToolBar->addAction("Load"), &QAction::triggered, this, &SequenceWidget::pickFile);
 
-    // VirtualDJ capture: a plain trigger (not checkable) since it's a start-a-process
-    // action, not a state toggle - Cancel is the separate way to stop it early.
-    m_impl->captureAction = m_impl->timeToolBar->addAction("Capture");
-    connect(m_impl->captureAction, &QAction::triggered, this, &SequenceWidget::toggleCapture);
-
-    m_impl->cancelCaptureAction = m_impl->timeToolBar->addAction("Cancel");
-    m_impl->cancelCaptureAction->setVisible(false);
-    connect(m_impl->cancelCaptureAction, &QAction::triggered, this, &SequenceWidget::cancelCapture);
-
-    m_impl->captureProgress = new QProgressBar;
-    m_impl->captureProgress->setVisible(false);
-    m_impl->captureProgress->setMaximumWidth(120);
-    m_impl->captureProgress->setTextVisible(false);
-    m_impl->timeToolBar->addWidget(m_impl->captureProgress);
-
     // VDJ Sync: while checked, Photon's transport (scrub, play/pause, rewind) is
     // mirrored to VirtualDJ - independent of Capture, useful any time during editing.
     auto vdjSyncAction = m_impl->timeToolBar->addAction("VDJ Sync");
@@ -191,8 +170,8 @@ SequenceWidget::SequenceWidget(QWidget *parent)
     connect(m_impl->curvePropertyEditor, &ClipStructureViewer::selectState, this, &SequenceWidget::selectState);
     connect(m_impl->curvePropertyEditor, &ClipStructureViewer::selectEffect, this, &SequenceWidget::selectEffect);
     connect(m_impl->curvePropertyEditor, &ClipStructureViewer::selectClipParameter, this, &SequenceWidget::selectClipParameter);
+    connect(m_impl->curvePropertyEditor, &ClipStructureViewer::selectClipGraph, this, &SequenceWidget::selectClipGraph);
     connect(m_impl->curvePropertyEditor, &ClipStructureViewer::selectMask, this, &SequenceWidget::selectMask);
-    connect(m_impl->curvePropertyEditor, &ClipStructureViewer::selectClipEffect, this, &SequenceWidget::selectClipEffect);
     connect(m_impl->curvePropertyEditor, &ClipStructureViewer::clearSelection, this, &SequenceWidget::clearEditor);
     connect(m_impl->timebar, &TimeBar::changeTime, this, &SequenceWidget::gotoTime);
     connect(m_impl->viewer, &TimelineViewer::offsetChanged, this, &SequenceWidget::setOffset);
@@ -205,17 +184,6 @@ SequenceWidget::SequenceWidget(QWidget *parent)
 
 SequenceWidget::~SequenceWidget()
 {
-    // A capture isn't QObject-parented to this widget (so Qt's parent/child cleanup
-    // won't reach it), and its completed() handler captures [this] - stop it and
-    // disconnect before the widget goes away, so a signal arriving later can't run
-    // that lambda against a dangling this.
-    if(m_impl->captureProcess)
-    {
-        m_impl->captureProcess->disconnect(this);
-        m_impl->captureProcess->stopCapture();
-        delete m_impl->captureProcess;
-    }
-
     delete m_impl;
 }
 
@@ -340,24 +308,6 @@ void SequenceWidget::selectFalloff(photon::FalloffEffect *t_effect)
 
 }
 
-void SequenceWidget::selectClipEffect(photon::BaseEffect *t_effect)
-{
-    clearEditor();
-    QHBoxLayout *layout = new QHBoxLayout;
-    layout->setContentsMargins(0,0,0,0);
-
-    auto editor = t_effect->createEditor();
-
-    if(editor)
-    {
-        layout->addWidget(editor);
-        m_impl->effectEditor = editor;
-        m_impl->effectEditorContainer->setLayout(layout);
-    }
-
-
-}
-
 void SequenceWidget::selectClipParameter(photon::Clip *t_clip)
 {
     clearEditor();
@@ -374,6 +324,41 @@ void SequenceWidget::selectClipParameter(photon::Clip *t_clip)
     }
 }
 
+void SequenceWidget::selectClipGraph(photon::Clip *t_clip)
+{
+    clearEditor();
+    QHBoxLayout *layout = new QHBoxLayout;
+    layout->setContentsMargins(0,0,0,0);
+
+    keira::Graph *graph = t_clip->contentGraph();
+    if(graph)
+    {
+        auto *library = photonApp->plugins()->nodeLibrary();
+        auto *graphWidget = new keira::GraphWidget(library);
+        // Parented to the graphWidget so clearEditor()'s delete of the editor
+        // widget tears the scene down with it - GraphWidget itself doesn't own it.
+        auto *scene = new keira::Scene(graphWidget);
+        scene->setNodeLibrary(library);
+        scene->setGraph(graph);
+        // A clip's content graph is already evaluated for real by the clip's own
+        // processChannels() (via the sequence's eval thread) whenever it's active -
+        // Scene's own GraphEvaluator ticking the SAME graph objects concurrently on
+        // ITS thread is redundant and unsafe: individual nodes with their own
+        // mutable per-evaluation state (e.g. FixtureStateNode's exposed-input
+        // history deques) aren't designed to be evaluate()'d from two threads at
+        // once, and it crashes. drainCommandQueue() still runs every tick regardless
+        // (see EvalWorker::tick()), so structural edits made here still apply and
+        // show up immediately - only the redundant evaluate()/live-value-refresh is
+        // disabled.
+        scene->setIsAutoEvaluate(false);
+        graphWidget->setScene(scene);
+
+        layout->addWidget(graphWidget);
+        m_impl->effectEditor = graphWidget;
+        m_impl->effectEditorContainer->setLayout(layout);
+    }
+}
+
 void SequenceWidget::selectState(photon::State *t_state)
 {
     clearEditor();
@@ -386,7 +371,7 @@ void SequenceWidget::selectState(photon::State *t_state)
     {
         auto clip = dynamic_cast<FixtureClip *>(m_impl->selectedClips[0]->clip());
         if(clip)
-            editor->setBaseEffectParent(clip);
+            editor->setClip(clip);
     }
 
     layout->addWidget(editor);
@@ -487,29 +472,22 @@ void SequenceWidget::gotoTime(double t_time)
 
 void SequenceWidget::positionChanged(qint64 t_time)
 {
-    /*
-    m_impl->currentTime = t_time/1000.0;
-    m_impl->viewer->movePlayheadTo(m_impl->currentTime);
+    if(!m_impl->isPlaying)
+        return;
 
-    photonApp->busEvaluator()->evaluate();
-    */
-    //m_impl->waveform->setPlayhead(t_time/1000.0);
+    // tick() interpolates currentTime from wall-clock elapsed time rather than
+    // querying the player every frame (smoother than QMediaPlayer's own position
+    // update rate) - but the system clock and the audio hardware's playback
+    // clock don't run at exactly the same rate, so that interpolation slowly
+    // drifts from what's actually audible. Rebase it to the player's real
+    // position on every update it reports, so drift never accumulates beyond
+    // one update interval.
+    m_impl->lastCurrentTime = t_time / 1000.0;
+    m_impl->startTimeMS = QDateTime::currentMSecsSinceEpoch();
 }
 
 void SequenceWidget::tick()
 {
-    // Drives independently of Photon's own play state - a VDJ capture advances via
-    // VDJ's playback, not Photon's local wall-clock simulation below.
-    if(m_impl->captureProcess)
-    {
-        VirtualDJConnector *connector = photonApp->djConnector();
-        if(connector->songLength > 0.0)
-        {
-            m_impl->captureProgress->setRange(0, static_cast<int>(connector->songLength));
-            m_impl->captureProgress->setValue(static_cast<int>(connector->time));
-        }
-    }
-
     if(!m_impl->isPlaying)
         return;
 /*
@@ -631,45 +609,6 @@ void SequenceWidget::rewind()
 
     if(m_impl->vdjSyncEnabled)
         photonApp->djConnector()->sendRestart();
-}
-
-void SequenceWidget::toggleCapture()
-{
-    if(m_impl->captureProcess)
-        return;   // a capture is already running; the action is disabled meanwhile anyway
-
-    m_impl->captureProcess = new VirtualDJCaptureProcess;
-    m_impl->captureProcess->init(sequence());
-
-    connect(m_impl->captureProcess, &AudioProcessor::completed, this, [this](){
-        m_impl->captureAction->setEnabled(true);
-        m_impl->cancelCaptureAction->setVisible(false);
-        m_impl->captureProgress->setVisible(false);
-        m_impl->captureProcess->deleteLater();
-        m_impl->captureProcess = nullptr;
-
-        // SongData carries no change signal by design (see songdata.h) - the
-        // waveform reads it fresh on every paint, but nothing else prompts a
-        // repaint, so the newly captured beats won't appear until the view is
-        // told to redraw. setDuration() is also how a no-local-file sequence's time
-        // axis gets framed in the first place (a no-op if a real file is already
-        // loaded, since it only takes effect when nothing has been decoded).
-        m_impl->waveform->setDuration(sequence()->songData()->duration());
-        m_impl->waveform->update();
-    });
-
-    m_impl->captureAction->setEnabled(false);
-    m_impl->cancelCaptureAction->setVisible(true);
-    m_impl->captureProgress->setVisible(true);
-    m_impl->captureProgress->setRange(0, 0);   // indeterminate until songLength is known
-
-    m_impl->captureProcess->startProcessing();
-}
-
-void SequenceWidget::cancelCapture()
-{
-    if(m_impl->captureProcess)
-        m_impl->captureProcess->stopCapture();
 }
 
 void SequenceWidget::toggleVdjSync(bool t_value)

@@ -1,10 +1,11 @@
 #include <QPainter>
 #include <QMouseEvent>
+#include <QToolButton>
 #include <algorithm>
 #include <cmath>
 #include "sequencewaveformeditor.h"
 #include "sequence/sequence.h"
-#include "sequence/beatlayer.h"
+#include "sequence/cuelayer.h"
 #include "audio/songdata.h"
 
 namespace photon {
@@ -17,25 +18,26 @@ public:
         DragMove,
         DragSelect
     };
-    void clearBeats();
+    void clearMarkers();
 
     Sequence *sequence;
-    QVector<float> otherBeats;
-    QVector<float> selectedBeats;
-    QVector<float> selectedBeatsInitial;
-    BeatLayer *editableLayer = nullptr;
+    QVector<float> otherMarkers;
+    QVector<float> selectedMarkers;
+    QVector<float> selectedMarkersInitial;
+    CueLayer *editableLayer = nullptr;
     DragMode dragMode = DragNone;
     double initialTime = 0;
     Range selectionRange;
+    QToolButton *deleteButton = nullptr;
 };
 
-void SequenceWaveformEditor::Impl::clearBeats()
+void SequenceWaveformEditor::Impl::clearMarkers()
 {
-    selectedBeats.clear();
-    otherBeats.clear();
-    editableLayer = sequence->editableBeatLayer();
+    selectedMarkers.clear();
+    otherMarkers.clear();
+    editableLayer = sequence->editableCueLayer();
     if(editableLayer)
-        otherBeats = editableLayer->beats();
+        otherMarkers = editableLayer->markers();
 }
 
 SequenceWaveformEditor::SequenceWaveformEditor(Sequence *t_sequence, QWidget *t_parent): WaveformWidget(t_parent),m_impl(new Impl)
@@ -46,6 +48,18 @@ SequenceWaveformEditor::SequenceWaveformEditor(Sequence *t_sequence, QWidget *t_
     // The layered low/mid/high band overlay (see drawFeatureOverlay) replaces the
     // raw audio waveform as this view's primary visual.
     setShowWaveform(false);
+
+    // Trashcan delete button, overlaid in the corner of the view - only shown while
+    // markers are selected (see updateMarkerDeleteButton()), positioned on resize
+    // (see positionMarkerDeleteButton()).
+    m_impl->deleteButton = new QToolButton(this);
+    m_impl->deleteButton->setText(QStringLiteral(u"\xD83D\xDDD1\xFE0F")); // U+1F5D1 wastebasket
+    m_impl->deleteButton->setToolTip("Delete selected markers");
+    m_impl->deleteButton->setAutoRaise(true);
+    m_impl->deleteButton->setCursor(Qt::PointingHandCursor);
+    m_impl->deleteButton->setVisible(false);
+    connect(m_impl->deleteButton, &QToolButton::clicked, this, &SequenceWaveformEditor::deleteSelectedMarkers);
+    positionMarkerDeleteButton();
 }
 
 SequenceWaveformEditor::~SequenceWaveformEditor()
@@ -63,9 +77,9 @@ void SequenceWaveformEditor::setSequence(Sequence *t_sequence)
     m_impl->sequence = t_sequence;
     if(t_sequence)
     {
-        connect(m_impl->sequence, &Sequence::editableBeatLayerChanged, this, &SequenceWaveformEditor::editableBeatLayerChanged);
-        connect(m_impl->sequence, &Sequence::beatLayerAdded, this, &SequenceWaveformEditor::layerAdded);
-        connect(m_impl->sequence, &Sequence::beatLayerRemoved, this, &SequenceWaveformEditor::layerRemoved);
+        connect(m_impl->sequence, &Sequence::editableCueLayerChanged, this, &SequenceWaveformEditor::editableCueLayerChanged);
+        connect(m_impl->sequence, &Sequence::cueLayerAdded, this, &SequenceWaveformEditor::layerAdded);
+        connect(m_impl->sequence, &Sequence::cueLayerRemoved, this, &SequenceWaveformEditor::layerRemoved);
 
         // A sequence with no local file (e.g. built from a VirtualDJ-live capture of
         // a streaming track) has nothing to decode - frame the time axis from
@@ -75,60 +89,60 @@ void SequenceWaveformEditor::setSequence(Sequence *t_sequence)
         else if(SongData *songData = t_sequence->songData())
             setDuration(songData->duration());
 
-        for(auto beat : m_impl->sequence->beatLayers())
+        for(auto layer : m_impl->sequence->cueLayers())
         {
 
-            connect(beat, &BeatLayer::metadataChanged, this, &SequenceWaveformEditor::beatsMetadataUpdated);
+            connect(layer, &CueLayer::metadataChanged, this, &SequenceWaveformEditor::markersMetadataUpdated);
 
-            if(beat->isEditable())
+            if(layer->isEditable())
             {
-                m_impl->editableLayer = beat;
-                m_impl->otherBeats = beat->beats();
+                m_impl->editableLayer = layer;
+                m_impl->otherMarkers = layer->markers();
             }
             else
             {
-                connect(beat, &BeatLayer::beatsChanged, this, &SequenceWaveformEditor::beatsUpdated);
+                connect(layer, &CueLayer::markersChanged, this, &SequenceWaveformEditor::markersUpdated);
             }
         }
     }
 }
 
 
-void SequenceWaveformEditor::layerAdded(photon::BeatLayer* t_layer)
+void SequenceWaveformEditor::layerAdded(photon::CueLayer* t_layer)
 {
-    connect(t_layer, &BeatLayer::beatsChanged, this, &SequenceWaveformEditor::beatsUpdated);
-    connect(t_layer, &BeatLayer::metadataChanged, this, &SequenceWaveformEditor::beatsMetadataUpdated);
+    connect(t_layer, &CueLayer::markersChanged, this, &SequenceWaveformEditor::markersUpdated);
+    connect(t_layer, &CueLayer::metadataChanged, this, &SequenceWaveformEditor::markersMetadataUpdated);
 
 }
 
-void SequenceWaveformEditor::layerRemoved(photon::BeatLayer* t_layer)
+void SequenceWaveformEditor::layerRemoved(photon::CueLayer* t_layer)
 {
-    disconnect(t_layer, &BeatLayer::beatsChanged, this, &SequenceWaveformEditor::beatsUpdated);
-    disconnect(t_layer, &BeatLayer::metadataChanged, this, &SequenceWaveformEditor::beatsMetadataUpdated);
+    disconnect(t_layer, &CueLayer::markersChanged, this, &SequenceWaveformEditor::markersUpdated);
+    disconnect(t_layer, &CueLayer::metadataChanged, this, &SequenceWaveformEditor::markersMetadataUpdated);
 }
 
-void SequenceWaveformEditor::editableBeatLayerChanged(photon::BeatLayer* t_layer)
+void SequenceWaveformEditor::editableCueLayerChanged(photon::CueLayer* t_layer)
 {
 
     if(m_impl->editableLayer)
     {
-        connect(m_impl->editableLayer, &BeatLayer::beatsChanged, this, &SequenceWaveformEditor::beatsUpdated);
+        connect(m_impl->editableLayer, &CueLayer::markersChanged, this, &SequenceWaveformEditor::markersUpdated);
     }
     m_impl->editableLayer = t_layer;
     if(t_layer)
     {
-        m_impl->otherBeats = t_layer->beats();
-        disconnect(t_layer, &BeatLayer::beatsChanged, this, &SequenceWaveformEditor::beatsUpdated);
+        m_impl->otherMarkers = t_layer->markers();
+        disconnect(t_layer, &CueLayer::markersChanged, this, &SequenceWaveformEditor::markersUpdated);
     }
 }
 
-void SequenceWaveformEditor::beatsUpdated(photon::BeatLayer*beat)
+void SequenceWaveformEditor::markersUpdated(photon::CueLayer*)
 {
 
     update();
 }
 
-void SequenceWaveformEditor::beatsMetadataUpdated(photon::BeatLayer*)
+void SequenceWaveformEditor::markersMetadataUpdated(photon::CueLayer*)
 {
 
     update();
@@ -192,6 +206,35 @@ void SequenceWaveformEditor::paintEvent(QPaintEvent *t_event)
 
     QPainter painter{this};
 
+    // The analysed beat grid, as an alternating background tint rather than a row
+    // of ticks: every other beat-to-beat interval gets a subtle highlight, the
+    // ones in between stay the plain background, so the rhythm reads as a pulse
+    // behind the waveform instead of competing with it for the view's height.
+    // Drawn before the feature overlay (whose bands are largely semi-transparent)
+    // so it shows through rather than getting hidden underneath.
+    if(SongData *songData = m_impl->sequence->songData())
+    {
+        const QVector<double> &beats = songData->beats().beats();
+        static const QColor kBeatTint(255, 255, 255, 18);
+        for(int i = 0; i + 1 < beats.size(); i += 2)
+        {
+            const double startTime = beats[i];
+            const double endTime = beats[i + 1];
+            if(endTime < visibleRange().start || startTime > visibleRange().end)
+                continue;
+
+            const double xd1 = timeToX(startTime);
+            const double xd2 = timeToX(endTime);
+            if(!std::isfinite(xd1) || !std::isfinite(xd2))
+                continue;
+
+            // Clamp before converting to int - see the note on drawTick() below.
+            const int x1 = static_cast<int>(std::clamp(xd1, -1.0e6, 1.0e6));
+            const int x2 = static_cast<int>(std::clamp(xd2, -1.0e6, 1.0e6));
+            painter.fillRect(x1, 0, x2 - x1, height(), kBeatTint);
+        }
+    }
+
     if(m_impl->sequence->songData())
         drawFeatureOverlay(painter);
 
@@ -203,17 +246,17 @@ void SequenceWaveformEditor::paintEvent(QPaintEvent *t_event)
         painter.fillRect(x1,0,x2 - x1,height(),QColor(255,255,255,50));
     }
 
-    // Short ticks along the bottom edge rather than full-height lines, so they read
-    // as beat markers (matching a VirtualDJ-style layout) instead of competing with
-    // the band overlay for the whole view's vertical space. Hit-testing in
-    // mousePressEvent/mouseMoveEvent still treats the full column as clickable, so
-    // editing behaviour is unchanged even though only the bottom is drawn.
+    // Short ticks along the top edge for cue-layer markers, rather than
+    // full-height lines, so they don't compete with the band overlay for the
+    // whole view's vertical space. Hit-testing in mousePressEvent/mouseMoveEvent
+    // still treats the full column as clickable, so editing behaviour is
+    // unchanged even though only a thin strip is drawn.
     const int tickHeight = 8;
     const int tickWidth = 4;
-    auto drawBeatTick = [&](double t_beat, const QColor &t_color) {
-        if(!visibleRange().contains(t_beat))
+    auto drawTick = [&](double t_time, const QColor &t_color) {
+        if(!visibleRange().contains(t_time))
             return;
-        const double xd = timeToX(t_beat);
+        const double xd = timeToX(t_time);
         if(!std::isfinite(xd))
             return;
         // Clamp before converting to int: timeToX() can be handed extreme beat data
@@ -221,35 +264,26 @@ void SequenceWaveformEditor::paintEvent(QPaintEvent *t_event)
         // stale/garbage bpm reading), and QRect's checked-integer arithmetic asserts
         // fatally on overflow rather than silently wrapping or clipping.
         const int x = static_cast<int>(std::clamp(xd, -1.0e6, 1.0e6));
-        painter.fillRect(x - tickWidth / 2, height() - tickHeight, tickWidth, tickHeight, t_color);
+        painter.fillRect(x - tickWidth / 2, 0, tickWidth, tickHeight, t_color);
     };
 
-    // The analysed beat grid: always drawn once a file has been analysed, distinct
-    // from the red custom-cue layers below since it's derived data, not something
-    // authored/edited here.
-    if(SongData *songData = m_impl->sequence->songData())
+    for(auto cueLayer : m_impl->sequence->cueLayers())
     {
-        for(double beat : songData->beats().beats())
-            drawBeatTick(beat, QColor(255, 180, 60, 200));
-    }
-
-    for(auto beatLayer : m_impl->sequence->beatLayers())
-    {
-        if(!beatLayer->isVisible())
+        if(!cueLayer->isVisible())
             continue;
-        for(auto beat : beatLayer->beats())
-            drawBeatTick(beat, Qt::red);
+        for(auto marker : cueLayer->markers())
+            drawTick(marker, cueLayer->color());
     }
 
-    for(auto beat : m_impl->otherBeats)
+    for(auto marker : m_impl->otherMarkers)
     {
         if(m_impl->editableLayer && !m_impl->editableLayer->isVisible())
             continue;
-        drawBeatTick(beat, Qt::red);
+        drawTick(marker, m_impl->editableLayer ? m_impl->editableLayer->color() : Qt::red);
     }
 
-    for(auto beat : m_impl->selectedBeats)
-        drawBeatTick(beat, Qt::cyan);
+    for(auto marker : m_impl->selectedMarkers)
+        drawTick(marker, Qt::cyan);
 }
 
 void SequenceWaveformEditor::keyPressEvent(QKeyEvent *t_key)
@@ -258,21 +292,14 @@ void SequenceWaveformEditor::keyPressEvent(QKeyEvent *t_key)
 
     if(t_key->key() == Qt::Key_Delete)
     {
-        qDebug() << "Delete";
-        m_impl->selectedBeats.clear();
-        if(m_impl->editableLayer)
-        {
-            m_impl->editableLayer->replaceBeats(m_impl->otherBeats);
-            m_impl->editableLayer->sort();
-        }
-        update();
+        deleteSelectedMarkers();
     }
     else if(t_key->key() == Qt::Key_Insert)
     {
         if(m_impl->editableLayer)
         {
-            m_impl->otherBeats.append(playheadTime());
-            m_impl->editableLayer->addBeats(m_impl->otherBeats);
+            m_impl->otherMarkers.append(playheadTime());
+            m_impl->editableLayer->addMarkers(m_impl->otherMarkers);
             m_impl->editableLayer->sort();
         }
         update();
@@ -292,24 +319,30 @@ void SequenceWaveformEditor::mousePressEvent(QMouseEvent *t_event)
 
 
         if(m_impl->editableLayer)
-            m_impl->editableLayer->insertBeat(time);
-        //m_impl->otherBeats.append(time);
+        {
+            m_impl->editableLayer->insertMarker(time);
+            // Keep the hit-testing cache in sync too, or this marker won't be
+            // selectable/draggable until something else (e.g. clearMarkers())
+            // happens to refresh it from the layer.
+            m_impl->otherMarkers.append(time);
+        }
         qDebug() << "Add" << time;
+        update();
         return;
 
     }
 
-    if(!m_impl->selectedBeats.isEmpty())
+    if(!m_impl->selectedMarkers.isEmpty())
     {
-        for(auto it = m_impl->selectedBeats.cbegin(); it != m_impl->selectedBeats.cend(); ++it)
+        for(auto it = m_impl->selectedMarkers.cbegin(); it != m_impl->selectedMarkers.cend(); ++it)
         {
             if(visibleRange().contains(*it))
             {
-                auto beatX = timeToX(*it);
-                if(x >= beatX && x <= beatX + 2)
+                auto markerX = timeToX(*it);
+                if(x >= markerX && x <= markerX + 2)
                 {
                     m_impl->dragMode = Impl::DragMove;
-                    m_impl->selectedBeatsInitial = m_impl->selectedBeats;
+                    m_impl->selectedMarkersInitial = m_impl->selectedMarkers;
                     return;
                 }
             }
@@ -318,21 +351,25 @@ void SequenceWaveformEditor::mousePressEvent(QMouseEvent *t_event)
 
 
     if(!(t_event->modifiers() & Qt::ShiftModifier))
-        m_impl->clearBeats();
+    {
+        m_impl->clearMarkers();
+        updateMarkerDeleteButton();
+    }
 
-    for(auto it = m_impl->otherBeats.cbegin(); it != m_impl->otherBeats.cend(); ++it)
+    for(auto it = m_impl->otherMarkers.cbegin(); it != m_impl->otherMarkers.cend(); ++it)
     {
         if(visibleRange().contains(*it))
         {
-            auto beatX = timeToX(*it);
-            if(x >= beatX && x <= beatX + 2)
+            auto markerX = timeToX(*it);
+            if(x >= markerX && x <= markerX + 2)
             {
 
 
-                m_impl->selectedBeats.append(*it);
-                m_impl->otherBeats.erase(it);
+                m_impl->selectedMarkers.append(*it);
+                m_impl->otherMarkers.erase(it);
                 m_impl->dragMode = Impl::DragMove;
-                m_impl->selectedBeatsInitial = m_impl->selectedBeats;
+                m_impl->selectedMarkersInitial = m_impl->selectedMarkers;
+                updateMarkerDeleteButton();
                 return;
             }
         }
@@ -344,7 +381,10 @@ void SequenceWaveformEditor::mousePressEvent(QMouseEvent *t_event)
     m_impl->selectionRange.end = time;
 
     if(!(t_event->modifiers() & Qt::ShiftModifier))
-        m_impl->clearBeats();
+    {
+        m_impl->clearMarkers();
+        updateMarkerDeleteButton();
+    }
 
     m_impl->dragMode = Impl::DragSelect;
 }
@@ -362,15 +402,15 @@ void SequenceWaveformEditor::mouseMoveEvent(QMouseEvent *t_event)
 
         if(m_impl->dragMode == Impl::DragMove)
         {
-            m_impl->selectedBeats = m_impl->selectedBeatsInitial;
-            for(auto &beat : m_impl->selectedBeats)
+            m_impl->selectedMarkers = m_impl->selectedMarkersInitial;
+            for(auto &marker : m_impl->selectedMarkers)
             {
-                beat += deltaTime;
+                marker += deltaTime;
             }
 
             if(m_impl->editableLayer)
             {
-                m_impl->editableLayer->replaceBeats(m_impl->selectedBeats + m_impl->otherBeats);
+                m_impl->editableLayer->replaceMarkers(m_impl->selectedMarkers + m_impl->otherMarkers);
                 m_impl->editableLayer->sort();
             }
             update();
@@ -387,10 +427,10 @@ void SequenceWaveformEditor::mouseMoveEvent(QMouseEvent *t_event)
     {
         if(m_impl->editableLayer)
         {
-            for(auto beat : m_impl->editableLayer->beats())
+            for(auto marker : m_impl->editableLayer->markers())
             {
-                auto beatX = timeToX(beat);
-                if(x >= beatX && x <= beatX + 2)
+                auto markerX = timeToX(marker);
+                if(x >= markerX && x <= markerX + 2)
                 {
                     setCursor(Qt::SplitHCursor);
                     return;
@@ -412,21 +452,55 @@ void SequenceWaveformEditor::mouseReleaseEvent(QMouseEvent *t_event)
 
     if(m_impl->dragMode == Impl::DragSelect)
     {
-        for(auto it = m_impl->otherBeats.begin(); it != m_impl->otherBeats.end();)
+        for(auto it = m_impl->otherMarkers.begin(); it != m_impl->otherMarkers.end();)
         {
             if(m_impl->selectionRange.contains(*it))
             {
-                m_impl->selectedBeats.append(*it);
-                it = m_impl->otherBeats.erase(it);
+                m_impl->selectedMarkers.append(*it);
+                it = m_impl->otherMarkers.erase(it);
                 continue;
             }
             ++it;
         }
+        updateMarkerDeleteButton();
         update();
     }
 
 
     m_impl->dragMode = Impl::DragNone;
+}
+
+void SequenceWaveformEditor::deleteSelectedMarkers()
+{
+    if(m_impl->selectedMarkers.isEmpty())
+        return;
+
+    m_impl->selectedMarkers.clear();
+    if(m_impl->editableLayer)
+    {
+        m_impl->editableLayer->replaceMarkers(m_impl->otherMarkers);
+        m_impl->editableLayer->sort();
+    }
+    updateMarkerDeleteButton();
+    update();
+}
+
+void SequenceWaveformEditor::updateMarkerDeleteButton()
+{
+    m_impl->deleteButton->setVisible(!m_impl->selectedMarkers.isEmpty());
+}
+
+void SequenceWaveformEditor::positionMarkerDeleteButton()
+{
+    const int margin = 4;
+    const QSize hint = m_impl->deleteButton->sizeHint();
+    m_impl->deleteButton->move(width() - hint.width() - margin, margin);
+}
+
+void SequenceWaveformEditor::resizeEvent(QResizeEvent *t_event)
+{
+    WaveformWidget::resizeEvent(t_event);
+    positionMarkerDeleteButton();
 }
 
 

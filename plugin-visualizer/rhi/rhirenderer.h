@@ -128,6 +128,10 @@ private:
     // each with its own channels. Rendered as a row of per-cell lenses + beams
     // rather than a single emitter.
     static bool isMultiCell(Fixture *fixture);
+    // A bee-eye-shaped multi-cell fixture: exactly the 1-centre + 6-outer hex count,
+    // with a lens-rotation channel to drive the per-outer-cell beam split. Anything
+    // else (e.g. a plain LED bar) keeps today's un-split multi-cell rendering.
+    static bool isBeeEyeShaped(Fixture *fixture);
     // One resolved LED cell of a multi-cell fixture.
     struct BarCell {
         QVector3D localPos;    // position in the fixture/model local frame (row along X)
@@ -135,12 +139,21 @@ private:
         float     intensity;   // 0..1 brightness
     };
     // Lays out a multi-cell fixture's cells along the model's local-X row (or the
-    // fixture width when there's no model), reading each cell's live colour. The
-    // shared local->world frame (cells emit down its local -Y) and the per-cell
-    // lens radius are returned so both the lens discs and the beams can place
-    // themselves consistently. Cells are ordered by colour index.
+    // fixture width when there's no model), applying the fixture's smoothed pan/tilt
+    // (procedural fallback only - a model with real per-cell "lamp*" nodes uses those
+    // transforms directly instead, see m_multiEmitterWorld). The shared local->world
+    // frame (cells emit down its local -Y) and the per-cell lens radius are returned so
+    // both the lens discs and the beams can place themselves consistently. Cells are
+    // ordered by colour index.
     void collectBarCells(Fixture *fixture, RhiModel *model, QVector<BarCell> &out,
                          QMatrix4x4 &outFrame, float &outLensRadius) const;
+
+    // Shared per-frame brightness for a multi-cell fixture's cells: master dimmer x
+    // shutter gate (each cell's own colour carries the rest).
+    float cellLevelFor(Fixture *fixture) const;
+    // One multi-cell fixture cell's live colour (already scaled by lvl, i.e.
+    // cellLevelFor()'s result) and 0..1 intensity.
+    QColor cellColorFor(Fixture *fixture, int index, float lvl, float &outIntensity) const;
 
     // Resolves whether a fixture's beams render volumetric: its per-fixture
     // beamStyle override ("cones"/"volumetric") wins, else "" (Auto) follows the
@@ -168,6 +181,12 @@ private:
     // engaged prism (channelIndex = its index among prism-rotation channels; -1 = any).
     float prismRotationFor(Fixture *fixture, int channelIndex = -1) const;
 
+    // Current lens-plate rotation (degrees, unwrapped) from a bee-eye-style fixture's
+    // LensRotation channel: continuous speed is accumulated over time (mirrors
+    // prismRotationFor); indexed mode returns a static angle. 0 if the fixture has no
+    // LensRotationCapability.
+    float lensRotationFor(Fixture *fixture) const;
+
     // Advances a fixture's motorised attributes (pan/tilt + zoom) toward their DMX
     // targets over time and returns the current smoothed values.
     void updateFixtureMotion(Fixture *fixture, float &panOut, float &tiltOut,
@@ -182,11 +201,14 @@ private:
     // World placement for a fixture's model root: the fixture's scene transform, offset
     // so the model's "origin" null (if any) coincides with it.
     QMatrix4x4 fixtureModelMatrix(Fixture *fixture, RhiModel *model) const;
-    // Walks a model node tree, emitting a drawable per mesh (pan/tilt applied at the
-    // rigged joints) and capturing the "lamp" emitter's world transform.
+    // Walks a model node tree, emitting a drawable per mesh (pan/tilt/rotor applied at
+    // the rigged joints) and capturing "lamp" emitter world transform(s): the last match
+    // into *emitterWorld (single-emitter models), and/or every match, in traversal
+    // order, appended to *emitterWorlds (multi-cell models, e.g. a bee-eye's lamp1..N).
     void collectModelNodes(const RhiModel::Node &node, const QMatrix4x4 &parentWorld,
-                           float pan, float tilt, bool selected, const QColor &lensColor,
-                           QVector<Drawable> &out, QMatrix4x4 *emitterWorld) const;
+                           float pan, float tilt, float rotor, bool selected, const QColor &lensColor,
+                           QVector<Drawable> &out, QMatrix4x4 *emitterWorld,
+                           QVector<QMatrix4x4> *emitterWorlds = nullptr) const;
 
     // Resolves a fixture's color wheel to the colour(s) visible in the gate. Returns
     // false if the fixture has no active colour wheel (open / RGB mixing only). When
@@ -255,6 +277,11 @@ private:
     mutable QHash<QString, QString> m_typePath;
     // Lamp-emitter world transform per lit fixture with a model (beam origin).
     QHash<SceneObject *, QMatrix4x4> m_emitterWorld;
+    // Per-cell emitter world transforms for a multi-cell fixture whose model provides
+    // one "lamp*" node per cell (e.g. a bee-eye's lamp1..lamp7) - only present when the
+    // model's emitter count matches the fixture's colorCount(); absent (no entry) falls
+    // back to collectBarCells()'s procedural row layout.
+    QHash<SceneObject *, QVector<QMatrix4x4>> m_multiEmitterWorld;
     // Surface planes (world point, unit normal) for volumetric beam soft-fade.
     mutable QVector<QPair<QVector3D, QVector3D>> m_surfacePlanes;
 
@@ -269,6 +296,7 @@ private:
     mutable QHash<SceneObject *, float> m_goboPhase;   // accumulated continuous rotation
     mutable QHash<SceneObject *, float> m_colorPhase;  // accumulated color-wheel position
     mutable QHash<FixtureChannel *, float> m_prismPhase;  // accumulated prism rotation (deg), per rotation channel
+    mutable QHash<FixtureChannel *, float> m_lensRotationPhase;  // accumulated bee-eye lens rotation (deg), per rotation channel
 
     // Per-fixture smoothed motor state (degrees) + velocities, for motor-like movement.
     struct FixtureMotion {

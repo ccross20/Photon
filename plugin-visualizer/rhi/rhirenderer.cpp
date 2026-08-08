@@ -63,6 +63,12 @@ constexpr float  kBarLensLift      = 0.6f;   // lift the lens off the body (× l
 constexpr float  kBarDefaultLength = 1.0f;   // row length (world units) when the fixture has no model
 constexpr float  kBarLensBaseGlow  = 0.06f;  // dark-glass base so an unlit cell reads dark, not black
 
+// Bee-eye (hex LED array behind a rotating lens plate) beam splitting.
+constexpr int    kBeeEyeCellCount      = 7;     // 1 centre + 6 outer - the shape this split applies to
+constexpr float  kBeeEyeMaxSplitDeflect = 30.0f; // degrees each sub-beam deflects (+-) at max split (tuning target)
+constexpr float  kBeeEyeSplitDim       = 0.75f;  // fraction dimmed (both sub-beams) at max split (tuning target)
+constexpr float  kLensRotationRevPerSec = 0.3f; // full-speed lens-plate rotation rate (rev/s)
+
 // Prisms: each active prism splits a beam into N copies fanned off-axis.
 constexpr float  kPrismDeflect   = 4.0f;  // per-copy deflection off the beam axis (deg)
 constexpr float  kPrismRevPerSec = 0.3f;  // full-speed prism rotation (rev/s)
@@ -496,8 +502,9 @@ RhiMesh *RhiRenderer::trussMeshFor(SceneObject *obj)
 }
 
 namespace {
-// Maps a fixture's OpenFixture category to a generic model type. PAR/uplight/wash
-// aren't distinguishable from category data, so they rely on the per-fixture override.
+// Maps a fixture's OpenFixture category to a generic model type. PAR/uplight/wash/
+// beeeye aren't distinguishable from category data (a bee-eye's categories look just
+// like a regular moving head's), so they rely on the per-fixture override.
 QString autoModelType(const QStringList &categories)
 {
     for (const QString &c : categories) {
@@ -571,8 +578,9 @@ void RhiRenderer::updateMotionPass(SceneObject *obj) const
 }
 
 void RhiRenderer::collectModelNodes(const RhiModel::Node &node, const QMatrix4x4 &parentWorld,
-                                    float pan, float tilt, bool selected, const QColor &lensColor,
-                                    QVector<Drawable> &out, QMatrix4x4 *emitterWorld) const
+                                    float pan, float tilt, float rotor, bool selected, const QColor &lensColor,
+                                    QVector<Drawable> &out, QMatrix4x4 *emitterWorld,
+                                    QVector<QMatrix4x4> *emitterWorlds) const
 {
     static const QColor highlight(255, 170, 40);
     static const QColor bodyColor(42, 42, 46);   // dark grey chassis
@@ -582,6 +590,8 @@ void RhiRenderer::collectModelNodes(const RhiModel::Node &node, const QMatrix4x4
         world.rotate(pan, QVector3D(node.panAxis == 0, node.panAxis == 1, node.panAxis == 2));
     if (node.tiltAxis >= 0)
         world.rotate(tilt, QVector3D(node.tiltAxis == 0, node.tiltAxis == 1, node.tiltAxis == 2));
+    if (node.rotorAxis >= 0)
+        world.rotate(rotor, QVector3D(node.rotorAxis == 0, node.rotorAxis == 1, node.rotorAxis == 2));
 
     // Lens faces glow the fixture's live emitted colour (even when selected, so the
     // colour stays readable); the rest of the body is a dark-grey chassis.
@@ -592,11 +602,15 @@ void RhiRenderer::collectModelNodes(const RhiModel::Node &node, const QMatrix4x4
         out.append(d);
     }
 
-    if (node.emitter && emitterWorld)
-        *emitterWorld = world;
+    if (node.emitter) {
+        if (emitterWorld)
+            *emitterWorld = world;
+        if (emitterWorlds)
+            emitterWorlds->append(world);
+    }
 
     for (const RhiModel::Node &c : node.children)
-        collectModelNodes(c, world, pan, tilt, selected, lensColor, out, emitterWorld);
+        collectModelNodes(c, world, pan, tilt, rotor, selected, lensColor, out, emitterWorld, emitterWorlds);
 }
 
 QMatrix4x4 RhiRenderer::fixtureModelMatrix(Fixture *fixture, RhiModel *model) const
@@ -623,9 +637,14 @@ void RhiRenderer::collectDrawables(SceneObject *obj, QVector<Drawable> &out,
         if (type == "fixture") {
             auto *fix = static_cast<Fixture *>(child);
             RhiModel *model = modelForFixture(fix);
+            const bool multiCell = isMultiCell(fix);
             if (model) {
-                // Real model: draw its animated hierarchy and capture the lamp emitter.
+                // Real model: draw its animated hierarchy and capture the lamp
+                // emitter(s). The rotor angle only matters for fixtures with a
+                // "rotor_*" joint (e.g. a bee-eye's lens plate) - harmless 0 for
+                // everything else, since they simply have no such node to rotate.
                 const FixtureMotion mo = m_motion.value(fix);
+                const float rotor = lensRotationFor(fix);
                 // Lens tint: the live emitted colour over a dark-glass base (so an
                 // unlit lens reads as dark rather than pure black).
                 QColor lensColor(18, 18, 22);
@@ -638,13 +657,22 @@ void RhiRenderer::collectDrawables(SceneObject *obj, QVector<Drawable> &out,
                         qMin(1.0f, 0.08f + float(emitted.blueF())));
                 }
                 QMatrix4x4 emitter;
-                collectModelNodes(model->root(), fixtureModelMatrix(fix, model), mo.pan, mo.tilt, sel,
-                                  lensColor, out, model->hasEmitter() ? &emitter : nullptr);
+                QVector<QMatrix4x4> emitters;
+                collectModelNodes(model->root(), fixtureModelMatrix(fix, model), mo.pan, mo.tilt, rotor, sel,
+                                  lensColor, out, model->hasEmitter() ? &emitter : nullptr,
+                                  multiCell ? &emitters : nullptr);
                 if (model->hasEmitter())
                     m_emitterWorld.insert(fix, emitter);
                 else
                     m_emitterWorld.remove(fix);
+                // Only trust the model's per-cell lamp nodes when there's exactly one
+                // per colour cell - otherwise fall back to the procedural row below.
+                if (multiCell && emitters.size() == fix->colorCount())
+                    m_multiEmitterWorld.insert(fix, emitters);
+                else
+                    m_multiEmitterWorld.remove(fix);
             } else {
+                m_multiEmitterWorld.remove(fix);
                 // No model: a box tinted by the live colour (dark when off).
                 QColor tint(150, 150, 158);
                 if (sel) {
@@ -664,21 +692,39 @@ void RhiRenderer::collectDrawables(SceneObject *obj, QVector<Drawable> &out,
                 m_emitterWorld.remove(fix);
             }
 
-            // Multi-cell fixtures (LED bars / pixel strips): a row of emissive
-            // lens discs, each glowing its own cell colour over a dark base.
-            if (isMultiCell(fix)) {
+            // Multi-cell fixtures (LED bars / pixel strips, or a bee-eye's hex): one
+            // emissive lens disc per cell, glowing its own colour over a dark base -
+            // at the model's real per-cell "lamp*" transforms when available, else a
+            // procedural row (see collectBarCells).
+            if (multiCell) {
+                const auto realIt = m_multiEmitterWorld.constFind(fix);
+                const bool hasReal = realIt != m_multiEmitterWorld.constEnd();
                 QVector<BarCell> cells;
                 QMatrix4x4 frame;
                 float lensR = 0.02f;
-                collectBarCells(fix, model, cells, frame, lensR);
-                for (const BarCell &c : cells) {
+                if (!hasReal)
+                    collectBarCells(fix, model, cells, frame, lensR);
+                const int cellCount = hasReal ? realIt.value().size() : cells.size();
+                const float lvl = hasReal ? cellLevelFor(fix) : 0.0f;   // unused when !hasReal
+
+                for (int i = 0; i < cellCount; ++i) {
+                    QColor color;
+                    float unused = 0.0f;
+                    QMatrix4x4 m;
+                    if (hasReal) {
+                        color = cellColorFor(fix, i, lvl, unused);
+                        m = realIt.value()[i];
+                        m.rotate(90.0f, 1.0f, 0.0f, 0.0f);   // face the disc down local -Y
+                    } else {
+                        color = cells[i].color;
+                        m = frame;
+                        m.translate(cells[i].localPos);
+                        m.rotate(90.0f, 1.0f, 0.0f, 0.0f);
+                    }
                     const QColor glow = QColor::fromRgbF(
-                        qMin(1.0f, kBarLensBaseGlow + float(c.color.redF())),
-                        qMin(1.0f, kBarLensBaseGlow + float(c.color.greenF())),
-                        qMin(1.0f, kBarLensBaseGlow + float(c.color.blueF())));
-                    QMatrix4x4 m = frame;
-                    m.translate(c.localPos);
-                    m.rotate(90.0f, 1.0f, 0.0f, 0.0f);   // face the disc down local -Y
+                        qMin(1.0f, kBarLensBaseGlow + float(color.redF())),
+                        qMin(1.0f, kBarLensBaseGlow + float(color.greenF())),
+                        qMin(1.0f, kBarLensBaseGlow + float(color.blueF())));
                     m.scale(lensR, lensR, lensR);
                     Drawable d{ m_disc, m, glow };
                     d.emissive = true;                    // glow unlit, like a lit lens
@@ -734,6 +780,16 @@ bool RhiRenderer::isMultiCell(Fixture *fixture)
     return fixture && fixture->colorCount() > 1;
 }
 
+bool RhiRenderer::isBeeEyeShaped(Fixture *fixture)
+{
+    if (!fixture || fixture->colorCount() != kBeeEyeCellCount)
+        return false;
+    for (auto *cap : fixture->findCapability<WheelSlotRotationCapability *>())
+        if (cap->type() == Capability_LensRotation)
+            return true;
+    return false;
+}
+
 bool RhiRenderer::beamVolumetricFor(Fixture *fixture) const
 {
     const QString style = fixture->beamStyle();
@@ -742,6 +798,27 @@ bool RhiRenderer::beamVolumetricFor(Fixture *fixture) const
     if (style == QLatin1String("cones"))
         return false;
     return m_beamMode == BeamMode::Volumetric;   // Auto → global toggle
+}
+
+float RhiRenderer::cellLevelFor(Fixture *fixture) const
+{
+    const float shutter = shutterFactor(fixture);
+    const auto dimmerCaps = fixture->findCapability(Capability_Dimmer);
+    const float dim = dimmerCaps.isEmpty()
+        ? 1.0f
+        : float(static_cast<DimmerCapability *>(dimmerCaps.first())->getPercent(m_dmx));
+    return dim * shutter;
+}
+
+QColor RhiRenderer::cellColorFor(Fixture *fixture, int index, float lvl, float &outIntensity) const
+{
+    ColorCapability *cap = fixture->colorAtIndex(index);
+    const QColor base = cap ? cap->getColor(m_dmx) : QColor(0, 0, 0);
+    const float r = qBound(0.0f, float(base.redF())   * lvl, 1.0f);
+    const float g = qBound(0.0f, float(base.greenF()) * lvl, 1.0f);
+    const float b = qBound(0.0f, float(base.blueF())  * lvl, 1.0f);
+    outIntensity = qMax(r, qMax(g, b));
+    return QColor::fromRgbF(r, g, b);
 }
 
 void RhiRenderer::collectBarCells(Fixture *fixture, RhiModel *model, QVector<BarCell> &out,
@@ -767,32 +844,27 @@ void RhiRenderer::collectBarCells(Fixture *fixture, RhiModel *model, QVector<Bar
     const float span  = width * kBarRowInset;
     const float pitch = span / float(cells);
     outLensRadius = pitch * kBarLensRadius;
+
+    // Procedural fallback only (no model, or a model without matching per-cell "lamp*"
+    // nodes) - apply the fixture's smoothed pan/tilt so a moving-head multi-cell
+    // fixture (e.g. a bee-eye before its real model is ready) still moves correctly.
+    // A plain LED bar with no pan/tilt capability reads mo.pan/tilt as 0, unaffected.
+    const FixtureMotion mo = m_motion.value(fixture);
     outFrame = fixtureModelMatrix(fixture, model);
+    outFrame.rotate(mo.pan, 0.0f, 1.0f, 0.0f);
+    outFrame.rotate(mo.tilt, 1.0f, 0.0f, 0.0f);
 
     // Sit the lenses just proud of the emitting (-Y) face so they don't
     // intersect / z-fight the fixture body. The beams start from here too.
     faceY -= outLensRadius * kBarLensLift;
 
-    // Shared level: master dimmer × shutter gate (per-cell colour carries the rest).
-    const float shutter = shutterFactor(fixture);
-    const auto dimmerCaps = fixture->findCapability(Capability_Dimmer);
-    const float dim = dimmerCaps.isEmpty()
-        ? 1.0f
-        : float(static_cast<DimmerCapability *>(dimmerCaps.first())->getPercent(m_dmx));
-    const float lvl = dim * shutter;
+    const float lvl = cellLevelFor(fixture);
 
     out.reserve(cells);
     for (int i = 0; i < cells; ++i) {
-        ColorCapability *cap = fixture->colorAtIndex(i);
-        const QColor base = cap ? cap->getColor(m_dmx) : QColor(0, 0, 0);
-        const float r = qBound(0.0f, float(base.redF())   * lvl, 1.0f);
-        const float g = qBound(0.0f, float(base.greenF()) * lvl, 1.0f);
-        const float b = qBound(0.0f, float(base.blueF())  * lvl, 1.0f);
-
         BarCell cell;
         cell.localPos = QVector3D(cx - span * 0.5f + pitch * (float(i) + 0.5f), faceY, cz);
-        cell.color = QColor::fromRgbF(r, g, b);
-        cell.intensity = qMax(r, qMax(g, b));
+        cell.color = cellColorFor(fixture, i, lvl, cell.intensity);
         out.append(cell);
     }
 }
@@ -1078,6 +1150,39 @@ float RhiRenderer::prismRotationFor(Fixture *fixture, int channelIndex) const
     return wantChannel ? m_prismPhase.value(wantChannel, 0.0f) : 0.0f;
 }
 
+float RhiRenderer::lensRotationFor(Fixture *fixture) const
+{
+    // Only one lens-rotation channel per fixture (unlike prisms) - filter by type since
+    // WheelSlotRotationCapability is shared with gobo-wheel rotation (same C++ class,
+    // different CapabilityType tag; see fixturechannel.cpp's "lensrotation" registration).
+    const auto rots = fixture->findCapability<WheelSlotRotationCapability *>();
+    for (auto *cap : rots) {
+        if (cap->type() != Capability_LensRotation)
+            continue;
+        if (!cap->isValid(m_dmx) || !cap->channel())
+            continue;
+
+        FixtureChannel *key = cap->channel();
+        const int raw = m_dmx.value(fixture->universe() - 1, key->universalChannelNumber());
+        DMXRange r = cap->range();
+        const float span = float(qMax(1, int(r.end) - int(r.start)));
+        const float factor = qBound(0.0f, (float(raw) - float(r.start)) / span, 1.0f);
+
+        if (cap->supportsAngle()) {
+            // Indexed: static angle within the range.
+            const double deg = cap->angleStart() + factor * (cap->angleEnd() - cap->angleStart());
+            m_lensRotationPhase[key] = float(deg);
+            return float(deg);
+        }
+        // Continuous rotation: normalized speed (-1..1) accumulated over time.
+        const double speedNorm = cap->speedStart() + factor * (cap->speedEnd() - cap->speedStart());
+        float &phase = m_lensRotationPhase[key];
+        phase += float(speedNorm) * kLensRotationRevPerSec * 360.0f * m_frameDt;  // degrees
+        return phase;
+    }
+    return 0.0f;
+}
+
 bool RhiRenderer::colorWheelFor(Fixture *fixture, QColor &outA, QColor &outB, float &outSplit) const
 {
     // Locate the colour wheel via any colour slot capability.
@@ -1225,40 +1330,96 @@ void RhiRenderer::collectBeams(SceneObject *obj, QVector<Drawable> &out) const
             continue;
         if (child->typeId() == "fixture" && isMultiCell(static_cast<Fixture *>(child))) {
             // Multi-cell fixture: one static cone per lit LED cell, sharing the
-            // fixture's orientation (parallel beams). No motion/gobo/prism/colour-
-            // wheel work — just the cell colour, which is the efficiency win.
+            // fixture's orientation (parallel beams) - unless it's a bee-eye (see
+            // below), no motion/gobo/prism/colour-wheel work, just the cell colour.
             auto *fix = static_cast<Fixture *>(child);
             RhiModel *model = modelForFixture(fix);
 
+            // Per-cell world transform: the model's real "lamp*" nodes when the
+            // fixture has one per cell, else the procedural row (collectBarCells).
+            const auto realIt = m_multiEmitterWorld.constFind(fix);
+            const bool hasReal = realIt != m_multiEmitterWorld.constEnd();
             QVector<BarCell> cells;
             QMatrix4x4 frame;
             float lensR = 0.02f;
-            collectBarCells(fix, model, cells, frame, lensR);
+            if (!hasReal)
+                collectBarCells(fix, model, cells, frame, lensR);
+            const int cellCount = hasReal ? realIt.value().size() : cells.size();
 
             const float halfAngle = beamHalfAngleFor(fix);
             const float tanHalf = std::tan(qDegreesToRadians(halfAngle));
             const float length = kBeamLength
                 * qBound(kBeamThrowMin, refTan / tanHalf, kBeamThrowMax);
             const float baseRadius = length * tanHalf;
-            const QVector3D axis = frame.mapVector(QVector3D(0, -1, 0)).normalized();
             const bool volumetric = beamVolumetricFor(fix);
+            const float lvl = hasReal ? cellLevelFor(fix) : 0.0f;   // unused when !hasReal
 
-            for (const BarCell &c : cells) {
-                if (c.intensity <= kBeamMinLevel)
+            // Bee-eye: outer cells (index 1..6) split into two beams as the shared
+            // lens plate rotates away from alignment with this cell's home lens,
+            // converging to one every 60 degrees. Cell 0 (centre) never splits.
+            const bool beeEye = isBeeEyeShaped(fix);
+            const float lensAngle = beeEye ? lensRotationFor(fix) : 0.0f;
+
+            for (int i = 0; i < cellCount; ++i) {
+                QColor cellColor;
+                float cellIntensity = 0.0f;
+                QMatrix4x4 cellWorld;
+                if (hasReal) {
+                    cellColor = cellColorFor(fix, i, lvl, cellIntensity);
+                    cellWorld = realIt.value()[i];
+                } else {
+                    cellColor = cells[i].color;
+                    cellIntensity = cells[i].intensity;
+                    cellWorld = frame;
+                    cellWorld.translate(cells[i].localPos);
+                }
+                if (cellIntensity <= kBeamMinLevel)
                     continue;
-                Drawable beam;
-                beam.mesh = m_beamCone;
-                beam.volumetric = volumetric;
-                beam.color = QColor::fromRgbF(float(c.color.redF()), float(c.color.greenF()),
-                                              float(c.color.blueF()), kBeamGain);
-                beam.color2 = beam.color;
-                QMatrix4x4 m = frame;
-                m.translate(c.localPos);
-                m.scale(baseRadius, length, baseRadius);
-                beam.model = m;
-                const QVector3D apex = frame.map(c.localPos);
-                beam.fadePlane = fadePlaneFor(apex, axis, length);
-                out.append(beam);
+
+                // Sub-beam list: (weight, tangential deflection in degrees). Non-bee-
+                // eye / centre cell: a single, undeflected, full-weight beam.
+                struct SubBeam { float weight; float deflect; };
+                QVector<SubBeam> subs{ { 1.0f, 0.0f } };
+                if (beeEye && i > 0) {
+                    const float home = float(i - 1) * 60.0f;
+                    // s is a smooth, continuous, unfolded function of the (unbounded)
+                    // angle from this cell's home alignment: exactly 0 at every 60-
+                    // degree alignment (both sub-beams coincide, undeflected) and +-1
+                    // exactly halfway between two alignments (max separation), sweeping
+                    // sign smoothly THROUGH each alignment point rather than snapping.
+                    // No folding/branching, so there's no seam to jump across - fmod's
+                    // wrap point never has to double as a "handoff" between two cases.
+                    const float theta = lensAngle - home;
+                    const float s = std::sin(theta * float(M_PI) / 60.0f);
+                    // Both sub-beams share the same brightness curve - full at
+                    // alignment, dipping by kBeeEyeSplitDim at max separation - rather
+                    // than one fading out as the other fades in.
+                    const float weight = 1.0f - kBeeEyeSplitDim * s * s;
+                    subs.clear();
+                    subs.append({ weight,  kBeeEyeMaxSplitDeflect * s });
+                    subs.append({ weight, -kBeeEyeMaxSplitDeflect * s });
+                }
+
+                const QVector3D axis = cellWorld.mapVector(QVector3D(0, -1, 0)).normalized();
+                for (const SubBeam &s : subs) {
+                    if (s.weight * cellIntensity <= kBeamMinLevel)
+                        continue;
+                    Drawable beam;
+                    beam.mesh = m_beamCone;
+                    beam.volumetric = volumetric;
+                    beam.color = QColor::fromRgbF(float(cellColor.redF()) * s.weight,
+                                                  float(cellColor.greenF()) * s.weight,
+                                                  float(cellColor.blueF()) * s.weight, kBeamGain);
+                    beam.color2 = beam.color;
+                    QMatrix4x4 m = cellWorld;
+                    if (s.deflect != 0.0f)
+                        m.rotate(s.deflect, 1.0f, 0.0f, 0.0f);   // tangential fan, off local X
+                    m.scale(baseRadius, length, baseRadius);
+                    beam.model = m;
+                    const QVector3D apex = cellWorld.map(QVector3D(0, 0, 0));
+                    beam.fadePlane = fadePlaneFor(apex, axis, length);
+                    out.append(beam);
+                }
             }
         } else if (child->typeId() == "fixture") {
             auto *fix = static_cast<Fixture *>(child);

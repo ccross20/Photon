@@ -131,6 +131,10 @@ public:
     QString resolveWheelName(const QString &role) const;
     QVector<FixtureCapability*> findCapability(CapabilityType type, int index = 0) const;
     QVector<FixtureCapability*> findCapability(CapabilityType type, const QString &name) const;
+    // Names of this fixture's channels that carry at least one capability of the
+    // given type - e.g. for populating a "which channel" dropdown (the same name
+    // findCapability(type, name) matches against), rather than requiring free-text.
+    QStringList channelNamesForCapability(CapabilityType type) const;
 
     template<class V>
     QVector<V> findCapability() const

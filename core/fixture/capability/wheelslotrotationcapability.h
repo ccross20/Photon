@@ -8,7 +8,11 @@ namespace photon {
 class PHOTONCORE_EXPORT WheelSlotRotationCapability : public FixtureCapability
 {
 public:
-    WheelSlotRotationCapability();
+    // Reused for other continuous rotation channels that share this shape
+    // (index-or-speed, optional wheel-name binding) - e.g. Capability_LensRotation
+    // for a bee-eye's rotating lens plate. Mirrors how AngleCapability serves
+    // Pan/Tilt/Zoom/Focus via a constructor tag.
+    WheelSlotRotationCapability(CapabilityType type = Capability_WheelSlotRotation);
     ~WheelSlotRotationCapability();
 
     bool supportsAngle() const;

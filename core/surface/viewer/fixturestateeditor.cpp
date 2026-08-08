@@ -5,6 +5,7 @@
 #include <QLabel>
 #include <QDoubleSpinBox>
 #include <QSpinBox>
+#include <QComboBox>
 #include <QCheckBox>
 #include <QColorDialog>
 #include <QFrame>
@@ -14,14 +15,33 @@
 #include "state/statecapability.h"
 #include "sequence/channel.h"
 #include "fixture/capability/fixturecapability.h"
+#include "fixture/fixture.h"
 
 namespace photon {
 
 // Editor widget for a single capability channel, chosen by its value type.
-static QWidget *makeChannelEditor(StateCapability *t_cap, int t_index, const ChannelInfo &t_info)
+// t_nameOptions is only used for ChannelTypeString (the fixture channel names
+// available for the capability's type, so e.g. a rotation's "Name" field offers a
+// dropdown of the actual matching channels instead of free-text entry).
+static QWidget *makeChannelEditor(StateCapability *t_cap, int t_index, const ChannelInfo &t_info,
+                                  const QStringList &t_nameOptions)
 {
     switch(t_info.type)
     {
+    case ChannelInfo::ChannelTypeString:
+    {
+        auto *combo = new QComboBox;
+        combo->setEditable(true);   // fall back to free text if no fixture match yet
+        combo->addItems(t_nameOptions);
+        const QString current = t_cap->getChannelValue(t_index).toString();
+        const int idx = combo->findText(current, Qt::MatchFixedString);
+        if(idx >= 0)
+            combo->setCurrentIndex(idx);
+        else
+            combo->setCurrentText(current);
+        QObject::connect(combo, &QComboBox::currentTextChanged, combo, [t_cap, t_index](const QString &v){ t_cap->setChannelValue(t_index, v); });
+        return combo;
+    }
     case ChannelInfo::ChannelTypeColor:
     {
         auto *btn = new QPushButton;
@@ -113,7 +133,16 @@ void FixtureStateEditor::rebuild()
                 auto *row = new QHBoxLayout;
                 row->addWidget(new QLabel(channels[i].name));
 
-                auto *editor = makeChannelEditor(cap, i, channels[i]);
+                QStringList nameOptions;
+                if(channels[i].type == ChannelInfo::ChannelTypeString)
+                {
+                    for(Fixture *fx : m_node->resolvedFixtures())
+                        for(const QString &n : fx->channelNamesForCapability(cap->fixtureCapabilityType()))
+                            if(!nameOptions.contains(n, Qt::CaseInsensitive))
+                                nameOptions.append(n);
+                }
+
+                auto *editor = makeChannelEditor(cap, i, channels[i], nameOptions);
                 row->addWidget(editor, 1);
 
                 // Expose the channel as a graph input port; static editor is
@@ -156,6 +185,7 @@ void FixtureStateEditor::openAddMenu()
         {"Strobe", Capability_Strobe},
         {"Focus",  Capability_Focus},
         {"Zoom",   Capability_Zoom},
+        {"Lens Rotation", Capability_LensRotation},
     };
 
     QMenu menu;

@@ -54,9 +54,14 @@ private:
     int m_lastBeatNumber = -1;
     QVector<double> m_beats;
 
-    // Level/stem samples, one per tick. m_firstSampleTime/m_lastSampleTime (song
-    // time, from the connector) bound the capture so the achieved sample rate can
-    // be derived at the end.
+    // Level/stem samples, one per tick, alongside each one's real capture time
+    // (m_sampleTimes) - VDJ's ticks don't land at perfectly even intervals, so
+    // this is what lets processingComplete() resample onto FeatureTrack's
+    // required uniform grid accurately instead of just assuming the raw samples
+    // already are evenly spaced. m_firstSampleTime/m_lastSampleTime (song time,
+    // from the connector) bound the capture so the achieved sample rate can be
+    // derived at the end.
+    QVector<double> m_sampleTimes;
     QVector<float> m_levelSamples;
     QVector<float> m_vocalSamples;
     QVector<float> m_instruSamples;

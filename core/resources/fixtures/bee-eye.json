@@ -1,0 +1,146 @@
+{
+  "$schema": "https://raw.githubusercontent.com/OpenLightingProject/open-fixture-library/master/schemas/fixture.json",
+  "name": "Generic Bee Eye",
+  "categories": ["Moving Head", "Color Changer"],
+  "meta": {
+    "authors": ["Photon"],
+    "createDate": "2026-08-03",
+    "lastModifyDate": "2026-08-03"
+  },
+  "comment": "Synthetic profile: a moving head with 7 independently RGBW-controlled LED cells (1 centre + 6 in a hexagon) behind a lens plate that rotates as a unit, independent of the LEDs (\"Lens Rotation\" channel). Led1 is the centre cell; Led2..Led7 are the outer ring in rotational order, 60 degrees apart - this ordering must match the 3D model's lamp1..lamp7 node order.",
+  "availableChannels": {
+    "Pan": {
+      "fineChannelAliases": ["Pan fine"],
+      "capability": {
+        "type": "Pan",
+        "angleStart": "0deg",
+        "angleEnd": "540deg"
+      }
+    },
+    "Tilt": {
+      "fineChannelAliases": ["Tilt fine"],
+      "capability": {
+        "type": "Tilt",
+        "angleStart": "0deg",
+        "angleEnd": "270deg"
+      }
+    },
+    "Dimmer": {
+      "capability": {
+        "type": "Intensity"
+      }
+    },
+    "Shutter / Strobe": {
+      "capabilities": [
+        {
+          "dmxRange": [0, 3],
+          "type": "ShutterStrobe",
+          "shutterEffect": "Closed"
+        },
+        {
+          "dmxRange": [4, 250],
+          "type": "ShutterStrobe",
+          "shutterEffect": "Strobe",
+          "speedStart": "slow",
+          "speedEnd": "fast"
+        },
+        {
+          "dmxRange": [251, 255],
+          "type": "ShutterStrobe",
+          "shutterEffect": "Open"
+        }
+      ]
+    },
+    "Lens Rotation": {
+      "capabilities": [
+        {
+          "dmxRange": [0, 127],
+          "type": "LensRotation",
+          "angleStart": "0deg",
+          "angleEnd": "360deg"
+        },
+        {
+          "dmxRange": [128, 128],
+          "type": "LensRotation",
+          "speed": "stop"
+        },
+        {
+          "dmxRange": [129, 191],
+          "type": "LensRotation",
+          "speedStart": "slow CW",
+          "speedEnd": "fast CW"
+        },
+        {
+          "dmxRange": [192, 192],
+          "type": "LensRotation",
+          "speed": "stop"
+        },
+        {
+          "dmxRange": [193, 255],
+          "type": "LensRotation",
+          "speedStart": "slow CCW",
+          "speedEnd": "fast CCW"
+        }
+      ]
+    },
+    "Red1": { "capability": { "type": "ColorIntensity", "color": "Red" } },
+    "Green1": { "capability": { "type": "ColorIntensity", "color": "Green" } },
+    "Blue1": { "capability": { "type": "ColorIntensity", "color": "Blue" } },
+    "White1": { "capability": { "type": "ColorIntensity", "color": "White" } },
+    "Red2": { "capability": { "type": "ColorIntensity", "color": "Red" } },
+    "Green2": { "capability": { "type": "ColorIntensity", "color": "Green" } },
+    "Blue2": { "capability": { "type": "ColorIntensity", "color": "Blue" } },
+    "White2": { "capability": { "type": "ColorIntensity", "color": "White" } },
+    "Red3": { "capability": { "type": "ColorIntensity", "color": "Red" } },
+    "Green3": { "capability": { "type": "ColorIntensity", "color": "Green" } },
+    "Blue3": { "capability": { "type": "ColorIntensity", "color": "Blue" } },
+    "White3": { "capability": { "type": "ColorIntensity", "color": "White" } },
+    "Red4": { "capability": { "type": "ColorIntensity", "color": "Red" } },
+    "Green4": { "capability": { "type": "ColorIntensity", "color": "Green" } },
+    "Blue4": { "capability": { "type": "ColorIntensity", "color": "Blue" } },
+    "White4": { "capability": { "type": "ColorIntensity", "color": "White" } },
+    "Red5": { "capability": { "type": "ColorIntensity", "color": "Red" } },
+    "Green5": { "capability": { "type": "ColorIntensity", "color": "Green" } },
+    "Blue5": { "capability": { "type": "ColorIntensity", "color": "Blue" } },
+    "White5": { "capability": { "type": "ColorIntensity", "color": "White" } },
+    "Red6": { "capability": { "type": "ColorIntensity", "color": "Red" } },
+    "Green6": { "capability": { "type": "ColorIntensity", "color": "Green" } },
+    "Blue6": { "capability": { "type": "ColorIntensity", "color": "Blue" } },
+    "White6": { "capability": { "type": "ColorIntensity", "color": "White" } },
+    "Red7": { "capability": { "type": "ColorIntensity", "color": "Red" } },
+    "Green7": { "capability": { "type": "ColorIntensity", "color": "Green" } },
+    "Blue7": { "capability": { "type": "ColorIntensity", "color": "Blue" } },
+    "White7": { "capability": { "type": "ColorIntensity", "color": "White" } }
+  },
+  "virtual": [
+    { "name": "Led1", "channels": ["Red1", "Green1", "Blue1", "White1"] },
+    { "name": "Led2", "channels": ["Red2", "Green2", "Blue2", "White2"] },
+    { "name": "Led3", "channels": ["Red3", "Green3", "Blue3", "White3"] },
+    { "name": "Led4", "channels": ["Red4", "Green4", "Blue4", "White4"] },
+    { "name": "Led5", "channels": ["Red5", "Green5", "Blue5", "White5"] },
+    { "name": "Led6", "channels": ["Red6", "Green6", "Blue6", "White6"] },
+    { "name": "Led7", "channels": ["Red7", "Green7", "Blue7", "White7"] }
+  ],
+  "modes": [
+    {
+      "name": "Standard",
+      "shortName": "std",
+      "channels": [
+        "Pan",
+        "Pan fine",
+        "Tilt",
+        "Tilt fine",
+        "Dimmer",
+        "Shutter / Strobe",
+        "Lens Rotation",
+        "Red1", "Green1", "Blue1", "White1",
+        "Red2", "Green2", "Blue2", "White2",
+        "Red3", "Green3", "Blue3", "White3",
+        "Red4", "Green4", "Blue4", "White4",
+        "Red5", "Green5", "Blue5", "White5",
+        "Red6", "Green6", "Blue6", "White6",
+        "Red7", "Green7", "Blue7", "White7"
+      ]
+    }
+  ]
+}

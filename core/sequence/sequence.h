@@ -21,11 +21,11 @@ public:
     void setAudioPath(const QString &);
     void addLayer(Layer *);
     void removeLayer(Layer *);
-    void addBeatLayer(BeatLayer *);
-    void removeBeatLayer(BeatLayer *);
-    BeatLayer *editableBeatLayer() const;
-    void setEditableBeatLayer(BeatLayer *);
-    const QVector<BeatLayer*> &beatLayers() const;
+    void addCueLayer(CueLayer *);
+    void removeCueLayer(CueLayer *);
+    CueLayer *editableCueLayer() const;
+    void setEditableCueLayer(CueLayer *);
+    const QVector<CueLayer*> &cueLayers() const;
     bool findClosestBeatToTime(float, float *) const;
     bool snapToBeat(float time, float *outTime, float tolerance = .1) const;
 
@@ -58,9 +58,9 @@ signals:
     void layerAdded(photon::Layer *);
     void layerRemoved(photon::Layer *);
     void fileChanged(const QString &);
-    void beatLayerAdded(photon::BeatLayer *);
-    void beatLayerRemoved(photon::BeatLayer *);
-    void editableBeatLayerChanged(photon::BeatLayer *);
+    void cueLayerAdded(photon::CueLayer *);
+    void cueLayerRemoved(photon::CueLayer *);
+    void editableCueLayerChanged(photon::CueLayer *);
 
 private slots:
 

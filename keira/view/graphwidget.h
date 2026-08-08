@@ -17,6 +17,7 @@ class KEIRA_EXPORT GraphWidget : public QWidget
     Q_OBJECT
 public:
     explicit GraphWidget(NodeLibrary *t_library, QWidget *parent = nullptr);
+    ~GraphWidget();
 
     void setScene(Scene *t_scene);
     Scene *scene() const;

@@ -120,8 +120,13 @@ bool BaseCanvasNode::ensureResources(QRhi *rhi, const QSize &size, const QVector
 
 void BaseCanvasNode::evaluate(keira::EvaluationContext *t_context) const
 {
-    auto ctx = static_cast<RoutineEvaluationContext *>(t_context);
-    if (!ctx->rhiContext || !ctx->rhiCommandBuffer)
+    // Guard against a plain (non-routine) context: e.g. a canvas graph opened
+    // directly in a node editor gets live-ticked by a generic GraphEvaluator
+    // whose default context factory produces a bare keira::EvaluationContext,
+    // not a RoutineEvaluationContext (see CanvasOutputNode::evaluate(), which
+    // already guards the same way).
+    auto ctx = dynamic_cast<RoutineEvaluationContext *>(t_context);
+    if (!ctx || !ctx->rhiContext || !ctx->rhiCommandBuffer)
         return;
     QRhi *rhi = ctx->rhiContext->rhi();
     const QSize size = ctx->canvasResolution;

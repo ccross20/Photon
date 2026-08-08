@@ -5,6 +5,7 @@
 #include "sequenceclip.h"
 #include "sequence/clip.h"
 #include "sequence/cliplayer.h"
+#include "routine/routine.h"
 #include "photoncore.h"
 
 namespace photon {
@@ -178,10 +179,10 @@ void SequenceClip::contextMenuEvent(QGraphicsSceneContextMenuEvent *event)
 
     QMenu menu;
 
-    if(clip->contentGraph())
+    if(auto *routine = dynamic_cast<Routine*>(clip->contentGraph()))
     {
-        menu.addAction("Open Graph", [clip](){
-            photonApp->editRoutine(clip->contentGraph());
+        menu.addAction("Open Graph", [routine](){
+            photonApp->editRoutine(routine);
         });
         menu.addSeparator();
     }

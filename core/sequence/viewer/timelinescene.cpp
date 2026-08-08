@@ -221,8 +221,7 @@ void TimelineScene::createLayer()
 
 void TimelineScene::createCanvasLayerGroup()
 {
-    auto canvas = photonApp->project()->canvases()->canvasAtIndex(0);
-    CanvasLayerGroup *layer = new CanvasLayerGroup(canvas, "Canvas Group");
+    CanvasLayerGroup *layer = new CanvasLayerGroup("Canvas Group");
 
     m_impl->sequence->addLayer(layer);
 }

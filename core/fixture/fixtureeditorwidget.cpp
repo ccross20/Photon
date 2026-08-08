@@ -78,7 +78,7 @@ FixtureEditorWidget::Impl::Impl()
     modelCombo = new QComboBox;
     // Index 0 = Auto (empty override); the rest are visualiser model types.
     modelCombo->addItems(QStringList() << "Auto" << "mover" << "par" << "uplight"
-                                       << "strobe" << "blinder" << "bar" << "wash");
+                                       << "strobe" << "blinder" << "bar" << "wash" << "beeeye");
     formLayout->addRow("Model", modelCombo);
 
     beamCombo = new QComboBox;

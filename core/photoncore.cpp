@@ -23,6 +23,8 @@
 #include "graph/parameter/textureparameter.h"
 #include "graph/parameter/rhitextureparameter.h"
 #include "virtualdj/virtualdjconnector.h"
+#include "library/songlibrary.h"
+#include "settings/applicationsettings.h"
 
 inline void initPluginResource() { Q_INIT_RESOURCE(resources); }
 
@@ -52,19 +54,31 @@ public:
     RhiContext *rhiContext = nullptr;
     CanvasRenderManager *canvasRenderManager = nullptr;
     VirtualDJConnector *djConnector = nullptr;
+    SongLibrary *songLibrary = nullptr;
 };
 
 PhotonCore::Impl::Impl(PhotonCore *t_core):
     sequences(new SequenceCollection),
     resources(new ResourceManager()),
     settings(new Settings(t_core)),
-    plugins(new PluginFactory(t_core)),gui(new GuiManager),timekeeper(new Timekeeper),busEvaluator(new BusEvaluator),djConnector(new VirtualDJConnector)
+    plugins(new PluginFactory(t_core)),gui(new GuiManager),timekeeper(new Timekeeper),busEvaluator(new BusEvaluator),djConnector(new VirtualDJConnector),
+    songLibrary(new SongLibrary)
 {
-
 }
 
 PhotonCore::Impl::~Impl()
 {
+    // Tear down the GUI FIRST: any docked panel can own a keira::Scene (e.g. a
+    // SequenceWidget's clip-graph editor, BusPanel, RoutineEditPanel), and each
+    // Scene has its own GraphEvaluator eval thread that keeps ticking - and
+    // locking mutexes inside - whatever Graph it's pointed at until the Scene
+    // is destroyed. If project/sequences (and so their graphs) were freed
+    // first, a still-live Scene's eval thread can fault against freed memory.
+    // GuiManager::~GuiManager() synchronously deletes the whole window tree
+    // (not a deferred close), so every panel - and its Scene, if any - is
+    // fully gone before this returns.
+    delete gui;
+
     // Stop the eval thread (and let go of the project's bus) before anything it
     // might reference starts getting torn down below - otherwise a tick landing
     // mid-shutdown dereferences already-freed state. Mirrors the ordering
@@ -76,13 +90,13 @@ PhotonCore::Impl::~Impl()
     delete project;
 
     delete djConnector;
+    delete songLibrary;   // just a QSqlDatabase connection, no ordering hazard
     delete canvasRenderManager;   // stop the render timer before the device it uses
     delete rhiContext;   // owns its own shared GL context; tear down before ours
     context->makeCurrent(surface);
     openGLResources->destroy(context);
     delete openGLResources;
 
-    delete gui;
     delete plugins;
     delete timekeeper;
     delete settings;
@@ -134,6 +148,15 @@ void PhotonCore::init()
     m_impl->version = QVersionNumber(0,0,1);
     setApplicationVersion(m_impl->version.toString());
 
+    // Open lazily against whatever path is currently configured; left closed
+    // (SongLibrary::isOpen() == false) if none is set yet, so callers can
+    // prompt the user to configure one instead of failing silently. Must run
+    // after setOrganizationName()/setApplicationName() above - ApplicationSettings
+    // reads a default-constructed QSettings, which resolves to the wrong location
+    // until those are set, so this can't happen any earlier (e.g. in Impl's ctor).
+    const QString libraryPath = ApplicationSettings::songDataLibraryPath();
+    if(!libraryPath.isEmpty())
+        m_impl->songLibrary->open(libraryPath);
 
     m_impl->resources->addResource(":/resources/styles.css", photon::Resource::ResourceStyle);
 
@@ -325,6 +348,11 @@ BusEvaluator *PhotonCore::busEvaluator() const
 VirtualDJConnector *PhotonCore::djConnector() const
 {
     return m_impl->djConnector;
+}
+
+SongLibrary *PhotonCore::songLibrary() const
+{
+    return m_impl->songLibrary;
 }
 
 Timekeeper *PhotonCore::timekeeper() const

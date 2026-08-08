@@ -206,6 +206,41 @@ QVector<FixtureCapability*> Fixture::findCapability(CapabilityType t_type, const
     return results;
 }
 
+QStringList Fixture::channelNamesForCapability(CapabilityType t_type) const
+{
+    QStringList results;
+
+    for(auto it = m_impl->channels.cbegin(); it != m_impl->channels.cend(); ++it)
+    {
+        auto channel = *it;
+        for(auto capabilityIt = channel->capabilities().cbegin(); capabilityIt != channel->capabilities().cend(); ++capabilityIt)
+        {
+            if((*capabilityIt)->type() == t_type)
+            {
+                if(!results.contains(channel->name(), Qt::CaseInsensitive))
+                    results.append(channel->name());
+                break;
+            }
+        }
+    }
+
+    for(auto it = m_impl->virtualChannels.cbegin(); it != m_impl->virtualChannels.cend(); ++it)
+    {
+        auto channel = *it;
+        for(auto capabilityIt = channel->capabilities().cbegin(); capabilityIt != channel->capabilities().cend(); ++capabilityIt)
+        {
+            if((*capabilityIt)->type() == t_type)
+            {
+                if(!results.contains(channel->name(), Qt::CaseInsensitive))
+                    results.append(channel->name());
+                break;
+            }
+        }
+    }
+
+    return results;
+}
+
 void Fixture::setDefaultState(State *t_state)
 {
     m_impl->defaultState = t_state;

@@ -133,24 +133,6 @@ private:
 
 };
 
-class BaseEffectData : public AbstractTreeData
-{
-    Q_OBJECT
-public:
-    BaseEffectData(BaseEffect*);
-    BaseEffect *effect() const{return m_effect;}
-
-private slots:
-    void channelAdded(photon::Channel *);
-    void channelRemoved(photon::Channel *);
-    void channelMoved(photon::Channel *);
-
-private:
-    BaseEffect *m_effect;
-
-};
-
-
 } // namespace photon
 
 #endif // COMMONMODEL_H

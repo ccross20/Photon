@@ -100,6 +100,8 @@ private:
     void disconnectParametersInternal(Parameter *, Parameter *);
     void disconnectNodeInternal(Node *);
     void resortGraphInternal();
+    Node *findNodeInternal(const QByteArray &) const;
+    Parameter *findParameterInternal(const QByteArray &);
 
     class Impl;
     Impl *m_impl;

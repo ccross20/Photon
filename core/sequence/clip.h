@@ -5,7 +5,8 @@
 #include <QEasingCurve>
 #include "photon-global.h"
 #include "channel.h"
-#include "baseeffectparent.h"
+
+namespace keira { class Graph; }
 
 namespace photon {
 
@@ -25,7 +26,7 @@ struct ClipInformation
     CategoryList categories;
 };
 
-class PHOTONCORE_EXPORT Clip : public QObject, public BaseEffectParent
+class PHOTONCORE_EXPORT Clip : public QObject
 {
     Q_OBJECT
 public:
@@ -42,7 +43,7 @@ public:
     ClipLayer *layer() const;
     // The clip's content graph (its inline routine or a referenced shared routine),
     // or null for clips that aren't graph-backed. Lets the editor open it.
-    virtual Routine *contentGraph() const;
+    virtual keira::Graph *contentGraph() const;
     virtual void processChannels(ProcessContext &);
     virtual bool timeIsValid(double) const;
     QByteArray type() const;
@@ -53,20 +54,14 @@ public:
     void removeChannelParameter(ChannelParameter *);
     const QVector<Channel*> channelsForParameter(ChannelParameter *) const;
 
-    void addClipEffect(BaseEffect *) override;
-    void removeClipEffect(BaseEffect *) override;
-    BaseEffect *clipEffectAtIndex(int index) const override;
-    int clipEffectCount() const override;
-    const QVector<BaseEffect*> &clipEffects() const override;
-
     void setStartTime(double);
     void setEndTime(double);
     void setDuration(double);
 
-    double startTime() const override;
+    double startTime() const;
     double endTime() const;
-    double duration() const override;
-    double strengthAtTime(double) const override;
+    double duration() const;
+    double strengthAtTime(double) const;
 
     Channel *channelAtIndex(int index) const;
     int channelCount() const;
@@ -89,8 +84,7 @@ public:
     virtual void readFromJson(const QJsonObject &, const LoadContext &);
     virtual void writeToJson(QJsonObject &) const;
 
-    void markChanged() override;
-    void effectUpdated(photon::BaseEffect *) override;
+    void markChanged();
 
 protected:
     virtual void startTimeUpdated(double);
@@ -101,17 +95,12 @@ protected:
 
 public slots:
     void channelUpdatedSlot(photon::Channel *);
-    void effectUpdatedSlot(photon::BaseEffect *);
     photon::Channel *addChannel(const photon::ChannelInfo &info = ChannelInfo{}, int index = -1);
     void removeChannel(int index);
     void createChannelsFromParameter(ChannelParameter *, ChannelInfo::ChannelType type = ChannelInfo::ChannelTypeNumber);
 
 signals:
 
-    void clipEffectAdded(photon::BaseEffect *);
-    void clipEffectRemoved(photon::BaseEffect *);
-    void clipEffectUpdated(photon::BaseEffect *);
-    void clipEffectMoved(photon::BaseEffect *);
     void clipUpdated(photon::Clip *);
     void channelUpdated(photon::Channel *);
     void channelAdded(photon::Channel *);

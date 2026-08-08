@@ -12,6 +12,7 @@
 #include "photoncore.h"
 #include "plugin/pluginfactory.h"
 #include "sequence/sequencecollection.h"
+#include "sequence/sequence.h"
 #include "panel_p.h"
 #include "gui/dialog/settingsdialog.h"
 /*
@@ -52,6 +53,9 @@ GuiManager::Impl::~Impl()
 void GuiManager::Impl::createAppWindow()
 {
     window = new Window();
+    // Track external destruction (e.g. WA_DeleteOnClose firing from a normal
+    // user-initiated close) so ~GuiManager() never deletes a dangling pointer.
+    connect(window, &QObject::destroyed, this, [this](){ window = nullptr; });
     //window->setAttribute(Qt::WA_DeleteOnClose);
 
     QMenuBar *menubar = new QMenuBar;
@@ -75,6 +79,7 @@ void GuiManager::Impl::createAppWindow()
     windowMenu->addAction("Canvas Preview", [](){photonApp->gui()->createFloatingPanel("photon.canvas-preview");});
     windowMenu->addAction("Tags", [](){photonApp->gui()->createFloatingPanel("photon.tag-collection");});
     windowMenu->addAction("Fixture Groups", [](){photonApp->gui()->createFloatingPanel("photon.fixture-group-collection");});
+    windowMenu->addAction("Song Library", [](){photonApp->gui()->createFloatingPanel("photon.song-library");});
     menubar->addMenu(windowMenu);
 
     Panel *panel1 = createPanel("photon.bus");
@@ -316,6 +321,18 @@ GuiManager::GuiManager(QObject *parent) : QObject (parent), m_impl(new GuiManage
 
 GuiManager::~GuiManager()
 {
+    // Synchronously tear down the whole window tree - and with it every docked
+    // panel, including any embedded keira::Scene/GraphEvaluator (e.g. a
+    // SequenceWidget's clip-graph editor, BusPanel, RoutineEditPanel) - before
+    // returning. This must run before PhotonCore::Impl::~Impl() frees project/
+    // sequences (and so their graphs): a Scene's evaluator has its own eval
+    // thread that keeps ticking (and locking mutexes inside) whatever Graph
+    // it's pointed at until it's destroyed, so a still-live one can fault
+    // against a graph that was just freed. A plain delete (not window->close())
+    // bypasses the deferred deleteLater()-based close path, which relies on
+    // the event loop and isn't guaranteed to have run before exec() returns
+    // during shutdown.
+    delete m_impl->window;
 }
 
 void GuiManager::init()

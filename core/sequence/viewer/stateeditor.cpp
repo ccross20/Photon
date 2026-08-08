@@ -24,11 +24,11 @@ StateEditor::StateEditor(QWidget *parent)
     setLayout(m_layout);
 }
 
-void StateEditor::setBaseEffectParent(photon::BaseEffectParent* t_effectParent)
+void StateEditor::setClip(photon::Clip* t_clip)
 {
-    m_baseEffectParent = t_effectParent;
-    if(dynamic_cast<FixtureClip*>(t_effectParent))
-        selectState(static_cast<FixtureClip*>(t_effectParent)->state());
+    m_clip = t_clip;
+    if(dynamic_cast<FixtureClip*>(t_clip))
+        selectState(static_cast<FixtureClip*>(t_clip)->state());
 }
 
 void StateEditor::selectState(State *t_state)
@@ -138,10 +138,10 @@ void StateEditor::selectState(State *t_state)
                 channelButton->setSizePolicy(QSizePolicy(QSizePolicy::Minimum, QSizePolicy::MinimumExpanding));
                 // Reflect the current exposed state — set before connecting so it
                 // doesn't fire the toggle handler during construction.
-                if(auto *clip = dynamic_cast<FixtureClip*>(m_baseEffectParent))
+                if(auto *clip = dynamic_cast<FixtureClip*>(m_clip))
                     channelButton->setChecked(clip->isCapabilityChannelExposed(stateCapability, index));
                 connect(channelButton, &QPushButton::toggled,this,[this, stateCapability, index](bool value){
-                    if(auto *clip = dynamic_cast<FixtureClip*>(m_baseEffectParent))
+                    if(auto *clip = dynamic_cast<FixtureClip*>(m_clip))
                     {
                         if(value)
                             clip->exposeCapabilityChannel(stateCapability, index);
@@ -198,6 +198,7 @@ void StateEditor::openAddMenu()
     menu.addAction("Gobo Slot",[state](){state->addCapability(Capability_WheelSlot);});
     menu.addAction("Wheel Rotation",[state](){state->addCapability(Capability_WheelRotation);});
     menu.addAction("Wheel Slot Rotation",[state](){state->addCapability(Capability_WheelSlotRotation);});
+    menu.addAction("Lens Rotation",[state](){state->addCapability(Capability_LensRotation);});
 
     menu.exec(m_addButton->mapToGlobal(QPoint(0,0)));
 }

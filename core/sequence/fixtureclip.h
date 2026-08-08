@@ -2,6 +2,7 @@
 #define PHOTON_FIXTURECLIP_H
 #include "clip.h"
 #include "state/state.h"
+#include "routine/routine.h"
 
 namespace photon {
 

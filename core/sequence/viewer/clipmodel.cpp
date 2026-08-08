@@ -8,7 +8,6 @@
 #include "sequence/routineclip.h"
 #include "sequence/fixtureclip.h"
 #include "sequence/canvasclip.h"
-#include "sequence/baseeffect.h"
 #include "sequence/canvaslayergroup.h"
 #include "pixel/pixellayout.h"
 
@@ -31,13 +30,16 @@ ClipData::ClipData(Clip *t_clip) : AbstractTreeData(t_clip->name(), t_clip->uniq
 {
 
     m_parameterData = new ClipParameterData(m_clip);
-    m_clipEffectData = new ClipEffectFolderData(m_clip);
 
     addChild(m_parameterData);
 
-    auto fixtureClip = dynamic_cast<FixtureClip*>(t_clip);
-    auto canvasClip = dynamic_cast<CanvasClip*>(t_clip);
+    if(t_clip->contentGraph())
+    {
+        m_graphData = new ClipGraphData(m_clip);
+        addChild(m_graphData);
+    }
 
+    auto fixtureClip = dynamic_cast<FixtureClip*>(t_clip);
 
     if(fixtureClip)
     {
@@ -45,9 +47,6 @@ ClipData::ClipData(Clip *t_clip) : AbstractTreeData(t_clip->name(), t_clip->uniq
         m_maskFolder = new ClipMaskData(fixtureClip);
         m_falloffData = new ClipFalloffData(fixtureClip);
     }
-
-    if(fixtureClip || canvasClip)
-        addChild(m_clipEffectData);
 
     if(fixtureClip)
     {
@@ -112,48 +111,7 @@ ClipParameterData::ClipParameterData(Clip *t_clip): AbstractTreeData("Parameters
 
 }
 
-ClipEffectFolderData::ClipEffectFolderData(Clip *t_clip): AbstractTreeData("Effects","effects"),m_clip(t_clip)
-{
-    connect(m_clip, &Clip::clipEffectAdded, this, &ClipEffectFolderData::effectAdded);
-    connect(m_clip, &Clip::clipEffectRemoved, this, &ClipEffectFolderData::effectRemoved);
-
-    qDebug() << "Effect count" << t_clip->clipEffectCount();
-    for(int i = 0; i < t_clip->clipEffectCount(); ++i)
-    {
-        auto effectData = new BaseEffectData(m_clip->clipEffectAtIndex(i));
-        addChild(effectData);
-    }
-    addChild(new CreateData("Add Effect..."));
-}
-
-BaseEffectData *ClipEffectFolderData::findEffectData(BaseEffect *t_effect)
-{
-    for(auto child : children())
-    {
-        BaseEffectData *childData = dynamic_cast<BaseEffectData*>(child);
-        if(childData && childData->effect() == t_effect)
-        {
-            return childData;
-        }
-    }
-    return nullptr;
-}
-
-void ClipEffectFolderData::effectAdded(photon::BaseEffect *t_effect)
-{
-    auto effectData = new BaseEffectData(t_effect);
-    insertChild(effectData, childCount() - 1);
-}
-
-void ClipEffectFolderData::effectRemoved(photon::BaseEffect *t_effect)
-{
-    auto effect = findEffectData(t_effect);
-
-    if(effect)
-        removeChild(effect);
-}
-
-void ClipEffectFolderData::effectMoved(photon::BaseEffect *t_effect)
+ClipGraphData::ClipGraphData(Clip *t_clip): AbstractTreeData("Graph","graph"),m_clip(t_clip)
 {
 
 }

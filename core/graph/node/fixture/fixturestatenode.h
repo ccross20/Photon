@@ -12,6 +12,7 @@ namespace photon {
 
 class FixtureListParameter;
 class StateCapability;
+class Fixture;
 
 // A fixture-state node that applies a State (a set of capability values) to a
 // list of fixtures. Unlike the per-capability Set-Fixture nodes it holds many
@@ -38,6 +39,10 @@ public:
     static keira::NodeInformation info();
 
     State *state() const;
+    // The node's currently assigned fixtures (resolved from the Fixtures input by
+    // id), for editors that need to know what's targeted - e.g. to offer a
+    // dropdown of a capability's available channel names on those fixtures.
+    QVector<Fixture*> resolvedFixtures() const;
 
     // Expose a capability channel as a graph input port (an AnyParameter whose
     // id is the capability's channelId), so a gizmo can drive it. When exposed

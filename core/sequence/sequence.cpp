@@ -13,6 +13,7 @@
 #include "fixture/fixture.h"
 #include "state/stateevaluationcontext.h"
 #include "state/state.h"
+#include "library/songlibrary.h"
 
 namespace photon {
 
@@ -102,15 +103,31 @@ void Sequence::save(const QString &t_path) const
 
     qDebug() << "Saved to: " << saveFile.fileName();
 
-    // Write the song-analysis sidecar alongside (binary). Skip when there's nothing
-    // to store so we don't leave empty .song files next to plain sequences.
-    const QString sidecar = songDataSidecarPath(savePath);
-    if(!sidecar.isEmpty())
+    // If this sequence is linked to a Song Library song, its SongData lives there
+    // (keyed by trackKey, shared with every other sequence for that song) - saving
+    // a second copy into a local sidecar would just be a redundant, driftable
+    // duplicate. Only sequences with no library link still use the sidecar.
+    SongLibrary *library = photonApp->songLibrary();
+    SongLibraryEntry *linkedSong = (library && library->isOpen())
+        ? library->findSongBySequencePath(savePath) : nullptr;
+
+    if(linkedSong)
     {
-        if(!m_impl->songData.isEmpty())
-            m_impl->songData.save(sidecar);
-        else if(QFile::exists(sidecar))
-            QFile::remove(sidecar);
+        library->saveSongData(*linkedSong, m_impl->songData);
+    }
+    else
+    {
+        // Write the song-analysis sidecar alongside (binary). Skip when there's
+        // nothing to store so we don't leave empty .song files next to plain
+        // sequences.
+        const QString sidecar = songDataSidecarPath(savePath);
+        if(!sidecar.isEmpty())
+        {
+            if(!m_impl->songData.isEmpty())
+                m_impl->songData.save(sidecar);
+            else if(QFile::exists(sidecar))
+                QFile::remove(sidecar);
+        }
     }
 }
 
@@ -155,41 +172,54 @@ void Sequence::load(const QString &t_path)
     readFromJson(loadDoc.object(), context);
     restore(*photonApp->project());
 
-    // Load the song-analysis sidecar if present; otherwise start with an empty one.
+    // See the matching comment in save(): a library-linked sequence's SongData
+    // comes from the library, not a local sidecar (ignore any pre-existing
+    // sidecar file in that case - it's a harmless orphan, not the source of truth).
     m_impl->songData = SongData();
-    const QString sidecar = songDataSidecarPath(loadPath);
-    if(!sidecar.isEmpty() && QFile::exists(sidecar))
-        m_impl->songData.load(sidecar);
+    SongLibrary *library = photonApp->songLibrary();
+    SongLibraryEntry *linkedSong = (library && library->isOpen())
+        ? library->findSongBySequencePath(loadPath) : nullptr;
+
+    if(linkedSong)
+    {
+        m_impl->songData = library->songDataFor(*linkedSong);
+    }
+    else
+    {
+        const QString sidecar = songDataSidecarPath(loadPath);
+        if(!sidecar.isEmpty() && QFile::exists(sidecar))
+            m_impl->songData.load(sidecar);
+    }
 
     qDebug() << "Load from: " << loadFile.fileName();
 }
 
-void Sequence::addBeatLayer(BeatLayer *t_layer)
+void Sequence::addCueLayer(CueLayer *t_layer)
 {
-    qDebug() << "Add" << t_layer->beats().length();
-    m_impl->beatLayers.append(t_layer);
-    emit beatLayerAdded(t_layer);
+    qDebug() << "Add" << t_layer->markers().length();
+    m_impl->cueLayers.append(t_layer);
+    emit cueLayerAdded(t_layer);
 }
 
-void Sequence::removeBeatLayer(BeatLayer *t_layer)
+void Sequence::removeCueLayer(CueLayer *t_layer)
 {
-    m_impl->beatLayers.removeOne(t_layer);
-    emit beatLayerRemoved(t_layer);
+    m_impl->cueLayers.removeOne(t_layer);
+    emit cueLayerRemoved(t_layer);
 }
 
 bool Sequence::findClosestBeatToTime(float t_time, float *t_result) const
 {
     *t_result = 0.0f;
-    if(m_impl->beatLayers.isEmpty())
+    if(m_impl->cueLayers.isEmpty())
         return false;
 
-    auto layer = m_impl->beatLayers.front();
-    auto beats = layer->beats();
+    auto layer = m_impl->cueLayers.front();
+    auto markers = layer->markers();
 
-    auto it = std::lower_bound(beats.begin(), beats.end(), t_time);
+    auto it = std::lower_bound(markers.begin(), markers.end(), t_time);
 
-    if (it == beats.begin()) {
-            *t_result = beats.front();
+    if (it == markers.begin()) {
+            *t_result = markers.front();
     }
 
     double a = *(it - 1);
@@ -221,12 +251,12 @@ bool Sequence::snapToBeat(float time, float *outTime, float tolerance) const
         hasSnap = true;
     }
 
-    for(auto beatLayer : m_impl->beatLayers)
+    for(auto cueLayer : m_impl->cueLayers)
     {
-        if(beatLayer->isSnappable())
+        if(cueLayer->isSnappable())
         {
             float snapTime = 0;
-            if(beatLayer->snapToBeat(time, &snapTime, tolerance))
+            if(cueLayer->snapToMarker(time, &snapTime, tolerance))
             {
                 if(abs(snapTime - time) < abs(winner - time) || !hasSnap)
                 {
@@ -244,30 +274,30 @@ bool Sequence::snapToBeat(float time, float *outTime, float tolerance) const
     return hasSnap;
 }
 
-const QVector<BeatLayer*> &Sequence::beatLayers() const
+const QVector<CueLayer*> &Sequence::cueLayers() const
 {
-    return m_impl->beatLayers;
+    return m_impl->cueLayers;
 }
 
-BeatLayer *Sequence::editableBeatLayer() const
+CueLayer *Sequence::editableCueLayer() const
 {
-    for(auto beatLayer : m_impl->beatLayers)
+    for(auto cueLayer : m_impl->cueLayers)
     {
-        if(beatLayer->isEditable())
-            return beatLayer;
+        if(cueLayer->isEditable())
+            return cueLayer;
     }
     return nullptr;
 }
 
-void Sequence::setEditableBeatLayer(BeatLayer *t_layer)
+void Sequence::setEditableCueLayer(CueLayer *t_layer)
 {
-    for(auto beatLayer : m_impl->beatLayers)
+    for(auto cueLayer : m_impl->cueLayers)
     {
-        if(beatLayer->isEditable())
-            beatLayer->setIsEditable(false);
+        if(cueLayer->isEditable())
+            cueLayer->setIsEditable(false);
     }
     t_layer->setIsEditable(true);
-    emit editableBeatLayerChanged(t_layer);
+    emit editableCueLayerChanged(t_layer);
 }
 
 Layer *Sequence::findLayerByGuid(const QUuid &t_guid)
@@ -394,17 +424,17 @@ void Sequence::readFromJson(const QJsonObject &t_json, const LoadContext &t_cont
             layer->readFromJson(layerObj, t_context);
         }
     }
-    auto beatArray = t_json.value("beatLayers").toArray();
-    for(auto layerJson : beatArray)
+    auto cueArray = t_json.value("cueLayers").toArray();
+    for(auto layerJson : cueArray)
     {
         auto layerObj = layerJson.toObject();
-        auto beatLayer = new BeatLayer;
-        beatLayer->readFromJson(layerObj, t_context);
-        m_impl->beatLayers.append(beatLayer);
+        auto cueLayer = new CueLayer;
+        cueLayer->readFromJson(layerObj, t_context);
+        m_impl->cueLayers.append(cueLayer);
     }
 
-    if(!m_impl->beatLayers.isEmpty())
-        m_impl->beatLayers.front()->setIsEditable(true);
+    if(!m_impl->cueLayers.isEmpty())
+        m_impl->cueLayers.front()->setIsEditable(true);
 }
 
 void Sequence::writeToJson(QJsonObject &t_json) const
@@ -421,14 +451,14 @@ void Sequence::writeToJson(QJsonObject &t_json) const
     }
     t_json.insert("layers", array);
 
-    QJsonArray beatArray;
-    for(auto layer : m_impl->beatLayers)
+    QJsonArray cueArray;
+    for(auto layer : m_impl->cueLayers)
     {
         QJsonObject layerJson;
         layer->writeToJson(layerJson);
-        beatArray.append(layerJson);
+        cueArray.append(layerJson);
     }
-    t_json.insert("beatLayers", beatArray);
+    t_json.insert("cueLayers", cueArray);
 }
 
 

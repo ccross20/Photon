@@ -42,6 +42,19 @@ GraphWidget::GraphWidget(NodeLibrary *t_library, QWidget *parent)
     setLayout(hLayout);
 }
 
+GraphWidget::~GraphWidget()
+{
+    // QWidget's destructor tears down our widget children (m_viewer, m_editor,
+    // m_navigationLabel, ...) before ~QObject() gets to plain-QObject children
+    // like a Scene parented to us - so if m_scene outlives them even briefly,
+    // its own destructor removing/deselecting items fires selectionChanged(),
+    // which is still connected to selectionUpdated() and would dereference the
+    // already-freed m_editor. Cut the connection first so nothing can fire
+    // during teardown, regardless of which child gets destroyed first.
+    if(m_scene)
+        m_scene->disconnect(this);
+}
+
 void GraphWidget::subGraphOpened(Graph *t_graph)
 {
     m_editor->setNode(nullptr);

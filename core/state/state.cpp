@@ -13,6 +13,7 @@
 #include "colorwheelstate.h"
 #include "wheelrotationstate.h"
 #include "wheelslotrotationstate.h"
+#include "lensrotationstate.h"
 #include "fixture/capability/shutterstrobecapability.h"
 
 namespace photon {
@@ -69,6 +70,9 @@ StateCapability *State::Impl::addCapability(CapabilityType t_type)
             break;
         case Capability_WheelSlotRotation:
             toAdd = new WheelSlotRotationState;
+            break;
+        case Capability_LensRotation:
+            toAdd = new LensRotationState;
             break;
         default:
             break;

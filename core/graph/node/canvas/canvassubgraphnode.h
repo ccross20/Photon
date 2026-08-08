@@ -11,6 +11,7 @@
 #include "photon-global.h"
 #include "model/parameter/booleanparameter.h"
 #include "model/parameter/integerparameter.h"
+#include "canvasrenderable.h"
 
 class QRhi;
 class QRhiTexture;
@@ -35,7 +36,7 @@ struct RoutineEvaluationContext;
 // node's texture into the sink. The sink texture is what preview/DMX read.
 //
 // Modeled on PixelGraph; see [[canvas-gpu-pipeline]].
-class PHOTONCORE_EXPORT CanvasSubGraphNode : public keira::SubGraphNode
+class PHOTONCORE_EXPORT CanvasSubGraphNode : public keira::SubGraphNode, public CanvasRenderable
 {
 public:
     const static QByteArray Width;
@@ -56,11 +57,11 @@ public:
 
     // Runs on the MAIN thread (called by CanvasRenderManager): evaluates the inner
     // graph and does all QRhi work — open frame, clear sink, composite output.
-    void renderMainThread() const;
+    void renderMainThread() const override;
 
     // Consumes the dirty flag set by the last evaluate(). Returns true if a render
     // is due. Called by the manager on the main thread.
-    bool takeNeedsRender() { return m_needsRender.exchange(false); }
+    bool takeNeedsRender() const override { return m_needsRender.exchange(false); }
 
     static keira::NodeInformation info();
 

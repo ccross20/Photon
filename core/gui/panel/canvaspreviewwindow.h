@@ -17,13 +17,30 @@ class QOffscreenSurface;
 namespace photon {
 
 class CanvasOutputNode;
+class CanvasLayerGroup;
 class CanvasRenderManager;
 
-// A QWindow that displays a canvas Output node's input texture. It owns its own
-// QRhi (OpenGL, in the global share group like the visualizer's RhiWindow), so it
-// can import the texture by its shared GL id — no CPU roundtrip — and draw it
-// fullscreen. Embedded in CanvasPreviewPanel via createWindowContainer.
-// See [[canvas-gpu-pipeline]].
+// What the preview window currently shows: either a canvas graph's Output node
+// (outputNode set) or a CanvasLayerGroup's own sink (layerGroup set). At most
+// one should be set at a time.
+struct CanvasPreviewTarget
+{
+    CanvasOutputNode *outputNode = nullptr;
+    CanvasLayerGroup *layerGroup = nullptr;
+
+    bool operator==(const CanvasPreviewTarget &o) const
+    {
+        return outputNode == o.outputNode && layerGroup == o.layerGroup;
+    }
+    bool operator!=(const CanvasPreviewTarget &o) const { return !(*this == o); }
+    bool isNull() const { return !outputNode && !layerGroup; }
+};
+
+// A QWindow that displays a canvas Output node's or CanvasLayerGroup's texture.
+// It owns its own QRhi (OpenGL, in the global share group like the visualizer's
+// RhiWindow), so it can import the texture by its shared GL id — no CPU
+// roundtrip — and draw it fullscreen. Embedded in CanvasPreviewPanel via
+// createWindowContainer. See [[canvas-gpu-pipeline]].
 class PHOTONCORE_EXPORT CanvasPreviewWindow : public QWindow
 {
     Q_OBJECT
@@ -31,8 +48,8 @@ public:
     CanvasPreviewWindow();
     ~CanvasPreviewWindow() override;
 
-    // Which Output node to show (validated against the render manager each frame).
-    void setOutputNode(CanvasOutputNode *node);
+    // Which target to show (validated against the render manager each frame).
+    void setTarget(const CanvasPreviewTarget &target);
 
 protected:
     void exposeEvent(QExposeEvent *) override;
@@ -56,7 +73,7 @@ private:
     quint64 m_importedId = 0;
     QSize   m_importedSize;
 
-    CanvasOutputNode    *m_output = nullptr;
+    CanvasPreviewTarget  m_target;
     CanvasRenderManager *m_manager = nullptr;
 
     bool m_initialized = false;

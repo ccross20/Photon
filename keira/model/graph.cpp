@@ -79,6 +79,7 @@ void Graph::drainCommandQueue()
     }
 
     QVector<Node*> nodesSnapshot;
+    bool interfaceDirty = false;
     {
         // Commands (addNodeInternal/removeNodeInternal/connectParametersInternal's
         // resort, ...) mutate `nodes` - hold the lock across them and take the
@@ -88,7 +89,23 @@ void Graph::drainCommandQueue()
         for (auto &cmd : commands)
             cmd();
         nodesSnapshot = m_impl->nodes;
+        interfaceDirty = m_impl->interfaceDirty;
+        m_impl->interfaceDirty = false;
     }
+
+    // Emitted here, after nodesMutex is released, rather than inline from
+    // addNodeInternal()/removeNodeInternal() while still holding it. When the
+    // graph and its FixtureClip facade live on the same thread as this call
+    // (e.g. drainCommandQueue() forced synchronously from Sequence::save()),
+    // interfaceChanged's connection to FixtureClip::syncChannelsFromGraph() is
+    // direct, not queued - emitting it while nodesMutex is still locked meant
+    // syncChannelsFromGraph()'s own inputPorts() call recursed straight back
+    // into a lock this same thread already held, deadlocking against itself.
+    // (When sender and receiver are on different threads the connection is
+    // queued instead, so the receiving thread's lock attempt merely had to wait
+    // its turn - still worth avoiding, but not a guaranteed deadlock like this.)
+    if (interfaceDirty)
+        emit interfaceChanged();
 
     // Recurse into subgraph nodes after our own commands run, so any
     // nodes added by those commands are included in the traversal. Iterate the
@@ -124,8 +141,11 @@ void Graph::connectParameters(const QByteArray &t_output, const QByteArray &t_in
 {
     QMutexLocker lock(&m_impl->commandMutex);
     m_impl->pendingCommands.push_back([this, t_output, t_input]() {
-        Parameter *outParam = findParameter(t_output);
-        Parameter *inParam  = findParameter(t_input);
+        // findParameterInternal(), not findParameter(): this command runs from
+        // inside drainCommandQueue()'s nodesMutex-locked loop - findParameter()
+        // would try to lock the same (non-recursive) mutex again and deadlock.
+        Parameter *outParam = findParameterInternal(t_output);
+        Parameter *inParam  = findParameterInternal(t_input);
         if (!outParam) { qWarning() << "Could not find output parameter:" << t_output; return; }
         if (!inParam)  { qWarning() << "Could not find input parameter:"  << t_input;  return; }
         connectParametersInternal(outParam, inParam);
@@ -136,8 +156,9 @@ void Graph::disconnectParameters(const QByteArray &t_output, const QByteArray &t
 {
     QMutexLocker lock(&m_impl->commandMutex);
     m_impl->pendingCommands.push_back([this, t_output, t_input]() {
-        Parameter *outParam = findParameter(t_output);
-        Parameter *inParam  = findParameter(t_input);
+        // See connectParameters() above - must use the non-locking internal lookup.
+        Parameter *outParam = findParameterInternal(t_output);
+        Parameter *inParam  = findParameterInternal(t_input);
         if (!outParam) { qWarning() << "Could not find output parameter:" << t_output; return; }
         if (!inParam)  { qWarning() << "Could not find input parameter:"  << t_input;  return; }
         disconnectParametersInternal(outParam, inParam);
@@ -184,8 +205,10 @@ void Graph::addNodeInternal(Node *t_node)
     nodeAdded(t_node);
     emit nodeWasAdded(t_node);
 
+    // Deferred to drainCommandQueue(), after nodesMutex is released - see the
+    // comment there.
     if(dynamic_cast<GraphInputNode*>(t_node) || dynamic_cast<GraphOutputNode*>(t_node))
-        emit interfaceChanged();
+        m_impl->interfaceDirty = true;
 
     markDirty(Dirty_Structure);
 }
@@ -201,8 +224,10 @@ void Graph::removeNodeInternal(Node *t_node)
     nodeRemoved(t_node);
     emit nodeWasRemoved(t_node);
 
+    // Deferred to drainCommandQueue(), after nodesMutex is released - see the
+    // comment there.
     if(dynamic_cast<GraphInputNode*>(t_node) || dynamic_cast<GraphOutputNode*>(t_node))
-        emit interfaceChanged();
+        m_impl->interfaceDirty = true;
 
     markDirty(Dirty_Structure);
 }
@@ -327,6 +352,37 @@ void Graph::updateNodePosition(Node *t_node)
 
 Node *Graph::findNode(const QByteArray &t_query) const
 {
+    // Unlike its siblings (evaluate(), markClean(), inputPorts(), ...), this
+    // used to read m_impl->nodes directly - the one gap in an otherwise
+    // consistently-guarded class. Any caller resolving a node by name/id from
+    // a thread other than this graph's own eval thread (e.g. a render loop
+    // reaching into a clip's content graph while its editor's Scene is
+    // concurrently draining structural edits on another thread) could race
+    // an add/removeNodeInternal() and corrupt the vector mid-iteration.
+    //
+    // findNodeInternal() is the same search without the lock - drainCommandQueue()
+    // already holds nodesMutex for its whole command loop, and connectParameters()/
+    // disconnectParameters()'s queued (by-name) commands resolve their nodes via
+    // findParameterInternal() from inside that loop; going through this locking
+    // entry point there would self-deadlock (QMutex isn't recursive).
+    QVector<Node*> nodesSnapshot;
+    {
+        QMutexLocker lock(&m_impl->nodesMutex);
+        nodesSnapshot = m_impl->nodes;
+    }
+
+    for(auto node : nodesSnapshot)
+    {
+        auto result = node->findNode(t_query);
+        if(result)
+            return result;
+    }
+
+    return nullptr;
+}
+
+Node *Graph::findNodeInternal(const QByteArray &t_query) const
+{
     for(auto node : m_impl->nodes)
     {
         auto result = node->findNode(t_query);
@@ -348,6 +404,15 @@ Parameter *Graph::findParameter(const QByteArray &t_query)
 {
     auto terms = t_query.split('/');
     Node *node = findNode(terms.front());
+    if(node)
+        return node->findParameter(terms.back());
+    return nullptr;
+}
+
+Parameter *Graph::findParameterInternal(const QByteArray &t_query)
+{
+    auto terms = t_query.split('/');
+    Node *node = findNodeInternal(terms.front());
     if(node)
         return node->findParameter(terms.back());
     return nullptr;
@@ -469,10 +534,22 @@ void Graph::readFromJson(const QJsonObject &t_json, NodeLibrary *library)
 
 void Graph::writeToJson(QJsonObject &t_json) const
 {
+    // Snapshot under nodesMutex like every other read path here (evaluate(),
+    // findNode(), inputPorts(), ...) - this graph can be actively driven by an
+    // eval thread (e.g. a FixtureClip wired into the Bus via a Sequence Node)
+    // at the same moment something on another thread saves it; reading `nodes`
+    // directly would race that thread's own drainCommandQueue()/evaluate()
+    // mutating the same vector.
+    QVector<Node*> nodesSnapshot;
+    {
+        QMutexLocker lock(&m_impl->nodesMutex);
+        nodesSnapshot = m_impl->nodes;
+    }
+
     QJsonArray nodeArray;
     QJsonArray connectionArray;
 
-    for(auto node : m_impl->nodes)
+    for(auto node : nodesSnapshot)
     {
         QJsonObject nodeObj;
         node->writeToJson(nodeObj);

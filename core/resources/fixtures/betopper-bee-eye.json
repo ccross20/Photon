@@ -76,42 +76,37 @@
     "Zoom": {
       "capability": {
         "type": "Zoom",
-        "angleStart": "narrow",
-        "angleEnd": "wide"
+        "angleStart": "wide",
+        "angleEnd": "narrow"
       }
     },
-    "Gobo Rotation": {
+    "Lens Rotation": {
       "capabilities": [
         {
           "dmxRange": [0, 7],
-          "type": "WheelSlotRotation",
-          "wheel": "Gobo Wheel",
+          "type": "LensRotation",
           "speed": "stop"
         },
         {
           "dmxRange": [8, 127],
-          "type": "WheelSlotRotation",
-          "wheel": "Gobo Wheel",
+          "type": "LensRotation",
           "angleStart": "0deg",
           "angleEnd": "60deg"
         },
         {
           "dmxRange": [128, 190],
-          "type": "WheelSlotRotation",
-          "wheel": "Gobo Wheel",
+          "type": "LensRotation",
           "speedStart": "fast CW",
           "speedEnd": "slow CW"
         },
         {
           "dmxRange": [191, 192],
-          "type": "WheelSlotRotation",
-          "wheel": "Gobo Wheel",
+          "type": "LensRotation",
           "speed": "stop"
         },
         {
           "dmxRange": [193, 255],
-          "type": "WheelSlotRotation",
-          "wheel": "Gobo Wheel",
+          "type": "LensRotation",
           "speedStart": "slow CCW",
           "speedEnd": "fast CCW"
         }
@@ -511,7 +506,7 @@
         "Tilt fine",
         "Pan / Tilt Speed",
         "Zoom",
-        "Gobo Rotation",
+        "Lens Rotation",
         "Dimmer",
         "Shutter / Strobe",
         "Red",
@@ -535,7 +530,7 @@
         "Tilt fine",
         "Pan / Tilt Speed",
         "Zoom",
-        "Gobo Rotation",
+        "Lens Rotation",
         "Dimmer",
         "Shutter / Strobe",
         "Red",

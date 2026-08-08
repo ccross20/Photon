@@ -1,28 +1,35 @@
-#include <QImage>
-#include <QComboBox>
+#include <algorithm>
+#include <rhi/qrhi.h>
+#include <QThread>
+#include <QCoreApplication>
 #include <QHBoxLayout>
 #include <QVBoxLayout>
 #include <QPushButton>
 #include <QFormLayout>
 #include <QListWidget>
 #include <QMenu>
-#include <QOffscreenSurface>
+#include <QMutex>
+#include <QMutexLocker>
+#include <QSpinBox>
+#include <QColorDialog>
 #include "canvaslayergroup.h"
-#include "pixel/canvas.h"
 #include "sequence.h"
 #include "project/project.h"
-#include "pixel/canvascollection.h"
 #include "pixel/pixelsource.h"
 #include "pixel/pixellayout.h"
 #include "scene/sceneiterator.h"
 #include "scene/sceneobject.h"
 #include "pixel/pixellayoutcollection.h"
 #include "photoncore.h"
-#include "opengl/openglframebuffer.h"
-#include "cliplayer.h"
 #include "canvasclip.h"
-#include "canvaseffect.h"
-#include "opengl/openglresources.h"
+#include "graph/node/canvas/canvasrendermanager.h"
+#include "graph/node/canvas/canvascompositenode.h"
+#include "graph/node/canvas/canvasoutputnode.h"
+#include "model/graph.h"
+#include "rhi/rhicontext.h"
+#include "routine/routineevaluationcontext.h"
+#include "gui/guimanager.h"
+#include "gui/panel/canvaspreviewpanel.h"
 
 namespace photon {
 
@@ -33,7 +40,10 @@ public:
     QListWidget *pixelLayoutList;
     QPushButton *addLayoutButton;
     QPushButton *removeLayoutButton;
-    QComboBox *canvasCombo;
+    QSpinBox *widthSpin;
+    QSpinBox *heightSpin;
+    QPushButton *backgroundButton;
+    QPushButton *viewPreviewButton;
 };
 
 CanvasLayerGroupEditor::CanvasLayerGroupEditor(CanvasLayerGroup *t_group):QWidget(),m_impl(new Impl)
@@ -43,23 +53,47 @@ CanvasLayerGroupEditor::CanvasLayerGroupEditor(CanvasLayerGroup *t_group):QWidge
     connect(t_group, &CanvasLayerGroup::pixelLayoutAdded, this, &CanvasLayerGroupEditor::pixelLayoutAdded);
     connect(t_group, &CanvasLayerGroup::pixelLayoutRemoved, this, &CanvasLayerGroupEditor::pixelLayoutRemoved);
 
-
     QFormLayout *formLayout = new QFormLayout;
 
-    int currentIndex = 0;
-    int counter = 0;
-    m_impl->canvasCombo = new QComboBox;
-    for(auto canvas : photonApp->project()->canvases()->canvases())
-    {
-        m_impl->canvasCombo->addItem(canvas->name());
-        if(t_group->canvas() == canvas)
-            currentIndex = counter;
-        counter++;
-    }
-    m_impl->canvasCombo->setCurrentIndex(currentIndex);
+    m_impl->widthSpin = new QSpinBox;
+    m_impl->widthSpin->setRange(1, 8192);
+    m_impl->widthSpin->setValue(t_group->canvasWidth());
+    connect(m_impl->widthSpin, &QSpinBox::valueChanged, this, &CanvasLayerGroupEditor::widthChanged);
+    formLayout->addRow("Width", m_impl->widthSpin);
 
-    formLayout->addRow("Canvas", m_impl->canvasCombo);
+    m_impl->heightSpin = new QSpinBox;
+    m_impl->heightSpin->setRange(1, 8192);
+    m_impl->heightSpin->setValue(t_group->canvasHeight());
+    connect(m_impl->heightSpin, &QSpinBox::valueChanged, this, &CanvasLayerGroupEditor::heightChanged);
+    formLayout->addRow("Height", m_impl->heightSpin);
 
+    m_impl->backgroundButton = new QPushButton("Background...");
+    connect(m_impl->backgroundButton, &QPushButton::clicked, this, [this](){
+        QColor color = QColorDialog::getColor(m_impl->canvasGroup->background(), this,
+                                              "Background Colour", QColorDialog::ShowAlphaChannel);
+        if(color.isValid())
+            backgroundChanged(color);
+    });
+    formLayout->addRow("Background", m_impl->backgroundButton);
+
+    m_impl->viewPreviewButton = new QPushButton("View Preview");
+    connect(m_impl->viewPreviewButton, &QPushButton::clicked, this, [this](){
+        auto *app = qobject_cast<PhotonCore *>(QCoreApplication::instance());
+        if(!app || !app->gui())
+            return;
+
+        auto *gui = app->gui();
+        Panel *panel = gui->findPanel("photon.canvas-preview");
+        if(!panel)
+            panel = gui->createDockedPanel("photon.canvas-preview");
+        if(!panel)
+            return;
+
+        gui->bringPanelToFront(panel);
+        if(auto *preview = dynamic_cast<CanvasPreviewPanel *>(panel))
+            preview->previewLayerGroup(m_impl->canvasGroup);
+    });
+    formLayout->addRow("", m_impl->viewPreviewButton);
 
     QVBoxLayout *vLayout = new QVBoxLayout;
     vLayout->setContentsMargins(0,0,0,0);
@@ -91,9 +125,19 @@ CanvasLayerGroupEditor::CanvasLayerGroupEditor(CanvasLayerGroup *t_group):QWidge
     setLayout(formLayout);
 }
 
-void CanvasLayerGroupEditor::canvasChanged(int t_index)
+void CanvasLayerGroupEditor::widthChanged(int t_value)
 {
-    m_impl->canvasGroup->setCanvas(photonApp->project()->canvases()->canvases()[t_index]);
+    m_impl->canvasGroup->setCanvasWidth(t_value);
+}
+
+void CanvasLayerGroupEditor::heightChanged(int t_value)
+{
+    m_impl->canvasGroup->setCanvasHeight(t_value);
+}
+
+void CanvasLayerGroupEditor::backgroundChanged(QColor t_value)
+{
+    m_impl->canvasGroup->setBackground(t_value);
 }
 
 void CanvasLayerGroupEditor::openAddPixelLayout()
@@ -153,154 +197,321 @@ class CanvasLayerGroup::Impl
 {
 public:
     QVector<PixelLayout*> pixelLayouts;
-    Canvas *canvas;
-    QOpenGLContext *context = nullptr;
-    QImage tempImage;
-    int canvasIndex = -1;
+    int width = 256;
+    int height = 256;
+    QColor background = QColor(0, 0, 0, 255);
+
+    // Non-null in the app (registered for main-thread rendering); null in
+    // headless tests, where there's nothing to render into anyway.
+    CanvasRenderManager *manager = nullptr;
+
+    // Set by processChannels() (worker or GUI thread), consumed by the
+    // manager (main thread).
+    std::atomic<bool> needsRender{false};
+
+    // Active-clip snapshot for this frame. queueClipForRender() (called from
+    // whichever thread processChannels() runs on) appends to pendingActiveClips;
+    // processChannels() clears it before recursing into sub-layers/clips and
+    // publishes it to activeClips once they've all reported in. renderMainThread()
+    // (main thread) reads activeClips. Guarded because a QVector copy isn't a
+    // benign cross-thread read the way the plain doubles elsewhere are.
+    QMutex activeClipsMutex;
+    QVector<CanvasClipRenderState> pendingActiveClips;
+    QVector<CanvasClipRenderState> activeClips;
+
+    // Ping-pong accumulator compositors used to composite active clips onto
+    // the sink one at a time without a composite ever reading and writing the
+    // same physical texture (see renderMainThread()). Lazily created; owned
+    // outside of any graph, driven directly via setValue()/evaluate(). Main-
+    // thread only, like the sink resources below.
+    CanvasCompositeNode *compositors[2] = {nullptr, nullptr};
+
+    // Owned sink resources. Main-thread only. (Not `mutable` - accessed
+    // through the m_impl pointer, which stays non-const regardless of the
+    // owning CanvasLayerGroup method's own constness.)
+    QRhiTexture *canvasTexture = nullptr;
+    QRhiTextureRenderTarget *canvasRT = nullptr;
+    QRhiRenderPassDescriptor *canvasRP = nullptr;
+    QSize canvasSize;
 };
 
 CanvasLayerGroup::CanvasLayerGroup(QObject *t_parent):LayerGroup("CanvasGroup", t_parent),m_impl(new Impl)
 {
-    m_impl->canvas = nullptr;
-
-    QOffscreenSurface *surface = photonApp->surface();
-
-    m_impl->context = new QOpenGLContext();
-
-    m_impl->context->setShareContext(QOpenGLContext::globalShareContext());
-    m_impl->context->create();
-    m_impl->context->makeCurrent(surface);
+    m_impl->manager = CanvasRenderManager::instance();
+    if(m_impl->manager)
+        m_impl->manager->registerCanvas(this);
 }
 
-CanvasLayerGroup::CanvasLayerGroup(Canvas *t_canvas, const QString &t_name):LayerGroup(t_name,"CanvasGroup"),m_impl(new Impl)
+CanvasLayerGroup::CanvasLayerGroup(const QString &t_name, QObject *t_parent):LayerGroup(t_name,"CanvasGroup", t_parent),m_impl(new Impl)
 {
-    m_impl->canvas = t_canvas;
-
-    QOffscreenSurface *surface = photonApp->surface();
-
-    m_impl->context = new QOpenGLContext();
-
-    m_impl->context->setShareContext(QOpenGLContext::globalShareContext());
-    m_impl->context->create();
-    m_impl->context->makeCurrent(surface);
+    m_impl->manager = CanvasRenderManager::instance();
+    if(m_impl->manager)
+        m_impl->manager->registerCanvas(this);
 }
 
 CanvasLayerGroup::~CanvasLayerGroup()
 {
+    // First thing, before anything else: once this is set, clipBeingDestroyed()
+    // (potentially called back into by child CanvasClips as QObject's parent/
+    // child cascade destroys them further down this same destructor chain)
+    // knows m_impl may already be gone and won't touch it.
+    m_tornDown.store(true);
+
+    // Unregister: blocks until any in-progress main-thread render of this
+    // group finishes, so nothing can render it mid-teardown (mirrors
+    // CanvasSubGraphNode::~CanvasSubGraphNode()).
+    if(m_impl->manager)
+        m_impl->manager->unregisterCanvas(this);
+    releaseSink();
+    delete m_impl->compositors[0];
+    delete m_impl->compositors[1];
     delete m_impl;
 }
 
-QOpenGLContext *CanvasLayerGroup::openGLContext() const
+void CanvasLayerGroup::clipBeingDestroyed(CanvasClip *t_clip)
 {
-    return m_impl->context;
+    if(m_tornDown.load())
+        return;
+
+    QMutexLocker lock(&m_impl->activeClipsMutex);
+    auto matches = [t_clip](const CanvasClipRenderState &s){ return s.clip == t_clip; };
+    m_impl->pendingActiveClips.erase(std::remove_if(m_impl->pendingActiveClips.begin(), m_impl->pendingActiveClips.end(), matches), m_impl->pendingActiveClips.end());
+    m_impl->activeClips.erase(std::remove_if(m_impl->activeClips.begin(), m_impl->activeClips.end(), matches), m_impl->activeClips.end());
 }
 
-void CanvasLayerGroup::setCanvas(Canvas *t_canvas)
+int CanvasLayerGroup::canvasWidth() const
 {
-    if(m_impl->canvas)
-        disconnect(m_impl->canvas, &Canvas::sizeUpdated,this, &CanvasLayerGroup::canvasSizeUpdated);
-    m_impl->canvas = t_canvas;
-    if(t_canvas)
+    return m_impl->width;
+}
+
+int CanvasLayerGroup::canvasHeight() const
+{
+    return m_impl->height;
+}
+
+void CanvasLayerGroup::setCanvasWidth(int t_value)
+{
+    m_impl->width = std::max(1, t_value);
+}
+
+void CanvasLayerGroup::setCanvasHeight(int t_value)
+{
+    m_impl->height = std::max(1, t_value);
+}
+
+QColor CanvasLayerGroup::background() const
+{
+    return m_impl->background;
+}
+
+void CanvasLayerGroup::setBackground(const QColor &t_value)
+{
+    m_impl->background = t_value;
+}
+
+bool CanvasLayerGroup::ensureSink(QRhi *rhi, const QSize &size) const
+{
+    if(m_impl->canvasTexture && m_impl->canvasSize == size)
+        return true;
+
+    releaseSink();
+
+    m_impl->canvasTexture = rhi->newTexture(QRhiTexture::RGBA8, size, 1,
+                                            QRhiTexture::RenderTarget | QRhiTexture::UsedAsTransferSource);
+    if(!m_impl->canvasTexture->create())
     {
-        connect(t_canvas, &Canvas::sizeUpdated,this, &CanvasLayerGroup::canvasSizeUpdated);
-
-        m_impl->context->makeCurrent(photonApp->surface());
-
-        for(auto layer : layers())
-        {
-            auto clipLayer = dynamic_cast<ClipLayer*>(layer);
-
-            if(clipLayer)
-            {
-                for(auto clip : clipLayer->clips())
-                {
-                    auto canvasClip = dynamic_cast<CanvasClip*>(clip);
-                    if(canvasClip)
-                        canvasClip->initializeContext(m_impl->context, m_impl->canvas);
-                }
-            }
-        }
+        qWarning() << "CanvasLayerGroup: sink texture create failed" << size;
+        delete m_impl->canvasTexture;
+        m_impl->canvasTexture = nullptr;
+        return false;
     }
-}
 
-Canvas *CanvasLayerGroup::canvas() const
-{
-    return m_impl->canvas;
-}
-
-void CanvasLayerGroup::canvasSizeUpdated(QSize t_size)
-{
-    m_impl->context->makeCurrent(photonApp->surface());
-
-    for(auto layer : layers())
+    QRhiColorAttachment colorAtt(m_impl->canvasTexture);
+    QRhiTextureRenderTargetDescription rtDesc(colorAtt);
+    m_impl->canvasRT = rhi->newTextureRenderTarget(rtDesc);
+    m_impl->canvasRP = m_impl->canvasRT->newCompatibleRenderPassDescriptor();
+    m_impl->canvasRT->setRenderPassDescriptor(m_impl->canvasRP);
+    if(!m_impl->canvasRT->create())
     {
-        auto clipLayer = dynamic_cast<ClipLayer*>(layer);
-
-        if(clipLayer)
-        {
-            for(auto clip : clipLayer->clips())
-            {
-                auto canvasClip = dynamic_cast<CanvasClip*>(clip);
-                if(canvasClip)
-                    canvasClip->canvasResized(m_impl->context, m_impl->canvas);
-            }
-        }
+        qWarning() << "CanvasLayerGroup: sink render target create failed" << size;
+        releaseSink();
+        return false;
     }
+
+    m_impl->canvasSize = size;
+    return true;
+}
+
+void CanvasLayerGroup::releaseSink() const
+{
+    if(!m_impl->canvasRP && !m_impl->canvasRT && !m_impl->canvasTexture)
+        return;
+
+    // QRhi resources must be destroyed on the main thread. If we're not on it
+    // (group destroyed during worker-thread graph/sequence editing), hand the
+    // pointers to the main thread to delete - detached here first, so it's
+    // safe even if this CanvasLayerGroup is gone by the time the deletion runs.
+    if(QThread::isMainThread())
+    {
+        delete m_impl->canvasRP;
+        delete m_impl->canvasRT;
+        delete m_impl->canvasTexture;
+    }
+    else
+    {
+        QRhiRenderPassDescriptor *rp = m_impl->canvasRP;
+        QRhiTextureRenderTarget *rt = m_impl->canvasRT;
+        QRhiTexture *tex = m_impl->canvasTexture;
+        QMetaObject::invokeMethod(QCoreApplication::instance(), [rp, rt, tex](){
+            delete rp;
+            delete rt;
+            delete tex;
+        }, Qt::QueuedConnection);
+    }
+
+    m_impl->canvasRP = nullptr;
+    m_impl->canvasRT = nullptr;
+    m_impl->canvasTexture = nullptr;
+    m_impl->canvasSize = QSize();
+}
+
+void CanvasLayerGroup::queueClipForRender(const CanvasClipRenderState &t_state)
+{
+    QMutexLocker lock(&m_impl->activeClipsMutex);
+    m_impl->pendingActiveClips.append(t_state);
 }
 
 void CanvasLayerGroup::processChannels(ProcessContext &t_context)
 {
-    if(!m_impl->canvas->texture())
+    // Runs on either the GUI thread or keira's eval thread (via a
+    // SequenceNode) - QRhi is main-thread only, so just flag a render here
+    // (mirrors CanvasSubGraphNode::evaluate()); CanvasRenderManager calls
+    // renderMainThread() from the main thread when it's due.
+    m_impl->needsRender.store(true);
+
     {
-        qDebug() << "No texture";
-        return;
+        QMutexLocker lock(&m_impl->activeClipsMutex);
+        m_impl->pendingActiveClips.clear();
     }
 
-
-    t_context.canvas = m_impl->canvas;
-    m_impl->context->makeCurrent(photonApp->surface());
-    t_context.openglContext = m_impl->context;
-    OpenGLFrameBuffer buffer(m_impl->canvas->texture(), m_impl->context);
-    t_context.frameBuffer = &buffer;
-    t_context.resources = photonApp->openGLResources();
-    t_context.resources->bind(t_context.openglContext);
-
-    auto f = m_impl->context->functions();
-
-    f->glViewport(0,0,m_impl->canvas->width(), m_impl->canvas->height());
-    f->glClearColor(0.0f,0.0f,0.0f,0.0f);
-    f->glClear(GL_COLOR_BUFFER_BIT);
-    f->glEnable(GL_BLEND);
-    f->glBlendEquation (GL_FUNC_ADD);
-    //f->glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA,GL_ONE,GL_ONE_MINUS_SRC_ALPHA);
-    f->glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
-
-
-    /*
-    QImage image(m_impl->canvas->size(), QImage::Format_ARGB32_Premultiplied);
-    image.fill(Qt::black);
-    t_context.previousCanvasImage = &m_impl->tempImage;
-    t_context.canvasImage = &image;
-*/
+    // Recurses into sub-layers -> ClipLayer::processChannels() -> each active
+    // CanvasClip::processChannels(), which calls queueClipForRender() above.
     LayerGroup::processChannels(t_context);
 
-    //context.doneCurrent();
-
-    if(!m_impl->pixelLayouts.isEmpty())
     {
-        QImage image(m_impl->canvas->width(), m_impl->canvas->height(),QImage::Format_ARGB32_Premultiplied);
-        buffer.writeToRaster(&image);
+        QMutexLocker lock(&m_impl->activeClipsMutex);
+        m_impl->activeClips = m_impl->pendingActiveClips;
+    }
+}
 
-        t_context.image = &image;
+bool CanvasLayerGroup::takeNeedsRender() const
+{
+    return m_impl->needsRender.exchange(false);
+}
 
-        for(auto pixelLayout : m_impl->pixelLayouts)
-            pixelLayout->process(t_context);
+void CanvasLayerGroup::renderMainThread() const
+{
+    if(!m_impl->manager)
+        return;
+    RhiContext *rhiCtx = m_impl->manager->rhiContext();
+    if(!rhiCtx || !rhiCtx->isValid())
+        return;
+    QRhi *rhi = rhiCtx->rhi();
+
+    const QSize size(std::max(1, m_impl->width), std::max(1, m_impl->height));
+    if(!ensureSink(rhi, size))
+        return;
+
+    QRhiCommandBuffer *cb = nullptr;
+    if(rhi->beginOffscreenFrame(&cb) != QRhi::FrameOpSuccess || !cb)
+        return;
+
+    // Clear the sink to the background colour.
+    cb->beginPass(m_impl->canvasRT, m_impl->background, { 1.0f, 0 });
+    cb->endPass();
+
+    // Held for the whole compositing loop below (not just a snapshot copy) so
+    // a CanvasClip referenced by m_impl->activeClips can't be destroyed out
+    // from under it - ~CanvasClip() blocks on this same lock via
+    // clipBeingDestroyed() before it tears down its graph.
+    QMutexLocker activeClipsLock(&m_impl->activeClipsMutex);
+
+    if(!m_impl->activeClips.isEmpty())
+    {
+        DMXMatrix matrix;
+        RoutineEvaluationContext inner(matrix);
+        inner.rhiContext = rhiCtx;
+        inner.rhiCommandBuffer = cb;
+        inner.canvasResolution = size;
+
+        // Composite each active clip's rendered output onto a running "base"
+        // texture, back to front (first sub-layer's clip is the bottommost).
+        // base starts as the background-cleared sink itself (safe to sample
+        // right after the clear pass, the same way chained canvas producer
+        // nodes already sample each other's just-rendered output within one
+        // frame). Ping-pong between the two persistent compositors so no
+        // composite ever reads and writes the same physical texture.
+        RhiTextureData base{m_impl->canvasTexture, size};
+        int compositorIndex = 0;
+
+        for(const auto &state : m_impl->activeClips)
+        {
+            if(!state.clip)
+                continue;
+            auto *graph = state.clip->contentGraph();
+            if(!graph)
+                continue;
+
+            graph->drainCommandQueue();
+            inner.relativeTime = state.relativeTime;
+            inner.globalTime = state.globalTime;
+            graph->evaluate(&inner);
+
+            auto *outputNode = dynamic_cast<CanvasOutputNode*>(graph->findNode("Output"));
+            const RhiTextureData clipTexture = outputNode ? outputNode->inputTexture() : RhiTextureData{};
+            if(!clipTexture.texture)
+                continue;
+
+            CanvasCompositeNode *&compositor = m_impl->compositors[compositorIndex % 2];
+            if(!compositor)
+            {
+                compositor = new CanvasCompositeNode;
+                compositor->createParameters();
+            }
+            ++compositorIndex;
+
+            compositor->setValue(CanvasCompositeNode::Base, base);
+            compositor->setValue(CanvasCompositeNode::Top, clipTexture);
+            compositor->setValue(CanvasCompositeNode::Position, state.position);
+            compositor->setValue(CanvasCompositeNode::Scale, state.scale);
+            compositor->setValue(CanvasCompositeNode::Rotation, state.rotation);
+            compositor->setValue(CanvasCompositeNode::Origin, state.center);
+            compositor->setValue(CanvasCompositeNode::Alpha, state.strength);
+            compositor->evaluate(&inner);
+
+            base = compositor->findParameter(CanvasCompositeNode::Output)->value().value<RhiTextureData>();
+        }
+
+        if(base.texture && base.texture != m_impl->canvasTexture && base.size == size)
+        {
+            QRhiResourceUpdateBatch *u = rhi->nextResourceUpdateBatch();
+            QRhiTextureCopyDescription copyDesc;
+            u->copyTexture(m_impl->canvasTexture, base.texture, copyDesc);
+            cb->resourceUpdate(u);
+        }
     }
 
-    buffer.destroy();
-    m_impl->canvas->updateTexture();
-    m_impl->context->doneCurrent();
+    rhi->endOffscreenFrame();
+}
 
+QRhiTexture *CanvasLayerGroup::outputTexture() const
+{
+    return m_impl->canvasTexture;
+}
+
+QSize CanvasLayerGroup::canvasSize() const
+{
+    return m_impl->canvasSize;
 }
 
 void CanvasLayerGroup::addPixelLayout(PixelLayout *t_layout)
@@ -360,19 +571,14 @@ QVector<PixelSource*> CanvasLayerGroup::sources() const
     return results;
 }
 
-void CanvasLayerGroup::restore(Project &t_project)
-{
-    if(m_impl->canvasIndex >= 0)
-        setCanvas(t_project.canvases()->canvasAtIndex(m_impl->canvasIndex));
-    LayerGroup::restore(t_project);
-}
-
 void CanvasLayerGroup::readFromJson(const QJsonObject &t_json, const LoadContext &t_context)
 {
     LayerGroup::readFromJson(t_json, t_context);
 
-    m_impl->canvasIndex = t_json.value("canvasIndex").toInt(-1);
-
+    m_impl->width = std::max(1, t_json.value("width").toInt(256));
+    m_impl->height = std::max(1, t_json.value("height").toInt(256));
+    if(t_json.contains("background"))
+        m_impl->background = QColor(t_json.value("background").toString());
 
     if(t_json.contains("pixelLayouts"))
     {
@@ -391,10 +597,9 @@ void CanvasLayerGroup::writeToJson(QJsonObject &t_json) const
 {
     LayerGroup::writeToJson(t_json);
 
-    if(m_impl->canvas)
-        t_json.insert("canvasIndex", 0);
-    else
-        t_json.insert("canvasIndex", -1);
+    t_json.insert("width", m_impl->width);
+    t_json.insert("height", m_impl->height);
+    t_json.insert("background", m_impl->background.name(QColor::HexArgb));
 
     QJsonArray pixelLayoutArray;
     for(auto pl : m_impl->pixelLayouts)

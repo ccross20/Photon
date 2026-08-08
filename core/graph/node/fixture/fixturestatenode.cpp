@@ -107,6 +107,19 @@ State *FixtureStateNode::state() const
     return m_state;
 }
 
+QVector<Fixture*> FixtureStateNode::resolvedFixtures() const
+{
+    QVector<Fixture*> results;
+    const auto fixtures = m_fixturesParam->value().value<QVector<FixtureParameterData>>();
+    for(const auto &fixtureData : fixtures)
+    {
+        auto *fixture = photonApp->project()->fixtures()->fixtureWithId(fixtureData.fixtureId);
+        if(fixture)
+            results.append(fixture);
+    }
+    return results;
+}
+
 void FixtureStateNode::createParameters()
 {
     m_fixturesParam = new FixtureListParameter(Fixtures, "Fixtures", QVector<FixtureParameterData>(),

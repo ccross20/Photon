@@ -1,6 +1,7 @@
 #include <QTimer>
 #include "canvasrendermanager.h"
 #include "canvassubgraphnode.h"
+#include "sequence/canvaslayergroup.h"
 
 namespace photon {
 
@@ -33,17 +34,18 @@ CanvasRenderManager *CanvasRenderManager::instance()
     return g_instance;
 }
 
-void CanvasRenderManager::registerCanvas(CanvasSubGraphNode *node)
+void CanvasRenderManager::registerCanvas(CanvasRenderable *node)
 {
     QMutexLocker lock(&m_mutex);
     m_canvases.insert(node);
 }
 
-void CanvasRenderManager::unregisterCanvas(CanvasSubGraphNode *node)
+void CanvasRenderManager::unregisterCanvas(CanvasRenderable *node)
 {
-    // Blocks until any in-progress renderTick() releases the lock, so a node being
-    // destroyed (possibly on the worker thread) can't be freed while the main
-    // thread is mid-render of it. Callers must unregister before destroying state.
+    // Blocks until any in-progress renderTick() releases the lock, so an
+    // instance being destroyed (possibly on the worker thread) can't be freed
+    // while the main thread is mid-render of it. Callers must unregister
+    // before destroying state.
     QMutexLocker lock(&m_mutex);
     m_canvases.remove(node);
 }
@@ -51,10 +53,24 @@ void CanvasRenderManager::unregisterCanvas(CanvasSubGraphNode *node)
 QVector<CanvasSubGraphNode *> CanvasRenderManager::canvases() const
 {
     QMutexLocker lock(&m_mutex);
-    return QVector<CanvasSubGraphNode *>(m_canvases.cbegin(), m_canvases.cend());
+    QVector<CanvasSubGraphNode *> result;
+    for (CanvasRenderable *r : m_canvases)
+        if (auto *node = dynamic_cast<CanvasSubGraphNode *>(r))
+            result.append(node);
+    return result;
 }
 
-bool CanvasRenderManager::isRegistered(CanvasSubGraphNode *node) const
+QVector<CanvasLayerGroup *> CanvasRenderManager::layerGroups() const
+{
+    QMutexLocker lock(&m_mutex);
+    QVector<CanvasLayerGroup *> result;
+    for (CanvasRenderable *r : m_canvases)
+        if (auto *group = dynamic_cast<CanvasLayerGroup *>(r))
+            result.append(group);
+    return result;
+}
+
+bool CanvasRenderManager::isRegistered(CanvasRenderable *node) const
 {
     QMutexLocker lock(&m_mutex);
     return m_canvases.contains(node);
@@ -65,7 +81,7 @@ void CanvasRenderManager::renderTick()
     // Hold the lock across the whole pass so register/unregister can't mutate the
     // set mid-iteration; the pointers stay valid for the render calls.
     QMutexLocker lock(&m_mutex);
-    for (CanvasSubGraphNode *node : m_canvases) {
+    for (CanvasRenderable *node : m_canvases) {
         if (node->takeNeedsRender())
             node->renderMainThread();
     }

@@ -1,4 +1,5 @@
 #include "fixturegizmo.h"
+#include "processcontext.h"
 #include "state/stateevaluationcontext.h"
 #include "fixture/fixturecollection.h"
 #include "project/project.h"

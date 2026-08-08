@@ -38,6 +38,8 @@ void FixtureChannel::Impl::addCapability(const QJsonObject &t_json)
         capability = new WheelRotationCapability();
     else if(typeString == "wheelslotrotation")
         capability = new WheelSlotRotationCapability();
+    else if(typeString == "lensrotation")
+        capability = new WheelSlotRotationCapability(Capability_LensRotation);
     else if(typeString == "prismrotation")
         capability = new PrismRotationCapability();
     else if(typeString == "prism")

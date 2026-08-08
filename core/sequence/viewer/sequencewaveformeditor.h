@@ -18,11 +18,11 @@ public:
     Sequence *sequence() const;
 
 private slots:
-    void beatsUpdated(photon::BeatLayer*);
-    void layerAdded(photon::BeatLayer*);
-    void layerRemoved(photon::BeatLayer*);
-    void beatsMetadataUpdated(photon::BeatLayer*);
-    void editableBeatLayerChanged(photon::BeatLayer*);
+    void markersUpdated(photon::CueLayer*);
+    void layerAdded(photon::CueLayer*);
+    void layerRemoved(photon::CueLayer*);
+    void markersMetadataUpdated(photon::CueLayer*);
+    void editableCueLayerChanged(photon::CueLayer*);
 
 protected:
 
@@ -31,9 +31,13 @@ protected:
     virtual void mouseMoveEvent(QMouseEvent *) override;
     virtual void mouseReleaseEvent(QMouseEvent *) override;
     virtual void keyPressEvent(QKeyEvent*) override;
+    virtual void resizeEvent(QResizeEvent *) override;
 
 private:
     void drawFeatureOverlay(QPainter &painter);
+    void deleteSelectedMarkers();
+    void updateMarkerDeleteButton();
+    void positionMarkerDeleteButton();
 
     class Impl;
     Impl *m_impl;

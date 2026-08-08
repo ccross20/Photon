@@ -4,6 +4,7 @@
 #include "sequence.h"
 #include "plugin/pluginfactory.h"
 #include "photoncore.h"
+#include "channel/parameter/channelparametercontainer.h"
 
 namespace photon {
 

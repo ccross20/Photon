@@ -10,9 +10,8 @@
 namespace photon {
 
 class ClipFalloffData;
-class BaseEffectData;
-class ClipEffectFolderData;
 class ClipParameterData;
+class ClipGraphData;
 class PixelLayoutFolderData;
 class ClipMaskData;
 class FixtureClip;
@@ -37,8 +36,8 @@ private:
     FolderData *m_channelFolder;
     ClipStateData *m_stateData;
     ClipParameterData *m_parameterData;
+    ClipGraphData *m_graphData = nullptr;
     PixelLayoutFolderData *m_pixelLayoutData;
-    ClipEffectFolderData *m_clipEffectData;
     Clip *m_clip;
 
 };
@@ -102,29 +101,26 @@ private:
     CanvasLayerGroup *m_layer;
 };
 
-class ClipEffectFolderData : public AbstractTreeData
-{
-    Q_OBJECT
-public:
-    ClipEffectFolderData(Clip*);
-    BaseEffectData *findEffectData(BaseEffect *);
-
-    Clip *clip() const{return m_clip;}
-
-private slots:
-    void effectAdded(photon::BaseEffect*);
-    void effectRemoved(photon::BaseEffect*);
-    void effectMoved(photon::BaseEffect*);
-
-private:
-    Clip *m_clip;
-};
-
 class ClipParameterData : public AbstractTreeData
 {
     Q_OBJECT
 public:
     ClipParameterData(Clip*);
+
+    Clip *clip() const{return m_clip;}
+
+private:
+    Clip *m_clip;
+};
+
+// A leaf node for a clip that has a content graph (Clip::contentGraph()) - lets
+// the editor show/edit that graph (e.g. FixtureClip's internal FixtureStateNode
+// routine) inline, the same way Parameters/State do for their own data.
+class ClipGraphData : public AbstractTreeData
+{
+    Q_OBJECT
+public:
+    ClipGraphData(Clip*);
 
     Clip *clip() const{return m_clip;}
 

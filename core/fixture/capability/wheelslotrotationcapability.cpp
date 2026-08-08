@@ -16,7 +16,7 @@ public:
     bool supportsAngle = false;
 };
 
-WheelSlotRotationCapability::WheelSlotRotationCapability() : FixtureCapability(DMXRange(),Capability_WheelSlotRotation),m_impl(new Impl)
+WheelSlotRotationCapability::WheelSlotRotationCapability(CapabilityType t_type) : FixtureCapability(DMXRange(),t_type),m_impl(new Impl)
 {
 
 }

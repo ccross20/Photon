@@ -9,6 +9,53 @@
 
 namespace photon {
 
+namespace {
+
+// Resamples irregularly-timed (t_times[i], t_values[i]) pairs onto a uniform
+// grid of t_count samples starting at t_startTime, spaced 1/t_rate apart, via
+// linear interpolation against the real per-sample timestamps. FeatureTrack
+// assumes its samples are evenly spaced at its stated rate - handing it the
+// raw per-tick samples directly (as if the achieved *average* rate meant every
+// individual tick landed exactly on schedule) lets each tick's real timing
+// jitter accumulate into a growing misalignment against anything with true
+// timestamps (like the beat grid) the longer the capture runs.
+QVector<float> resampleUniform(const QVector<double> &t_times, const QVector<float> &t_values,
+                                double t_startTime, double t_rate, int t_count)
+{
+    QVector<float> result;
+    result.reserve(t_count);
+
+    if(t_times.isEmpty() || t_rate <= 0.0)
+        return result;
+
+    int searchIndex = 0;
+    for(int i = 0; i < t_count; ++i)
+    {
+        const double targetTime = t_startTime + i / t_rate;
+
+        while(searchIndex + 1 < t_times.size() && t_times[searchIndex + 1] < targetTime)
+            ++searchIndex;
+
+        if(searchIndex + 1 >= t_times.size())
+        {
+            result.append(t_values.last());
+            continue;
+        }
+
+        const double t0 = t_times[searchIndex];
+        const double t1 = t_times[searchIndex + 1];
+        const double span = t1 - t0;
+        const double alpha = span > 0.0 ? std::clamp((targetTime - t0) / span, 0.0, 1.0) : 0.0;
+
+        result.append(static_cast<float>(t_values[searchIndex]
+            + (t_values[searchIndex + 1] - t_values[searchIndex]) * alpha));
+    }
+
+    return result;
+}
+
+} // namespace
+
 VirtualDJCaptureProcess::VirtualDJCaptureProcess() : AudioProcessor()
 {
 }
@@ -33,6 +80,7 @@ void VirtualDJCaptureProcess::startProcessing()
 
     m_beats.clear();
     m_lastBeatNumber = -1;
+    m_sampleTimes.clear();
     m_levelSamples.clear();
     m_vocalSamples.clear();
     m_instruSamples.clear();
@@ -64,6 +112,7 @@ void VirtualDJCaptureProcess::onDataUpdated()
     if(m_levelSamples.isEmpty())
         m_firstSampleTime = connector->time;
     m_lastSampleTime = connector->time;
+    m_sampleTimes.append(connector->time);
     m_levelSamples.append(static_cast<float>(connector->level));
     m_vocalSamples.append(static_cast<float>(connector->stemVocal));
     m_instruSamples.append(static_cast<float>(connector->stemInstru));
@@ -163,10 +212,13 @@ void VirtualDJCaptureProcess::processingComplete()
         // startTime accounts for the gap between sendRestart() and the first tick
         // actually landing (command latency) - samples don't necessarily begin at
         // song time exactly 0.
+        const int sampleCount = m_levelSamples.size();
         auto addTrack = [&](const QByteArray &id, const QVector<float> &samples) {
             auto &track = songData->addFeature(id, featureRate);
             track.setStartTime(m_firstSampleTime);
-            track.setSamples(samples);
+            // Resample onto the uniform grid FeatureTrack assumes, rather than
+            // handing it the raw per-tick samples as-is - see resampleUniform().
+            track.setSamples(resampleUniform(m_sampleTimes, samples, m_firstSampleTime, featureRate, sampleCount));
         };
 
         addTrack(SongData::FeatureLevel, m_levelSamples);

@@ -9,18 +9,18 @@
 
 namespace photon {
 
-class BeatLayerDelegate : public QAbstractItemDelegate
+class CueLayerDelegate : public QAbstractItemDelegate
 {
     Q_OBJECT
 public:
-    BeatLayerDelegate(QObject *parent = Q_NULLPTR);
+    CueLayerDelegate(QObject *parent = Q_NULLPTR);
 
     void paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const override;
     QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const override;
     bool editorEvent(QEvent *event, QAbstractItemModel *model, const QStyleOptionViewItem &option, const QModelIndex &index) override;
 };
 
-class BeatLayerModel : public QAbstractItemModel
+class CueLayerModel : public QAbstractItemModel
 {
     Q_OBJECT
 public:
@@ -43,8 +43,8 @@ public:
     void setSequence(Sequence *);
 
 private slots:
-    void beatLayerAdded(photon::BeatLayer *);
-    void beatLayerRemoved(photon::BeatLayer *);
+    void cueLayerAdded(photon::CueLayer *);
+    void cueLayerRemoved(photon::CueLayer *);
 
 private:
     Sequence *m_sequence = nullptr;
@@ -58,10 +58,11 @@ class WaveformHeader::Impl
 {
 public:
     QTreeView *tree = nullptr;
-    BeatLayerModel *beatModel = nullptr;
-    BeatLayerDelegate *delegate;
+    CueLayerModel *cueModel = nullptr;
+    CueLayerDelegate *delegate;
     Sequence *sequence;
     QPushButton *addButton;
+    QPushButton *layerMenuButton;
 };
 
 }

@@ -7,6 +7,7 @@
 #include "graph/node/canvas/canvassubgraphnode.h"
 #include "graph/node/canvas/canvasoutputnode.h"
 #include "graph/node/canvas/canvasrendermanager.h"
+#include "sequence/canvaslayergroup.h"
 
 namespace photon {
 
@@ -38,9 +39,9 @@ CanvasPreviewWindow::~CanvasPreviewWindow()
     releaseRhi();
 }
 
-void CanvasPreviewWindow::setOutputNode(CanvasOutputNode *node)
+void CanvasPreviewWindow::setTarget(const CanvasPreviewTarget &t_target)
 {
-    m_output = node;
+    m_target = t_target;
     requestUpdate();
 }
 
@@ -181,22 +182,26 @@ void CanvasPreviewWindow::renderFrame()
         return;
     }
 
-    // Resolve the output node's texture to show, validating it still belongs to a
-    // live canvas (it lives inside a registered canvas subgraph's inner graph), and
-    // grab that canvas's background colour as the backdrop.
+    // Resolve the target's texture to show, validating it's still live, and grab
+    // its background colour as the backdrop.
     QRhiTexture *canvasTex = nullptr;
     QSize canvasSize;
     QColor backdrop(24, 24, 28);
-    if (m_output && m_manager) {
+    if (m_manager && m_target.outputNode) {
+        // Belongs to a registered canvas subgraph's inner graph.
         for (auto *canvas : m_manager->canvases()) {
-            if (canvas->outputNodes().contains(m_output)) {
-                const RhiTextureData tex = m_output->inputTexture();
+            if (canvas->outputNodes().contains(m_target.outputNode)) {
+                const RhiTextureData tex = m_target.outputNode->inputTexture();
                 canvasTex = tex.texture;
                 canvasSize = tex.size;
                 backdrop = canvas->backgroundColor();
                 break;
             }
         }
+    } else if (m_manager && m_target.layerGroup && m_manager->isRegistered(m_target.layerGroup)) {
+        canvasTex = m_target.layerGroup->outputTexture();
+        canvasSize = m_target.layerGroup->canvasSize();
+        backdrop = m_target.layerGroup->background();
     }
 
     // (Re)import the canvas sink texture by its shared GL id when it changes.

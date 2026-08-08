@@ -28,6 +28,15 @@ BusPanel::BusPanel() : Panel("photon.bus"),m_impl(new Impl)
 
 BusPanel::~BusPanel()
 {
+    // projectWillClose() only fires on an explicit project switch - app shutdown
+    // deletes the project directly without it, so the scene (and its live
+    // GraphEvaluator eval thread) must also be cleaned up here, or a shutdown
+    // with a project still open leaks a thread that ticks a freed BusGraph.
+    // Detach from the viewer first - Panel::~Panel() destroys m_impl->viewer
+    // (a QWidget child) after this body returns, and ~GraphWidget() dereferences
+    // whatever scene it still thinks it has.
+    m_impl->viewer->setScene(nullptr);
+    delete m_impl->scene;
     delete m_impl;
 }
 
@@ -45,8 +54,8 @@ void BusPanel::projectDidOpen(photon::Project* project)
 void BusPanel::projectWillClose(photon::Project* project)
 {
     m_impl->viewer->setScene(nullptr);
-    if(m_impl->scene)
-        delete m_impl->scene;
+    delete m_impl->scene;
+    m_impl->scene = nullptr;
 }
 
 

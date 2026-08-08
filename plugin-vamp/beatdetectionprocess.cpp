@@ -31,7 +31,7 @@ void BeatDetectionProcess::processingComplete()
 
     // SongData is the sole source of truth for detected beats - a companion .song
     // sidecar persists it, effects/graph nodes query it, and the waveform view
-    // draws it directly. Beats are not a BeatLayer: layers are reserved for
+    // draws it directly. Beats are not a CueLayer: layers are reserved for
     // user-authored custom cues, whereas the beat grid is derived data that's
     // simply always present once a file has been analysed.
     SongData *songData = sequence()->songData();

@@ -18,11 +18,18 @@ class RhiMesh;
 // joints can be animated), one RhiMesh per sub-mesh, plus the resolved rig roles.
 //
 // Rig convention (in the model, matching the legacy rigs):
-//   * a node whose name starts with "pan_"  is the pan joint
-//   * a node whose name starts with "tilt_" is the tilt joint
-//     (the _x/_y/_z suffix selects the local rotation axis)
-//   * a node named "lamp" is the light emitter (beam origin/direction)
-//   * a node whose name starts with "lens" is the lens face; it is tinted with the
+//   * a node whose name starts with "pan_"   is the pan joint
+//   * a node whose name starts with "tilt_"  is the tilt joint
+//   * a node whose name starts with "rotor_" is a third rotation joint that spins its
+//     children as a rigid sub-assembly independent of pan/tilt - e.g. a bee-eye's
+//     lens plate (the parent of its "lens*" meshes), driven by a fixture-specific
+//     rotation channel rather than pan/tilt
+//     (all three: the _x/_y/_z suffix selects the local rotation axis)
+//   * a node whose name starts with "lamp" is a light emitter (beam origin/direction).
+//     A single-emitter model names it exactly "lamp"; a multi-cell model (e.g. a
+//     bee-eye) names each one "lamp1".."lampN", authored in the SAME order as the
+//     fixture's per-cell channels (index 0 = first cell, etc.)
+//   * a node whose name starts with "lens" is a lens face; it is tinted with the
 //     fixture's live emitted colour so the lens glows the current beam colour
 //   * a node named "origin" is the fixture's reference frame (mount / pan pivot); the
 //     model is placed so this node coincides with the fixture's scene transform
@@ -36,6 +43,7 @@ public:
         QColor color = QColor(190, 190, 200);
         int  panAxis = -1;             // -1 = none, 0 = X, 1 = Y, 2 = Z
         int  tiltAxis = -1;
+        int  rotorAxis = -1;           // third rotation joint, independent of pan/tilt
         bool emitter = false;
         bool lens = false;             // tinted with the live emitted colour
         bool origin = false;           // fixture reference frame (mount / pan pivot)

@@ -5,6 +5,8 @@
 #include <QFileDialog>
 #include "generalsettingspage.h"
 #include "settings/applicationsettings.h"
+#include "photoncore.h"
+#include "library/songlibrary.h"
 
 namespace photon {
 
@@ -30,7 +32,13 @@ GeneralSettingsPage::GeneralSettingsPage(QWidget *t_parent)
 
 void GeneralSettingsPage::songDataLibraryPathEdited()
 {
-    ApplicationSettings::setSongDataLibraryPath(m_songDataLibraryPathEdit->text());
+    const QString path = m_songDataLibraryPathEdit->text();
+    ApplicationSettings::setSongDataLibraryPath(path);
+
+    if(path.isEmpty())
+        photonApp->songLibrary()->close();
+    else
+        photonApp->songLibrary()->open(path);
 }
 
 void GeneralSettingsPage::browseSongDataLibraryPath()
@@ -42,6 +50,7 @@ void GeneralSettingsPage::browseSongDataLibraryPath()
 
     m_songDataLibraryPathEdit->setText(path);
     ApplicationSettings::setSongDataLibraryPath(path);
+    photonApp->songLibrary()->open(path);
 }
 
 } // namespace photon

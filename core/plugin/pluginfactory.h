@@ -12,7 +12,6 @@
 #include "falloff/falloffeffect.h"
 #include "fixture/maskeffect.h"
 #include "sequence/clip.h"
-#include "sequence/baseeffect.h"
 #include "audio/audioprocessor.h"
 
 namespace photon {
@@ -53,10 +52,6 @@ public:
     void registerClip(const ClipInformation &info);
     QVector<ClipInformation> clips() const;
     Clip *createClip(const QByteArray &effectId) const;
-
-    void registerClipEffect(const ClipEffectInformation &info);
-    QVector<ClipEffectInformation> clipEffects() const;
-    BaseEffect *createClipEffect(const QByteArray &effectId) const;
 
     void registerFalloffEffect(const FalloffEffectInformation &info);
     QVector<FalloffEffectInformation> falloffEffects() const;

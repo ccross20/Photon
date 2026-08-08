@@ -21,6 +21,7 @@
 #include "gui/panel/pixellayoutcollectionpanel.h"
 #include "gui/panel/surfacepanel.h"
 #include "gui/panel/surfacecollectionpanel.h"
+#include "gui/panel/songlibrarypanel.h"
 
 #include "graph/bus/dmxgeneratematrixnode.h"
 #include "graph/bus/dmxwriternode.h"
@@ -105,7 +106,6 @@
 
 #include "sequence/fixtureclip.h"
 #include "sequence/canvasclip.h"
-#include "sequence/canvasroutineclipeffect.h"
 
 namespace photon {
 
@@ -136,7 +136,6 @@ public:
     QHash<QByteArray, FalloffEffectInformation> falloffEffects;
     QHash<QByteArray, MaskEffectInformation> maskEffects;
     QHash<QByteArray, ClipInformation> clips;
-    QHash<QByteArray, ClipEffectInformation> clipEffects;
     QHash<QByteArray, AudioProcessorInformation> audioProcessors;
     QHash<PanelId, std::function<Panel*()>> panels;
     keira::NodeLibrary nodeLibrary;
@@ -221,6 +220,7 @@ void PluginFactory::init()
     registerPluginPanel("photon.tag-collection",[](){return new TagCollectionPanel;});
     registerPluginPanel("photon.fixture-group-collection",[](){return new FixtureGroupCollectionPanel;});
     registerPluginPanel("photon.pixellayout-collection",[](){return new PixelLayoutCollectionPanel;});
+    registerPluginPanel("photon.song-library",[](){return new SongLibraryPanel;});
 
     registerNode(FixtureWriterNode::info());
     registerNode(GlobalsNode::info());
@@ -293,8 +293,6 @@ void PluginFactory::init()
 
     registerAudioProcessor(LevelAnalysisProcess::info());
     registerAudioProcessor(VirtualDJCaptureProcess::info());
-
-    registerClipEffect(CanvasRoutineClipEffect::info());
 
     registerClip(FixtureClip::info());
     registerClip(CanvasClip::info());
@@ -471,30 +469,6 @@ Clip *PluginFactory::createClip(const QByteArray &effectId) const
     if(info.id == effectId)
     {
         auto effect = info.callback();
-        effect->setName(info.name);
-        effect->setId(info.id);
-        return effect;
-    }
-    return nullptr;
-}
-
-void PluginFactory::registerClipEffect(const ClipEffectInformation &info)
-{
-    m_impl->clipEffects.insert(info.id, info);
-}
-
-QVector<ClipEffectInformation> PluginFactory::clipEffects() const
-{
-    return m_impl->clipEffects.values();
-}
-
-BaseEffect *PluginFactory::createClipEffect(const QByteArray &effectId) const
-{
-    auto info = m_impl->clipEffects[effectId];
-    if(info.id == effectId)
-    {
-        auto effect = info.callback();
-        effect->init();
         effect->setName(info.name);
         effect->setId(info.id);
         return effect;

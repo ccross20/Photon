@@ -3,7 +3,7 @@
 
 #include <atomic>
 #include "sequence.h"
-#include "beatlayer.h"
+#include "cuelayer.h"
 #include "audio/songdata.h"
 
 namespace photon
@@ -16,7 +16,7 @@ public:
     void addLayer(Layer*);
     void removeLayer(Layer*);
     QVector<Layer*> layers;
-    QVector<BeatLayer*> beatLayers;
+    QVector<CueLayer*> cueLayers;
     QString name;
     QString filePath;
     SongData songData;

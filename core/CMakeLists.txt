@@ -26,6 +26,7 @@ find_package(Qt6 REQUIRED COMPONENTS
     MultimediaWidgets
 )
 find_package(Qt6 REQUIRED COMPONENTS Concurrent)
+find_package(Qt6 REQUIRED COMPONENTS Sql)             # SongLibrary's SQLite catalog
 find_package(Qt6 REQUIRED COMPONENTS Core)
 find_package(Qt6 REQUIRED COMPONENTS Core)
 find_package(Qt6 REQUIRED COMPONENTS Widgets)
@@ -232,6 +233,11 @@ set(PROJECT_SOURCES
         gui/panel/routinecollectionpanel.h
         gui/panel/routinecollectionpanel_p.h
         gui/panel/routinecollectionpanel.cpp
+        gui/panel/songlibrarypanel.h
+        gui/panel/songlibrarypanel_p.h
+        gui/panel/songlibrarypanel.cpp
+        library/songlibrary.h
+        library/songlibrary.cpp
         gui/panel/routineeditpanel.h
         gui/panel/routineeditpanel.cpp
         gui/panel/pixellayoutcollectionpanel.h
@@ -322,12 +328,10 @@ set(PROJECT_SOURCES
         scene/truss.cpp
         scene/scenesurface.h
         scene/scenesurface.cpp
-        sequence/beatlayer.h
-        sequence/beatlayer.cpp
+        sequence/cuelayer.h
+        sequence/cuelayer.cpp
         sequence/canvasclip.h
         sequence/canvasclip.cpp
-        sequence/canvaseffect.h
-        sequence/canvaseffect.cpp
         sequence/canvaslayergroup.h
         sequence/canvaslayergroup.cpp
         sequence/channel.h
@@ -339,9 +343,6 @@ set(PROJECT_SOURCES
         sequence/clip.h
         sequence/clip_p.h
         sequence/clip.cpp
-        sequence/baseeffect.h
-        sequence/clipeffect_p.h
-        sequence/baseeffect.cpp
         sequence/cliplayer.h
         sequence/cliplayer_p.h
         sequence/cliplayer.cpp
@@ -349,8 +350,6 @@ set(PROJECT_SOURCES
         sequence/constantchanneleffect.cpp
         sequence/fixtureclip.h
         sequence/fixtureclip.cpp
-        sequence/fixtureeffect.h
-        sequence/fixtureeffect.cpp
         sequence/gradientchanneleffect.h
         sequence/gradientchanneleffect.cpp
         sequence/layer.h
@@ -501,6 +500,7 @@ add_library(photon-core SHARED ${PROJECT_SOURCES}
     fixture/capability/wheelslotrotationcapability.h fixture/capability/wheelslotrotationcapability.cpp
     state/wheelrotationstate.h state/wheelrotationstate.cpp
     state/wheelslotrotationstate.h state/wheelslotrotationstate.cpp
+    state/lensrotationstate.h state/lensrotationstate.cpp
     state/slotstate.h state/slotstate.cpp
     data/spline.cpp data/spline.h
     util/BezierUtils.h
@@ -511,7 +511,6 @@ add_library(photon-core SHARED ${PROJECT_SOURCES}
     channel/parameter/view/filechannelparameterview.h channel/parameter/view/filechannelparameterview.cpp
     opengl/distancetransform.cpp opengl/distancetransform.h
     graph/parameter/textureparameter.h graph/parameter/textureparameter.cpp
-    sequence/canvasroutineclipeffect.h sequence/canvasroutineclipeffect.cpp
     routine/node/canvaswriternode.h routine/node/canvaswriternode.cpp
     routine/node/createtexturenode.h routine/node/createtexturenode.cpp
     routine/node/baseroutinenode.h routine/node/baseroutinenode.cpp
@@ -549,7 +548,6 @@ add_library(photon-core SHARED ${PROJECT_SOURCES}
     graph/node/fixture/allfixturesnode.h graph/node/fixture/allfixturesnode.cpp
     graph/node/fixture/selectfixturesnode.h graph/node/fixture/selectfixturesnode.cpp
     graph/node/fixture/fixturegroupnode.h graph/node/fixture/fixturegroupnode.cpp
-    sequence/baseeffectparent.h
     data/commonmodel.h data/commonmodel.cpp
     state/wheelslotanglestate.h state/wheelslotanglestate.cpp
     gui/panel/surfacecollectionpanel.h gui/panel/surfacecollectionpanel.cpp
@@ -576,10 +574,12 @@ add_library(photon-core SHARED ${PROJECT_SOURCES}
     graph/parameter/pixellistparameter.h graph/parameter/pixellistparameter.cpp
     virtualdj/virtualdjconnector.h virtualdj/virtualdjconnector.cpp
     resources/fixtures/elation-dartz-360.json
+    resources/fixtures/bee-eye.json
     rhi/rhicontext.h rhi/rhicontext.cpp
     graph/parameter/rhitextureparameter.h graph/parameter/rhitextureparameter.cpp
     graph/parameter/pixellayoutlistparameter.h graph/parameter/pixellayoutlistparameter.cpp
     graph/node/canvas/canvasoutputnode.h graph/node/canvas/canvasoutputnode.cpp
+    graph/node/canvas/canvasrenderable.h
     graph/node/canvas/canvassubgraphnode.h graph/node/canvas/canvassubgraphnode.cpp
     graph/node/canvas/canvasrendermanager.h graph/node/canvas/canvasrendermanager.cpp
     graph/node/canvas/basecanvasnode.h graph/node/canvas/basecanvasnode.cpp
@@ -630,6 +630,7 @@ target_include_directories(photon-core PUBLIC third-party/advanced-docking)
 
 target_link_libraries(photon-core PRIVATE keira)
 target_link_libraries(photon-core PRIVATE Qt6::Concurrent)
+target_link_libraries(photon-core PRIVATE Qt6::Sql)
 target_link_libraries(photon-core PRIVATE Qt6::Quick Qt6::Qml Qt6::QuickWidgets)
 
 target_link_libraries(photon-core PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)

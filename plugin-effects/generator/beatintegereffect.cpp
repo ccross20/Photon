@@ -189,7 +189,7 @@ void BeatIntegerEffect::rebuildCells()
     if(!sequence)
         return;
 
-    // Beats come from the sequence's analysed beat grid, not a BeatLayer: layers
+    // Beats come from the sequence's analysed beat grid, not a CueLayer: layers
     // are reserved for user-authored custom cues, while the beat grid is derived
     // data that's always present once a file has been loaded and analysed.
     SongData *songData = sequence->songData();

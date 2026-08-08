@@ -37,6 +37,7 @@ public:
     OpenGLResources *openGLResources() const;
     RhiContext *rhiContext() const;
     VirtualDJConnector *djConnector() const;
+    SongLibrary *songLibrary() const;
 
 
     QString appDataPath() const;

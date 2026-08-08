@@ -79,6 +79,7 @@ static void traceNode(const RhiModel::Node &n, int depth)
     QString roles;
     if (n.panAxis  >= 0) roles += QString(" PAN[%1]").arg("xyz"[n.panAxis]);
     if (n.tiltAxis >= 0) roles += QString(" TILT[%1]").arg("xyz"[n.tiltAxis]);
+    if (n.rotorAxis >= 0) roles += QString(" ROTOR[%1]").arg("xyz"[n.rotorAxis]);
     if (n.emitter)       roles += " LAMP";
     if (n.lens)          roles += " LENS";
     if (n.origin)        roles += " ORIGIN";
@@ -120,7 +121,9 @@ static void processNode(const aiNode *node, const aiScene *scene, const QMatrix4
         out.panAxis = axisFromSuffix(lname);
     if (lname.startsWith("tilt_"))
         out.tiltAxis = axisFromSuffix(lname);
-    if (lname == "lamp") {
+    if (lname.startsWith("rotor_"))
+        out.rotorAxis = axisFromSuffix(lname);
+    if (lname.startsWith("lamp")) {
         out.emitter = true;
         hasEmitter = true;
     }

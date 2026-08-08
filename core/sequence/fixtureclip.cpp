@@ -263,8 +263,6 @@ void FixtureClip::processChannels(ProcessContext &t_context)
     // Model (b): evaluate the graph once — the FixtureStateNode does the fixtures.
     m_impl->graph->evaluate(&localContext);
     m_impl->graph->markClean();
-
-    Clip::processChannels(t_context);
 }
 
 State *FixtureClip::state() const

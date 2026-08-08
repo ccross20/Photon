@@ -10,7 +10,6 @@
 #include "fixture/fixturecollection.h"
 #include "photoncore.h"
 #include "plugin/pluginfactory.h"
-#include "clipeffect_p.h"
 #include "channel/parameter/view/channelparameterwidget.h"
 #include "channel/parameter/channelparametercontainer.h"
 #include "channel/parameter/channelparameter.h"
@@ -63,10 +62,8 @@ Clip::~Clip()
     delete m_impl;
 }
 
-void Clip::layerDidChange(Layer *t_layer)
+void Clip::layerDidChange(Layer *)
 {
-    for(auto effect : m_impl->clipEffects)
-        effect->layerChanged(t_layer);
 }
 
 QByteArray Clip::type() const
@@ -114,7 +111,7 @@ ClipLayer *Clip::layer() const
     return m_impl->layer;
 }
 
-Routine *Clip::contentGraph() const
+keira::Graph *Clip::contentGraph() const
 {
     return nullptr;
 }
@@ -134,14 +131,8 @@ bool Clip::timeIsValid(double t_time) const
     return m_impl->startTime < t_time && t_time < endTime();
 }
 
-void Clip::processChannels(ProcessContext &t_context)
+void Clip::processChannels(ProcessContext &)
 {
-
-
-    for(auto effect : m_impl->clipEffects)
-    {
-        effect->processChannels(t_context);
-    }
 }
 
 double Clip::strengthAtTime(double t_value) const
@@ -211,32 +202,32 @@ double Clip::duration() const
 
 void Clip::startTimeUpdated(double t_value)
 {
-    for(auto channel : m_impl->channels)
+    // Iterate a snapshot, not m_impl->channels directly: channel->setStartTime()
+    // can, via emitted signals, end up back in FixtureClip::processChannels()
+    // for this same (active-under-the-playhead) clip, which may drain a queued
+    // graph edit that adds/removes a channel - mutating this vector while this
+    // loop is still walking it.
+    const QVector<Channel*> channelsSnapshot = m_impl->channels;
+    for(auto channel : channelsSnapshot)
     {
         channel->setStartTime(t_value);
     }
-
-    for(auto effect : m_impl->clipEffects)
-        effect->startTimeUpdated(t_value);
 }
 
 void Clip::durationUpdated(double t_value)
 {
-    for(auto channel : m_impl->channels)
+    // See startTimeUpdated() above for why this iterates a snapshot.
+    const QVector<Channel*> channelsSnapshot = m_impl->channels;
+    for(auto channel : channelsSnapshot)
     {
         channel->setDuration(t_value);
     }
-    for(auto effect : m_impl->clipEffects)
-        effect->durationUpdated(t_value);
 }
 
 void Clip::restore(Project &t_project)
 {
     for(auto channel : m_impl->channels)
         channel->restore(t_project);
-
-    for(auto effect : m_impl->clipEffects)
-        effect->restore(t_project);
 }
 
 void Clip::clearChannels()
@@ -390,7 +381,11 @@ void Clip::removeChannel(int t_index)
     auto channel = m_impl->channels[t_index];
     m_impl->channels.removeAt(t_index);
     emit channelRemoved(channel);
-    delete channel;
+    // deleteLater(), not delete: this can run reentrantly from within code that's
+    // mid-iteration over a snapshot of this same channel list (see
+    // Clip::durationUpdated()'s comment) - an immediate delete would leave that
+    // snapshot holding a dangling pointer to whichever channel is removed.
+    channel->deleteLater();
 }
 
 void Clip::channelUpdatedSlot(Channel *t_channel)
@@ -399,55 +394,6 @@ void Clip::channelUpdatedSlot(Channel *t_channel)
     markChanged();
 }
 
-
-void Clip::effectUpdated(photon::BaseEffect *t_effect)
-{
-    effectUpdatedSlot(t_effect);
-}
-
-void Clip::effectUpdatedSlot(photon::BaseEffect *t_effect)
-{
-    emit clipEffectUpdated(t_effect);
-    markChanged();
-}
-
-const QVector<BaseEffect*> &Clip::clipEffects() const
-{
-    return m_impl->clipEffects;
-}
-
-void Clip::addClipEffect(BaseEffect *t_effect)
-{
-    m_impl->clipEffects.append(t_effect);
-    t_effect->setParent(this);
-    t_effect->m_impl->effectParent = this;
-
-    emit clipEffectAdded(t_effect);
-    t_effect->addedToParent(this);
-    if(layer())
-        t_effect->layerChanged(layer());
-    m_impl->markChanged();
-}
-
-void Clip::removeClipEffect(BaseEffect *t_effect)
-{
-    if(m_impl->clipEffects.removeOne(t_effect))
-    {
-        t_effect->m_impl->effectParent = nullptr;
-
-        emit clipEffectRemoved(t_effect);
-    }
-}
-
-BaseEffect *Clip::clipEffectAtIndex(int t_index) const
-{
-    return m_impl->clipEffects[t_index];
-}
-
-int Clip::clipEffectCount() const
-{
-    return m_impl->clipEffects.length();
-}
 
 void Clip::readFromJson(const QJsonObject &t_json, const LoadContext &t_context)
 {
@@ -463,33 +409,6 @@ void Clip::readFromJson(const QJsonObject &t_json, const LoadContext &t_context)
     m_impl->uniqueId = t_json.value("uniqueId").toString(QUuid::createUuid().toString()).toLatin1();
     m_impl->name = t_json.value("name").toString();
     m_impl->id = t_json.value("id").toString().toLatin1();
-
-    if(t_json.contains("clipEffects"))
-    {
-        auto effectArray = t_json.value("clipEffects").toArray();
-
-        for(auto item : effectArray)
-        {
-            auto effectObj = item.toObject();
-            auto id = effectObj.value("id").toString();
-
-            auto effect = photonApp->plugins()->createClipEffect(id.toLatin1());
-
-            if(effect){
-                effect->m_impl->effectParent = this;
-                effect->readFromJson(effectObj, t_context);
-                effect->setParent(this);
-                m_impl->clipEffects.append(effect);
-                effect->addedToParent(this);
-
-            }
-            else
-            {
-                qWarning() << "Could not find clip effect:" << id;
-            }
-        }
-    }
-
 
     for(auto channel : m_impl->channels)
         delete channel;
@@ -522,16 +441,6 @@ void Clip::writeToJson(QJsonObject &t_json) const
     t_json.insert("uniqueId", QString(m_impl->uniqueId));
     t_json.insert("id", QString(m_impl->id));
     t_json.insert("name", QString(m_impl->name));
-
-    QJsonArray clipEffectArray;
-    for(auto effect : m_impl->clipEffects)
-    {
-        QJsonObject effectObj;
-        effectObj.insert("id", QString(effect->id()));
-        effect->writeToJson(effectObj);
-        clipEffectArray.append(effectObj);
-    }
-    t_json.insert("clipEffects", clipEffectArray);
 
     QJsonArray array;
     for(auto channel : m_impl->channels)

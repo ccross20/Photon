@@ -1,43 +1,64 @@
-#include <QMatrix4x4>
 #include "canvasclip.h"
-#include "photoncore.h"
-#include "project/project.h"
-#include "opengl/openglshader.h"
-#include "opengl/openglplane.h"
-#include "opengl/opengltexture.h"
-#include "opengl/openglframebuffer.h"
-#include "pixel/canvas.h"
-#include "sequence.h"
 #include "channel/parameter/numberchannelparameter.h"
 #include "channel/parameter/point2channelparameter.h"
-#include "baseeffect.h"
-#include "canvaseffect.h"
 #include "canvaslayergroup.h"
+#include "processcontext.h"
+#include "model/graph.h"
+#include "graph/node/graphcontextnode.h"
+#include "graph/node/canvas/canvasoutputnode.h"
+#include "photoncore.h"
+#include "plugin/pluginfactory.h"
 
 namespace photon {
 
 class CanvasClip::Impl
 {
 public:
-    OpenGLShader *shader = nullptr;
-    OpenGLPlane *plane = nullptr;
-    OpenGLTexture *texture = nullptr;
-    int viewportLoc;
-    int cameraLoc;
+    void createGraph();
+
+    keira::Graph *graph = nullptr;
+    GraphContextNode *globalsNode = nullptr;
+    CanvasOutputNode *outputNode = nullptr;
+
+    // The owning group, cached on layerDidChange() rather than resolved via
+    // layer()->parentGroup() at use time - by the time ~CanvasClip() runs,
+    // layer() has already been cleared (Clip::Impl::setLayer(nullptr) runs
+    // before the clip's own destructor), so this is the only way to reach the
+    // group during teardown to purge/block against an in-flight render.
+    CanvasLayerGroup *cachedGroup = nullptr;
 };
 
-CanvasClip::CanvasClip(): Clip(),m_impl(new Impl)
+void CanvasClip::Impl::createGraph()
+{
+    graph = new keira::Graph;
+    graph->setGraphTypeId("canvas");
+    graph->setName("Canvas Clip Graph");
+
+    globalsNode = new GraphContextNode;
+    globalsNode->configure(GraphContextNode::canvasPorts());
+    graph->addNode(globalsNode);
+
+    outputNode = new CanvasOutputNode;
+    outputNode->createParameters();
+    graph->addNode(outputNode);
+
+    graph->drainCommandQueue();   // apply the addNodes immediately (see readFromJson)
+}
+
+CanvasClip::CanvasClip(): Clip(), m_impl(new Impl)
 {
     setId("canvasclip");
+    m_impl->createGraph();
     addChannelParameter(new Point2ChannelParameter("position",QPointF{0,0}));
     addChannelParameter(new Point2ChannelParameter("center",QPointF{0,0}));
     addChannelParameter(new Point2ChannelParameter("scale",QPointF{1,1}));
     addChannelParameter(new NumberChannelParameter("rotation"));
 }
 
-CanvasClip::CanvasClip(double t_start, double t_duration, QObject *t_parent) : Clip(t_start, t_duration, t_parent),m_impl(new Impl)
-{    
+CanvasClip::CanvasClip(double t_start, double t_duration, QObject *t_parent) : Clip(t_start, t_duration, t_parent), m_impl(new Impl)
+{
     setId("canvasclip");
+    m_impl->createGraph();
     addChannelParameter(new Point2ChannelParameter("position",QPointF{0,0}));
     addChannelParameter(new Point2ChannelParameter("center",QPointF{0,0}));
     addChannelParameter(new Point2ChannelParameter("scale",QPointF{1,1}));
@@ -46,107 +67,51 @@ CanvasClip::CanvasClip(double t_start, double t_duration, QObject *t_parent) : C
 
 CanvasClip::~CanvasClip()
 {
+    // Block until any in-progress CanvasLayerGroup::renderMainThread() that
+    // might be evaluating this clip's graph (on the main thread, possibly up
+    // to ~16ms after processChannels() last queued it from the eval thread)
+    // has finished, and purge any queued reference to this clip - otherwise
+    // the render could dereference/evaluate a graph that's about to be freed
+    // below. No-op if the group is itself mid-teardown (it already guarantees
+    // no render can be in flight in that case) or if this clip was never
+    // attached to a group.
+    if(m_impl->cachedGroup)
+        m_impl->cachedGroup->clipBeingDestroyed(this);
+
+    delete m_impl->graph;   // owns globalsNode/outputNode
     delete m_impl;
+}
+
+keira::Graph *CanvasClip::contentGraph() const
+{
+    return m_impl->graph;
 }
 
 void CanvasClip::layerDidChange(Layer *t_layer)
 {
-    auto group = dynamic_cast<CanvasLayerGroup*>(t_layer->parentGroup());
-    if(group)
-    {
-        group->openGLContext()->makeCurrent(photonApp->surface());
-        initializeContext(group->openGLContext(), group->canvas());
-    }
     Clip::layerDidChange(t_layer);
-}
-
-void CanvasClip::initializeContext(QOpenGLContext *t_context, Canvas *t_canvas)
-{
-    if(!t_canvas)
-        return;
-
-    for(auto clipEffect : clipEffects())
-    {
-        auto canvasEffect = dynamic_cast<CanvasEffect*>(clipEffect);
-        if(canvasEffect)
-            canvasEffect->initializeContext(t_context, t_canvas);
-    }
-
-    m_impl->plane = new OpenGLPlane(t_context, bounds_d{-1,-1,1,1}, false);
-    m_impl->shader = new OpenGLShader(t_context, ":/resources/shader/projectedvertex.vert",
-                                      ":/resources/shader/TextureOpacity.frag");
-    m_impl->shader->bind(t_context);
-    m_impl->viewportLoc = m_impl->shader->uniformLocation("projMatrix");
-    m_impl->cameraLoc = m_impl->shader->uniformLocation("mvMatrix");
-
-    QMatrix4x4 mat;
-    mat.setToIdentity();
-    mat.ortho(-1,1, -1,1,-1,1);
-
-    m_impl->shader->setMatrix(m_impl->viewportLoc,mat);
-    int w = t_canvas->width();
-    int h = t_canvas->height();
-    m_impl->texture = new OpenGLTexture;
-    m_impl->texture->resize(t_context, QImage::Format::Format_ARGB32_Premultiplied, w, h);
-
-}
-
-void CanvasClip::canvasResized(QOpenGLContext *t_context, Canvas *t_canvas)
-{
-    for(auto clipEffect : clipEffects())
-    {
-        auto canvasEffect = dynamic_cast<CanvasEffect*>(clipEffect);
-        if(canvasEffect)
-            canvasEffect->canvasResized(t_context, t_canvas);
-    }
-
-    m_impl->texture->resize(t_context, QImage::Format::Format_ARGB32_Premultiplied, t_canvas->width(), t_canvas->height());
+    if(t_layer)
+        m_impl->cachedGroup = dynamic_cast<CanvasLayerGroup*>(t_layer->parentGroup());
+    // else: keep the last-known group - needed by ~CanvasClip() above.
 }
 
 void CanvasClip::processChannels(ProcessContext &t_context)
 {
+    if(!m_impl->cachedGroup)
+        return;
 
-    double amount = strengthAtTime(t_context.relativeTime);
+    CanvasClipRenderState state;
+    state.clip = this;
+    state.position = t_context.channelValues.value("position").toPointF();
+    state.center = t_context.channelValues.value("center").toPointF();
+    state.scale = t_context.channelValues.value("scale").toPointF();
+    state.rotation = t_context.channelValues.value("rotation").toDouble();
+    state.strength = strengthAtTime(t_context.relativeTime);
+    state.relativeTime = t_context.relativeTime;
+    state.globalTime = t_context.globalTime;
 
-    QPointF pos = t_context.channelValues["position"].value<QPointF>();
-    QPointF center = t_context.channelValues["center"].value<QPointF>();
-    QPointF scale = t_context.channelValues["scale"].value<QPointF>();
-    double rotation = t_context.channelValues["rotation"].toDouble();
-
-
-    auto f = t_context.openglContext->functions();
-
-    OpenGLFrameBuffer *previousBuffer = t_context.frameBuffer;
-    OpenGLFrameBuffer buffer(m_impl->texture, t_context.openglContext);
-    f->glClearColor(.0f,.0f,.0f,.0f);
-    f->glClear(GL_COLOR_BUFFER_BIT);
-    t_context.frameBuffer = &buffer;
-
-    Clip::processChannels(t_context);
-
-    t_context.frameBuffer = previousBuffer;
-    t_context.frameBuffer->bind();
-    m_impl->shader->bind(t_context.openglContext);
-    m_impl->texture->bind(t_context.openglContext);
-    m_impl->shader->setTexture("tex",m_impl->texture->handle());
-    m_impl->shader->setFloat("opacity",  amount);
-
-
-    QMatrix4x4 camMatrix;
-    camMatrix.setToIdentity();
-    camMatrix.translate(pos.x()*2.0, pos.y()*2.0);
-    camMatrix.translate(center.x(), center.y());
-    camMatrix.rotate(rotation,0,0,1);
-    camMatrix.scale(scale.x(), scale.y());
-    camMatrix.translate(-center.x(), -center.y());
-    m_impl->shader->setMatrix(m_impl->cameraLoc, camMatrix);
-
-
-    m_impl->plane->draw();
-
-
+    m_impl->cachedGroup->queueClipForRender(state);
 }
-
 
 void CanvasClip::restore(Project &t_project)
 {
@@ -157,12 +122,27 @@ void CanvasClip::readFromJson(const QJsonObject &t_json, const LoadContext &t_co
 {
     Clip::readFromJson(t_json, t_context);
 
+    if(t_json.contains("graph"))
+    {
+        delete m_impl->graph;   // owns the previous globalsNode/outputNode
+        m_impl->graph = new keira::Graph;
+        m_impl->graph->setGraphTypeId("canvas");
+        m_impl->graph->readFromJson(t_json.value("graph").toObject(), photonApp->plugins()->nodeLibrary());
+        m_impl->globalsNode = dynamic_cast<GraphContextNode*>(m_impl->graph->findNode("Globals"));
+        m_impl->outputNode = dynamic_cast<CanvasOutputNode*>(m_impl->graph->findNode("Output"));
+        if(!m_impl->globalsNode || !m_impl->outputNode)
+            qWarning() << "CanvasClip: could not relink Globals/Output after load";
+    }
 }
 
 void CanvasClip::writeToJson(QJsonObject &t_json) const
 {
     Clip::writeToJson(t_json);
 
+    m_impl->graph->drainCommandQueue();
+    QJsonObject graphObj;
+    m_impl->graph->writeToJson(graphObj);
+    t_json.insert("graph", graphObj);
 }
 
 

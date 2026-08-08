@@ -16,7 +16,6 @@ namespace photon
         ClipLayer *layer = nullptr;
         Sequence *sequence = nullptr;
         QVector<Channel*> channels;
-        QVector<BaseEffect*> clipEffects;
         ChannelParameterContainer *parameters;
         QByteArray type;
         QByteArray uniqueId;

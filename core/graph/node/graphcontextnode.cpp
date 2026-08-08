@@ -106,7 +106,13 @@ void GraphContextNode::createParameters()
 
 void GraphContextNode::evaluate(keira::EvaluationContext *t_context) const
 {
-    fillFromContext(*static_cast<RoutineEvaluationContext*>(t_context));
+    // Guard against a plain (non-routine) context: e.g. a canvas graph opened
+    // directly in a node editor gets live-ticked by a generic GraphEvaluator
+    // whose default context factory produces a bare keira::EvaluationContext,
+    // not a RoutineEvaluationContext (see CanvasOutputNode::evaluate(), which
+    // already guards the same way).
+    if(auto *context = dynamic_cast<RoutineEvaluationContext*>(t_context))
+        fillFromContext(*context);
 }
 
 void GraphContextNode::fillFromContext(const RoutineEvaluationContext &t_context) const

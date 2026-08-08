@@ -20,6 +20,8 @@ public:
 
 private slots:
     void addClicked();
+    void deleteSelectedLayerClicked();
+    void convertBeatsToMarkersClicked();
 
 private:
     class Impl;

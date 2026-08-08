@@ -6,6 +6,7 @@
 #include "graph/node/canvas/canvassubgraphnode.h"
 #include "graph/node/canvas/canvasoutputnode.h"
 #include "graph/node/canvas/canvasrendermanager.h"
+#include "sequence/canvaslayergroup.h"
 
 namespace photon {
 
@@ -45,24 +46,28 @@ void CanvasPreviewPanel::refreshList()
 {
     auto *manager = CanvasRenderManager::instance();
 
-    QVector<CanvasOutputNode *> outputs;
+    QVector<CanvasPreviewTarget> targets;
     QStringList labels;
     if (manager) {
         for (auto *canvas : manager->canvases()) {
             for (auto *output : canvas->outputNodes()) {
-                outputs << output;
+                targets << CanvasPreviewTarget{output, nullptr};
                 labels << canvas->name() + " · " + output->name();
             }
         }
+        for (auto *group : manager->layerGroups()) {
+            targets << CanvasPreviewTarget{nullptr, group};
+            labels << group->name();
+        }
     }
 
-    if (outputs == m_items)
+    if (targets == m_items)
         return;
 
-    CanvasOutputNode *selected = (m_combo->currentIndex() >= 0 && m_combo->currentIndex() < m_items.size())
-                                     ? m_items.at(m_combo->currentIndex()) : nullptr;
+    const CanvasPreviewTarget selected = (m_combo->currentIndex() >= 0 && m_combo->currentIndex() < m_items.size())
+                                              ? m_items.at(m_combo->currentIndex()) : CanvasPreviewTarget{};
 
-    m_items = outputs;
+    m_items = targets;
     QSignalBlocker block(m_combo);
     m_combo->clear();
     int reselect = -1;
@@ -79,19 +84,29 @@ void CanvasPreviewPanel::refreshList()
 
 void CanvasPreviewPanel::selectionChanged(int index)
 {
-    CanvasOutputNode *node = (index >= 0 && index < m_items.size()) ? m_items.at(index) : nullptr;
+    const CanvasPreviewTarget target = (index >= 0 && index < m_items.size()) ? m_items.at(index) : CanvasPreviewTarget{};
     if (m_window)
-        m_window->setOutputNode(node);
+        m_window->setTarget(target);
 }
 
 void CanvasPreviewPanel::previewOutput(CanvasOutputNode *output)
 {
     refreshList();
-    const int idx = m_items.indexOf(output);
+    const int idx = m_items.indexOf(CanvasPreviewTarget{output, nullptr});
     if (idx >= 0)
-        m_combo->setCurrentIndex(idx);   // triggers selectionChanged -> setOutputNode
+        m_combo->setCurrentIndex(idx);   // triggers selectionChanged -> setTarget
     else if (m_window)
-        m_window->setOutputNode(output); // not listed yet; show it anyway
+        m_window->setTarget(CanvasPreviewTarget{output, nullptr}); // not listed yet; show it anyway
+}
+
+void CanvasPreviewPanel::previewLayerGroup(CanvasLayerGroup *group)
+{
+    refreshList();
+    const int idx = m_items.indexOf(CanvasPreviewTarget{nullptr, group});
+    if (idx >= 0)
+        m_combo->setCurrentIndex(idx);   // triggers selectionChanged -> setTarget
+    else if (m_window)
+        m_window->setTarget(CanvasPreviewTarget{nullptr, group}); // not listed yet; show it anyway
 }
 
 } // namespace photon

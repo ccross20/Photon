@@ -7,6 +7,7 @@
 #include "generator/pulseeffect.h"
 #include "generator/sawtootheffect.h"
 #include "generator/stepeffect.h"
+#include "generator/cuemarkereffect.h"
 #include "time/stuttereffect.h"
 #include "time/loopeffect.h"
 #include "modifier/smootheffect.h"
@@ -40,6 +41,7 @@ bool PluginEffects::initialize(const PluginContext &context)
     photonApp->plugins()->registerChannelEffect(PeakHoldEffect::info());
     photonApp->plugins()->registerChannelEffect(ChannelRemapEffect::info());
     photonApp->plugins()->registerChannelEffect(NoiseEffect::info());
+    photonApp->plugins()->registerChannelEffect(CueMarkerEffect::info());
 
     photonApp->plugins()->registerMaskEffect(TreeMaskEffect::info());
     photonApp->plugins()->registerMaskEffect(RandomMaskEffect::info());

@@ -29,6 +29,11 @@ public:
     // thread's own drainCommandQueue()/evaluate()/prepForEvaluation()/markClean(),
     // which iterate or mutate this same vector unsynchronized.
     mutable QMutex nodesMutex;
+
+    // Set by addNodeInternal()/removeNodeInternal() (under nodesMutex) instead of
+    // emitting interfaceChanged() directly - drainCommandQueue() emits it once
+    // after releasing the lock. See the comment there for why.
+    bool interfaceDirty = false;
 };
 
 }

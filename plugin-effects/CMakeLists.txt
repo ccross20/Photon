@@ -25,6 +25,8 @@ set(SOURCES
     generator/sawtootheffect.cpp
     generator/sineeffect.h
     generator/sineeffect.cpp
+    generator/cuemarkereffect.h
+    generator/cuemarkereffect.cpp
     mask/randommaskeffect.h
     mask/randommaskeffect.cpp
     mask/treemaskeffect.h

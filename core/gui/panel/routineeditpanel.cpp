@@ -35,6 +35,10 @@ RoutineEditPanel::RoutineEditPanel() : Panel("photon.routine"),m_impl(new Impl)
 
 RoutineEditPanel::~RoutineEditPanel()
 {
+    // Detach from the viewer first - Panel::~Panel() destroys m_impl->viewer
+    // (a QWidget child) after this body returns, and ~GraphWidget() dereferences
+    // whatever scene it still thinks it has.
+    m_impl->viewer->setScene(nullptr);
     delete m_impl->scene;
     delete m_impl;
 }
