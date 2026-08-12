@@ -24,7 +24,6 @@ public:
     QVector3D position;
     QVector3D rotation;
     QMatrix4x4 localMatrix;
-    QStringList tags;
     bool visible = true;
     SceneObject *facade;
     int index = -1;

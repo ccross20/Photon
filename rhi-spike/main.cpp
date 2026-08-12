@@ -54,13 +54,10 @@ namespace {
 class TestPixelSource : public photon::PixelSource
 {
 public:
-    TestPixelSource() { m_positions << QPointF(0.5, 0.5); }
-    const QVector<QPointF> &positions() const override { return m_positions; }
+    int pixelCount() const override { return 1; }
     QByteArray sourceUniqueId() const override { return "test"; }
     int dmxOffset() const override { return 0; }
     int universe() const override { return 1; }
-private:
-    QVector<QPointF> m_positions;
 };
 
 // Phase 5b: GPU gather — render a solid fill, sample it at a few UVs on the GPU,
@@ -115,7 +112,8 @@ bool runDmxTest(photon::RhiContext &ctx)
     QVector<QColor> gathered{ fill };
     pc.gatheredColors = &gathered;
     pc.gatheredIndex = 0;
-    src.process(pc, QTransform());
+    QVector<QPointF> positions{ QPointF(0.5, 0.5) };
+    src.process(pc, positions);
     const bool dmxOk = qAbs(int(dmx.value(0, 0)) - fill.red()) <= tol
                     && qAbs(int(dmx.value(0, 1)) - fill.green()) <= tol
                     && qAbs(int(dmx.value(0, 2)) - fill.blue()) <= tol;

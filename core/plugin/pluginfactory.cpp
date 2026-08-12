@@ -7,20 +7,14 @@
 #include "iplugin.h"
 #include "gui/panel/buspanel.h"
 #include "gui/panel/sequencepanel.h"
-#include "gui/panel/sequencecollectionpanel.h"
-#include "gui/panel/routinecollectionpanel.h"
-#include "gui/panel/rigpanel.h"
 #include "gui/panel/propertiespanel.h"
-#include "gui/panel/canvascollectionpanel.h"
+#include "gui/panel/projectpanel.h"
 #include "gui/panel/routineeditpanel.h"
 #include "gui/panel/dmxviewerpanel.h"
 #include "gui/panel/dmxpatchpanel.h"
 #include "gui/panel/canvasviewerpanel.h"
 #include "gui/panel/canvaspreviewpanel.h"
-#include "gui/panel/tagcollectionpanel.h"
-#include "gui/panel/pixellayoutcollectionpanel.h"
 #include "gui/panel/surfacepanel.h"
-#include "gui/panel/surfacecollectionpanel.h"
 #include "gui/panel/songlibrarypanel.h"
 
 #include "graph/bus/dmxgeneratematrixnode.h"
@@ -52,7 +46,6 @@
 #include "graph/node/fixture/allfixturesnode.h"
 #include "graph/node/fixture/selectfixturesnode.h"
 #include "graph/node/fixture/fixturegroupnode.h"
-#include "gui/panel/fixturegroupcollectionpanel.h"
 #include "graph/node/pixel/pixelgraph.h"
 #include "graph/node/canvas/canvassubgraphnode.h"
 #include "graph/node/canvas/canvasoutputnode.h"
@@ -99,6 +92,7 @@
 #include "graph/parameter/point2dparameter.h"
 #include "graph/parameter/fixturelistparameter.h"
 #include "graph/parameter/pixellistparameter.h"
+#include "graph/parameter/tagsparameter.h"
 #include "graph/parameter/rhitextureparameter.h"
 #include "graph/parameter/pixellayoutlistparameter.h"
 #include "graph/parameter/colorpaletteparameter.h"
@@ -203,23 +197,16 @@ void PluginFactory::init()
     m_impl->init();
 
     //registerPluginNode(StylesheetBolt::info());
+    registerPluginPanel("photon.project",[](){return new ProjectPanel;});
     registerPluginPanel("photon.bus",[](){return new BusPanel;});
     registerPluginPanel("photon.sequence",[](){return new SequencePanel;});
-    registerPluginPanel("photon.routine-collection",[](){return new RoutineCollectionPanel;});
-    registerPluginPanel("photon.sequence-collection",[](){return new SequenceCollectionPanel;});
-    registerPluginPanel("photon.surface-collection",[](){return new SurfaceCollectionPanel;});
     registerPluginPanel("photon.surface",[](){return new SurfacePanel;});
-    registerPluginPanel("photon.rig",[](){return new RigPanel;});
     registerPluginPanel("photon.properties",[](){return new PropertiesPanel;});
-    registerPluginPanel("photon.canvas-collection",[](){return new CanvasCollectionPanel;});
     registerPluginPanel("photon.routine",[](){return new RoutineEditPanel;});
     registerPluginPanel("photon.dmx-viewer",[](){return new DMXViewerPanel;});
     registerPluginPanel("photon.dmx-patch",[](){return new DMXPatchPanel;});
     registerPluginPanel("photon.canvas-viewer",[](){return new CanvasViewerPanel;});
     registerPluginPanel("photon.canvas-preview",[](){return new CanvasPreviewPanel;});
-    registerPluginPanel("photon.tag-collection",[](){return new TagCollectionPanel;});
-    registerPluginPanel("photon.fixture-group-collection",[](){return new FixtureGroupCollectionPanel;});
-    registerPluginPanel("photon.pixellayout-collection",[](){return new PixelLayoutCollectionPanel;});
     registerPluginPanel("photon.song-library",[](){return new SongLibraryPanel;});
 
     registerNode(FixtureWriterNode::info());
@@ -319,6 +306,7 @@ void PluginFactory::init()
     m_impl->nodeLibrary.registerParameter(PixelListParameter::ParameterId,[](){return new PixelListParameter();});
     m_impl->nodeLibrary.registerParameter(RhiTextureParameter::ParameterId,[](){return new RhiTextureParameter();});
     m_impl->nodeLibrary.registerParameter(PixelLayoutListParameter::ParameterId,[](){return new PixelLayoutListParameter();});
+    m_impl->nodeLibrary.registerParameter(TagsParameter::ParameterId,[](){return new TagsParameter();});
 
     //qDebug() << "Node Count:" << m_impl->nodeHash.size();
 }

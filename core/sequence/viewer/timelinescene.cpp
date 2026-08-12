@@ -10,7 +10,6 @@
 #include "timelinelayergroup.h"
 #include "photoncore.h"
 #include "project/project.h"
-#include "pixel/canvascollection.h"
 #include "pixel/canvas.h"
 #include "sequence/clip.h"
 

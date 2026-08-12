@@ -68,17 +68,10 @@ void GuiManager::Impl::createAppWindow()
     menubar->addMenu(fileMenu);
 
     QMenu *windowMenu = new QMenu("Window");
-    windowMenu->addAction("Canvas", [](){photonApp->gui()->createFloatingPanel("photon.canvas-collection");});
-    windowMenu->addAction("Pixel Layouts", [](){photonApp->gui()->createFloatingPanel("photon.pixellayout-collection");});
-    windowMenu->addAction("Rig", [](){photonApp->gui()->createFloatingPanel("photon.rig");});
+    windowMenu->addAction("Project", [](){photonApp->gui()->createFloatingPanel("photon.project");});
     windowMenu->addAction("DMX Patch", [](){photonApp->gui()->createFloatingPanel("photon.dmx-patch");});
     windowMenu->addAction("Properties", [](){photonApp->gui()->createFloatingPanel("photon.properties");});
-    windowMenu->addAction("Routine", [](){photonApp->gui()->createFloatingPanel("photon.routine-collection");});
-    windowMenu->addAction("Sequence", [](){photonApp->gui()->createFloatingPanel("photon.sequence-collection");});
-    windowMenu->addAction("Surfaces", [](){photonApp->gui()->createFloatingPanel("photon.surface-collection");});
     windowMenu->addAction("Canvas Preview", [](){photonApp->gui()->createFloatingPanel("photon.canvas-preview");});
-    windowMenu->addAction("Tags", [](){photonApp->gui()->createFloatingPanel("photon.tag-collection");});
-    windowMenu->addAction("Fixture Groups", [](){photonApp->gui()->createFloatingPanel("photon.fixture-group-collection");});
     windowMenu->addAction("Song Library", [](){photonApp->gui()->createFloatingPanel("photon.song-library");});
     menubar->addMenu(windowMenu);
 
@@ -120,9 +113,7 @@ void GuiManager::Impl::createAppWindow()
 
 
 /*
-    m_ext->createDockedPanel("photon.routine-collection", RightDockWidgetArea);
-    m_ext->createDockedPanel("photon.sequence-collection", RightDockWidgetArea);
-    m_ext->createDockedPanel("photon.rig", RightDockWidgetArea);
+    m_ext->createDockedPanel("photon.project", RightDockWidgetArea);
     */
 
 

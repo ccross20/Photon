@@ -223,13 +223,12 @@ int PixelSource::universe() const
 
 
 
-void PixelSource::collectSampleUVs(QVector<QPointF> &t_out, const QTransform &t_transform) const
+void PixelSource::collectSampleUVs(QVector<QPointF> &t_out, const QVector<QPointF> &t_positions) const
 {
-    for(const auto &pos : positions())
-        t_out << t_transform.map(pos);
+    t_out << t_positions;
 }
 
-void PixelSource::process(ProcessContext &t_context, const QTransform &t_transform, double t_blend) const
+void PixelSource::process(ProcessContext &t_context, const QVector<QPointF> &t_positions, double t_blend) const
 {
     int u = universe()-1;
     int channel = dmxOffset();
@@ -237,7 +236,7 @@ void PixelSource::process(ProcessContext &t_context, const QTransform &t_transfo
     if(!t_context.gatheredColors && !t_context.image)
         return;
 
-    for(auto it = positions().cbegin(); it != positions().cend(); it++)
+    for(auto it = t_positions.cbegin(); it != t_positions.cend(); it++)
     {
         QColor qc;
         if(t_context.gatheredColors)
@@ -247,7 +246,7 @@ void PixelSource::process(ProcessContext &t_context, const QTransform &t_transfo
         }
         else
         {
-            auto ptF = t_transform.map((*it));
+            auto ptF = (*it);
             ptF.setX(ptF.x() * t_context.image->width());
             ptF.setY(ptF.y() * t_context.image->height());
 

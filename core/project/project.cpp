@@ -8,8 +8,6 @@
 #include "fixture/fixture.h"
 #include "photoncore.h"
 #include "plugin/pluginfactory.h"
-#include "pixel/canvascollection.h"
-#include "pixel/canvas.h"
 #include "sequence/sequencecollection.h"
 #include "routine/routinecollection.h"
 #include "routine/routine.h"
@@ -25,12 +23,10 @@
 #include "graph/bus/identifyfixturenode.h"
 #include "scene/sceneobject.h"
 #include "scene/scenemanager.h"
-#include "state/statecollection.h"
-#include "state/state.h"
 #include "surface/surfacecollection.h"
 #include "surface/surface.h"
-#include "tag/tagcollection.h"
 #include "fixture/fixturegroup.h"
+#include "scene/sceneiterator.h"
 
 namespace photon {
 
@@ -39,16 +35,23 @@ class Project::Impl
 public:
     Impl();
     ~Impl();
-    CanvasCollection canvases;
+
+    // Give any SurfaceNode that arrived without a surface reference one of its
+    // own. Covers nodes dragged in from the palette; deserialized nodes already
+    // carry an id, and Graph::readFromJson doesn't emit nodeWasAdded anyway.
+    void adoptSurfaceNode(keira::Node *);
+    void watchBus();
+
     PixelLayoutCollection pixelLayouts;
     FixtureCollection fixtures;
     RoutineCollection routines;
     SurfaceCollection surfaces;
-    TagCollection tags;
     FixtureGroupCollection groups;
-    StateCollection states;
     BusGraph *bus;
     SceneManager *sceneManager;
+    QList<ProjectResource*> selectedResources;
+    // The SceneObject-only slice of selectedResources, kept in step by
+    // setSelectedResources().
     QList<SceneObject*> selectedSceneObjects;
     QWidget *propertiesWidget = nullptr;
 };
@@ -70,6 +73,11 @@ Project::Impl::Impl()
     SurfaceNode *sequenceNode = new SurfaceNode;
     sequenceNode->createParameters();
     sequenceNode->setPosition(QPointF(600,0));
+
+    // The project owns surfaces; the node only references one by id.
+    Surface *defaultSurface = new Surface("Surface");
+    surfaces.addSurface(defaultSurface);
+    sequenceNode->setSurfaceId(defaultSurface->uniqueId());
 
     // Last in the chain before the output node — overrides one fixture's
     // dimmer/shutter/color when the DMX Patch panel's Identify toggle is on.
@@ -96,18 +104,37 @@ Project::Impl::Impl()
     bus->connectParameters(sequenceNode->findParameter(SurfaceNode::OutputDMX), identifyNode->findParameter(IdentifyFixtureNode::InputDMX));
     bus->connectParameters(identifyNode->findParameter(IdentifyFixtureNode::OutputDMX), writerNode->findParameter(DMXWriterNode::InputDMX));
 
-    State *state = new State();
-    state->setName("Default");
-    state->addDefaultCapabilities();
-
-    states.addState(state);
     bus->drainCommandQueue();
 
+    watchBus();
 }
 
 Project::Impl::~Impl()
 {
     delete bus;
+}
+
+void Project::Impl::adoptSurfaceNode(keira::Node *t_node)
+{
+    auto *surfaceNode = dynamic_cast<SurfaceNode*>(t_node);
+    if(!surfaceNode || !surfaceNode->surfaceId().isEmpty())
+        return;
+
+    Surface *surface = new Surface("Surface");
+    surfaces.addSurface(surface);
+    surfaceNode->setSurfaceId(surface->uniqueId());
+}
+
+void Project::Impl::watchBus()
+{
+    // nodeWasAdded can fire on the eval thread (addNodeInternal runs from
+    // drainCommandQueue). Passing `bus` as the receiver context makes this a
+    // queued connection in that case, so the surface is created on the GUI
+    // thread where the collection's signals are consumed. The node resolves its
+    // id lazily, so it just sees no surface until then.
+    QObject::connect(bus, &keira::Graph::nodeWasAdded, bus, [this](keira::Node *node){
+        adoptSurfaceNode(node);
+    });
 }
 
 Project::Project(QObject *parent)
@@ -132,6 +159,49 @@ SceneObject *Project::sceneRoot() const
     return m_impl->sceneManager->rootObject();
 }
 
+ProjectResource *Project::selectedResource() const
+{
+    return m_impl->selectedResources.isEmpty() ? nullptr : m_impl->selectedResources.last();
+}
+
+void Project::setSelectedResource(ProjectResource *t_resource)
+{
+    setSelectedResources(t_resource ? QList<ProjectResource*>{t_resource} : QList<ProjectResource*>{});
+}
+
+QList<ProjectResource*> Project::selectedResources() const
+{
+    return m_impl->selectedResources;
+}
+
+void Project::setSelectedResources(const QList<ProjectResource*> &t_resources)
+{
+    if(t_resources == m_impl->selectedResources)
+        return;
+
+    m_impl->selectedResources = t_resources;
+
+    // Scene-object consumers see only their slice of the selection. Selecting a
+    // routine therefore clears the scene selection rather than leaving the
+    // visualizer highlighting something no longer selected.
+    QList<SceneObject*> sceneObjects;
+    for(auto *resource : t_resources)
+        if(auto *sceneObject = dynamic_cast<SceneObject*>(resource))
+            sceneObjects.append(sceneObject);
+
+    const bool sceneSelectionChanged = sceneObjects != m_impl->selectedSceneObjects;
+    m_impl->selectedSceneObjects = sceneObjects;
+
+    emit selectedResourcesChanged(t_resources);
+    emit selectedResourceChanged(t_resources.isEmpty() ? nullptr : t_resources.last());
+
+    if(sceneSelectionChanged)
+    {
+        emit selectedSceneObjectsChanged(sceneObjects);
+        emit selectedSceneObjectChanged(sceneObjects.isEmpty() ? nullptr : sceneObjects.last());
+    }
+}
+
 SceneObject *Project::selectedSceneObject() const
 {
     return m_impl->selectedSceneObjects.isEmpty() ? nullptr : m_impl->selectedSceneObjects.last();
@@ -149,11 +219,12 @@ QList<SceneObject*> Project::selectedSceneObjects() const
 
 void Project::setSelectedSceneObjects(const QList<SceneObject*> &obj)
 {
-    if (obj == m_impl->selectedSceneObjects)
-        return;
-    m_impl->selectedSceneObjects = obj;
-    emit selectedSceneObjectsChanged(obj);
-    emit selectedSceneObjectChanged(obj.isEmpty() ? nullptr : obj.last());
+    QList<ProjectResource*> resources;
+    resources.reserve(obj.size());
+    for(auto *sceneObject : obj)
+        resources.append(sceneObject);
+
+    setSelectedResources(resources);
 }
 
 QWidget *Project::propertiesWidget() const
@@ -189,24 +260,46 @@ FixtureCollection *Project::fixtures() const
     return &m_impl->fixtures;
 }
 
-StateCollection *Project::states() const
+QStringList Project::allTags() const
 {
-    return &m_impl->states;
-}
+    QSet<QString> tags;
 
-TagCollection *Project::tags() const
-{
-    return &m_impl->tags;
+    for(auto *object : SceneIterator::ToList(sceneRoot()))
+        for(const auto &tag : object->resourceTags())
+            tags.insert(tag);
+
+    for(auto *group : m_impl->groups.groups())
+        for(const auto &tag : group->resourceTags())
+            tags.insert(tag);
+
+    for(auto *routine : m_impl->routines.routines())
+        for(const auto &tag : routine->resourceTags())
+            tags.insert(tag);
+
+    for(auto *surface : m_impl->surfaces.surfaces())
+        for(const auto &tag : surface->resourceTags())
+            tags.insert(tag);
+
+    for(auto *layout : m_impl->pixelLayouts.layouts())
+        for(const auto &tag : layout->resourceTags())
+            tags.insert(tag);
+
+    // Sequences are owned by PhotonCore, not the project - guarded the same
+    // way ProjectModel guards it, since a bare Project (as in tests) has no
+    // running application.
+    if(photonApp && photonApp->sequences())
+        for(auto *sequence : photonApp->sequences()->sequences())
+            for(const auto &tag : sequence->resourceTags())
+                tags.insert(tag);
+
+    QStringList sorted(tags.constBegin(), tags.constEnd());
+    sorted.sort();
+    return sorted;
 }
 
 FixtureGroupCollection *Project::groups() const
 {
     return &m_impl->groups;
-}
-
-CanvasCollection *Project::canvases() const
-{
-    return &m_impl->canvases;
 }
 
 SurfaceCollection *Project::surfaces() const
@@ -314,31 +407,14 @@ void Project::readFromJson(const QJsonObject &json)
     LoadContext context;
     context.project = this;
 
-    if(json.contains("tags"))
-    {
-        QJsonArray tagArray = json.value("tags").toArray();
-        QStringList tags;
-        for(const auto &tag : tagArray)
-            tags << tag.toString();
-        m_impl->tags.replaceTags(tags);
-    }
+    // The constructor seeds a default surface so a brand-new project is
+    // usable. Loading into that same instance would leave it orphaned
+    // alongside the saved ones, so drop it first.
+    m_impl->surfaces.clear();
 
     if(json.contains("fixtureGroups"))
         m_impl->groups.readFromJson(json.value("fixtureGroups").toObject());
 
-    if(json.contains("states"))
-    {
-
-        QJsonArray stateArray = json.value("states").toArray();
-        for(const auto &state : stateArray)
-        {
-            const QJsonObject &stateObj = state.toObject();
-
-            State *s = new State;
-            s->readFromJson(stateObj, context);
-            m_impl->states.addState(s);
-        }
-    }
     //m_impl->sceneManager = new SceneManager;
     if(json.contains("sceneManager"))
     {
@@ -374,20 +450,8 @@ void Project::readFromJson(const QJsonObject &json)
         }
     }
 
-    if(json.contains("canvases"))
-    {
-        QJsonArray canvasArray = json.value("canvases").toArray();
-        for(const auto &canvas : canvasArray)
-        {
-            const QJsonObject &canvasObj = canvas.toObject();
-
-            Canvas *c = new Canvas;
-            c->readFromJson(canvasObj, context);
-            m_impl->canvases.addCanvas(c);
-        }
-    }
-
-    /*
+    // Must precede the bus graph: SurfaceNodes resolve their surface by id
+    // against this collection.
     if(json.contains("surfaces"))
     {
         QJsonArray surfaceArray = json.value("surfaces").toArray();
@@ -400,9 +464,10 @@ void Project::readFromJson(const QJsonObject &json)
             m_impl->surfaces.addSurface(surface);
         }
     }
-*/
 
+    delete m_impl->bus;
     m_impl->bus = new BusGraph;
+    m_impl->watchBus();
     if(json.contains("bus"))
     {
         QJsonObject busObj = json.value("bus").toObject();
@@ -452,31 +517,6 @@ void Project::writeToJson(QJsonObject &json) const
     }
     json.insert("routines", routineArray);
 
-    QJsonArray canvasArray;
-    for(auto canvas : m_impl->canvases.canvases())
-    {
-        QJsonObject canvasObj;
-        canvas->writeToJson(canvasObj);
-        canvasArray.append(canvasObj);
-    }
-    json.insert("canvases", canvasArray);
-
-    QJsonArray stateArray;
-    for(auto state : m_impl->states.states())
-    {
-        QJsonObject stateObj;
-        state->writeToJson(stateObj);
-        canvasArray.append(stateObj);
-    }
-    json.insert("states", stateArray);
-
-    QJsonArray tagArray;
-    for(const auto &tag : m_impl->tags.tags())
-    {
-        tagArray.append(tag);
-    }
-    json.insert("tags", tagArray);
-
     QJsonObject groupsObj;
     m_impl->groups.writeToJson(groupsObj);
     json.insert("fixtureGroups", groupsObj);
@@ -494,7 +534,6 @@ void Project::writeToJson(QJsonObject &json) const
     m_impl->sceneManager->writeToJson(sceneObj);
     json.insert("sceneManager", sceneObj);
 
-    /*
     QJsonArray surfacesArray;
     for(auto surface : m_impl->surfaces.surfaces())
     {
@@ -503,8 +542,6 @@ void Project::writeToJson(QJsonObject &json) const
         surfacesArray.append(surfaceObj);
     }
     json.insert("surfaces", surfacesArray);
-*/
-
 }
 
 } // namespace photon

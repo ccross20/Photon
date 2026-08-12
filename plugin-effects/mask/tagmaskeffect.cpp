@@ -2,14 +2,19 @@
 #include "tagmaskeffect.h"
 #include "util/utils.h"
 #include "fixture/fixture.h"
+#include "gui/tag/tageditorwidget.h"
+#include "photoncore.h"
+#include "project/project.h"
 
 namespace photon {
 
 
 TagMaskEffectEditor::TagMaskEffectEditor(TagMaskEffect *t_effect):QWidget(),m_effect(t_effect)
 {
-    m_tagEdit = new QLineEdit;
-    m_tagEdit->setText(m_effect->tags().join(" "));
+    m_tagEditor = new TagEditorWidget(
+        [this](){ return m_effect->tags(); },
+        [this](const QStringList &tags){ m_effect->setTags(tags); },
+        [](){ return photonApp->project() ? photonApp->project()->allTags() : QStringList(); });
 
     m_relatedCheck = new QCheckBox;
     m_relatedCheck->setChecked(m_effect->checkRelated());
@@ -18,20 +23,14 @@ TagMaskEffectEditor::TagMaskEffectEditor(TagMaskEffect *t_effect):QWidget(),m_ef
     m_allCheck->setChecked(m_effect->requireAll());
 
     QFormLayout *form = new QFormLayout;
-    form->addRow("Tags", m_tagEdit);
+    form->addRow("Tags", m_tagEditor);
     form->addRow("Related", m_relatedCheck);
     form->addRow("Require All", m_allCheck);
 
     setLayout(form);
 
-    connect(m_tagEdit, &QLineEdit::textChanged, this, &TagMaskEffectEditor::tagsUpdated);
     connect(m_relatedCheck, &QCheckBox::toggled, this, &TagMaskEffectEditor::relatedToggle);
     connect(m_allCheck, &QCheckBox::toggled, this, &TagMaskEffectEditor::allToggle);
-}
-
-void TagMaskEffectEditor::tagsUpdated(QString t_text)
-{
-    m_effect->setTags(t_text.toLower().split(" "));
 }
 
 void TagMaskEffectEditor::relatedToggle(bool t_value)

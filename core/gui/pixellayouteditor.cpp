@@ -5,12 +5,19 @@
 #include <QMenu>
 #include <QPainter>
 #include <QResizeEvent>
+#include <QDragEnterEvent>
+#include <QDragMoveEvent>
+#include <QDropEvent>
+#include <QMimeData>
 #include "pixellayouteditor_p.h"
+#include "pixelarrangedialog.h"
 #include "pixel/pixelsourcelayout.h"
 #include "pixel/pixellayout.h"
 #include "pixel/pixelsource.h"
+#include "pixel/pixelarrange.h"
 #include "scene/sceneobject.h"
 #include "scene/sceneiterator.h"
+#include "scene/scenemodel.h"
 #include "photoncore.h"
 #include "project/project.h"
 #include "fixture/fixture.h"
@@ -19,76 +26,6 @@
 #include "pixel/fixturepixelsource.h"
 
 namespace photon {
-
-PixelLayoutPropertyEditor::PixelLayoutPropertyEditor()
-{
-    QFormLayout *formLayout = new QFormLayout;
-
-    m_positionEdit = new PointEdit;
-    m_scaleEdit = new PointEdit;
-    m_rotationSpin = new QDoubleSpinBox;
-    m_rotationSpin->setMinimum(-10000);
-    m_rotationSpin->setMaximum(10000);
-
-    m_positionEdit->setEnabled(false);
-    m_scaleEdit->setEnabled(false);
-    m_rotationSpin->setEnabled(false);
-
-    formLayout->addRow("Position",m_positionEdit);
-    formLayout->addRow("Scale",m_scaleEdit);
-    formLayout->addRow("Rotation",m_rotationSpin);
-
-    setLayout(formLayout);
-
-    connect(m_positionEdit, &PointEdit::valueChanged,this, &PixelLayoutPropertyEditor::positionUpdated);
-    connect(m_scaleEdit, &PointEdit::valueChanged,this, &PixelLayoutPropertyEditor::scaleUpdated);
-    connect(m_rotationSpin, &QDoubleSpinBox::valueChanged,this, &PixelLayoutPropertyEditor::rotationUpdated);
-}
-
-void PixelLayoutPropertyEditor::selectLayout(PixelSourceLayout* t_layout)
-{
-    m_layout = t_layout;
-
-    m_positionEdit->blockSignals(true);
-    m_scaleEdit->blockSignals(true);
-    m_rotationSpin->blockSignals(true);
-
-    if(m_layout)
-    {
-        m_positionEdit->setEnabled(true);
-        m_scaleEdit->setEnabled(true);
-        m_rotationSpin->setEnabled(true);
-        m_positionEdit->setValue(m_layout->position());
-        m_scaleEdit->setValue(m_layout->scale());
-        m_rotationSpin->setValue(m_layout->rotation());
-    }
-    else
-    {
-        m_positionEdit->setEnabled(false);
-        m_scaleEdit->setEnabled(false);
-        m_rotationSpin->setEnabled(false);
-    }
-
-
-    m_positionEdit->blockSignals(false);
-    m_scaleEdit->blockSignals(false);
-    m_rotationSpin->blockSignals(false);
-}
-
-void PixelLayoutPropertyEditor::positionUpdated(const QPointF t_value)
-{
-    m_layout->setPosition(t_value);
-}
-
-void PixelLayoutPropertyEditor::scaleUpdated(const QPointF t_value)
-{
-    m_layout->setScale(t_value);
-}
-
-void PixelLayoutPropertyEditor::rotationUpdated(double t_value)
-{
-    m_layout->setRotation(t_value);
-}
 
 PixelLayoutScene::PixelLayoutScene(PixelLayout *t_layout) : QGraphicsScene(),m_layout(t_layout)
 {
@@ -101,37 +38,117 @@ PixelLayoutScene::PixelLayoutScene(PixelLayout *t_layout) : QGraphicsScene(),m_l
     connect(m_layout, &PixelLayout::sourceWillBeRemoved, this, &PixelLayoutScene::sourceRemoved);
 }
 
-PixelSourceItem *PixelLayoutScene::findItemForSource(PixelSourceLayout *t_source) const
-{
-    for(auto item : m_sourceItems)
-    {
-        if(item->sourceLayout() == t_source)
-        {
-            return item;
-        }
-    }
-    return nullptr;
-}
-
 void PixelLayoutScene::sourceAdded(photon::PixelSourceLayout *t_source)
 {
-    auto item = new PixelSourceItem(t_source);
+    QVector<PixelPointItem*> items;
+    int count = t_source->pixelCount();
+    for(int i = 0; i < count; ++i)
+    {
+        auto *item = new PixelPointItem(t_source, i);
+        addItem(item);
+        item->reposition();
+        item->setInteractive(t_source == m_activeSourceLayout);
+        items << item;
+    }
+    m_pointItems.insert(t_source, items);
 
-    m_sourceItems << item;
-    addItem(item);
+    // Reposition this source's points whenever a pixel position is written
+    // programmatically (a drag repositions its own item directly via
+    // itemChange(), but an Arrange command writes the model without ever
+    // touching the item, so it needs this to actually redraw).
+    connect(t_source, &PixelSourceLayout::pixelPositionsChanged, this, [this, t_source](){ repositionSource(t_source); });
 
-    connect(t_source, &PixelSourceLayout::transformUpdated, this, &PixelLayoutScene::sourceTransformUpdated);
+    // Live pixel-count changes (e.g. PixelStrip::setPixelCount()) only reach
+    // us via the underlying SceneObject's generic metadataChanged signal -
+    // FixturePixelSource isn't a SceneObject and its count is fixed at
+    // construction, so it never needs this. t_source is used as the
+    // connection context (not just captured) so this auto-disconnects if
+    // t_source is destroyed before the scene object is.
+    if(auto *sceneObj = dynamic_cast<SceneObject*>(t_source->source()))
+        connect(sceneObj, &SceneObject::metadataChanged, t_source, [this, t_source](){ syncPointCount(t_source); });
 }
 
 void PixelLayoutScene::sourceRemoved(photon::PixelSourceLayout *t_source)
 {
-    auto item = findItemForSource(t_source);
-    if(item)
+    auto it = m_pointItems.find(t_source);
+    if(it == m_pointItems.end())
+        return;
+
+    for(auto *item : it.value())
+        delete item;
+    m_pointItems.erase(it);
+
+    if(m_activeSourceLayout == t_source)
+        m_activeSourceLayout = nullptr;
+}
+
+void PixelLayoutScene::syncPointCount(PixelSourceLayout *t_source)
+{
+    auto it = m_pointItems.find(t_source);
+    if(it == m_pointItems.end())
+        return;
+
+    int count = t_source->pixelCount();
+    auto &items = it.value();
+
+    while(items.size() > count)
+        delete items.takeLast();
+
+    while(items.size() < count)
     {
-        m_sourceItems.removeOne(item);
-        removeItem(item);
-        connect(t_source, &PixelSourceLayout::transformUpdated, this, &PixelLayoutScene::sourceTransformUpdated);
+        auto *item = new PixelPointItem(t_source, items.size());
+        addItem(item);
+        item->reposition();
+        item->setInteractive(t_source == m_activeSourceLayout);
+        items << item;
     }
+}
+
+void PixelLayoutScene::repositionSource(PixelSourceLayout *t_source)
+{
+    auto it = m_pointItems.find(t_source);
+    if(it == m_pointItems.end())
+        return;
+
+    for(auto *item : it.value())
+        item->reposition();
+}
+
+void PixelLayoutScene::selectSource(PixelSourceLayout *t_source)
+{
+    if(m_activeSourceLayout == t_source)
+        return;
+
+    auto oldIt = m_pointItems.find(m_activeSourceLayout);
+    if(oldIt != m_pointItems.end())
+        for(auto *item : oldIt.value())
+            item->setInteractive(false);
+
+    m_activeSourceLayout = t_source;
+
+    auto newIt = m_pointItems.find(m_activeSourceLayout);
+    if(newIt != m_pointItems.end())
+        for(auto *item : newIt.value())
+            item->setInteractive(true);
+
+    update();
+}
+
+QVector<QPair<PixelSourceLayout*,int>> PixelLayoutScene::selectedPixels() const
+{
+    QVector<QPair<PixelSourceLayout*,int>> result;
+    for(auto *sourceLayout : m_layout->sourceLayouts())
+    {
+        auto it = m_pointItems.find(sourceLayout);
+        if(it == m_pointItems.end())
+            continue;
+
+        const auto &items = it.value();
+        for(int i = 0; i < items.size(); ++i)
+            if(items[i]->isSelected())
+                result << qMakePair(sourceLayout, i);
+    }
+    return result;
 }
 
 void PixelLayoutScene::setScale(QPointF t_scale)
@@ -139,28 +156,22 @@ void PixelLayoutScene::setScale(QPointF t_scale)
     m_scale = t_scale;
     m_inverseScale = QPointF{1.0/m_scale.x(), 1.0/m_scale.y()};
 
-    for(auto item : m_sourceItems)
-        item->setScale(m_scale);
-}
-
-void PixelLayoutScene::sourceTransformUpdated()
-{
-    for(auto src : m_sourceItems)
-    {
-        src->transformUpdated();
-    }
+    for(auto &items : m_pointItems)
+        for(auto *item : items)
+            item->reposition();
 }
 
 void PixelLayoutScene::drawBackground(QPainter *painter, const QRectF &rect)
 {
     QGraphicsScene::drawBackground(painter, rect);
-    painter->fillRect(rect, Qt::red);
+    painter->fillRect(rect, Qt::gray);
 }
 
 PixelLayoutView::PixelLayoutView(): QGraphicsView()
 {
     setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    setDragMode(QGraphicsView::RubberBandDrag);
 }
 void PixelLayoutView::paintEvent(QPaintEvent *event)
 {
@@ -188,46 +199,120 @@ void PixelLayoutView::resizeEvent(QResizeEvent *t_event)
 }
 
 
-PixelSourceItem::PixelSourceItem(PixelSourceLayout *t_sourceLayout) : QGraphicsItem(),m_layout(t_sourceLayout)
+PixelPointItem::PixelPointItem(PixelSourceLayout *t_sourceLayout, int t_index)
+    : QGraphicsItem(), m_sourceLayout(t_sourceLayout), m_index(t_index)
 {
-    transformUpdated();
+    // Selectable/movable is granted per-source by setInteractive(), driven by
+    // PixelLayoutScene::selectSource() - only the active source's points can
+    // be picked at all, so a rubber-band drag across the whole canvas can
+    // never touch another fixture's points.
+    setFlags(ItemSendsScenePositionChanges);
 }
 
-void PixelSourceItem::setScale(QPointF t_scale)
+void PixelPointItem::setInteractive(bool t_interactive)
 {
-    m_scale = t_scale;
-    //m_layout->setScale(t_scale);
-    m_inverseScale = QPointF{1.0/m_scale.x(), 1.0/m_scale.y()};
-    transformUpdated();
+    setFlag(ItemIsSelectable, t_interactive);
+    setFlag(ItemIsMovable, t_interactive);
+    if(!t_interactive)
+        setSelected(false);
 }
 
-void PixelSourceItem::transformUpdated()
+void PixelPointItem::reposition()
 {
-    prepareGeometryChange();
-    setPos(m_layout->position().x() * m_scale.x(), m_layout->position().y() * m_scale.y());
-    setRotation(m_layout->rotation());
+    auto *layoutScene = static_cast<PixelLayoutScene*>(scene());
+    QPointF sceneScale = layoutScene ? layoutScene->scale() : QPointF{1,1};
 
+    QPointF pos = m_sourceLayout->pixelPosition(m_index);
+
+    m_repositioning = true;
+    setPos(pos.x() * sceneScale.x(), pos.y() * sceneScale.y());
+    m_repositioning = false;
 }
 
-QRectF PixelSourceItem::boundingRect() const
+QRectF PixelPointItem::boundingRect() const
 {
-    QTransform t;
-    t.scale(m_scale.x(), m_scale.y());
-    return t.mapRect(QRectF{m_layout->localBounds()}).adjusted(-3,-3 ,3 ,3);
+    return QRectF(-4, -4, 8, 8);
 }
 
-void PixelSourceItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget)
+void PixelPointItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWidget *)
 {
     painter->setRenderHint(QPainter::Antialiasing);
-    painter->fillRect(boundingRect(), Qt::cyan);
 
-    QPointF s = m_layout->scale();
+    auto *layoutScene = static_cast<PixelLayoutScene*>(scene());
+    bool active = layoutScene && layoutScene->activeSourceLayout() == m_sourceLayout;
 
-    for(auto pt : m_layout->source()->positions())
+    painter->setPen(isSelected() ? QPen(Qt::yellow, 1) : Qt::NoPen);
+    painter->setBrush(active ? Qt::cyan : Qt::darkGray);
+    painter->drawRect(boundingRect());
+}
+
+QVariant PixelPointItem::itemChange(GraphicsItemChange t_change, const QVariant &t_value)
+{
+    // Live visual clamp while dragging, so the point never visibly leaves
+    // the edit area mid-drag (PixelSourceLayout::setPixelPosition() below
+    // clamps too - that's the authoritative enforcement for every write
+    // path, including programmatic ones this never sees - but doing it here
+    // as well keeps the drag itself from looking like it detaches from the
+    // cursor at the boundary).
+    if(t_change == ItemPositionChange && scene() && !m_repositioning)
     {
-        //qDebug() << pt;
-        painter->fillRect(QRectF{QPointF{(pt.x()* m_scale.x() * s.x()) - 2.0,(pt.y() * m_scale.y() * s.y())-2.0}, QSizeF{4,4}}, Qt::black);
+        auto *layoutScene = static_cast<PixelLayoutScene*>(scene());
+        QRectF bounds = PixelSourceLayout::pixelBounds();
+        QRectF sceneBounds(bounds.x() * layoutScene->scale().x(), bounds.y() * layoutScene->scale().y(),
+                            bounds.width() * layoutScene->scale().x(), bounds.height() * layoutScene->scale().y());
+
+        QPointF newPos = t_value.toPointF();
+        if(!sceneBounds.contains(newPos))
+        {
+            newPos.setX(qBound(sceneBounds.left(), newPos.x(), sceneBounds.right()));
+            newPos.setY(qBound(sceneBounds.top(), newPos.y(), sceneBounds.bottom()));
+            return newPos;
+        }
     }
+
+    if(t_change == ItemPositionHasChanged && !m_repositioning)
+    {
+        auto *layoutScene = static_cast<PixelLayoutScene*>(scene());
+        QPointF sceneScale = layoutScene ? layoutScene->scale() : QPointF{1,1};
+
+        QPointF scenePos = t_value.toPointF();
+        QPointF pos(scenePos.x() / sceneScale.x(), scenePos.y() / sceneScale.y());
+
+        m_sourceLayout->setPixelPosition(m_index, pos);
+    }
+    return QGraphicsItem::itemChange(t_change, t_value);
+}
+
+PixelSourceListWidget::PixelSourceListWidget(QWidget *t_parent) : QListWidget(t_parent)
+{
+    setAcceptDrops(true);
+}
+
+void PixelSourceListWidget::dragEnterEvent(QDragEnterEvent *t_event)
+{
+    if(t_event->mimeData()->hasFormat(SceneObject::SceneObjectMime))
+        t_event->acceptProposedAction();
+    else
+        QListWidget::dragEnterEvent(t_event);
+}
+
+void PixelSourceListWidget::dragMoveEvent(QDragMoveEvent *t_event)
+{
+    if(t_event->mimeData()->hasFormat(SceneObject::SceneObjectMime))
+        t_event->acceptProposedAction();
+    else
+        QListWidget::dragMoveEvent(t_event);
+}
+
+void PixelSourceListWidget::dropEvent(QDropEvent *t_event)
+{
+    if(t_event->mimeData()->hasFormat(SceneObject::SceneObjectMime))
+    {
+        emit sceneObjectsDropped(decodeSceneObjectMime(t_event->mimeData()));
+        t_event->acceptProposedAction();
+    }
+    else
+        QListWidget::dropEvent(t_event);
 }
 
 PixelLayoutEditorSidePanel::PixelLayoutEditorSidePanel(PixelLayout *t_layout) : QWidget(),pixelLayout(t_layout)
@@ -242,13 +327,20 @@ PixelLayoutEditorSidePanel::PixelLayoutEditorSidePanel(PixelLayout *t_layout) : 
     scene->setSceneRect(QRect(0,0,1,1));
 
     addButton = new QPushButton("Add");
-    layoutList = new QListWidget;
-    propertyEditor = new PixelLayoutPropertyEditor;
+    removeButton = new QPushButton("Remove");
+    removeButton->setEnabled(false);
+    arrangeButton = new QPushButton("Arrange");
+    arrangeButton->setEnabled(false);
+    layoutList = new PixelSourceListWidget;
+
+    QHBoxLayout *buttonLayout = new QHBoxLayout;
+    buttonLayout->addWidget(addButton);
+    buttonLayout->addWidget(removeButton);
+    buttonLayout->addWidget(arrangeButton);
 
     QVBoxLayout *vLayout = new QVBoxLayout;
-    vLayout->addWidget(addButton);
+    vLayout->addLayout(buttonLayout);
     vLayout->addWidget(layoutList);
-    vLayout->addWidget(propertyEditor);
 
     QHBoxLayout *hLayout = new QHBoxLayout;
     hLayout->addWidget(view);
@@ -259,6 +351,15 @@ PixelLayoutEditorSidePanel::PixelLayoutEditorSidePanel(PixelLayout *t_layout) : 
 
     connect(layoutList, &QListWidget::currentRowChanged, this, &PixelLayoutEditorSidePanel::selectedRow);
     connect(addButton, &QPushButton::clicked, this, &PixelLayoutEditorSidePanel::addClicked);
+    connect(removeButton, &QPushButton::clicked, this, &PixelLayoutEditorSidePanel::removeClicked);
+    connect(arrangeButton, &QPushButton::clicked, this, &PixelLayoutEditorSidePanel::arrangeClicked);
+    connect(layoutList, &PixelSourceListWidget::sceneObjectsDropped, this, &PixelLayoutEditorSidePanel::sceneObjectsDropped);
+    // Individual pixels are selected directly in the view (rubber-band or
+    // click), independent of which fixture/strip row is current - the
+    // Arrange button only makes sense once at least one is selected.
+    connect(scene, &QGraphicsScene::selectionChanged, this, [this](){
+        arrangeButton->setEnabled(!scene->selectedItems().isEmpty());
+    });
 
     auto sources = pixelLayout->sources();
     for(auto src : sources)
@@ -277,11 +378,271 @@ PixelLayoutEditorSidePanel::PixelLayoutEditorSidePanel(PixelLayout *t_layout) : 
 
 void PixelLayoutEditorSidePanel::selectedRow(int t_row)
 {
-    if(t_row < pixelLayout->sourceLayouts().length())
-        propertyEditor->selectLayout(pixelLayout->sourceLayouts()[t_row]);
-    else
-        propertyEditor->selectLayout(nullptr);
+    bool hasSelection = t_row >= 0 && t_row < pixelLayout->sourceLayouts().length();
+    removeButton->setEnabled(hasSelection);
+
+    auto selected = hasSelection ? pixelLayout->sourceLayouts()[t_row] : nullptr;
+    scene->selectSource(selected);
 }
+
+void PixelLayoutEditorSidePanel::removeClicked()
+{
+    int row = layoutList->currentRow();
+    if(row < 0 || row >= pixelLayout->sourceLayouts().length())
+        return;
+
+    auto sourceLayout = pixelLayout->sourceLayouts()[row];
+    auto source = sourceLayout->source();
+
+    pixelLayout->removeSource(sourceLayout);
+    delete layoutList->takeItem(row);
+
+    // The layout owns neither the wrapper nor (for a fixture) the PixelSource
+    // it wraps - both were allocated fresh by tryAddSceneObject()/addSource()
+    // and nothing else references them, so removal is also where they're
+    // freed. A PixelSource that's itself a SceneObject (e.g. a PixelStrip) is
+    // owned by the scene, not by this list, and must be left alone.
+    delete sourceLayout;
+    if(dynamic_cast<FixturePixelSource*>(source))
+        delete source;
+
+    // Qt only emits currentRowChanged() when the *row number* changes - if
+    // the removed row wasn't the last one, the item that shifts into its
+    // place keeps the same row number as current, so the signal never fires
+    // even though which source it points to just changed. Re-sync explicitly
+    // rather than relying on it, or the view keeps the old (now-deleted)
+    // source active until some other selection change happens to fire it.
+    selectedRow(layoutList->currentRow());
+}
+
+namespace {
+
+QPointF selectionCentroid(const QVector<QPair<PixelSourceLayout*,int>> &t_selection)
+{
+    QPointF centroid;
+    for(const auto &entry : t_selection)
+        centroid += entry.first->pixelPosition(entry.second);
+    return t_selection.isEmpty() ? centroid : centroid / t_selection.size();
+}
+
+} // namespace
+
+void PixelLayoutEditorSidePanel::arrangeClicked()
+{
+    QMenu menu;
+    menu.addAction("Linear...", this, &PixelLayoutEditorSidePanel::arrangeLinear);
+    menu.addAction("Grid...", this, &PixelLayoutEditorSidePanel::arrangeGrid);
+    menu.addAction("Radial...", this, &PixelLayoutEditorSidePanel::arrangeRadial);
+    menu.addAction("Arc...", this, &PixelLayoutEditorSidePanel::arrangeArc);
+    menu.addAction("Honeycomb...", this, &PixelLayoutEditorSidePanel::arrangeHoneycomb);
+    menu.addAction("Bee Eye...", this, &PixelLayoutEditorSidePanel::arrangeBeeEye);
+    menu.addSeparator();
+    menu.addAction("Move...", this, &PixelLayoutEditorSidePanel::arrangeMove);
+    menu.addAction("Scale...", this, &PixelLayoutEditorSidePanel::arrangeScale);
+    menu.addAction("Rotate...", this, &PixelLayoutEditorSidePanel::arrangeRotate);
+    menu.exec(arrangeButton->mapToGlobal(QPoint{}));
+}
+
+void PixelLayoutEditorSidePanel::arrangeLinear()
+{
+    int count = scene->selectedPixels().size();
+    if(count == 0)
+        return;
+
+    LinearArrangeDialog dialog(this);
+    if(dialog.exec() != QDialog::Accepted)
+        return;
+
+    commitArrangedPoints(PixelArrange::linear(count, dialog.length(), dialog.center(), dialog.angle()));
+}
+
+void PixelLayoutEditorSidePanel::arrangeGrid()
+{
+    int count = scene->selectedPixels().size();
+    if(count == 0)
+        return;
+
+    GridArrangeDialog dialog(this);
+    if(dialog.exec() != QDialog::Accepted)
+        return;
+
+    commitArrangedPoints(PixelArrange::grid(count, dialog.rows(), dialog.columns(), dialog.width(), dialog.height()));
+}
+
+void PixelLayoutEditorSidePanel::arrangeRadial()
+{
+    int count = scene->selectedPixels().size();
+    if(count == 0)
+        return;
+
+    RadialArrangeDialog dialog(this);
+    if(dialog.exec() != QDialog::Accepted)
+        return;
+
+    commitArrangedPoints(PixelArrange::radial(count, dialog.radius()));
+}
+
+void PixelLayoutEditorSidePanel::arrangeArc()
+{
+    int count = scene->selectedPixels().size();
+    if(count == 0)
+        return;
+
+    ArcArrangeDialog dialog(this);
+    if(dialog.exec() != QDialog::Accepted)
+        return;
+
+    commitArrangedPoints(PixelArrange::arc(count, dialog.radius(), dialog.startAngle(), dialog.sweepAngle()));
+}
+
+void PixelLayoutEditorSidePanel::arrangeHoneycomb()
+{
+    int count = scene->selectedPixels().size();
+    if(count == 0)
+        return;
+
+    HoneycombArrangeDialog dialog(this);
+    if(dialog.exec() != QDialog::Accepted)
+        return;
+
+    commitArrangedPoints(PixelArrange::honeycomb(count, dialog.rows(), dialog.columns(), dialog.spacing()));
+}
+
+void PixelLayoutEditorSidePanel::arrangeBeeEye()
+{
+    int count = scene->selectedPixels().size();
+    if(count == 0)
+        return;
+
+    BeeEyeArrangeDialog dialog(this);
+    if(dialog.exec() != QDialog::Accepted)
+        return;
+
+    commitArrangedPoints(PixelArrange::beeEye(count, dialog.spacing()));
+}
+
+void PixelLayoutEditorSidePanel::arrangeMove()
+{
+    if(scene->selectedPixels().isEmpty())
+        return;
+
+    MoveArrangeDialog dialog(this);
+    if(dialog.exec() != QDialog::Accepted)
+        return;
+
+    QPointF offset(dialog.dx(), dialog.dy());
+    transformSelected([offset](QPointF t_pos){ return t_pos + offset; });
+}
+
+void PixelLayoutEditorSidePanel::arrangeScale()
+{
+    auto selection = scene->selectedPixels();
+    if(selection.isEmpty())
+        return;
+
+    ScaleArrangeDialog dialog(this);
+    if(dialog.exec() != QDialog::Accepted)
+        return;
+
+    QPointF centroid = selectionCentroid(selection);
+    double sx = dialog.scaleX();
+    double sy = dialog.scaleY();
+    transformSelected([centroid, sx, sy](QPointF t_pos){
+        return QPointF(centroid.x() + (t_pos.x() - centroid.x()) * sx,
+                        centroid.y() + (t_pos.y() - centroid.y()) * sy);
+    });
+}
+
+void PixelLayoutEditorSidePanel::arrangeRotate()
+{
+    auto selection = scene->selectedPixels();
+    if(selection.isEmpty())
+        return;
+
+    RotateArrangeDialog dialog(this);
+    if(dialog.exec() != QDialog::Accepted)
+        return;
+
+    QPointF centroid = selectionCentroid(selection);
+    QTransform t;
+    t.translate(centroid.x(), centroid.y());
+    t.rotate(dialog.angle());
+    t.translate(-centroid.x(), -centroid.y());
+    transformSelected([t](QPointF t_pos){ return t.map(t_pos); });
+}
+
+void PixelLayoutEditorSidePanel::transformSelected(const std::function<QPointF(QPointF)> &t_fn)
+{
+    auto selection = scene->selectedPixels();
+    for(const auto &entry : selection)
+        entry.first->setPixelPosition(entry.second, t_fn(entry.first->pixelPosition(entry.second)));
+}
+
+void PixelLayoutEditorSidePanel::commitArrangedPoints(const QVector<QPointF> &t_shapePoints)
+{
+    auto selection = scene->selectedPixels();
+    if(selection.size() != t_shapePoints.size())
+        return;
+
+    // Anchor the shape on the selection's current centroid, rather than
+    // wherever PixelArrange:: happens to center it locally - "Arrange"
+    // replaces the selected points roughly where they already are.
+    QPointF fromCentroid = selectionCentroid(selection);
+
+    QPointF shapeCentroid;
+    for(const auto &pt : t_shapePoints)
+        shapeCentroid += pt;
+    shapeCentroid /= t_shapePoints.size();
+
+    for(int i = 0; i < selection.size(); ++i)
+        selection[i].first->setPixelPosition(selection[i].second, t_shapePoints[i] - shapeCentroid + fromCentroid);
+}
+
+// A fixture counts as "added" if any current FixturePixelSource wraps that
+// same fixture (the PixelSource itself is only constructed on add, so
+// comparing PixelSource pointers - as a plain PixelSource-derived
+// SceneObject would - can't detect that case).
+bool PixelLayoutEditorSidePanel::isAlreadyAdded(SceneObject *t_obj) const
+{
+    auto currentSources = pixelLayout->sources();
+
+    if(auto fixture = dynamic_cast<Fixture*>(t_obj))
+    {
+        for(auto existing : currentSources)
+        {
+            auto fixtureSource = dynamic_cast<FixturePixelSource*>(existing);
+            if(fixtureSource && fixtureSource->fixture() == fixture)
+                return true;
+        }
+        return false;
+    }
+
+    return currentSources.contains(dynamic_cast<PixelSource*>(t_obj));
+}
+
+void PixelLayoutEditorSidePanel::tryAddSceneObject(SceneObject *t_obj)
+{
+    if(!t_obj || isAlreadyAdded(t_obj))
+        return;
+
+    if(auto fixture = dynamic_cast<Fixture*>(t_obj))
+    {
+        auto capabilities = fixture->findCapability(Capability_Color);
+        if(!capabilities.isEmpty())
+            addSource(new FixturePixelSource(capabilities));
+        return;
+    }
+
+    if(auto source = dynamic_cast<PixelSource*>(t_obj))
+        addSource(source);
+}
+
+void PixelLayoutEditorSidePanel::sceneObjectsDropped(const QVector<SceneObject*> &t_objects)
+{
+    for(auto obj : t_objects)
+        tryAddSceneObject(obj);
+}
+
 void PixelLayoutEditorSidePanel::addClicked()
 {
     auto sources = SceneIterator::FindMany(photonApp->project()->sceneRoot(),[](SceneObject *obj, bool *keepGoing){
@@ -303,26 +664,13 @@ void PixelLayoutEditorSidePanel::addClicked()
 
     });
 
-
-    auto currentSources = pixelLayout->sources();
-
     QMenu menu;
     for(auto src : sources)
     {
         auto action = menu.addAction(src->name(),[src, this](){
-            auto fixture = dynamic_cast<Fixture*>(src);
-
-            if(fixture)
-            {
-                if(!fixture->findCapability(Capability_Color).isEmpty()){
-                    auto capabilities = fixture->findCapability(Capability_Color);
-                    addSource(new FixturePixelSource(capabilities));
-                }
-            }
-            else
-                addSource(dynamic_cast<PixelSource*>(src));
+            tryAddSceneObject(src);
         });
-        action->setEnabled(!currentSources.contains(dynamic_cast<PixelSource*>(src)));
+        action->setEnabled(!isAlreadyAdded(src));
     }
 
     menu.exec(addButton->mapToGlobal(QPoint{}));

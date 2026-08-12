@@ -13,7 +13,6 @@
 #include "timelineheader.h"
 #include "photoncore.h"
 #include "project/project.h"
-#include "pixel/canvascollection.h"
 #include "pixel/canvas.h"
 
 namespace photon {

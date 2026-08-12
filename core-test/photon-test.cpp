@@ -9,6 +9,10 @@
 #include "fixture/fixturecollectiontest.h"
 #include "fixture/fixturecapabilitytest.h"
 #include "sequence/sequencetest.h"
+#include "project/surfaceownershiptest.h"
+#include "project/projectresourcetest.h"
+#include "project/projectmodeltest.h"
+#include "project/tagtest.h"
 
 
 int main(int argc, char *argv[])
@@ -23,7 +27,12 @@ int main(int argc, char *argv[])
     //exo::ExoCore core(argc, argv);
 
 
-    QStringList arguments = QCoreApplication::arguments();
+    // Built from argv rather than QCoreApplication::arguments(): there is no
+    // QCoreApplication instance here, so that call returns an empty list and
+    // qExec() silently runs nothing.
+    QStringList arguments;
+    for(int i = 0; i < argc; ++i)
+        arguments << QString::fromLocal8Bit(argv[i]);
 
     std::map<QString, std::unique_ptr<QObject>> tests;
 
@@ -31,6 +40,10 @@ int main(int argc, char *argv[])
     tests.emplace("fixture_collection_test", std::make_unique<photon::FixtureCollectionTest>());
     tests.emplace("fixture_capability_test", std::make_unique<photon::FixtureCapabilityTest>());
     tests.emplace("sequence_test", std::make_unique<photon::SequenceTest>());
+    tests.emplace("surface_ownership_test", std::make_unique<photon::SurfaceOwnershipTest>());
+    tests.emplace("project_resource_test", std::make_unique<photon::ProjectResourceTest>());
+    tests.emplace("project_model_test", std::make_unique<photon::ProjectModelTest>());
+    tests.emplace("tag_test", std::make_unique<photon::TagTest>());
 
     if (arguments.size() >= 3 && arguments[1] == "-select") {
         QString testName = arguments[2];

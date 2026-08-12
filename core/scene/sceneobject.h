@@ -3,11 +3,12 @@
 
 #include <QObject>
 #include "photon-global.h"
+#include "project/projectresource.h"
 
 namespace photon {
 
 
-class PHOTONCORE_EXPORT SceneObject : public QObject
+class PHOTONCORE_EXPORT SceneObject : public QObject, public ProjectResource
 {
     Q_OBJECT
 public:
@@ -27,10 +28,24 @@ public:
     QString name() const;
     QByteArray uniqueId() const;
     QByteArray typeId() const;
-    const QStringList &tags() const;
-    void setTags(const QStringList &);
-    void addTag(const QString &);
-    void removeTag(const QString &);
+
+    // Tags live on ProjectResource so every resource type has them; these are
+    // the long-standing scene-object spellings, kept as aliases.
+    const QStringList &tags() const{return resourceTags();}
+    void setTags(const QStringList &t_tags){setResourceTags(t_tags);}
+    void addTag(const QString &t_tag){addResourceTag(t_tag);}
+    void removeTag(const QString &t_tag){removeResourceTag(t_tag);}
+
+    // ProjectResource
+    QByteArray resourceId() const override{return uniqueId();}
+    QByteArray resourceTypeId() const override{return typeId();}
+    QString resourceName() const override{return name();}
+    void setResourceName(const QString &t_name) override{setName(t_name);}
+    QObject *resourceObject() override{return this;}
+    QWidget *createResourceEditor() override{return createEditor();}
+    // Route shared-metadata changes through the scene's own signal; the
+    // constructor bridges that back out to the resource notifier.
+    void notifyResourceChanged() override{emit metadataChanged(this);}
 
     // Whether this object (and, by extension, its subtree) is drawn in the
     // visualizer. Purely a display toggle — does not affect DMX/evaluation.

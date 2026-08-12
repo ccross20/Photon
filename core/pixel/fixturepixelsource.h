@@ -17,10 +17,10 @@ public:
     virtual int dmxSize() const override;
     virtual int universe() const override;
 
-    const QVector<QPointF> &positions() const override;
+    int pixelCount() const override;
 
-    virtual void process(ProcessContext &, const QTransform &, double blend = 1.0) const override;
-    void collectSampleUVs(QVector<QPointF> &out, const QTransform &transform) const override;
+    virtual void process(ProcessContext &, const QVector<QPointF> &positions, double blend = 1.0) const override;
+    void collectSampleUVs(QVector<QPointF> &out, const QVector<QPointF> &positions) const override;
 
     virtual void readFromJson(const QJsonObject &, const LoadContext &) override;
     virtual void writeToJson(QJsonObject &) const override;

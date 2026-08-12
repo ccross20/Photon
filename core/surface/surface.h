@@ -2,11 +2,12 @@
 #define SURFACE_H
 #include "photon-global.h"
 #include "processcontext.h"
+#include "project/projectresource.h"
 
 
 namespace photon {
 
-class PHOTONCORE_EXPORT Surface : public QObject
+class PHOTONCORE_EXPORT Surface : public QObject, public ProjectResource
 {
     Q_OBJECT
 public:
@@ -16,6 +17,15 @@ public:
     QByteArray uniqueId() const;
     QString name() const;
     void setName(const QString &);
+
+    // ProjectResource
+    QByteArray resourceId() const override{return uniqueId();}
+    QByteArray resourceTypeId() const override{return "surface";}
+    QString resourceName() const override{return name();}
+    void setResourceName(const QString &t_name) override{setName(t_name);}
+    QObject *resourceObject() override{return this;}
+    QWidget *createResourceEditor() override;
+
     Project *project() const;
     SurfaceGraph *graph() const;
 

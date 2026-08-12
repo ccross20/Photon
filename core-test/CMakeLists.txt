@@ -24,6 +24,14 @@ set(PROJECT_SOURCES
     fixture/fixturecollectiontest.cpp
     sequence/sequencetest.h
     sequence/sequencetest.cpp
+    project/surfaceownershiptest.h
+    project/surfaceownershiptest.cpp
+    project/projectresourcetest.h
+    project/projectresourcetest.cpp
+    project/projectmodeltest.h
+    project/projectmodeltest.cpp
+    project/tagtest.h
+    project/tagtest.cpp
 )
 
 enable_testing(true)

@@ -4,9 +4,18 @@
 #include <QAbstractItemModel>
 #include "photon-global.h"
 
+class QMimeData;
+
 namespace photon {
 
 class SceneObject;
+
+// Scene-object drag payload, shared by SceneModel and ProjectModel so both
+// speak the same wire format and a drag started in one can land in the other.
+// Raw pointers guarded by the writing process's PID - decode returns empty for
+// data from another process, where the pointers would be meaningless.
+PHOTONCORE_EXPORT QMimeData *encodeSceneObjectMime(const QVector<SceneObject*> &objects);
+PHOTONCORE_EXPORT QVector<SceneObject*> decodeSceneObjectMime(const QMimeData *mimeData);
 
 class PHOTONCORE_EXPORT SceneModel : public QAbstractItemModel
 {

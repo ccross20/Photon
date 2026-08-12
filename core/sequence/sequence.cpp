@@ -14,6 +14,8 @@
 #include "state/stateevaluationcontext.h"
 #include "state/state.h"
 #include "library/songlibrary.h"
+#include "gui/resourceeditorwidget.h"
+#include "sequence/sequencecollection.h"
 
 namespace photon {
 
@@ -52,6 +54,7 @@ Sequence::Sequence(const QString &t_name, QObject *parent)
     : QObject{parent},m_impl(new Impl(this))
 {
     m_impl->name = t_name;
+    m_impl->uniqueId = QUuid::createUuid().toByteArray();
 }
 
 Sequence::~Sequence()
@@ -336,6 +339,15 @@ const QVector<Layer*> &Sequence::layers() const
     return m_impl->layers;
 }
 
+QWidget *Sequence::createResourceEditor()
+{
+    auto *editor = new ResourceEditorWidget(this);
+    editor->setOpenAction("Open Sequence", [this](){
+        photonApp->sequences()->editSequence(this);
+    });
+    return editor;
+}
+
 QString Sequence::name() const
 {
     return m_impl->name;
@@ -343,7 +355,15 @@ QString Sequence::name() const
 
 void Sequence::setName(const QString &t_value)
 {
+    if(m_impl->name == t_value)
+        return;
     m_impl->name = t_value;
+    notifyResourceChanged();
+}
+
+QByteArray Sequence::uniqueId() const
+{
+    return m_impl->uniqueId;
 }
 
 QString Sequence::filePath() const
@@ -400,6 +420,11 @@ void Sequence::readFromJson(const QJsonObject &t_json, const LoadContext &t_cont
 {
     m_impl->name = t_json.value("name").toString();
     m_impl->filePath = t_json.value("filePath").toString();
+    // Sequences predate having an id, so keep the generated one for files
+    // written before this existed rather than blanking it.
+    if(t_json.contains("uniqueId"))
+        m_impl->uniqueId = t_json.value("uniqueId").toString().toLatin1();
+    readResourceJson(t_json);
 
     auto array = t_json.value("layers").toArray();
     for(auto layerJson : array)
@@ -441,6 +466,8 @@ void Sequence::writeToJson(QJsonObject &t_json) const
 {
     t_json.insert("name", m_impl->name);
     t_json.insert("filePath", m_impl->filePath);
+    t_json.insert("uniqueId", QString(m_impl->uniqueId));
+    writeResourceJson(t_json);
 
     QJsonArray array;
     for(auto layer : m_impl->layers)

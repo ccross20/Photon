@@ -8,9 +8,7 @@
 #include "capability/colorcapability.h"
 #include "capability/anglecapability.h"
 #include "fixturewheel.h"
-#include "state/state.h"
 #include "project/project.h"
-#include "state/statecollection.h"
 #include "photoncore.h"
 
 namespace photon {
@@ -24,7 +22,6 @@ public:
     QVector<ColorCapability*> colors;
     QVector<FixtureMode> modes;
     QVector<FixtureWheel*> wheels;
-    State *defaultState = nullptr;
     QString definitionPath;
     QString description;
     QString manufacturer;
@@ -46,9 +43,6 @@ Fixture::Fixture(const QString &path) :SceneObject("fixture"), m_impl(new Impl)
 {
     if(!path.isEmpty())
         loadFixtureDefinition(path);
-
-    if(photonApp->project())
-        m_impl->defaultState = photonApp->project()->states()->stateAtIndex(0);
 }
 
 Fixture::~Fixture()
@@ -239,18 +233,6 @@ QStringList Fixture::channelNamesForCapability(CapabilityType t_type) const
     }
 
     return results;
-}
-
-void Fixture::setDefaultState(State *t_state)
-{
-    m_impl->defaultState = t_state;
-    qDebug() << "set state";
-    emit metadataChanged(this);
-}
-
-State *Fixture::defaultState() const
-{
-    return m_impl->defaultState;
 }
 
 void Fixture::setComments(const QString &t_value)
@@ -783,13 +765,6 @@ void Fixture::readFromJson(const QJsonObject &json, const LoadContext &t_context
     m_impl->uniqueIndex = json.value("uniqueIndex").toInt(0);
     loadFixtureDefinition(m_impl->definitionPath);
     setMode(json.value("selectedMode").toInt(-1));
-
-    QByteArray stateId = json.value("stateId").toString("default").toLatin1();
-    if(!stateId.isEmpty())
-        m_impl->defaultState = t_context.project->states()->findStateById(stateId);
-    else
-        m_impl->defaultState = nullptr;
-
 }
 
 void Fixture::writeToJson(QJsonObject &json) const
@@ -808,13 +783,6 @@ void Fixture::writeToJson(QJsonObject &json) const
     json.insert("selectedMode", m_impl->selectedMode);
     json.insert("definitionPath", m_impl->definitionPath);
     json.insert("uniqueIndex", m_impl->uniqueIndex);
-
-    if(m_impl->defaultState)
-        json.insert("stateId", QString{m_impl->defaultState->uniqueId()});
-    else
-        json.insert("stateId", "");
-
-
 }
 
 } // namespace photon

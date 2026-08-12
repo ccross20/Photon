@@ -15,7 +15,14 @@ public:
     SurfaceNode();
     ~SurfaceNode();
 
+    // The node references a Surface owned by the Project rather than owning one:
+    // several SurfaceNodes can drive the same surface, and the surface outlives
+    // any one node. Resolves to nullptr if the id is unset or no longer in the
+    // project's collection.
     Surface *surface() const;
+    QByteArray surfaceId() const;
+    void setSurfaceId(const QByteArray &);
+
     void createParameters() override;
     void evaluate(keira::EvaluationContext *) const override;
     void buttonClicked(const keira::Parameter *) override;

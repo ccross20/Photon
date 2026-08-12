@@ -15,6 +15,7 @@ public:
     SurfaceCollection *facade;
     Surface *activeSurface = nullptr;
     SurfacePanel *activePanel = nullptr;
+    quint32 revision = 0;
 };
 
 SurfaceCollection::Impl::Impl(SurfaceCollection *t_facade):facade(t_facade)
@@ -96,6 +97,12 @@ void SurfaceCollection::clear()
         delete surface;
 
     m_impl->surfaces.clear();
+    ++m_impl->revision;
+}
+
+quint32 SurfaceCollection::revision() const
+{
+    return m_impl->revision;
 }
 
 const QVector<Surface*> &SurfaceCollection::surfaces() const
@@ -129,6 +136,7 @@ void SurfaceCollection::addSurface(photon::Surface *t_surface)
         return;
     emit surfaceWillBeAdded(t_surface, m_impl->surfaces.length());
     m_impl->surfaces.append(t_surface);
+    ++m_impl->revision;
     emit surfaceWasAdded(t_surface, m_impl->surfaces.length()-1);
 }
 
@@ -137,19 +145,24 @@ void SurfaceCollection::removeSurface(photon::Surface *t_surface)
     if(!m_impl->surfaces.contains(t_surface))
         return;
 
-    int index = 0;
-    for(auto seq : m_impl->surfaces)
-    {
-        if(seq == t_surface)
-            break;
-        ++index;
-    }
+    int index = m_impl->surfaces.indexOf(t_surface);
 
-    m_impl->panels.remove(t_surface);
+    // The collection owns its surfaces, so removal destroys. Close any open
+    // editor panel first — it holds a bare pointer to the surface and would
+    // dangle otherwise. SurfaceNodes referencing this surface resolve by id,
+    // so they simply stop finding it and fall back to passing DMX through.
+    if(auto *panel = m_impl->panels.take(t_surface))
+        panel->deleteLater();
+
+    if(m_impl->activeSurface == t_surface)
+        m_impl->activeSurface = nullptr;
 
     emit surfaceWillBeRemoved(t_surface, index);
     m_impl->surfaces.removeOne(t_surface);
+    ++m_impl->revision;
     emit surfaceWasRemoved(t_surface, index);
+
+    t_surface->deleteLater();
 }
 
 } // namespace photon

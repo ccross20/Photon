@@ -18,6 +18,7 @@ public:
     QVector<Layer*> layers;
     QVector<CueLayer*> cueLayers;
     QString name;
+    QByteArray uniqueId;
     QString filePath;
     SongData songData;
     Sequence *facade;

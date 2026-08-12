@@ -19,6 +19,11 @@ public:
     const QVector<Surface*> &surfaces() const;
     Surface *findSurfaceWithId(const QByteArray &) const;
 
+    // Bumped whenever the set of surfaces changes. Referencing holders that
+    // aren't QObjects (SurfaceNode) cache a resolved pointer against this and
+    // re-resolve only when it moves, rather than scanning every frame.
+    quint32 revision() const;
+
     void editSurface(Surface *);
     void setActiveSurfacePanel(SurfacePanel *panel);
     SurfacePanel *activeSurfacePanel() const;

@@ -12,36 +12,12 @@ class FixturePixelSource::Impl
 {
 public:
     QVector<FixtureCapability *>capabilities;
-    QVector<QPointF> positions;
     QByteArray uniqueId;
 };
 
 FixturePixelSource::FixturePixelSource(const QVector<FixtureCapability *> &t_capabilities) : PixelSource(),m_impl(new Impl) {
     m_impl->capabilities = t_capabilities;
     m_impl->uniqueId = QUuid::createUuid().toByteArray();
-
-    double length = .9;
-    int pixelCount = t_capabilities.length();
-    double delta = length / (pixelCount - 1);
-    double center = .5;
-    double angle = 0;
-
-    QTransform t;
-    t.translate(length * center, 0);
-    t.rotate(angle);
-    t.translate(length * -center, 0);
-
-    m_impl->positions.resize(pixelCount);
-    double position = 0;
-    for(auto it = m_impl->positions.begin(); it != m_impl->positions.end(); ++it)
-    {
-        auto &pt = *it;
-        auto transformedPt = t.map(QPointF(position, 0.0));
-
-        pt.setX(transformedPt.x());
-        pt.setY(transformedPt.y());
-        position += delta;
-    }
 }
 
 FixturePixelSource::~FixturePixelSource()
@@ -78,22 +54,28 @@ int FixturePixelSource::universe() const
     return m_impl->capabilities[0]->fixture()->universe();
 }
 
-const QVector<QPointF> &FixturePixelSource::positions() const
+int FixturePixelSource::pixelCount() const
 {
-    return m_impl->positions;
+    // The total capability count, not just the color-emitting ones - the
+    // caller-supplied positions vector is index-parallel to capabilities()
+    // and both collectSampleUVs()/process() lockstep-iterate the two, only
+    // acting on ColorCapability slots while still consuming a position slot
+    // for every capability. Counting color capabilities only would desync
+    // the two arrays.
+    return m_impl->capabilities.size();
 }
 
-void FixturePixelSource::collectSampleUVs(QVector<QPointF> &t_out, const QTransform &t_transform) const
+void FixturePixelSource::collectSampleUVs(QVector<QPointF> &t_out, const QVector<QPointF> &t_positions) const
 {
     auto capIt = m_impl->capabilities.cbegin();
-    for(auto it = positions().cbegin(); it != positions().cend() && capIt != m_impl->capabilities.cend(); ++it, ++capIt)
+    for(auto it = t_positions.cbegin(); it != t_positions.cend() && capIt != m_impl->capabilities.cend(); ++it, ++capIt)
     {
         if(dynamic_cast<ColorCapability*>(*capIt))
-            t_out << t_transform.map(*it);
+            t_out << *it;
     }
 }
 
-void FixturePixelSource::process(ProcessContext &t_context, const QTransform &t_transform, double t_blend) const
+void FixturePixelSource::process(ProcessContext &t_context, const QVector<QPointF> &t_positions, double t_blend) const
 {
     auto capIt = m_impl->capabilities.cbegin();
 
@@ -101,7 +83,7 @@ void FixturePixelSource::process(ProcessContext &t_context, const QTransform &t_
         if(!t_context.gatheredColors && !t_context.image)
             return;
 
-        for(auto it = positions().cbegin(); it != positions().cend() && capIt != m_impl->capabilities.cend(); it++, capIt++)
+        for(auto it = t_positions.cbegin(); it != t_positions.cend() && capIt != m_impl->capabilities.cend(); it++, capIt++)
         {
 
             ColorCapability *colorCap = dynamic_cast<ColorCapability*>(*capIt);
@@ -115,7 +97,7 @@ void FixturePixelSource::process(ProcessContext &t_context, const QTransform &t_
                 }
                 else
                 {
-                    auto ptF = t_transform.map((*it));
+                    auto ptF = (*it);
                     ptF.setX(ptF.x() * t_context.image->width());
                     ptF.setY(ptF.y() * t_context.image->height());
 

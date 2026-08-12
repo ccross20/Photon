@@ -6,6 +6,9 @@
 #include <QSignalBlocker>
 #include "scenesurface.h"
 #include "gui/vector3edit.h"
+#include "gui/tag/tageditorwidget.h"
+#include "photoncore.h"
+#include "project/project.h"
 
 namespace photon {
 
@@ -13,9 +16,10 @@ class SceneSurfaceEditorWidget::Impl
 {
 public:
     Impl();
-    SceneSurface *surface;
+    SceneSurface *surface = nullptr;
     QFormLayout *formLayout;
     QLineEdit *nameEdit;
+    TagEditorWidget *tagEditor;
     QDoubleSpinBox *widthSpin;
     QDoubleSpinBox *heightSpin;
     QPushButton *colorButton;
@@ -29,6 +33,12 @@ SceneSurfaceEditorWidget::Impl::Impl()
 
     nameEdit = new QLineEdit;
     formLayout->addRow("Name", nameEdit);
+
+    tagEditor = new TagEditorWidget(
+        [this](){ return surface ? surface->tags() : QStringList(); },
+        [this](const QStringList &tags){ if(surface) surface->setTags(tags); },
+        [](){ return photonApp->project() ? photonApp->project()->allTags() : QStringList(); });
+    formLayout->addRow("Tags", tagEditor);
 
     widthSpin = new QDoubleSpinBox;
     widthSpin->setMinimum(0.1);
@@ -67,8 +77,12 @@ SceneSurfaceEditorWidget::SceneSurfaceEditorWidget(SceneSurface *t_surface, QWid
 
     connect(t_surface, &SceneObject::positionChanged, this, &SceneSurfaceEditorWidget::refreshTransform);
     connect(t_surface, &SceneObject::rotationChanged, this, &SceneSurfaceEditorWidget::refreshTransform);
+    // Keeps the tag row live if a tag is added/removed from outside this
+    // editor - e.g. dropped onto this object's row in the Project panel.
+    connect(t_surface, &SceneObject::metadataChanged, m_impl->tagEditor, &TagEditorWidget::refresh);
 
     m_impl->nameEdit->setText(t_surface->name());
+    m_impl->tagEditor->refresh();
     m_impl->widthSpin->setValue(t_surface->surfaceWidth());
     m_impl->heightSpin->setValue(t_surface->surfaceHeight());
     m_impl->positionEdit->setValue(t_surface->position());

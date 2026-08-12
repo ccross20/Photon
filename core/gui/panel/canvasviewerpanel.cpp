@@ -2,7 +2,6 @@
 #include "canvasviewerpanel.h"
 #include "photoncore.h"
 #include "project/project.h"
-#include "pixel/canvascollection.h"
 #include "pixel/canvas.h"
 #include "opengl/openglshader.h"
 #include "opengl/openglplane.h"
@@ -77,14 +76,10 @@ public:
 
 CanvasViewerPanel::CanvasViewerPanel() : Panel("photon.canvas-viewer"),m_impl(new Impl)
 {
+    // Canvases are no longer a project-level collection — each one is owned by
+    // the node or sequence layer group that renders it, so there's nothing to
+    // pick as a default here. This legacy OpenGL preview starts empty.
     Canvas *canvas = nullptr;
-    if(photonApp->project() && photonApp->project()->canvases()->canvasCount() > 0)
-        canvas = photonApp->project()->canvases()->canvases()[0];
-    if(canvas)
-    {
-        connect(canvas, &Canvas::textureDidUpdate, this, &CanvasViewerPanel::canvasUpdated);
-
-    }
     m_impl->previewWidget = new OpenGLPreviewWidget(canvas, nullptr);
     setPanelWidget(m_impl->previewWidget);
 

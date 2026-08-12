@@ -105,8 +105,6 @@ public:
     int uniqueIndex() const;
     void setUniqueIndex(int);
     void setUniverse(int universe);
-    void setDefaultState(State *);
-    State *defaultState() const;
 
     int colorCount() const;
     ColorCapability *colorAtIndex(int) const;

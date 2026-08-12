@@ -2,11 +2,12 @@
 #define PHOTON_PIXELLAYOUT_H
 #include "photon-global.h"
 #include "pixel/canvas.h"
+#include "project/projectresource.h"
 
 namespace photon {
 
 
-class PHOTONCORE_EXPORT PixelLayout : public QObject
+class PHOTONCORE_EXPORT PixelLayout : public QObject, public ProjectResource
 {
     Q_OBJECT
 public:
@@ -19,6 +20,14 @@ public:
 
     QString name() const;
     void setName(const QString &);
+
+    // ProjectResource
+    QByteArray resourceId() const override{return uniqueId();}
+    QByteArray resourceTypeId() const override{return "pixel-layout";}
+    QString resourceName() const override{return name();}
+    void setResourceName(const QString &t_name) override{setName(t_name);}
+    QObject *resourceObject() override{return this;}
+    QWidget *createResourceEditor() override;
 
     void addSource(PixelSourceLayout *);
     void removeSource(PixelSourceLayout *);

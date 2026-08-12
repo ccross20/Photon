@@ -1,5 +1,6 @@
 #include "selectfixturesnode.h"
 #include "graph/parameter/fixturelistparameter.h"
+#include "graph/parameter/tagsparameter.h"
 #include "model/parameter/stringparameter.h"
 #include "model/parameter/stringoptionparameter.h"
 #include "fixture/fixturequery.h"
@@ -18,7 +19,7 @@ const QByteArray SelectFixturesNode::ResultParam = "result";
 class SelectFixturesNode::Impl
 {
 public:
-    keira::StringParameter *tagsParam = nullptr;
+    TagsParameter *tagsParam = nullptr;
     keira::StringParameter *typeParam = nullptr;
     keira::StringOptionParameter *zoneParam = nullptr;
     FixtureListParameter *resultParam = nullptr;
@@ -47,7 +48,7 @@ SelectFixturesNode::~SelectFixturesNode()
 void SelectFixturesNode::createParameters()
 {
     // Space-separated tags; a fixture must carry ALL of them (AND). Empty = any.
-    m_impl->tagsParam = new keira::StringParameter(TagsParam, "Tags", "", 0);
+    m_impl->tagsParam = new TagsParameter(TagsParam, "Tags", "", 0);
     addParameter(m_impl->tagsParam);
 
     // Matched (case-insensitive substring) against the fixture's model type and its

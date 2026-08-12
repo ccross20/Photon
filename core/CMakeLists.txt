@@ -108,6 +108,8 @@ set(PROJECT_SOURCES
         fixture/fixturequery.cpp
         fixture/fixturegroup.h
         fixture/fixturegroup.cpp
+        fixture/fixturegroupeditor.h
+        fixture/fixturegroupeditor.cpp
         scene/scenezone.h
         scene/scenezone.cpp
         fixture/fixtureeditorwidget.h
@@ -161,6 +163,8 @@ set(PROJECT_SOURCES
         graph/parameter/canvasparameter.cpp
         graph/parameter/colorparameter.h
         graph/parameter/colorparameter.cpp
+        graph/parameter/tagsparameter.h
+        graph/parameter/tagsparameter.cpp
         graph/parameter/dmxmatrixparameter.h
         graph/parameter/dmxmatrixparameter.cpp
         graph/parameter/fixtureparameter.h
@@ -181,8 +185,6 @@ set(PROJECT_SOURCES
         gui/color/huebox.cpp
         gui/color/simpleswatch.h
         gui/color/simpleswatch.cpp
-        gui/dialog/canvasdialog.h
-        gui/dialog/canvasdialog.cpp
         gui/dialog/settingsdialog.h
         gui/dialog/settingsdialog.cpp
         gui/dialog/appsettingspage.h
@@ -214,9 +216,9 @@ set(PROJECT_SOURCES
         gui/panel.cpp
         gui/panel/buspanel.h
         gui/panel/buspanel.cpp
-        gui/panel/canvascollectionpanel.h
-        gui/panel/canvascollectionpanel_p.h
-        gui/panel/canvascollectionpanel.cpp
+        gui/panel/projectpanel.h
+        gui/panel/projectpanel_p.h
+        gui/panel/projectpanel.cpp
         gui/panel/canvasviewerpanel.h
         gui/panel/canvasviewerpanel.cpp
         gui/panel/dmxviewerpanel.h
@@ -224,15 +226,9 @@ set(PROJECT_SOURCES
         gui/panel/dmxpatchpanel.h
         gui/panel/dmxpatchpanel_p.h
         gui/panel/dmxpatchpanel.cpp
-        gui/panel/rigpanel.h
-        gui/panel/rigpanel_p.h
-        gui/panel/rigpanel.cpp
         gui/panel/propertiespanel.h
         gui/panel/propertiespanel_p.h
         gui/panel/propertiespanel.cpp
-        gui/panel/routinecollectionpanel.h
-        gui/panel/routinecollectionpanel_p.h
-        gui/panel/routinecollectionpanel.cpp
         gui/panel/songlibrarypanel.h
         gui/panel/songlibrarypanel_p.h
         gui/panel/songlibrarypanel.cpp
@@ -240,17 +236,13 @@ set(PROJECT_SOURCES
         library/songlibrary.cpp
         gui/panel/routineeditpanel.h
         gui/panel/routineeditpanel.cpp
-        gui/panel/pixellayoutcollectionpanel.h
-        gui/panel/pixellayoutcollectionpanel_p.h
-        gui/panel/pixellayoutcollectionpanel.cpp
-        gui/panel/sequencecollectionpanel.h
-        gui/panel/sequencecollectionpanel_p.h
-        gui/panel/sequencecollectionpanel.cpp
         gui/panel/sequencepanel.h
         gui/panel/sequencepanel.cpp
         gui/pixellayouteditor.h
         gui/pixellayouteditor_p.h
         gui/pixellayouteditor.cpp
+        gui/pixelarrangedialog.h
+        gui/pixelarrangedialog.cpp
         gui/pointedit.h
         gui/pointedit.cpp
         gui/xypad.h
@@ -280,6 +272,10 @@ set(PROJECT_SOURCES
         photoncore.cpp
         project/project.h
         project/project.cpp
+        project/projectresource.h
+        project/projectresource.cpp
+        project/projectmodel.h
+        project/projectmodel.cpp
         routine/node/fixturewriternode.h
         routine/node/fixturewriternode.cpp
         routine/node/globalsnode.h
@@ -298,14 +294,14 @@ set(PROJECT_SOURCES
         plugin/iplugin.h
         pixel/canvas.h
         pixel/canvas.cpp
-        pixel/canvascollection.h
-        pixel/canvascollection.cpp
         pixel/pixellayout.h
         pixel/pixellayout.cpp
         pixel/pixellayoutcollection.h
         pixel/pixellayoutcollection.cpp
         pixel/pixelsource.h
         pixel/pixelsource.cpp
+        pixel/pixelarrange.h
+        pixel/pixelarrange.cpp
         pixel/pixelsourcelayout.h
         pixel/pixelsourcelayout.cpp
         pixel/pixelstrip.h
@@ -485,14 +481,12 @@ set(PROJECT_SOURCES
 qt_add_resources(PROJECT_SOURCES third-party/advanced-docking/ads.qrc)
 
 add_library(photon-core SHARED ${PROJECT_SOURCES}
-    state/statecollection.h state/statecollection.cpp
-    tag/tagcollection.h tag/tagcollection.cpp
-    gui/panel/tagcollectionpanel.h gui/panel/tagcollectionpanel.cpp
-    gui/panel/fixturegroupcollectionpanel.h gui/panel/fixturegroupcollectionpanel_p.h gui/panel/fixturegroupcollectionpanel.cpp
-    gui/panel/tagcollectionpanel_p.h
-    gui/tagpicker.h gui/tagpicker.cpp
-    gui/tageditwidget.h gui/tageditwidget.cpp
-    gui/tageditwidget_p.h
+    gui/flowlayout.h gui/flowlayout.cpp
+    gui/tag/tagcolor.h gui/tag/tagcolor.cpp
+    gui/tag/tagmime.h gui/tag/tagmime.cpp
+    gui/tag/tagchip.h gui/tag/tagchip.cpp
+    gui/tag/tageditorwidget.h gui/tag/tageditorwidget.cpp
+    gui/resourceeditorwidget.h gui/resourceeditorwidget.cpp
     scene/scenearrow.h scene/scenearrow.cpp
     state/gobostate.h state/gobostate.cpp
     fixture/capability/wheelshakecapability.h fixture/capability/wheelshakecapability.cpp
@@ -550,8 +544,6 @@ add_library(photon-core SHARED ${PROJECT_SOURCES}
     graph/node/fixture/fixturegroupnode.h graph/node/fixture/fixturegroupnode.cpp
     data/commonmodel.h data/commonmodel.cpp
     state/wheelslotanglestate.h state/wheelslotanglestate.cpp
-    gui/panel/surfacecollectionpanel.h gui/panel/surfacecollectionpanel.cpp
-    gui/panel/surfacecollectionpanel_p.h
     surface/gizmofactory.h surface/gizmofactory.cpp
     gui/color/colorpalettewidget.h gui/color/colorpalettewidget.cpp
     surface/palettegizmo.h surface/palettegizmo.cpp

@@ -6,6 +6,9 @@
 
 namespace photon {
 
+// Not a ProjectResource: a State is always privately owned by whatever uses it
+// (a FixtureStateNode in the graph, a FixtureClip) rather than living in a
+// project-wide, browsable collection.
 class PHOTONCORE_EXPORT State : public QObject
 {
     Q_OBJECT
@@ -17,6 +20,7 @@ public:
     void setName(const QString &);
     void addDefaultCapabilities();
     QByteArray uniqueId() const;
+
     virtual void initializeValues(StateEvaluationContext &) const;
     virtual void evaluate(const StateEvaluationContext &) const;
     StateCapability *addCapability(CapabilityType);

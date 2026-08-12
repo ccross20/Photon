@@ -7,6 +7,53 @@
 
 namespace photon {
 
+QMimeData *encodeSceneObjectMime(const QVector<SceneObject*> &t_objects)
+{
+    QMimeData *mimeData = new QMimeData;
+    QByteArray data;
+    QDataStream stream(&data, QIODevice::WriteOnly);
+
+    stream << QCoreApplication::applicationPid();
+    // Explicitly 32-bit: QVector::count() is qsizetype (64-bit here), and the
+    // reader below takes an int, so streaming it directly would desync.
+    stream << static_cast<qint32>(t_objects.count());
+    for(SceneObject *object : t_objects)
+        stream << reinterpret_cast<qlonglong>(object);
+
+    mimeData->setData(SceneObject::SceneObjectMime, data);
+    return mimeData;
+}
+
+QVector<SceneObject*> decodeSceneObjectMime(const QMimeData *t_mimeData)
+{
+    QVector<SceneObject*> objects;
+
+    if(!t_mimeData || !t_mimeData->hasFormat(SceneObject::SceneObjectMime))
+        return objects;
+
+    QByteArray data = t_mimeData->data(SceneObject::SceneObjectMime);
+    QDataStream stream(&data, QIODevice::ReadOnly);
+
+    qint64 senderPid;
+    stream >> senderPid;
+    // The payload is raw pointers, so it's only meaningful in the process that
+    // wrote it.
+    if(senderPid != QCoreApplication::applicationPid())
+        return objects;
+
+    qint32 count = 0;
+    stream >> count;
+    objects.reserve(count);
+    for(qint32 i = 0; i < count; ++i)
+    {
+        qlonglong objectPtr = 0;
+        stream >> objectPtr;
+        objects.append(reinterpret_cast<SceneObject*>(objectPtr));
+    }
+
+    return objects;
+}
+
 class SceneModel::Impl
 {
 public:
@@ -87,28 +134,15 @@ bool SceneModel::canDropMimeData(const QMimeData *mimeData, Qt::DropAction actio
 //receives a list of model indexes list
 QMimeData *SceneModel::mimeData(const QModelIndexList &indexes) const
 {
-    QMimeData *mimeData = new QMimeData;
-    QByteArray data; //a kind of RAW format for datas
-
-    QDataStream stream(&data, QIODevice::WriteOnly);
-
     QVector<SceneObject*> items;
 
-    foreach (const QModelIndex &index, indexes) {
+    for(const QModelIndex &index : indexes) {
         SceneObject *node = objectForIndex(index);
-        //qDebug() << index.row() << node->name();
         if (!items.contains(node))
             items << node;
     }
-    int count = items.count();
-    stream << QCoreApplication::applicationPid();
-    stream << count;
-    for(SceneObject *item : items) {
-        stream << reinterpret_cast<qlonglong>(item);
-    }
 
-    mimeData->setData(SceneObject::SceneObjectMime, data);
-    return mimeData;
+    return encodeSceneObjectMime(items);
 }
 
 bool SceneModel::dropMimeData(const QMimeData *mimeData, Qt::DropAction action, int row, int column, const QModelIndex &parent)
@@ -119,11 +153,8 @@ bool SceneModel::dropMimeData(const QMimeData *mimeData, Qt::DropAction action, 
 
     if (mimeData->hasFormat(SceneObject::SceneObjectMime)) {
 
-        QByteArray data = mimeData->data(SceneObject::SceneObjectMime);
-        QDataStream stream(&data, QIODevice::ReadOnly);
-        qint64 senderPid;
-        stream >> senderPid;
-        if (senderPid != QCoreApplication::applicationPid())
+        QVector<SceneObject*> layers = decodeSceneObjectMime(mimeData);
+        if(layers.isEmpty())
             return false;
 
         SceneObject *parentLayer = nullptr;
@@ -133,23 +164,11 @@ bool SceneModel::dropMimeData(const QMimeData *mimeData, Qt::DropAction action, 
         if(!parentLayer)
             parentLayer = m_impl->rootObject;
 
-        int count;
-        stream >> count;
         if (row == -1) {
             if (parent.isValid())
                 row = 0;
             else
                 row = rowCount(parent);
-        }
-
-        QVector<SceneObject*> layers;
-        for (int i = 0; i < count; ++i) {
-            // Decode data from the QMimeData
-            qlonglong objPtr;
-            stream >> objPtr;
-            SceneObject *node = reinterpret_cast<SceneObject*>(objPtr);
-
-                layers.append(static_cast<SceneObject*>(node));
         }
 
         //std::sort(layers.begin(), layers.end(),[](LayerPtr layerA, LayerPtr layerB){return layerA->index() < layerB->index();});

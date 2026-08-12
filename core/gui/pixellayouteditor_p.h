@@ -6,31 +6,35 @@
 #include <QGraphicsScene>
 #include <QGraphicsView>
 #include <QGraphicsItem>
-#include <QDoubleSpinBox>
+#include <functional>
 #include "pixellayouteditor.h"
-#include "pointedit.h"
+
+class QDragEnterEvent;
+class QDragMoveEvent;
+class QDropEvent;
 
 namespace photon {
 
-class PixelSourceItem;
+class PixelPointItem;
+class SceneObject;
 
-class PixelLayoutPropertyEditor : public QWidget
+// A QListWidget that also accepts a Fixture/PixelSource-capable SceneObject
+// dropped from the Project panel (or anywhere else SceneObjectMime is
+// dragged from), re-emitting the decoded objects for the side panel to
+// filter and add - mirrors the drop handling in FalloffView.
+class PixelSourceListWidget : public QListWidget
 {
     Q_OBJECT
 public:
-    PixelLayoutPropertyEditor();
+    explicit PixelSourceListWidget(QWidget *parent = nullptr);
 
-public slots:
-    void selectLayout(PixelSourceLayout*);
-    void positionUpdated(const QPointF);
-    void scaleUpdated(const QPointF);
-    void rotationUpdated(double);
+signals:
+    void sceneObjectsDropped(const QVector<SceneObject*> &objects);
 
-private:
-    PixelSourceLayout *m_layout;
-    PointEdit *m_positionEdit;
-    PointEdit *m_scaleEdit;
-    QDoubleSpinBox *m_rotationSpin;
+protected:
+    void dragEnterEvent(QDragEnterEvent *) override;
+    void dragMoveEvent(QDragMoveEvent *) override;
+    void dropEvent(QDropEvent *) override;
 };
 
 class PixelLayoutScene : public QGraphicsScene
@@ -39,21 +43,36 @@ class PixelLayoutScene : public QGraphicsScene
 public:
     PixelLayoutScene(PixelLayout *);
 
-    PixelSourceItem *findItemForSource(PixelSourceLayout *) const;
     void setScale(QPointF);
     QPointF scale() const{return m_scale;}
-private slots:
 
+    // Marks t_source (or none, for nullptr) as the active source, so its
+    // points paint cyan instead of dark grey - kept in sync with the fixture
+    // list's current row. Independent of native Qt item selection (below).
+    void selectSource(PixelSourceLayout *t_source);
+    PixelSourceLayout *activeSourceLayout() const{return m_activeSourceLayout;}
+
+    // Every currently-selected point (native QGraphicsItem selection, e.g.
+    // from a rubber-band drag - independent of which source is "active"),
+    // as (owning layout, pixel index) pairs. Deterministically ordered by
+    // m_layout->sourceLayouts() order then ascending index - selectedItems()
+    // itself has no stable order, and shape commands like Grid need one.
+    QVector<QPair<PixelSourceLayout*,int>> selectedPixels() const;
+
+private slots:
     void sourceAdded(photon::PixelSourceLayout *);
     void sourceRemoved(photon::PixelSourceLayout *);
-    void sourceTransformUpdated();
 
 protected:
     void drawBackground(QPainter *painter, const QRectF &rect) override;
 
 private:
+    void repositionSource(PixelSourceLayout *);
+    void syncPointCount(PixelSourceLayout *);
+
     PixelLayout *m_layout;
-    QVector<PixelSourceItem*> m_sourceItems;
+    QHash<PixelSourceLayout*, QVector<PixelPointItem*>> m_pointItems;
+    PixelSourceLayout *m_activeSourceLayout = nullptr;
     QPointF m_scale;
     QPointF m_inverseScale;
 
@@ -69,23 +88,40 @@ protected:
     void resizeEvent(QResizeEvent *) override;
 };
 
-class PixelSourceItem : public QGraphicsItem
+// One point per pixel (replaces the old one-item-per-source PixelSourceItem)
+// so individual pixels can be natively selected/dragged via QGraphicsScene's
+// built-in rubber-band selection, same pattern as SceneObjectItem/GizmoItem
+// in fixturefalloff2deditor.cpp.
+class PixelPointItem : public QGraphicsItem
 {
 public:
-    PixelSourceItem(PixelSourceLayout *);
+    PixelPointItem(PixelSourceLayout *, int index);
     QRectF boundingRect() const override;
     void paint(QPainter *painter, const QStyleOptionGraphicsItem *option,
                QWidget *widget) override;
 
-    PixelSourceLayout *sourceLayout() const{return m_layout;}
+    PixelSourceLayout *sourceLayout() const{return m_sourceLayout;}
+    int index() const{return m_index;}
 
-    QPointF scale() const{return m_scale;}
-    void setScale(QPointF);
-    void transformUpdated();
+    // Recomputes this point's scene position from
+    // sourceLayout->pixelPosition(index) and the scene's current pixel
+    // scale. Called on scene rescale, on pixelPositionsChanged, and after
+    // syncPointCount() adds new points.
+    void reposition();
+
+    // Only the active source's points are selectable/draggable - kept in
+    // sync with PixelLayoutScene::selectSource(). Clears any existing
+    // selection when turned off, since a point that can no longer be
+    // selected shouldn't linger in a stale selected state.
+    void setInteractive(bool);
+
+protected:
+    QVariant itemChange(GraphicsItemChange change, const QVariant &value) override;
+
 private:
-    PixelSourceLayout *m_layout;
-    QPointF m_scale;
-    QPointF m_inverseScale;
+    PixelSourceLayout *m_sourceLayout;
+    int m_index;
+    bool m_repositioning = false;
 };
 
 class PixelLayoutEditorSidePanel : public QWidget
@@ -97,15 +133,41 @@ public:
 public slots:
     void addSource(photon::PixelSource*);
     void addClicked();
+    void removeClicked();
+    void arrangeClicked();
     void selectedRow(int);
+    void sceneObjectsDropped(const QVector<SceneObject*> &objects);
 
 protected:
+    bool isAlreadyAdded(SceneObject *) const;
+    void tryAddSceneObject(SceneObject *);
+
+    void arrangeLinear();
+    void arrangeGrid();
+    void arrangeRadial();
+    void arrangeArc();
+    void arrangeHoneycomb();
+    void arrangeBeeEye();
+    void arrangeMove();
+    void arrangeScale();
+    void arrangeRotate();
+
+    // Recenters t_shapePoints (in the shape function's own canonical local
+    // convention) around the current selection's canvas-space bounding-box
+    // centroid, then writes each one back into its point's own source layout.
+    void commitArrangedPoints(const QVector<QPointF> &shapePoints);
+
+    // Applies fn to each selected pixel's current position independently
+    // (as opposed to commitArrangedPoints(), which replaces the whole
+    // selection with a freshly-generated shape) - used by Move/Scale/Rotate.
+    void transformSelected(const std::function<QPointF(QPointF)> &fn);
 
 private:
     PixelLayout *pixelLayout;
     QPushButton *addButton;
-    QListWidget *layoutList;
-    PixelLayoutPropertyEditor *propertyEditor;
+    QPushButton *removeButton;
+    QPushButton *arrangeButton;
+    PixelSourceListWidget *layoutList;
     PixelLayoutScene *scene;
     PixelLayoutView *view;
 };

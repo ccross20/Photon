@@ -8,6 +8,8 @@
 #include "node/colorinputnode.h"
 #include "node/pointinputnode.h"
 #include "opengl/openglframebuffer.h"
+#include "gui/resourceeditorwidget.h"
+#include "photoncore.h"
 
 namespace photon {
 
@@ -67,6 +69,15 @@ void Routine::canvasResized(QOpenGLContext *t_context, Canvas *t_canvas)
     }
 }
 
+QWidget *Routine::createResourceEditor()
+{
+    auto *editor = new ResourceEditorWidget(this);
+    editor->setOpenAction("Open Routine Editor", [this](){
+        photonApp->editRoutine(this);
+    });
+    return editor;
+}
+
 QString Routine::name() const
 {
     return m_impl->name;
@@ -74,7 +85,10 @@ QString Routine::name() const
 
 void Routine::setName(const QString &t_value)
 {
+    if(m_impl->name == t_value)
+        return;
     m_impl->name = t_value;
+    notifyResourceChanged();
 }
 
 const QVector<ChannelInfo> &Routine::channelInfo() const
@@ -209,6 +223,7 @@ void Routine::readFromJson(const QJsonObject &t_json, keira::NodeLibrary *t_libr
     Graph::readFromJson(t_json, t_library);
 
     m_impl->name = t_json["name"].toString();
+    readResourceJson(t_json);
 
     for(auto node : nodes())
     {
@@ -235,6 +250,7 @@ void Routine::writeToJson(QJsonObject &t_json) const
     Graph::writeToJson(t_json);
 
     t_json.insert("name",m_impl->name);
+    writeResourceJson(t_json);
 }
 
 } // namespace photon

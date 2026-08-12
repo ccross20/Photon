@@ -9,10 +9,9 @@
 #include "fixture.h"
 #include "scene/sceneobject.h"
 #include "gui/vector3edit.h"
+#include "gui/tag/tageditorwidget.h"
 #include "photoncore.h"
 #include "project/project.h"
-#include "state/statecollection.h"
-#include "state/state.h"
 
 namespace photon {
 
@@ -25,7 +24,7 @@ public:
     QLineEdit *nameEdit;
     QTextEdit *commentEdit;
     QLineEdit *identifierEdit;
-    QLineEdit *tagEdit;
+    TagEditorWidget *tagEditor;
     QLabel *manufacturerLabel;
     QLabel *descriptionLabel;
     QSpinBox *universeSpin;
@@ -33,7 +32,6 @@ public:
     QComboBox *modeCombo;
     Vector3Edit *positionEdit;
     Vector3Edit *rotationEdit;
-    QComboBox *defaultStateCombo;
     QComboBox *modelCombo;
     QComboBox *beamCombo;
 };
@@ -72,9 +70,6 @@ FixtureEditorWidget::Impl::Impl()
     modeCombo = new QComboBox;
     formLayout->addRow("DMX Mode", modeCombo);
 
-    defaultStateCombo = new QComboBox;
-    formLayout->addRow("Default State", defaultStateCombo);
-
     modelCombo = new QComboBox;
     // Index 0 = Auto (empty override); the rest are visualiser model types.
     modelCombo->addItems(QStringList() << "Auto" << "mover" << "par" << "uplight"
@@ -87,8 +82,48 @@ FixtureEditorWidget::Impl::Impl()
     beamCombo->addItems(QStringList() << "Auto" << "Cones" << "Volumetric");
     formLayout->addRow("Beam Style", beamCombo);
 
-    tagEdit = new QLineEdit;
-    formLayout->addRow("Tags", tagEdit);
+    // Shows the union of the current selection's tags. Adding a chip applies
+    // it to every selected fixture; removing one removes it from whichever
+    // fixtures have it - each fixture's own tags outside that union are left
+    // alone. Replaces the old "[multiple]" sentinel, which could otherwise be
+    // committed back as a literal tag.
+    tagEditor = new TagEditorWidget(
+        [this](){
+            QStringList unionTags;
+            for(auto *fixture : fixtures)
+                for(const auto &tag : fixture->tags())
+                    if(!unionTags.contains(tag))
+                        unionTags.append(tag);
+            unionTags.sort();
+            return unionTags;
+        },
+        [this](const QStringList &newTags){
+            QStringList before;
+            for(auto *fixture : fixtures)
+                for(const auto &tag : fixture->tags())
+                    if(!before.contains(tag))
+                        before.append(tag);
+
+            QStringList added = newTags;
+            for(const auto &tag : before)
+                added.removeAll(tag);
+            QStringList removed = before;
+            for(const auto &tag : newTags)
+                removed.removeAll(tag);
+
+            for(auto *fixture : fixtures)
+            {
+                QStringList tags = fixture->tags();
+                for(const auto &tag : added)
+                    if(!tags.contains(tag))
+                        tags.append(tag);
+                for(const auto &tag : removed)
+                    tags.removeAll(tag);
+                fixture->setTags(tags);
+            }
+        },
+        [](){ return photonApp->project() ? photonApp->project()->allTags() : QStringList(); });
+    formLayout->addRow("Tags", tagEditor);
 
     positionEdit = new Vector3Edit;
     formLayout->addRow("Position", positionEdit);
@@ -111,12 +146,10 @@ FixtureEditorWidget::FixtureEditorWidget(QWidget *parent)
     connect(m_impl->universeSpin, &QSpinBox::valueChanged, this, &FixtureEditorWidget::setUniverse);
     connect(m_impl->offsetSpin, &QSpinBox::valueChanged, this, &FixtureEditorWidget::setOffset);
     connect(m_impl->modeCombo, &QComboBox::activated, this, &FixtureEditorWidget::setMode);
-    connect(m_impl->defaultStateCombo, &QComboBox::activated, this, &FixtureEditorWidget::setDefaultState);
     connect(m_impl->modelCombo, &QComboBox::activated, this, &FixtureEditorWidget::setModelType);
     connect(m_impl->beamCombo, &QComboBox::activated, this, &FixtureEditorWidget::setBeamStyle);
     connect(m_impl->positionEdit, &Vector3Edit::valueChanged, this, &FixtureEditorWidget::setPosition);
     connect(m_impl->rotationEdit, &Vector3Edit::valueChanged, this, &FixtureEditorWidget::setRotation);
-    connect(m_impl->tagEdit, &QLineEdit::textEdited, this, &FixtureEditorWidget::setTags);
 }
 
 FixtureEditorWidget::~FixtureEditorWidget()
@@ -129,11 +162,15 @@ void FixtureEditorWidget::setFixtures(QVector<Fixture*> t_fixtures)
     for (auto *fix : m_impl->fixtures) {
         disconnect(fix, &SceneObject::positionChanged, this, &FixtureEditorWidget::refreshTransform);
         disconnect(fix, &SceneObject::rotationChanged, this, &FixtureEditorWidget::refreshTransform);
+        disconnect(fix, &SceneObject::metadataChanged, m_impl->tagEditor, &TagEditorWidget::refresh);
     }
     m_impl->fixtures = t_fixtures;
     for (auto *fix : m_impl->fixtures) {
         connect(fix, &SceneObject::positionChanged, this, &FixtureEditorWidget::refreshTransform);
         connect(fix, &SceneObject::rotationChanged, this, &FixtureEditorWidget::refreshTransform);
+        // Keeps the tag row live if a tag is added/removed from outside this
+        // editor - e.g. dropped onto this fixture's row in the Project panel.
+        connect(fix, &SceneObject::metadataChanged, m_impl->tagEditor, &TagEditorWidget::refresh);
     }
     m_impl->modeCombo->clear();
 
@@ -152,12 +189,12 @@ void FixtureEditorWidget::setFixtures(QVector<Fixture*> t_fixtures)
         m_impl->offsetSpin->setValue(1);
         m_impl->offsetSpin->setEnabled(false);
         m_impl->modeCombo->setEnabled(false);
-        m_impl->defaultStateCombo->setEnabled(false);
         m_impl->modelCombo->setEnabled(false);
         m_impl->beamCombo->setEnabled(false);
         m_impl->positionEdit->setEnabled(false);
         m_impl->rotationEdit->setEnabled(false);
-        m_impl->tagEdit->setEnabled(false);
+        m_impl->tagEditor->setEnabled(false);
+        m_impl->tagEditor->refresh();
         return;
     }
 
@@ -168,12 +205,11 @@ void FixtureEditorWidget::setFixtures(QVector<Fixture*> t_fixtures)
     m_impl->universeSpin->setEnabled(true);
     m_impl->offsetSpin->setEnabled(true);
     m_impl->modeCombo->setEnabled(true);
-    m_impl->defaultStateCombo->setEnabled(true);
     m_impl->modelCombo->setEnabled(true);
     m_impl->beamCombo->setEnabled(true);
     m_impl->positionEdit->setEnabled(true);
     m_impl->rotationEdit->setEnabled(true);
-    m_impl->tagEdit->setEnabled(true);
+    m_impl->tagEditor->setEnabled(true);
 
     auto it = m_impl->fixtures.cbegin();
     Fixture *firstFixture = *it;
@@ -203,23 +239,11 @@ void FixtureEditorWidget::setFixtures(QVector<Fixture*> t_fixtures)
     int mode = firstFixture->mode();
     auto modes = firstFixture->modes();
 
-    QByteArray stateId;
-    if(firstFixture->defaultState())
-    {
-        stateId = firstFixture->defaultState()->uniqueId();
-        qDebug() << "Default " << firstFixture->defaultState()->name();
-    }
-    else
-        qDebug() << "no default state";
-
     QVector3D position = firstFixture->position();
     bool multiPosition = false;
 
     QVector3D rotation = firstFixture->rotation();
     bool multiRotation = false;
-
-    QStringList tags = firstFixture->tags();
-    bool multiTags = false;
 
     if(m_impl->fixtures.length() > 1)
     {
@@ -255,12 +279,6 @@ void FixtureEditorWidget::setFixtures(QVector<Fixture*> t_fixtures)
             {
                 comment = "[multiple]";
                 multiComment = true;
-            }
-
-            if(!multiTags && currentFixture->tags() != tags)
-            {
-                tags = QStringList{"[multiple]"};
-                multiTags = true;
             }
 
             if(!multiUniverse && currentFixture->universe() != universe)
@@ -304,24 +322,12 @@ void FixtureEditorWidget::setFixtures(QVector<Fixture*> t_fixtures)
     m_impl->offsetSpin->setValue(offset);
     m_impl->positionEdit->setValue(position);
     m_impl->rotationEdit->setValue(rotation);
-    m_impl->tagEdit->setText(tags.join(" "));
+    m_impl->tagEditor->refresh();
 
     for(const auto &mode : modes)
     {
         m_impl->modeCombo->addItem(mode.name + " (" + QString::number(mode.channels.length()) + ")");
     }
-
-    int stateCounter = 1;
-    int chosenState = 0;
-    m_impl->defaultStateCombo->addItem("[None]");
-    for(auto state : photonApp->project()->states()->states())
-    {
-        m_impl->defaultStateCombo->addItem(state->name());
-        if(state->uniqueId() == stateId)
-            chosenState = stateCounter;
-        stateCounter++;
-    }
-    m_impl->defaultStateCombo->setCurrentIndex(chosenState);
 
     m_impl->modeCombo->setCurrentIndex(mode);
 
@@ -343,14 +349,6 @@ void FixtureEditorWidget::setName(const QString &name)
     for(auto fixture : m_impl->fixtures)
     {
         fixture->setName(name);
-    }
-}
-
-void FixtureEditorWidget::setTags(const QString &tags)
-{
-    for(auto fixture : m_impl->fixtures)
-    {
-        fixture->setTags(tags.split(" "));
     }
 }
 
@@ -394,18 +392,6 @@ void FixtureEditorWidget::setOffset(uint t_channel)
     }
 }
 
-void FixtureEditorWidget::setDefaultState(int index)
-{
-    State *state = nullptr;
-
-    if(index > 0)
-        state = photonApp->project()->states()->stateAtIndex(index - 1);
-
-    for(auto fixture : m_impl->fixtures)
-    {
-        fixture->setDefaultState(state);
-    }
-}
 
 void FixtureEditorWidget::setMode(int t_index)
 {

@@ -112,6 +112,15 @@ SceneObject::SceneObject(const QByteArray &t_typeId, SceneObject *t_parent)
     : QObject{t_parent},m_impl(new Impl(this))
 {
     m_impl->typeId = t_typeId;
+
+    // metadataChanged is the scene's long-standing "something displayable
+    // changed" signal; republish it to the resource notifier so the project
+    // panel sees renames, tag edits and visibility toggles alike. Calls the
+    // base implementation explicitly - the override redirects back into
+    // metadataChanged, which would otherwise recurse.
+    connect(this, &SceneObject::metadataChanged, this, [this](){
+        ProjectResource::notifyResourceChanged();
+    });
 }
 
 SceneObject::~SceneObject()
@@ -122,38 +131,6 @@ SceneObject::~SceneObject()
 QWidget *SceneObject::createEditor()
 {
     return new QWidget();
-}
-
-const QStringList &SceneObject::tags() const
-{
-    return m_impl->tags;
-}
-
-void SceneObject::setTags(const QStringList &t_tags)
-{
-    m_impl->tags = t_tags;
-    m_impl->tags.sort();
-    emit metadataChanged(this);
-}
-
-void SceneObject::addTag(const QString &t_tag)
-{
-    if(m_impl->tags.contains(t_tag.toLower()))
-        return;
-
-    m_impl->tags.append(t_tag.toLower());
-    m_impl->tags.sort();
-    emit metadataChanged(this);
-}
-
-void SceneObject::removeTag(const QString &t_tag)
-{
-    if(!m_impl->tags.contains(t_tag.toLower()))
-        return;
-
-    m_impl->tags.removeOne(t_tag);
-    m_impl->tags.sort();
-    emit metadataChanged(this);
 }
 
 bool SceneObject::isVisible() const
@@ -343,7 +320,7 @@ void SceneObject::readFromJson(const QJsonObject &t_json, const LoadContext &t_c
                                     static_cast<float>(rotationObj.value("y").toDouble()),
                                     static_cast<float>(rotationObj.value("z").toDouble())};
 
-    m_impl->tags = jsonToStringList(t_json.value("tags").toArray());
+    readResourceJson(t_json);
     m_impl->visible = t_json.contains("visible") ? t_json.value("visible").toBool() : true;
 
     m_impl->rebuildMatrix();
@@ -380,7 +357,7 @@ void SceneObject::writeToJson(QJsonObject &t_json) const
     rotationObj.insert("z", m_impl->rotation.z());
     t_json.insert("rotation", rotationObj);
 
-    t_json.insert("tags", stringListToJson(m_impl->tags));
+    writeResourceJson(t_json);
     t_json.insert("visible", m_impl->visible);
 
     if(!m_impl->children.isEmpty())

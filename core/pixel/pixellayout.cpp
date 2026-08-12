@@ -1,5 +1,11 @@
 #include "pixellayout.h"
 #include "pixelsourcelayout.h"
+#include <QJsonArray>
+#include <QJsonObject>
+#include <QUuid>
+#include <QVBoxLayout>
+#include "gui/resourceeditorwidget.h"
+#include "gui/pixellayouteditor.h"
 
 namespace photon {
 
@@ -59,6 +65,21 @@ QVector<PixelSource*> PixelLayout::sources() const
     return results;
 }
 
+QWidget *PixelLayout::createResourceEditor()
+{
+    // Compact enough to live inline in the Properties panel - name/tags on
+    // top, the layout canvas below - rather than behind a separate "Open"
+    // step or a floating window.
+    auto *container = new QWidget;
+    auto *layout = new QVBoxLayout(container);
+    layout->setContentsMargins(0, 0, 0, 0);
+
+    layout->addWidget(new ResourceEditorWidget(this));
+    layout->addWidget(new PixelLayoutEditor(this));
+
+    return container;
+}
+
 QString PixelLayout::name() const
 {
     return m_impl->name;
@@ -66,7 +87,10 @@ QString PixelLayout::name() const
 
 void PixelLayout::setName(const QString &t_name)
 {
+    if(m_impl->name == t_name)
+        return;
     m_impl->name = t_name;
+    notifyResourceChanged();
 }
 
 
@@ -80,6 +104,15 @@ void PixelLayout::process(ProcessContext &t_context, double t_blend) const
 
 void PixelLayout::readFromJson(const QJsonObject &t_json, const LoadContext &t_context)
 {
+    // Identity is read unconditionally: it used to sit inside the "sources"
+    // guard below, so a layout saved with no sources came back nameless and
+    // with a freshly generated id.
+    if(t_json.contains("name"))
+        m_impl->name = t_json.value("name").toString();
+    if(t_json.contains("uniqueId"))
+        m_impl->uniqueId = t_json.value("uniqueId").toString().toLatin1();
+    readResourceJson(t_json);
+
     if(t_json.contains("sources"))
     {
         m_impl->sources.clear();
@@ -92,8 +125,6 @@ void PixelLayout::readFromJson(const QJsonObject &t_json, const LoadContext &t_c
 
             m_impl->sources.append(newLayout);
         }
-        m_impl->name = t_json.value("name").toString();
-        m_impl->uniqueId = t_json.value("uniqueId").toString().toLatin1();
     }
 }
 
@@ -109,6 +140,7 @@ void PixelLayout::writeToJson(QJsonObject &t_json) const
     t_json.insert("sources", sourceArray);
     t_json.insert("name", m_impl->name);
     t_json.insert("uniqueId", QString{m_impl->uniqueId});
+    writeResourceJson(t_json);
 }
 
 } // namespace photon

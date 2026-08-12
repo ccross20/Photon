@@ -21,8 +21,18 @@ public:
     DMXMatrixParameter *dmxInParam;
     DMXMatrixParameter *dmxOutParam;
     keira::ButtonParameter *editParam;
-    Surface *surface = nullptr;
     QByteArray surfaceId;
+
+    // Resolved lazily from surfaceId and held until the collection changes.
+    // keira::Node isn't a QObject so we can't listen for that — instead we
+    // compare the collection's revision, which is cheaper than a lookup. The
+    // collection pointer is part of the key because a node can be asked for its
+    // surface while a *different* project is still the current one (Project::load
+    // runs before PhotonCore::setProject), and revisions aren't comparable across
+    // collections.
+    mutable Surface *cachedSurface = nullptr;
+    mutable const SurfaceCollection *cachedCollection = nullptr;
+    mutable quint32 cachedRevision = 0;
 };
 
 keira::NodeInformation SurfaceNode::info()
@@ -39,18 +49,43 @@ SurfaceNode::SurfaceNode() : keira::SubGraphNode("photon.bus.surface"),m_impl(ne
 {
     setName("Surface");
     graph()->setGraphTypeId("surface");
-    m_impl->surface = new Surface();
 }
 
 SurfaceNode::~SurfaceNode()
 {
-    delete m_impl->surface;
+    // The Project owns the surface — never delete it here.
     delete m_impl;
+}
+
+QByteArray SurfaceNode::surfaceId() const
+{
+    return m_impl->surfaceId;
+}
+
+void SurfaceNode::setSurfaceId(const QByteArray &t_id)
+{
+    m_impl->surfaceId = t_id;
+    m_impl->cachedCollection = nullptr;
+    m_impl->cachedSurface = nullptr;
 }
 
 Surface *SurfaceNode::surface() const
 {
-    return m_impl->surface;
+    if(m_impl->surfaceId.isEmpty())
+        return nullptr;
+
+    auto *collection = photonApp->surfaces();
+    if(!collection)
+        return nullptr;
+
+    if(m_impl->cachedCollection == collection && m_impl->cachedRevision == collection->revision())
+        return m_impl->cachedSurface;
+
+    m_impl->cachedSurface = collection->findSurfaceWithId(m_impl->surfaceId);
+    m_impl->cachedCollection = collection;
+    m_impl->cachedRevision = collection->revision();
+
+    return m_impl->cachedSurface;
 }
 
 void SurfaceNode::createParameters()
@@ -67,11 +102,21 @@ void SurfaceNode::createParameters()
 void SurfaceNode::evaluate(keira::EvaluationContext *t_context) const
 {
     auto context = static_cast<RoutineEvaluationContext*>(t_context);
-    context->surface = m_impl->surface;
+    Surface *surface = this->surface();
+    context->surface = surface;
+
+    // The surface is owned by the project and referenced by id, so it can be
+    // absent — deleted from the project panel, or an id that never resolved.
+    // Pass DMX through untouched rather than dropping the frame.
+    if(!surface)
+    {
+        m_impl->dmxOutParam->setValue(m_impl->dmxInParam->value());
+        return;
+    }
 
     // Publish every gizmo's live outputs onto the value bus so GizmoValueNodes
     // downstream can read them by "<uniqueId>/<portId>" without type coupling.
-    for(auto *gizmo : m_impl->surface->gizmos())
+    for(auto *gizmo : surface->gizmos())
     {
         const QByteArray prefix = gizmo->uniqueId() + "/";
         for(const auto &output : gizmo->outputs())
@@ -84,13 +129,7 @@ void SurfaceNode::evaluate(keira::EvaluationContext *t_context) const
     processContext.globalTime = context->globalTime;
     processContext.relativeTime = context->relativeTime;
 
-/*
-    auto panel = photonApp->sequences()->activeSequencePanel();
-
-    if(panel)
-        panel->processPreview(context);
-*/
-    m_impl->surface->processChannels(processContext,0);
+    surface->processChannels(processContext,0);
 
     keira::SubGraphNode::evaluate(context);
 
@@ -100,28 +139,21 @@ void SurfaceNode::evaluate(keira::EvaluationContext *t_context) const
 
 void SurfaceNode::buttonClicked(const keira::Parameter *)
 {
-
-    photonApp->surfaces()->addSurface(m_impl->surface);
-    photonApp->surfaces()->editSurface(m_impl->surface);
+    if(auto *surface = this->surface())
+        photonApp->surfaces()->editSurface(surface);
 }
 
 void SurfaceNode::readFromJson(const QJsonObject &t_obj, keira::NodeLibrary *t_library)
 {
-    LoadContext context;
-    m_impl->surface->readFromJson(t_obj.value("surface").toObject(), context);
+    setSurfaceId(t_obj.value("surfaceId").toString().toLatin1());
     SubGraphNode::readFromJson(t_obj, t_library);
-
-
-
 }
 
 void SurfaceNode::writeToJson(QJsonObject &t_obj) const
 {
     SubGraphNode::writeToJson(t_obj);
 
-    QJsonObject surfaceObj;
-    m_impl->surface->writeToJson(surfaceObj);
-    t_obj.insert("surface", surfaceObj);
+    t_obj.insert("surfaceId", QString::fromLatin1(m_impl->surfaceId));
 }
 
 } // namespace photon

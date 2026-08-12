@@ -7,6 +7,9 @@
 #include <QDoubleSpinBox>
 #include "scenearrow.h"
 #include "gui/vector3edit.h"
+#include "gui/tag/tageditorwidget.h"
+#include "photoncore.h"
+#include "project/project.h"
 
 namespace photon {
 
@@ -16,8 +19,9 @@ class SceneArrowEditorWidget::Impl
 {
 public:
     Impl();
-    SceneArrow *arrow;
+    SceneArrow *arrow = nullptr;
     QLineEdit *nameEdit;
+    TagEditorWidget *tagEditor;
     QFormLayout *formLayout;
     QDoubleSpinBox *sizeSpin;
     Vector3Edit *positionEdit;
@@ -31,7 +35,11 @@ SceneArrowEditorWidget::Impl::Impl()
     nameEdit = new QLineEdit;
     formLayout->addRow("Name", nameEdit);
 
-
+    tagEditor = new TagEditorWidget(
+        [this](){ return arrow ? arrow->tags() : QStringList(); },
+        [this](const QStringList &tags){ if(arrow) arrow->setTags(tags); },
+        [](){ return photonApp->project() ? photonApp->project()->allTags() : QStringList(); });
+    formLayout->addRow("Tags", tagEditor);
 
     sizeSpin = new QDoubleSpinBox;
     sizeSpin->setMinimum(.1);
@@ -61,8 +69,12 @@ SceneArrowEditorWidget::SceneArrowEditorWidget(SceneArrow *t_arrow, QWidget *par
     connect(m_impl->rotationEdit, &Vector3Edit::valueChanged, this, &SceneArrowEditorWidget::setRotation);
 
     m_impl->arrow = t_arrow;
+    // Keeps the tag row live if a tag is added/removed from outside this
+    // editor - e.g. dropped onto this object's row in the Project panel.
+    connect(t_arrow, &SceneObject::metadataChanged, m_impl->tagEditor, &TagEditorWidget::refresh);
 
     m_impl->nameEdit->setText(t_arrow->name());
+    m_impl->tagEditor->refresh();
     m_impl->sizeSpin->setValue(t_arrow->size());
 
 }

@@ -66,7 +66,7 @@ void FixtureGroupNode::evaluate(keira::EvaluationContext *) const
     const QString name = m_impl->groupParam->value().toString();
     if(FixtureGroup *group = photonApp->project()->groups()->findGroup(name))
     {
-        for(Fixture *fixture : group->query.resolve(photonApp->project()))
+        for(Fixture *fixture : group->query().resolve(photonApp->project()))
             result.append(fixture);
     }
 

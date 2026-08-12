@@ -47,11 +47,13 @@ public:
     PixelStrip(SceneObject *parent = nullptr);
     ~PixelStrip();
 
+    // Kept for the visualizer's future use (physical strip geometry) - no
+    // longer drives pixel-mapping-canvas positions, which live on
+    // PixelSourceLayout instead. See pixelCount() for the DMX/canvas concern.
     double center() const;
     double angle() const;
     double bend() const;
     double length() const;
-    int pixelCount() const;
 
     void setLength(double);
     void setCenter(double);
@@ -62,14 +64,14 @@ public:
     void setUniverse(int universe);
 
     QWidget *createEditor() override;
-    const QVector<QPointF> &positions() const override;
+    int pixelCount() const override;
 
     QByteArray sourceUniqueId() const override;
     int dmxOffset() const override;
     int dmxSize() const override;
     int universe() const override;
 
-    void process(ProcessContext &, const QTransform &, double blend=1.0) const override;
+    void process(ProcessContext &, const QVector<QPointF> &positions, double blend=1.0) const override;
 
     void readFromJson(const QJsonObject &, const LoadContext &) override;
     void writeToJson(QJsonObject &) const override;

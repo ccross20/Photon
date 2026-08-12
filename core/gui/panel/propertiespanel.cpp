@@ -1,6 +1,6 @@
 #include "propertiespanel_p.h"
 #include "project/project.h"
-#include "scene/sceneobject.h"
+#include "project/projectresource.h"
 #include "photoncore.h"
 
 namespace photon {
@@ -25,11 +25,12 @@ PropertiesPanel::~PropertiesPanel()
     delete m_impl;
 }
 
-// A scene object was selected — route its editor through the shared properties
-// widget so any selection source (scene, channel effect, ...) uses one path.
-void PropertiesPanel::selectedObjectChanged(SceneObject *obj)
+// A resource was selected — route its editor through the shared properties
+// widget so any selection source (project panel, viewport, channel effect, ...)
+// uses one path. Works for every resource type, not just scene objects.
+void PropertiesPanel::selectedResourceChanged(ProjectResource *resource)
 {
-    photonApp->project()->setPropertiesWidget(obj ? obj->createEditor() : nullptr);
+    photonApp->project()->setPropertiesWidget(resource ? resource->createResourceEditor() : nullptr);
 }
 
 // Display the current properties widget. The Project owns it (and deletes the
@@ -55,16 +56,16 @@ void PropertiesPanel::propertiesWidgetChanged(QWidget *widget)
 
 void PropertiesPanel::projectDidOpen(Project *project)
 {
-    connect(project, &Project::selectedSceneObjectChanged, this, &PropertiesPanel::selectedObjectChanged);
+    connect(project, &Project::selectedResourceChanged, this, &PropertiesPanel::selectedResourceChanged);
     connect(project, &Project::propertiesWidgetChanged, this, &PropertiesPanel::propertiesWidgetChanged);
 
     propertiesWidgetChanged(project->propertiesWidget());
-    selectedObjectChanged(project->selectedSceneObject());
+    selectedResourceChanged(project->selectedResource());
 }
 
 void PropertiesPanel::projectWillClose(Project *project)
 {
-    disconnect(project, &Project::selectedSceneObjectChanged, this, &PropertiesPanel::selectedObjectChanged);
+    disconnect(project, &Project::selectedResourceChanged, this, &PropertiesPanel::selectedResourceChanged);
     disconnect(project, &Project::propertiesWidgetChanged, this, &PropertiesPanel::propertiesWidgetChanged);
 
     // Detach our view of the widget, then clear it in the project (which deletes it).

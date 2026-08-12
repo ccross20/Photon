@@ -54,11 +54,11 @@ private:
 
 // A sequence layer group that owns and renders its own GPU (QRhi) canvas -
 // the same sink-texture-ownership pattern as CanvasSubGraphNode
-// (core/graph/node/canvas/canvassubgraphnode.h), rather than referencing an
-// externally shared pixel::Canvas by index into a CanvasCollection (the old
-// model). Registers with CanvasRenderManager for main-thread rendering, since
-// processChannels() can run on either the GUI thread or keira's eval thread
-// (via a SequenceNode) and QRhi is main-thread only.
+// (core/graph/node/canvas/canvassubgraphnode.h). Every canvas is owned by the
+// node or layer group that renders it; there is no project-wide canvas
+// collection. Registers with CanvasRenderManager for main-thread rendering,
+// since processChannels() can run on either the GUI thread or keira's eval
+// thread (via a SequenceNode) and QRhi is main-thread only.
 class PHOTONCORE_EXPORT CanvasLayerGroup : public LayerGroup, public CanvasRenderable
 {
     Q_OBJECT

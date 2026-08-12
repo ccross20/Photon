@@ -7,9 +7,9 @@
 namespace photon {
 
 // Cinema-4D-style "Attributes" panel: shows the property editor for whatever
-// scene object is currently selected, via Project::selectedSceneObject. Kept
-// separate from RigPanel (or any other panel that changes the selection) so
-// multiple selection sources can eventually share it.
+// resource is currently selected, via Project::selectedResource. Kept separate
+// from any panel that changes the selection so multiple selection sources
+// (project panel, visualizer viewport, DMX patch grid) share one editor.
 class PHOTONCORE_EXPORT PropertiesPanel : public Panel
 {
 public:
@@ -17,7 +17,7 @@ public:
     ~PropertiesPanel();
 
 private slots:
-    void selectedObjectChanged(photon::SceneObject *obj);
+    void selectedResourceChanged(photon::ProjectResource *resource);
     void propertiesWidgetChanged(QWidget *widget);
 
 protected:

@@ -1,6 +1,5 @@
 #ifndef PHOTON_TAGMASKEFFECT_H
 #define PHOTON_TAGMASKEFFECT_H
-#include <QLineEdit>
 #include <QCheckBox>
 #include "fixture/maskeffect.h"
 
@@ -8,6 +7,7 @@
 namespace photon {
 
 class TagMaskEffect;
+class TagEditorWidget;
 
 class TagMaskEffectEditor :public QWidget
 {
@@ -15,12 +15,11 @@ public:
     TagMaskEffectEditor(TagMaskEffect *);
 
 private slots:
-    void tagsUpdated(QString);
     void relatedToggle(bool);
     void allToggle(bool);
 
 private:
-    QLineEdit *m_tagEdit;
+    TagEditorWidget *m_tagEditor;
     QCheckBox *m_allCheck;
     QCheckBox *m_relatedCheck;
     TagMaskEffect *m_effect;

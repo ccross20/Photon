@@ -3,11 +3,12 @@
 
 #include "photon-global.h"
 #include "processcontext.h"
+#include "project/projectresource.h"
 
 
 namespace photon {
 
-class PHOTONCORE_EXPORT Sequence : public QObject
+class PHOTONCORE_EXPORT Sequence : public QObject, public ProjectResource
 {
     Q_OBJECT
 public:
@@ -17,7 +18,16 @@ public:
     void init();
     QString name() const;
     void setName(const QString &);
+    QByteArray uniqueId() const;
     QString filePath() const;
+
+    // ProjectResource
+    QByteArray resourceId() const override{return uniqueId();}
+    QByteArray resourceTypeId() const override{return "sequence";}
+    QString resourceName() const override{return name();}
+    void setResourceName(const QString &t_name) override{setName(t_name);}
+    QObject *resourceObject() override{return this;}
+    QWidget *createResourceEditor() override;
     void setAudioPath(const QString &);
     void addLayer(Layer *);
     void removeLayer(Layer *);

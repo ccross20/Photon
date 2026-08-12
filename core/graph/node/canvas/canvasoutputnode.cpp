@@ -97,7 +97,7 @@ QVector<QPointF> CanvasOutputNode::buildSampleUVs() const
     for (auto *layout : selectedLayouts())
         for (auto *sourceLayout : layout->sourceLayouts())
             if (sourceLayout->source())
-                sourceLayout->source()->collectSampleUVs(uvs, sourceLayout->transform());
+                sourceLayout->collectSampleUVs(uvs);
     return uvs;
 }
 

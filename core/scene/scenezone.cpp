@@ -8,6 +8,7 @@
 #include <cmath>
 #include "scenezone.h"
 #include "gui/vector3edit.h"
+#include "gui/tag/tageditorwidget.h"
 #include "photoncore.h"
 #include "project/project.h"
 
@@ -17,9 +18,10 @@ class SceneZoneEditorWidget::Impl
 {
 public:
     Impl();
-    SceneZone *zone;
+    SceneZone *zone = nullptr;
     QFormLayout *formLayout;
     QLineEdit *nameEdit;
+    TagEditorWidget *tagEditor;
     Vector3Edit *sizeEdit;
     QPushButton *colorButton;
     Vector3Edit *positionEdit;
@@ -32,6 +34,12 @@ SceneZoneEditorWidget::Impl::Impl()
 
     nameEdit = new QLineEdit;
     formLayout->addRow("Name", nameEdit);
+
+    tagEditor = new TagEditorWidget(
+        [this](){ return zone ? zone->tags() : QStringList(); },
+        [this](const QStringList &tags){ if(zone) zone->setTags(tags); },
+        [](){ return photonApp->project() ? photonApp->project()->allTags() : QStringList(); });
+    formLayout->addRow("Tags", tagEditor);
 
     sizeEdit = new Vector3Edit;
     formLayout->addRow("Size", sizeEdit);
@@ -64,8 +72,12 @@ SceneZoneEditorWidget::SceneZoneEditorWidget(SceneZone *t_zone, QWidget *parent)
     connect(t_zone, &SceneObject::rotationChanged, this, &SceneZoneEditorWidget::refreshTransform);
     // Size changes (e.g. the scale gizmo) emit metadataChanged — keep the field live.
     connect(t_zone, &SceneObject::metadataChanged, this, &SceneZoneEditorWidget::refreshSize);
+    // Likewise for tags added/removed from outside this editor - e.g.
+    // dropped onto this object's row in the Project panel.
+    connect(t_zone, &SceneObject::metadataChanged, m_impl->tagEditor, &TagEditorWidget::refresh);
 
     m_impl->nameEdit->setText(t_zone->name());
+    m_impl->tagEditor->refresh();
     m_impl->sizeEdit->setValue(t_zone->size());
     m_impl->positionEdit->setValue(t_zone->position());
     m_impl->rotationEdit->setValue(t_zone->rotation());

@@ -12,6 +12,8 @@
 #include "surfacegizmocontainer.h"
 #include "containergizmo.h"
 #include "surfacegraph.h"
+#include "gui/resourceeditorwidget.h"
+#include "surface/surfacecollection.h"
 #include "plugin/pluginfactory.h"
 
 namespace photon {
@@ -103,6 +105,15 @@ Project *Surface::project() const
     return photonApp->project();
 }
 
+QWidget *Surface::createResourceEditor()
+{
+    auto *editor = new ResourceEditorWidget(this);
+    editor->setOpenAction("Open Surface", [this](){
+        photonApp->surfaces()->editSurface(this);
+    });
+    return editor;
+}
+
 QString Surface::name() const
 {
     return m_impl->name;
@@ -110,7 +121,10 @@ QString Surface::name() const
 
 void Surface::setName(const QString &t_value)
 {
+    if(m_impl->name == t_value)
+        return;
     m_impl->name = t_value;
+    notifyResourceChanged();
 }
 
 SurfaceGraph *Surface::graph() const
@@ -178,6 +192,7 @@ void Surface::readFromJson(const QJsonObject &t_json, const LoadContext &t_conte
 {
     m_impl->name = t_json.value("name").toString();
     m_impl->uniqueId = t_json["uniqueId"].toString().toLatin1();
+    readResourceJson(t_json);
 
     if(t_json.contains("root"))
         m_impl->root->readFromJson(t_json.value("root").toObject(), t_context);
@@ -187,6 +202,7 @@ void Surface::writeToJson(QJsonObject &t_json) const
 {
     t_json.insert("name", m_impl->name);
     t_json.insert("uniqueId", QString(m_impl->uniqueId));
+    writeResourceJson(t_json);
 
     QJsonObject rootObj;
     m_impl->root->writeToJson(rootObj);

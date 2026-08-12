@@ -1,5 +1,7 @@
+#include <QJsonArray>
 #include "pixelsourcelayout.h"
 #include "pixelsource.h"
+#include "pixelarrange.h"
 #include "util/utils.h"
 #include "scene/sceneiterator.h"
 #include "project/project.h"
@@ -13,105 +15,49 @@ namespace photon {
 class PixelSourceLayout::Impl
 {
 public:
-    void rebuildBounds();
+    void ensurePixelPositions();
 
-    QPointF position;
-    QPointF scale = QPointF{1,1};
-    QTransform transform;
-    bounds_d bounds;
-    double rotation = 0;
     QString name;
     QByteArray uniqueId;
     PixelSource *source = nullptr;
+    QVector<QPointF> pixelPositions;
 };
 
-void PixelSourceLayout::Impl::rebuildBounds()
+// Reconciles pixelPositions against source->pixelCount(): no-op if already
+// matching, seeds only newly-appended tail slots (via PixelArrange::linear())
+// if growing, truncates if shrinking. Existing entries - including hand-
+// dragged ones - are never touched.
+void PixelSourceLayout::Impl::ensurePixelPositions()
 {
     if(!source)
         return;
 
-    transform = QTransform{};
-    transform.translate(position.x(), position.y());
-    transform.scale(scale.x(), scale.y());
-    transform.rotate(rotation);
+    int count = source->pixelCount();
+    if(pixelPositions.size() == count)
+        return;
 
+    if(pixelPositions.size() > count)
+    {
+        pixelPositions.resize(count);
+        return;
+    }
 
-
-    bounds_d bnds;
-
-    for(const auto &pt : source->positions())
-        bnds.unite(QPointF{pt.x() * scale.x(), pt.y() * scale.y()});
-
-    bounds = bnds;
+    int existing = pixelPositions.size();
+    QVector<QPointF> seeded = PixelArrange::linear(count);
+    pixelPositions.resize(count);
+    for(int i = existing; i < count; ++i)
+        pixelPositions[i] = seeded[i];
 }
 
 PixelSourceLayout::PixelSourceLayout(PixelSource *t_source) : QObject(), m_impl(new Impl)
 {
     m_impl->uniqueId = QUuid::createUuid().toByteArray();
     m_impl->source = t_source;
-
-    m_impl->rebuildBounds();
 }
 
 PixelSourceLayout::~PixelSourceLayout()
 {
     delete m_impl;
-}
-
-void PixelSourceLayout::setPosition(const QPointF &t_value)
-{
-    m_impl->position = t_value;
-    m_impl->rebuildBounds();
-    emit transformUpdated();
-}
-
-QPointF PixelSourceLayout::position() const
-{
-    return m_impl->position;
-}
-
-
-void PixelSourceLayout::setRotation(double t_value)
-{
-    m_impl->rotation = t_value;
-    m_impl->rebuildBounds();
-    emit transformUpdated();
-}
-
-double PixelSourceLayout::rotation() const
-{
-    return m_impl->rotation;
-}
-
-
-void PixelSourceLayout::setScale(const QPointF &t_scale)
-{
-    m_impl->scale = t_scale;
-    m_impl->rebuildBounds();
-    emit transformUpdated();
-}
-
-QPointF PixelSourceLayout::scale() const
-{
-    return m_impl->scale;
-}
-
-
-QTransform PixelSourceLayout::transform() const
-{
-    return m_impl->transform;
-}
-
-
-bounds_d PixelSourceLayout::canvasBounds() const
-{
-    return m_impl->bounds;
-}
-
-
-bounds_d PixelSourceLayout::localBounds() const
-{
-    return m_impl->bounds;
 }
 
 PixelSource *PixelSourceLayout::source() const
@@ -122,22 +68,67 @@ PixelSource *PixelSourceLayout::source() const
 void PixelSourceLayout::setSource(PixelSource *t_source)
 {
     m_impl->source = t_source;
-    m_impl->rebuildBounds();
+}
+
+int PixelSourceLayout::pixelCount() const
+{
+    m_impl->ensurePixelPositions();
+    return m_impl->pixelPositions.size();
+}
+
+const QVector<QPointF> &PixelSourceLayout::pixelPositions() const
+{
+    m_impl->ensurePixelPositions();
+    return m_impl->pixelPositions;
+}
+
+QPointF PixelSourceLayout::pixelPosition(int t_index) const
+{
+    m_impl->ensurePixelPositions();
+    if(t_index < 0 || t_index >= m_impl->pixelPositions.size())
+        return QPointF();
+    return m_impl->pixelPositions[t_index];
+}
+
+void PixelSourceLayout::setPixelPosition(int t_index, const QPointF &t_value)
+{
+    m_impl->ensurePixelPositions();
+    if(t_index < 0 || t_index >= m_impl->pixelPositions.size())
+        return;
+
+    QRectF bounds = pixelBounds();
+    QPointF clamped(qBound(bounds.left(), t_value.x(), bounds.right()),
+                     qBound(bounds.top(), t_value.y(), bounds.bottom()));
+
+    m_impl->pixelPositions[t_index] = clamped;
+    emit pixelPositionsChanged();
+}
+
+QRectF PixelSourceLayout::pixelBounds()
+{
+    return QRectF(0, 0, 1, 1);
+}
+
+void PixelSourceLayout::collectSampleUVs(QVector<QPointF> &t_out) const
+{
+    if(m_impl->source)
+        m_impl->source->collectSampleUVs(t_out, pixelPositions());
 }
 
 void PixelSourceLayout::process(ProcessContext &t_context, double t_blend) const
 {
     if(m_impl->source)
-        m_impl->source->process(t_context, transform(),t_blend);
+        m_impl->source->process(t_context, pixelPositions(), t_blend);
 }
 
 void PixelSourceLayout::readFromJson(const QJsonObject &t_json, const LoadContext &t_context)
 {
-    m_impl->position = jsonToPointF(t_json.value("position").toObject());
-    m_impl->scale = jsonToPointF(t_json.value("scale").toObject());
-    m_impl->rotation = t_json.value("rotation").toDouble();
     m_impl->name = t_json.value("name").toString();
     m_impl->uniqueId = t_json.value("uniqueId").toString().toLatin1();
+
+    m_impl->pixelPositions.clear();
+    for(const auto &v : t_json.value("pixelPositions").toArray())
+        m_impl->pixelPositions << jsonToPointF(v.toObject());
 
     QByteArray sourceId = t_json.value("source").toString().toLatin1();
 
@@ -161,7 +152,6 @@ void PixelSourceLayout::readFromJson(const QJsonObject &t_json, const LoadContex
                 }
             }
         }
-        m_impl->rebuildBounds();
     }
     else
     {
@@ -172,11 +162,6 @@ void PixelSourceLayout::readFromJson(const QJsonObject &t_json, const LoadContex
 
 void PixelSourceLayout::writeToJson(QJsonObject &t_json) const
 {
-
-
-    t_json.insert("position", pointFToJson(m_impl->position));
-    t_json.insert("scale", pointFToJson(m_impl->scale));
-    t_json.insert("rotation", m_impl->rotation);
     t_json.insert("name", m_impl->name);
     t_json.insert("uniqueId", QString(m_impl->uniqueId));
 
@@ -185,7 +170,11 @@ void PixelSourceLayout::writeToJson(QJsonObject &t_json) const
     else
         t_json.insert("source", "");
 
-
+    m_impl->ensurePixelPositions();
+    QJsonArray posArray;
+    for(const auto &pt : m_impl->pixelPositions)
+        posArray.append(pointFToJson(pt));
+    t_json.insert("pixelPositions", posArray);
 }
 
 } // namespace photon

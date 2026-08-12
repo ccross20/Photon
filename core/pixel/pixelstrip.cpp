@@ -7,6 +7,9 @@
 #include <QDoubleSpinBox>
 #include "pixelstrip.h"
 #include "gui/vector3edit.h"
+#include "gui/tag/tageditorwidget.h"
+#include "photoncore.h"
+#include "project/project.h"
 
 namespace photon {
 
@@ -14,9 +17,10 @@ class PixelStripEditorWidget::Impl
 {
 public:
     Impl();
-    PixelStrip *pixelStrip;
+    PixelStrip *pixelStrip = nullptr;
     QFormLayout *formLayout;
     QLineEdit *nameEdit;
+    TagEditorWidget *tagEditor;
     QSpinBox *pixelCountSpin;
     QSpinBox *universeSpin;
     QSpinBox *offsetSpin;
@@ -35,7 +39,11 @@ PixelStripEditorWidget::Impl::Impl(){
     nameEdit = new QLineEdit;
     formLayout->addRow("Name", nameEdit);
 
-
+    tagEditor = new TagEditorWidget(
+        [this](){ return pixelStrip ? pixelStrip->tags() : QStringList(); },
+        [this](const QStringList &tags){ if(pixelStrip) pixelStrip->setTags(tags); },
+        [](){ return photonApp->project() ? photonApp->project()->allTags() : QStringList(); });
+    formLayout->addRow("Tags", tagEditor);
 
     pixelCountSpin = new QSpinBox;
     pixelCountSpin->setMinimum(1);
@@ -99,8 +107,12 @@ PixelStripEditorWidget::PixelStripEditorWidget(PixelStrip *t_strip, QWidget *par
     connect(m_impl->rotationEdit, &Vector3Edit::valueChanged, this, &PixelStripEditorWidget::setRotation);
 
     m_impl->pixelStrip = t_strip;
+    // Keeps the tag row live if a tag is added/removed from outside this
+    // editor - e.g. dropped onto this object's row in the Project panel.
+    connect(t_strip, &SceneObject::metadataChanged, m_impl->tagEditor, &TagEditorWidget::refresh);
 
     m_impl->nameEdit->setText(t_strip->name());
+    m_impl->tagEditor->refresh();
     m_impl->universeSpin->setValue(t_strip->universe());
     m_impl->bendSpin->setValue(t_strip->bend());
     m_impl->centerSpin->setValue(t_strip->center());
@@ -175,9 +187,8 @@ void PixelStripEditorWidget::setRotation(const QVector3D &t_value)
 
 class PixelStrip::Impl {
 public:
-    void remakePoints();
-
-    QVector<QPointF> positions;
+    // Kept for the visualizer's future use (physical strip geometry) - no
+    // longer feeds a positions() override; see PixelStrip.h.
     double center = .5;
     double angle = 0;
     double bend = 0;
@@ -187,31 +198,8 @@ public:
     int universe = 1;
 };
 
-void PixelStrip::Impl::remakePoints()
-{
-    double delta = length / (pixelCount - 1);
-
-    QTransform t;
-    t.translate(length * center, 0);
-    t.rotate(angle);
-    t.translate(length * -center, 0);
-
-    positions.resize(pixelCount);
-    double position = 0;
-    for(auto it = positions.begin(); it != positions.end(); ++it)
-    {
-        auto &pt = *it;
-        auto transformedPt = t.map(QPointF(position, 0.0));
-
-        pt.setX(transformedPt.x());
-        pt.setY(transformedPt.y());
-        position += delta;
-    }
-}
-
 PixelStrip::PixelStrip(SceneObject *t_parent) : SceneObject("pixelstrip", t_parent),m_impl(new Impl)
 {
-    m_impl->remakePoints();
 }
 
 PixelStrip::~PixelStrip()
@@ -252,55 +240,43 @@ int PixelStrip::pixelCount() const
 void PixelStrip::setPixelCount(int t_value)
 {
     m_impl->pixelCount = t_value;
-    m_impl->remakePoints();
     triggerUpdate();
 }
 
 void PixelStrip::setCenter(double t_value)
 {
     m_impl->center = t_value;
-    m_impl->remakePoints();
     triggerUpdate();
 }
 
 void PixelStrip::setAngle(double t_value)
 {
     m_impl->angle = t_value;
-    m_impl->remakePoints();
     triggerUpdate();
 }
 
 void PixelStrip::setLength(double t_value)
 {
     m_impl->length = t_value;
-    m_impl->remakePoints();
     triggerUpdate();
 }
 
 void PixelStrip::setBend(double t_value)
 {
     m_impl->bend = t_value;
-    m_impl->remakePoints();
     triggerUpdate();
 }
 
 void PixelStrip::setDMXOffset(int offset)
 {
     m_impl->offset = offset;
-    m_impl->remakePoints();
     triggerUpdate();
 }
 
 void PixelStrip::setUniverse(int universe)
 {
     m_impl->universe = universe;
-    m_impl->remakePoints();
     triggerUpdate();
-}
-
-const QVector<QPointF> &PixelStrip::positions() const
-{
-    return m_impl->positions;
 }
 
 QByteArray PixelStrip::sourceUniqueId() const
@@ -323,9 +299,9 @@ int PixelStrip::universe() const
     return m_impl->universe;
 }
 
-void PixelStrip::process(ProcessContext &t_context, const QTransform &t_transform, double t_blend) const
+void PixelStrip::process(ProcessContext &t_context, const QVector<QPointF> &t_positions, double t_blend) const
 {
-    PixelSource::process(t_context, t_transform, t_blend);
+    PixelSource::process(t_context, t_positions, t_blend);
 }
 
 void PixelStrip::readFromJson(const QJsonObject &t_json, const LoadContext &t_context)

@@ -8,6 +8,9 @@
 #include <QSignalBlocker>
 #include "truss.h"
 #include "gui/vector3edit.h"
+#include "gui/tag/tageditorwidget.h"
+#include "photoncore.h"
+#include "project/project.h"
 
 namespace photon {
 
@@ -17,9 +20,10 @@ class TrussEditorWidget::Impl
 {
 public:
     Impl();
-    Truss *truss;
+    Truss *truss = nullptr;
     QFormLayout *formLayout;
     QLineEdit *nameEdit;
+    TagEditorWidget *tagEditor;
     QSpinBox *beamSpin;
     QDoubleSpinBox *segmentLengthSpin;
     QDoubleSpinBox *radiusSpin;
@@ -37,7 +41,11 @@ TrussEditorWidget::Impl::Impl()
     nameEdit = new QLineEdit;
     formLayout->addRow("Name", nameEdit);
 
-
+    tagEditor = new TagEditorWidget(
+        [this](){ return truss ? truss->tags() : QStringList(); },
+        [this](const QStringList &tags){ if(truss) truss->setTags(tags); },
+        [](){ return photonApp->project() ? photonApp->project()->allTags() : QStringList(); });
+    formLayout->addRow("Tags", tagEditor);
 
     beamSpin = new QSpinBox;
     beamSpin->setMinimum(2);
@@ -98,8 +106,12 @@ TrussEditorWidget::TrussEditorWidget(Truss *t_truss, QWidget *parent)
     m_impl->truss = t_truss;
     connect(t_truss, &SceneObject::positionChanged, this, &TrussEditorWidget::refreshTransform);
     connect(t_truss, &SceneObject::rotationChanged, this, &TrussEditorWidget::refreshTransform);
+    // Keeps the tag row live if a tag is added/removed from outside this
+    // editor - e.g. dropped onto this object's row in the Project panel.
+    connect(t_truss, &SceneObject::metadataChanged, m_impl->tagEditor, &TagEditorWidget::refresh);
 
     m_impl->nameEdit->setText(t_truss->name());
+    m_impl->tagEditor->refresh();
     m_impl->beamSpin->setValue(t_truss->beams());
     m_impl->segmentLengthSpin->setValue(t_truss->segmentLength());
     m_impl->radiusSpin->setValue(t_truss->radius());
