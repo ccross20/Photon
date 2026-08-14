@@ -57,7 +57,7 @@ void FixtureListIntervalSubsetNode::createParameters()
 void FixtureListIntervalSubsetNode::evaluate(keira::EvaluationContext *t_context) const
 {
 
-    auto fixtures = m_inParam->value().value<QVector<FixtureParameterData>>();
+    auto fixtures = m_inParam->resolvedValue();
 
     QVector<FixtureParameterData> results;
 

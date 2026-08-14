@@ -16,8 +16,8 @@ class FlowLayout;
 // trailing "add" field that autocompletes from a caller-supplied pool of
 // known tags, or creates a new one. Driven entirely through get/set/knownTags
 // callbacks rather than a fixed data type, so the same widget edits a
-// resource's own tags, a FixtureQuery's match-predicate tags, or a
-// TagMaskEffect's tags - different lists, same look and the same picker.
+// resource's own tags, a FixtureQuery's match-predicate tags, or a graph
+// node's tags - different lists, same look and the same picker.
 class PHOTONCORE_EXPORT TagEditorWidget : public QWidget
 {
     Q_OBJECT

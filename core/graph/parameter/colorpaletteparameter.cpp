@@ -1,5 +1,3 @@
-
-#include <QLabel>
 #include "colorpaletteparameter.h"
 #include "util/utils.h"
 #include "gui/color/colorpalettewidget.h"
@@ -20,47 +18,31 @@ ColorPaletteParameter::~ColorPaletteParameter()
 
 }
 
-QWidget *ColorPaletteParameter::createWidget(keira::NodeEditor *item) const
+QWidget *ColorPaletteParameter::createWidget(keira::NodeEditor *) const
 {
-    if(isReadOnly())
-    {
-        QLabel *label = new QLabel();
-        label->setMaximumHeight(30);
-        label->setStyleSheet("background:transparent;");
-        label->setSizePolicy(QSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::Minimum));
-        return label;
-    }
-
-    auto paletteWidget = new ColorPaletteWidget(value().value<ColorPalette>(),true);
+    // isReadOnly() here just means "can't receive a graph connection" (no
+    // AllowSingleInput/AllowMultipleInput bit) - an output-only palette (e.g.
+    // a generator node's result) still needs to actually show its colors, so
+    // this always builds the real widget and only withholds edit affordances
+    // (the "Add" button, click-to-edit) via isEditable, rather than falling
+    // back to an empty label.
+    auto paletteWidget = new ColorPaletteWidget(value().value<ColorPalette>(), !isReadOnly());
 
     ColorPaletteParameter *param = const_cast<ColorPaletteParameter*>(this);
 
-    ColorPaletteWidget::connect(paletteWidget, &ColorPaletteWidget::paletteUpdated,[paletteWidget, param](){param->setValue(param->updateValue(paletteWidget));});
+    if(!isReadOnly())
+        ColorPaletteWidget::connect(paletteWidget, &ColorPaletteWidget::paletteUpdated,[paletteWidget, param](){param->setValue(param->updateValue(paletteWidget));});
 
     return paletteWidget;
 }
 
 void ColorPaletteParameter::updateWidget(QWidget *t_widget) const
 {
-
-    if(isReadOnly())
-    {
-
-    }
-    else
-    {
-        ColorPaletteWidget *editor = static_cast<ColorPaletteWidget*>(t_widget);
-        editor->setPalette(value().value<ColorPalette>());
-    }
-
-
+    static_cast<ColorPaletteWidget*>(t_widget)->setPalette(value().value<ColorPalette>());
 }
 
 QVariant ColorPaletteParameter::updateValue(QWidget *t_widget) const
 {
-    if(isReadOnly())
-        return static_cast<QLabel*>(t_widget)->text();
-
     return QVariant::fromValue(static_cast<ColorPaletteWidget*>(t_widget)->palette());
 }
 

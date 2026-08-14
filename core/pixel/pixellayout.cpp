@@ -71,11 +71,18 @@ QWidget *PixelLayout::createResourceEditor()
     // top, the layout canvas below - rather than behind a separate "Open"
     // step or a floating window.
     auto *container = new QWidget;
+    // PropertiesPanel checks a resource editor's own vertical size policy to
+    // decide whether it gets the panel's leftover space or leaves it to the
+    // panel's default trailing spacer - that check sees this container
+    // (what createResourceEditor() actually returns), not PixelLayoutEditor
+    // nested inside it, so the policy has to be set here too, not just on
+    // PixelLayoutEditor itself.
+    container->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Expanding);
     auto *layout = new QVBoxLayout(container);
     layout->setContentsMargins(0, 0, 0, 0);
 
     layout->addWidget(new ResourceEditorWidget(this));
-    layout->addWidget(new PixelLayoutEditor(this));
+    layout->addWidget(new PixelLayoutEditor(this), 1);
 
     return container;
 }

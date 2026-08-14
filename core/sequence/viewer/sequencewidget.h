@@ -40,10 +40,8 @@ private slots:
     void positionChanged(qint64);
     void editLayer(photon::Layer *);
     void selectEffect(photon::ChannelEffect *);
-    void selectMask(photon::MaskEffect *);
     void selectClipParameter(photon::Clip *);
     void selectClipGraph(photon::Clip *);
-    void selectFalloff(photon::FalloffEffect *);
     void selectState(photon::State *);
     void clearEditor();
     void toggleVdjSync(bool);

@@ -2,7 +2,6 @@
 #define FIXTURELISTPARAMETER_H
 #include "photon-global.h"
 #include "model/parameter/parameter.h"
-#include "gui/sceneobjectselector.h"
 #include "fixture/fixture.h"
 
 namespace photon {
@@ -55,22 +54,6 @@ struct FixtureParameterData
     }
 };
 
-class FixtureListParameter;
-
-class SelectorWatcher : public QObject
-{
-public:
-    SelectorWatcher(FixtureListParameter *, SceneObjectSelector *);
-
-public slots:
-    void selectionChanged();
-
-private:
-    FixtureListParameter *m_param;
-    SceneObjectSelector *m_selector;
-
-};
-
 class PHOTONCORE_EXPORT FixtureListParameter : public keira::Parameter
 {
 public:
@@ -84,14 +67,15 @@ public:
     void updateWidget(QWidget *) const override;
     QVariant updateValue(QWidget *) const override;
 
+    // The value to actually use: value() as stored, unless this parameter is
+    // unconnected and has nothing of its own set - then every fixture in the
+    // project, so a fresh/default fixture list means "everything" rather
+    // than "nothing" until a specific selection is wired in upstream (e.g.
+    // a SelectFixturesNode).
+    QVector<FixtureParameterData> resolvedValue() const;
+
     void readFromJson(const QJsonObject &) override;
     void writeToJson(QJsonObject &) const override;
-
-private:
-
-    class Impl;
-    Impl *m_impl;
-
 };
 
 } // namespace photon

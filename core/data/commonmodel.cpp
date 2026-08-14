@@ -1,8 +1,6 @@
 #include "commonmodel.h"
 #include "sequence/channel.h"
 #include "sequence/channeleffect.h"
-#include "falloff/falloffeffect.h"
-#include "fixture/maskeffect.h"
 
 namespace photon {
 
@@ -181,17 +179,6 @@ ChannelEffectData::ChannelEffectData(ChannelEffect *t_effect):AbstractTreeData(t
 
 }
 
-
-
-FalloffEffectData::FalloffEffectData(FalloffEffect *t_effect):AbstractTreeData(t_effect->name(), t_effect->uniqueId()),m_effect(t_effect)
-{
-
-}
-
-MaskEffectData::MaskEffectData(MaskEffect *t_effect):AbstractTreeData(t_effect->name(), t_effect->uniqueId()),m_effect(t_effect)
-{
-
-}
 
 
 CreateData::CreateData(const QString &name): AbstractTreeData(name)

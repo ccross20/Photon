@@ -34,6 +34,7 @@ ColorPalette ColorPaletteWidget::palette() const
 void ColorPaletteWidget::setPalette(const photon::ColorPalette &t_palette)
 {
     m_palette = t_palette;
+    buildLayout();
     emit paletteUpdated();
 }
 

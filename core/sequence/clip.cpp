@@ -2,9 +2,6 @@
 #include <algorithm>
 #include "clip_p.h"
 #include "cliplayer_p.h"
-#include "falloff/falloffeffect_p.h"
-#include "falloff/constantfalloffeffect.h"
-#include "fixture/maskeffect_p.h"
 #include "sequence.h"
 #include "project/project.h"
 #include "fixture/fixturecollection.h"

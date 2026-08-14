@@ -24,6 +24,12 @@ private:
     keira::DecimalParameter *beatIntensityParam;
     keira::DecimalParameter *beatAmountParam;
     keira::IntegerParameter *beatParam;
+    keira::IntegerParameter *songIdParam;
+
+    // Cache the derived song id so evaluate() only re-hashes when the track
+    // actually changes, rather than every frame.
+    mutable QString m_lastSongIdentity;
+    mutable int m_songId = 0;
 };
 
 } // namespace photon

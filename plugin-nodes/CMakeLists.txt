@@ -73,6 +73,7 @@ add_library(plugin-nodes SHARED ${SOURCES}
     animation/pulsenode.h animation/pulsenode.cpp
     math/stopwatchnode.h math/stopwatchnode.cpp
     color-palette/fadecolorpalettenode.h color-palette/fadecolorpalettenode.cpp
+    color-palette/colortheorypalettenode.h color-palette/colortheorypalettenode.cpp
     color/sparklenode.h color/sparklenode.cpp
     pixel/pixelsfromfixturelist.h pixel/pixelsfromfixturelist.cpp
     pixel/setpixelcolor.h pixel/setpixelcolor.cpp

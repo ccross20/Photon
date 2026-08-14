@@ -18,8 +18,6 @@ public:
     {
         DataAny,
         DataChannel,
-        DataFalloff,
-        DataSelection,
         DataState
     };
 
@@ -110,28 +108,6 @@ private:
     FolderData *m_subChannelFolder;
 };
 
-
-class FalloffEffectData : public AbstractTreeData
-{
-public:
-    FalloffEffectData(FalloffEffect*);
-    FalloffEffect *effect() const{return m_effect;}
-
-private:
-    FalloffEffect *m_effect;
-};
-
-
-class MaskEffectData : public AbstractTreeData
-{
-public:
-    MaskEffectData(MaskEffect*);
-    MaskEffect *effect() const{return m_effect;}
-
-private:
-    MaskEffect *m_effect;
-
-};
 
 } // namespace photon
 

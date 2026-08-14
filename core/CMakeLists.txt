@@ -87,15 +87,6 @@ set(PROJECT_SOURCES
         data/dmxmatrix.h
         data/dmxmatrix.cpp
         data/types.h
-        falloff/constantfalloffeffect.h
-        falloff/constantfalloffeffect.cpp
-        falloff/falloffeffect.h
-        falloff/falloffeffect_p.h
-        falloff/falloffeffect.cpp
-        falloff/falloffmap2d.h
-        falloff/falloffmap2d.cpp
-        falloff/fixturefalloffmap.h
-        falloff/fixturefalloffmap.cpp
         fixture/dmxreceiver.h
         fixture/fixture.h
         fixture/fixture.cpp
@@ -120,9 +111,6 @@ set(PROJECT_SOURCES
         fixture/fixturevirtualchannel.cpp
         fixture/fixturewheel.h
         fixture/fixturewheel.cpp
-        fixture/maskeffect.h
-        fixture/maskeffect_p.h
-        fixture/maskeffect.cpp
         fixture/capability/anglecapability.h
         fixture/capability/anglecapability.cpp
         fixture/capability/colorcapability.h
@@ -203,9 +191,6 @@ set(PROJECT_SOURCES
         gui/gizmo/gizmohandle.cpp
         gui/gizmo/gizmogroup.h
         gui/gizmo/gizmogroup.cpp
-        gui/fixturefalloff2deditor.h
-        gui/fixturefalloff2deditor_p.h
-        gui/fixturefalloff2deditor.cpp
         gui/guimanager.h
         gui/guimanager_p.h
         gui/guimanager.cpp
@@ -247,9 +232,6 @@ set(PROJECT_SOURCES
         gui/pointedit.cpp
         gui/xypad.h
         gui/xypad.cpp
-        gui/sceneobjectselector.h
-        gui/sceneobjectselector_p.h
-        gui/sceneobjectselector.cpp
         gui/vector3edit.h
         gui/vector3edit.cpp
         gui/waveformwidget.h
@@ -521,7 +503,6 @@ add_library(photon-core SHARED ${PROJECT_SOURCES}
     surface/gizmoproperty.h surface/gizmoproperty.cpp
     surface/containergizmo.h surface/containergizmo.cpp
     surface/viewer/surfacequickview.h surface/viewer/surfacequickview.cpp
-    surface/fixturegizmo.h surface/fixturegizmo.cpp
     surface/surfacegizmo_p.h
     surfaceqml.qrc
     surface/viewer/surfacewidget.h surface/viewer/surfacewidget.cpp

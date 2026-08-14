@@ -3,8 +3,6 @@
 #include "sequence/masterlayer.h"
 #include "sequence/channel.h"
 #include "sequence/channeleffect.h"
-#include "falloff/falloffeffect.h"
-#include "fixture/maskeffect.h"
 #include "sequence/routineclip.h"
 #include "sequence/fixtureclip.h"
 #include "sequence/canvasclip.h"
@@ -42,17 +40,7 @@ ClipData::ClipData(Clip *t_clip) : AbstractTreeData(t_clip->name(), t_clip->uniq
     auto fixtureClip = dynamic_cast<FixtureClip*>(t_clip);
 
     if(fixtureClip)
-    {
         addChild(new ClipStateData(fixtureClip));
-        m_maskFolder = new ClipMaskData(fixtureClip);
-        m_falloffData = new ClipFalloffData(fixtureClip);
-    }
-
-    if(fixtureClip)
-    {
-        addChild(m_maskFolder);
-        addChild(m_falloffData);
-    }
 
     if(t_clip)
     {
@@ -169,96 +157,6 @@ ClipStateData::ClipStateData(FixtureClip *t_clip):AbstractTreeData("State", t_cl
 State *ClipStateData::state() const
 {
     return m_clip->state();
-}
-
-ClipFalloffData::ClipFalloffData(FixtureClip *t_clip): AbstractTreeData("Falloff","falloff"),m_clip(t_clip)
-{
-    connect(m_clip, &FixtureClip::falloffEffectAdded, this, &ClipFalloffData::effectAdded);
-    connect(m_clip, &FixtureClip::falloffEffectRemoved, this, &ClipFalloffData::effectRemoved);
-
-    for(int i = 0; i < t_clip->falloffEffectCount(); ++i)
-    {
-        auto effectData = new FalloffEffectData(m_clip->falloffEffectAtIndex(i));
-        addChild(effectData);
-    }
-    addChild(new CreateData("Add Effect..."));
-}
-
-FalloffEffectData *ClipFalloffData::findEffectData(FalloffEffect *t_effect)
-{
-    for(auto child : children())
-    {
-        FalloffEffectData *childData = dynamic_cast<FalloffEffectData*>(child);
-        if(childData && childData->effect() == t_effect)
-        {
-            return childData;
-        }
-    }
-    return nullptr;
-}
-
-void ClipFalloffData::effectAdded(photon::FalloffEffect *t_effect)
-{
-    auto effectData = new FalloffEffectData(t_effect);
-    insertChild(effectData, childCount() - 1);
-}
-
-void ClipFalloffData::effectRemoved(photon::FalloffEffect *t_effect)
-{
-    auto effect = findEffectData(t_effect);
-
-    if(effect)
-        removeChild(effect);
-}
-
-void ClipFalloffData::effectMoved(photon::FalloffEffect *t_effect)
-{
-
-}
-
-ClipMaskData::ClipMaskData(FixtureClip *t_clip): AbstractTreeData("Selection Mask","mask"),m_clip(t_clip)
-{
-    connect(m_clip, &FixtureClip::maskAdded, this, &ClipMaskData::effectAdded);
-    connect(m_clip, &FixtureClip::maskRemoved, this, &ClipMaskData::effectRemoved);
-
-    for(int i = 0; i < t_clip->maskEffectCount(); ++i)
-    {
-        auto effectData = new MaskEffectData(m_clip->maskEffectAtIndex(i));
-        addChild(effectData);
-    }
-    addChild(new CreateData("Add Effect..."));
-}
-
-MaskEffectData *ClipMaskData::findEffectData(MaskEffect *t_effect)
-{
-    for(auto child : children())
-    {
-        MaskEffectData *childData = dynamic_cast<MaskEffectData*>(child);
-        if(childData && childData->effect() == t_effect)
-        {
-            return childData;
-        }
-    }
-    return nullptr;
-}
-
-void ClipMaskData::effectAdded(photon::MaskEffect *t_effect)
-{
-    auto effectData = new MaskEffectData(t_effect);
-    insertChild(effectData, childCount() - 1);
-}
-
-void ClipMaskData::effectRemoved(photon::MaskEffect *t_effect)
-{
-    auto effect = findEffectData(t_effect);
-
-    if(effect)
-        removeChild(effect);
-}
-
-void ClipMaskData::effectMoved(photon::MaskEffect *t_effect)
-{
-
 }
 
 ClipModel::ClipModel()

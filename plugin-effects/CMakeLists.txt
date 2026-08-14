@@ -27,10 +27,6 @@ set(SOURCES
     generator/sineeffect.cpp
     generator/cuemarkereffect.h
     generator/cuemarkereffect.cpp
-    mask/randommaskeffect.h
-    mask/randommaskeffect.cpp
-    mask/treemaskeffect.h
-    mask/treemaskeffect.cpp
     modifier/easeeffect.h
     modifier/easeeffect.cpp
     modifier/comparatoreffect.h
@@ -50,7 +46,6 @@ set(SOURCES
 )
 
 add_library(plugin-effects SHARED ${SOURCES}
-    mask/tagmaskeffect.h mask/tagmaskeffect.cpp
     generator/stepeffect.h generator/stepeffect.cpp)
 
 

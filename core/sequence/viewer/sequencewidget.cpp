@@ -27,13 +27,11 @@
 #include "sequence/clip.h"
 #include "state/state.h"
 #include "sequence/masterlayer.h"
-#include "falloff/falloffeffect.h"
 #include "timebar.h"
 #include "graph/bus/busevaluator.h"
 #include "gui/waveformwidget.h"
 #include "sequence/viewer/stateeditor.h"
 #include "sequence/fixtureclip.h"
-#include "fixture/maskeffect.h"
 #include "sequencewaveformeditor.h"
 #include "plugin/pluginfactory.h"
 #include "routine/routine.h"
@@ -166,12 +164,10 @@ SequenceWidget::SequenceWidget(QWidget *parent)
     connect(m_impl->verticalSplitter, &QSplitter::splitterMoved, this, &SequenceWidget::editorSplitterMoved);
     connect(m_impl->detailsSplitter, &QSplitter::splitterMoved, this, &SequenceWidget::detailsSplitterMoved);
     connect(m_impl->horizontalSplitter, &QSplitter::splitterMoved, this, &SequenceWidget::horizontalSplitterMoved);
-    connect(m_impl->curvePropertyEditor, &ClipStructureViewer::selectFalloff, this, &SequenceWidget::selectFalloff);
     connect(m_impl->curvePropertyEditor, &ClipStructureViewer::selectState, this, &SequenceWidget::selectState);
     connect(m_impl->curvePropertyEditor, &ClipStructureViewer::selectEffect, this, &SequenceWidget::selectEffect);
     connect(m_impl->curvePropertyEditor, &ClipStructureViewer::selectClipParameter, this, &SequenceWidget::selectClipParameter);
     connect(m_impl->curvePropertyEditor, &ClipStructureViewer::selectClipGraph, this, &SequenceWidget::selectClipGraph);
-    connect(m_impl->curvePropertyEditor, &ClipStructureViewer::selectMask, this, &SequenceWidget::selectMask);
     connect(m_impl->curvePropertyEditor, &ClipStructureViewer::clearSelection, this, &SequenceWidget::clearEditor);
     connect(m_impl->timebar, &TimeBar::changeTime, this, &SequenceWidget::gotoTime);
     connect(m_impl->viewer, &TimelineViewer::offsetChanged, this, &SequenceWidget::setOffset);
@@ -281,31 +277,6 @@ void SequenceWidget::selectEffect(photon::ChannelEffect *t_effect)
 
 
     //editor->selectEffect(t_effect);
-}
-
-void SequenceWidget::selectMask(photon::MaskEffect *t_effect)
-{
-    clearEditor();
-    QHBoxLayout *layout = new QHBoxLayout;
-    layout->setContentsMargins(0,0,0,0);
-
-    auto editor = t_effect->createEditor();
-    layout->addWidget(editor);
-    m_impl->effectEditor = editor;
-    m_impl->effectEditorContainer->setLayout(layout);
-}
-
-void SequenceWidget::selectFalloff(photon::FalloffEffect *t_effect)
-{
-    clearEditor();
-    QHBoxLayout *layout = new QHBoxLayout;
-    layout->setContentsMargins(0,0,0,0);
-
-    auto editor = t_effect->createEditor();
-    layout->addWidget(editor);
-    m_impl->effectEditor = editor;
-    m_impl->effectEditorContainer->setLayout(layout);
-
 }
 
 void SequenceWidget::selectClipParameter(photon::Clip *t_clip)

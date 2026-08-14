@@ -27,6 +27,7 @@
 #include "color-palette/colorpalettenode.h"
 #include "color-palette/colorfromcolorpalette.h"
 #include "color-palette/fadecolorpalettenode.h"
+#include "color-palette/colortheorypalettenode.h"
 #include "math/circlenode.h"
 #include "math/noisenode.h"
 #include "math/randomnumbernode.h"
@@ -78,6 +79,7 @@ bool PluginNodes::initialize(const PluginContext &context)
     photonApp->plugins()->registerNode(ColorPaletteNode::info());
     photonApp->plugins()->registerNode(ColorFromColorPalette::info());
     photonApp->plugins()->registerNode(FadeColorPaletteNode::info());
+    photonApp->plugins()->registerNode(ColorTheoryPaletteNode::info());
     photonApp->plugins()->registerNode(Timer::info());
     photonApp->plugins()->registerNode(StopwatchNode::info());
     photonApp->plugins()->registerNode(PulseNode::info());

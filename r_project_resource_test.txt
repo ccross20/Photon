@@ -1,0 +1,17 @@
+********* Start testing of photon::ProjectResourceTest *********
+Config: Using QtTest library 6.11.1, Qt 6.11.1 (x86_64-little_endian-llp64 shared (dynamic) debug build; by MSVC 2022), windows 11
+PASS   : photon::ProjectResourceTest::initTestCase()
+PASS   : photon::ProjectResourceTest::tagsAreNormalisedAndSorted()
+PASS   : photon::ProjectResourceTest::unchangedTagsDoNotNotify()
+PASS   : photon::ProjectResourceTest::tagsRoundTripThroughJson()
+PASS   : photon::ProjectResourceTest::sceneObjectBridgesBothNotificationPaths()
+PASS   : photon::ProjectResourceTest::sceneObjectTagAliasesShareStorage()
+PASS   : photon::ProjectResourceTest::fixtureGroupIsAnIdentifiedResource()
+PASS   : photon::ProjectResourceTest::fixtureGroupQueryChangeReachesCollection()
+PASS   : photon::ProjectResourceTest::sequenceIdRoundTrips()
+PASS   : photon::ProjectResourceTest::selectionCarriesAnyResourceType()
+PASS   : photon::ProjectResourceTest::sceneConsumersSeeOnlyTheirSlice()
+PASS   : photon::ProjectResourceTest::sceneSelectionSignalsStayQuietWhenTheSliceIsUnchanged()
+PASS   : photon::ProjectResourceTest::cleanupTestCase()
+Totals: 13 passed, 0 failed, 0 skipped, 0 blacklisted, 6ms
+********* Finished testing of photon::ProjectResourceTest *********

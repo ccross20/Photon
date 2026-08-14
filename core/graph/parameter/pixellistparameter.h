@@ -2,7 +2,6 @@
 #define PIXELLISTPARAMETER_H
 #include "photon-global.h"
 #include "model/parameter/parameter.h"
-#include "gui/sceneobjectselector.h"
 #include "fixture/fixture.h"
 
 namespace photon {

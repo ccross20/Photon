@@ -16,21 +16,6 @@ public:
     FixtureClip(double start, double duration, QObject *parent = nullptr);
     virtual ~FixtureClip();
 
-
-    void addMaskEffect(MaskEffect *);
-    void removeMaskEffect(MaskEffect *);
-    MaskEffect *maskEffectAtIndex(int index) const;
-    int maskEffectCount() const;
-    const QVector<Fixture*> maskedFixtures() const;
-
-    void addFalloffEffect(FalloffEffect *);
-    void removeFalloffEffect(FalloffEffect *);
-    FalloffEffect *falloffEffectAtIndex(int index) const;
-    int falloffEffectCount() const;
-    void setDefaultFalloff(double);
-    double defaultFalloff() const;
-    double falloff(Fixture *t_fixture) const;
-
     State *state() const;
     Routine *contentGraph() const override;
 
@@ -52,21 +37,6 @@ public:
     void writeToJson(QJsonObject &) const override;
 
     static ClipInformation info();
-
-public slots:
-    void falloffUpdatedSlot(photon::FalloffEffect *);
-    void maskUpdatedSlot(photon::MaskEffect *);
-
-signals:
-
-    void falloffEffectAdded(photon::FalloffEffect*);
-    void falloffEffectRemoved(photon::FalloffEffect*);
-    void maskAdded(photon::MaskEffect *);
-    void maskRemoved(photon::MaskEffect *);
-    void maskUpdated(photon::MaskEffect *);
-    void maskMoved(photon::MaskEffect *);
-    void falloffMapChanged(photon::FixtureFalloffMap *);
-    void falloffUpdated(photon::FalloffEffect *);
 
 private:
     // Reconcile the clip's channels against the graph's input ports (by portId):

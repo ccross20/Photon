@@ -40,7 +40,7 @@ void LinearFalloffNode::createParameters()
 void LinearFalloffNode::evaluate(keira::EvaluationContext *t_context) const
 {
 
-    auto fixtures = m_inParam->value().value<QVector<FixtureParameterData>>();
+    auto fixtures = m_inParam->resolvedValue();
 
     double offset = m_totalOffsetParam->value().toDouble();
     bool reverse = m_reverseParam->value().toBool();

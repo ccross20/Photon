@@ -151,9 +151,10 @@ QVector<QPair<PixelSourceLayout*,int>> PixelLayoutScene::selectedPixels() const
     return result;
 }
 
-void PixelLayoutScene::setScale(QPointF t_scale)
+void PixelLayoutScene::setViewport(QPointF t_scale, QPointF t_offset)
 {
     m_scale = t_scale;
+    m_offset = t_offset;
     m_inverseScale = QPointF{1.0/m_scale.x(), 1.0/m_scale.y()};
 
     for(auto &items : m_pointItems)
@@ -164,7 +165,13 @@ void PixelLayoutScene::setScale(QPointF t_scale)
 void PixelLayoutScene::drawBackground(QPainter *painter, const QRectF &rect)
 {
     QGraphicsScene::drawBackground(painter, rect);
-    painter->fillRect(rect, Qt::gray);
+
+    // The view always keeps this scene square (see PixelLayoutView::
+    // resizeEvent()), letterboxed within a non-square panel - fill outside
+    // that square darker so the actual [0,1]x[0,1] edit area's bounds are
+    // visible rather than blending into the letterbox margins.
+    painter->fillRect(rect, Qt::darkGray);
+    painter->fillRect(QRectF(m_offset.x(), m_offset.y(), m_scale.x(), m_scale.y()), Qt::gray);
 }
 
 PixelLayoutView::PixelLayoutView(): QGraphicsView()
@@ -185,17 +192,23 @@ void PixelLayoutView::resizeEvent(QResizeEvent *t_event)
 
     double w = t_event->size().width();
     double h = t_event->size().height();
-    //view->setSceneRect(QRect(0,0,w,h));
+
+    // The pixel-layout edit area (PixelSourceLayout::pixelBounds(), a
+    // normalized [0,1]x[0,1] square) must always render as a true square,
+    // not stretched to whatever aspect ratio the panel happens to be - so
+    // both axes share one scale factor sized to the shorter side, and the
+    // square is centered in the remaining space (letterboxed on the longer
+    // axis) rather than anchored to a corner. Centering is done as an
+    // explicit scene-space offset baked into point positioning (see
+    // PixelLayoutScene::setViewport()) rather than a view transform/scroll -
+    // resetTransform() is still needed since the view otherwise keeps
+    // whatever transform a previous resize left behind.
+    double size = qMin(w, h);
+    QPointF offset((w - size) / 2.0, (h - size) / 2.0);
+
     scene()->setSceneRect(QRect(0,0,w,h));
-    static_cast<PixelLayoutScene*>(scene())->setScale(QPointF{w,h});
-
-    QTransform t;
-    t.translate(-w/2.0,-h/2.0);
-    //t.scale(w,h);
-    //t.translate(-w/2.0,-h/2.0);
-    translate(-w/2.0,-h/2.0);
-
-    //view->setTransform(t);
+    resetTransform();
+    static_cast<PixelLayoutScene*>(scene())->setViewport(QPointF{size,size}, offset);
 }
 
 
@@ -221,11 +234,12 @@ void PixelPointItem::reposition()
 {
     auto *layoutScene = static_cast<PixelLayoutScene*>(scene());
     QPointF sceneScale = layoutScene ? layoutScene->scale() : QPointF{1,1};
+    QPointF sceneOffset = layoutScene ? layoutScene->offset() : QPointF{0,0};
 
     QPointF pos = m_sourceLayout->pixelPosition(m_index);
 
     m_repositioning = true;
-    setPos(pos.x() * sceneScale.x(), pos.y() * sceneScale.y());
+    setPos(sceneOffset.x() + pos.x() * sceneScale.x(), sceneOffset.y() + pos.y() * sceneScale.y());
     m_repositioning = false;
 }
 
@@ -258,7 +272,8 @@ QVariant PixelPointItem::itemChange(GraphicsItemChange t_change, const QVariant 
     {
         auto *layoutScene = static_cast<PixelLayoutScene*>(scene());
         QRectF bounds = PixelSourceLayout::pixelBounds();
-        QRectF sceneBounds(bounds.x() * layoutScene->scale().x(), bounds.y() * layoutScene->scale().y(),
+        QPointF sceneOffset = layoutScene->offset();
+        QRectF sceneBounds(sceneOffset.x() + bounds.x() * layoutScene->scale().x(), sceneOffset.y() + bounds.y() * layoutScene->scale().y(),
                             bounds.width() * layoutScene->scale().x(), bounds.height() * layoutScene->scale().y());
 
         QPointF newPos = t_value.toPointF();
@@ -274,9 +289,10 @@ QVariant PixelPointItem::itemChange(GraphicsItemChange t_change, const QVariant 
     {
         auto *layoutScene = static_cast<PixelLayoutScene*>(scene());
         QPointF sceneScale = layoutScene ? layoutScene->scale() : QPointF{1,1};
+        QPointF sceneOffset = layoutScene ? layoutScene->offset() : QPointF{0,0};
 
         QPointF scenePos = t_value.toPointF();
-        QPointF pos(scenePos.x() / sceneScale.x(), scenePos.y() / sceneScale.y());
+        QPointF pos((scenePos.x() - sceneOffset.x()) / sceneScale.x(), (scenePos.y() - sceneOffset.y()) / sceneScale.y());
 
         m_sourceLayout->setPixelPosition(m_index, pos);
     }
@@ -317,9 +333,12 @@ void PixelSourceListWidget::dropEvent(QDropEvent *t_event)
 
 PixelLayoutEditorSidePanel::PixelLayoutEditorSidePanel(PixelLayout *t_layout) : QWidget(),pixelLayout(t_layout)
 {
+    setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+
     scene = new PixelLayoutScene(t_layout);
 
     view = new PixelLayoutView();
+    view->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     view->setScene(scene);
     view->setFrameRect(QRect(0,0,1,1));
     //scene->setScale(500);
@@ -694,6 +713,12 @@ void PixelLayoutEditorSidePanel::addSource(photon::PixelSource *t_source)
 
 PixelLayoutEditor::PixelLayoutEditor(PixelLayout *t_layout, QWidget *t_parent) : QWidget(t_parent),m_impl(new Impl)
 {
+    // Opts into PropertiesPanel giving this widget its trailing stretch
+    // instead of leaving it capped at its sizeHint - the pixel-mapping
+    // canvas should grow to use whatever room the panel has, not sit in a
+    // small fixed square with dead space below it.
+    setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+
     m_impl->sidePanel = new PixelLayoutEditorSidePanel(t_layout);
 
 

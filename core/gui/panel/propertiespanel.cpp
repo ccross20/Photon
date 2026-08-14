@@ -48,9 +48,27 @@ void PropertiesPanel::propertiesWidgetChanged(QWidget *widget)
 
     if(widget)
     {
-        m_impl->layout->insertWidget(0, widget);
+        // Most resource editors are a fixed-height form and should sit at
+        // the top with the leftover space going to this panel's own
+        // trailing stretch (below). One that explicitly wants room to grow
+        // (a vertically Expanding size policy - e.g. PixelLayoutEditor, so
+        // its square edit area can be as large as the panel allows) gets
+        // the stretch itself instead, rather than being capped at its
+        // sizeHint while the panel's spacer eats the rest.
+        int stretch = widget->sizePolicy().verticalPolicy() == QSizePolicy::Expanding ? 1 : 0;
+        m_impl->layout->insertWidget(0, widget, stretch);
         widget->show();
         m_impl->editorWidget = widget;
+
+        // The trailing spacer (always the layout's last item) otherwise
+        // keeps an equal stretch factor and splits the leftover space with
+        // the widget above instead of ceding all of it - mute it whenever
+        // the widget itself is the one claiming the stretch.
+        m_impl->layout->setStretch(m_impl->layout->count() - 1, stretch > 0 ? 0 : 1);
+    }
+    else
+    {
+        m_impl->layout->setStretch(m_impl->layout->count() - 1, 1);
     }
 }
 

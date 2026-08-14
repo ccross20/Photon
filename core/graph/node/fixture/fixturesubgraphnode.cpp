@@ -153,7 +153,7 @@ void FixtureSubGraphNode::evaluate(keira::EvaluationContext *t_context) const
         return;
 
     auto context = static_cast<RoutineEvaluationContext*>(t_context);
-    const auto fixtures = m_fixturesParam->value().value<QVector<FixtureParameterData>>();
+    const auto fixtures = m_fixturesParam->resolvedValue();
 
     if(m_poolStale || m_subgraphPool.size() != fixtures.size())
         syncSubgraphPool(fixtures.size());
@@ -163,8 +163,10 @@ void FixtureSubGraphNode::evaluate(keira::EvaluationContext *t_context) const
 
     // Push values that are constant across all fixtures into each clone: the full
     // fixture list onto the context node, and the exposed graph inputs (relayed
-    // from our outer mirror parameters by the base SubGraphNode).
-    const QVariant fixtureListValue = m_fixturesParam->value();
+    // from our outer mirror parameters by the base SubGraphNode). Relay the
+    // resolved list (not m_fixturesParam->value() directly), so a clone sees
+    // the same default-to-all-fixtures fallback this node itself just used.
+    const QVariant fixtureListValue = QVariant::fromValue(fixtures);
     for(int i = 0; i < m_subgraphPool.size(); ++i)
     {
         if(m_globalsPool[i])

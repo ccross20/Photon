@@ -66,7 +66,6 @@
 #include "graph/node/canvas/gradientsamplenode.h"
 #include "graph/node/canvas/gradientmixnode.h"
 
-#include "falloff/constantfalloffeffect.h"
 #include "sequence/constantchanneleffect.h"
 #include "sequence/gradientchanneleffect.h"
 #include "sequence/masterlayerchanneleffect.h"
@@ -127,8 +126,6 @@ public:
 
     QVector<IPlugin*> plugins;
     QHash<QByteArray, EffectInformation> effects;
-    QHash<QByteArray, FalloffEffectInformation> falloffEffects;
-    QHash<QByteArray, MaskEffectInformation> maskEffects;
     QHash<QByteArray, ClipInformation> clips;
     QHash<QByteArray, AudioProcessorInformation> audioProcessors;
     QHash<PanelId, std::function<Panel*()>> panels;
@@ -271,8 +268,6 @@ void PluginFactory::init()
     registerNode(GradientSampleNode::info());
     registerNode(GradientMixNode::info());
 
-    registerFalloffEffect(ConstantFalloffEffect::info());
-
     registerChannelEffect(ConstantChannelEffect::info());
     registerChannelEffect(GradientChannelEffect::info());
     registerChannelEffect(MasterLayerChannelEffect::info());
@@ -396,29 +391,6 @@ ChannelEffect *PluginFactory::createChannelEffect(const QByteArray &effectId) co
 }
 
 
-void PluginFactory::registerFalloffEffect(const FalloffEffectInformation &info)
-{
-    m_impl->falloffEffects.insert(info.effectId, info);
-}
-
-QVector<FalloffEffectInformation> PluginFactory::falloffEffects() const
-{
-    return m_impl->falloffEffects.values();
-}
-
-FalloffEffect *PluginFactory::createFalloffEffect(const QByteArray &effectId) const
-{
-    auto info = m_impl->falloffEffects[effectId];
-    if(info.effectId == effectId)
-    {
-        auto effect = info.callback();
-        effect->setName(info.name);
-        effect->setId(info.effectId);
-        return effect;
-    }
-    return nullptr;
-}
-
 void PluginFactory::registerAudioProcessor(const AudioProcessorInformation &info)
 {
     m_impl->audioProcessors.insert(info.id, info);
@@ -459,29 +431,6 @@ Clip *PluginFactory::createClip(const QByteArray &effectId) const
         auto effect = info.callback();
         effect->setName(info.name);
         effect->setId(info.id);
-        return effect;
-    }
-    return nullptr;
-}
-
-void PluginFactory::registerMaskEffect(const MaskEffectInformation &info)
-{
-    m_impl->maskEffects.insert(info.effectId, info);
-}
-
-QVector<MaskEffectInformation> PluginFactory::maskEffects() const
-{
-    return m_impl->maskEffects.values();
-}
-
-MaskEffect *PluginFactory::createMaskEffect(const QByteArray &effectId) const
-{
-    auto info = m_impl->maskEffects[effectId];
-    if(info.effectId == effectId)
-    {
-        auto effect = info.callback();
-        effect->setName(info.name);
-        effect->setId(info.effectId);
         return effect;
     }
     return nullptr;

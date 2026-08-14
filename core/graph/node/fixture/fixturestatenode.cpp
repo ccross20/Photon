@@ -110,7 +110,7 @@ State *FixtureStateNode::state() const
 QVector<Fixture*> FixtureStateNode::resolvedFixtures() const
 {
     QVector<Fixture*> results;
-    const auto fixtures = m_fixturesParam->value().value<QVector<FixtureParameterData>>();
+    const auto fixtures = m_fixturesParam->resolvedValue();
     for(const auto &fixtureData : fixtures)
     {
         auto *fixture = photonApp->project()->fixtures()->fixtureWithId(fixtureData.fixtureId);
@@ -202,7 +202,7 @@ static bool enabledAt(const std::deque<FixtureStateNode::EnableSample> &t_histor
 void FixtureStateNode::evaluate(keira::EvaluationContext *t_context) const
 {
     auto context = static_cast<RoutineEvaluationContext*>(t_context);
-    const auto fixtures = m_fixturesParam->value().value<QVector<FixtureParameterData>>();
+    const auto fixtures = m_fixturesParam->resolvedValue();
 
     const double now = context->globalTime;
 

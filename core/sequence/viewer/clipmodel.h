@@ -9,11 +9,9 @@
 
 namespace photon {
 
-class ClipFalloffData;
 class ClipParameterData;
 class ClipGraphData;
 class PixelLayoutFolderData;
-class ClipMaskData;
 class FixtureClip;
 class ClipStateData;
 
@@ -31,8 +29,6 @@ private slots:
     void channelMoved(photon::Channel *);
 
 private:
-    ClipMaskData *m_maskFolder;
-    ClipFalloffData *m_falloffData;
     FolderData *m_channelFolder;
     ClipStateData *m_stateData;
     ClipParameterData *m_parameterData;
@@ -53,24 +49,6 @@ private:
     FolderData *m_channelFolder;
     MasterLayer *m_layer;
 
-};
-
-class ClipFalloffData : public AbstractTreeData
-{
-    Q_OBJECT
-public:
-    ClipFalloffData(FixtureClip*);
-    FalloffEffectData *findEffectData(FalloffEffect *);
-
-    FixtureClip *clip() const{return m_clip;}
-
-private slots:
-    void effectAdded(photon::FalloffEffect*);
-    void effectRemoved(photon::FalloffEffect*);
-    void effectMoved(photon::FalloffEffect*);
-
-private:
-    FixtureClip *m_clip;
 };
 
 class PixelLayoutData : public AbstractTreeData
@@ -127,27 +105,6 @@ public:
 private:
     Clip *m_clip;
 };
-
-
-class ClipMaskData : public AbstractTreeData
-{
-    Q_OBJECT
-public:
-    ClipMaskData(FixtureClip*);
-    MaskEffectData *findEffectData(MaskEffect *);
-
-    FixtureClip *clip() const{return m_clip;}
-
-private slots:
-    void effectAdded(photon::MaskEffect*);
-    void effectRemoved(photon::MaskEffect*);
-    void effectMoved(photon::MaskEffect*);
-
-private:
-    FixtureClip *m_clip;
-};
-
-
 
 
 class ClipStateData : public AbstractTreeData

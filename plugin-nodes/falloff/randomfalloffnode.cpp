@@ -53,7 +53,7 @@ void RandomFalloffNode::createParameters()
 void RandomFalloffNode::evaluate(keira::EvaluationContext *t_context) const
 {
 
-    auto fixtures = m_inParam->value().value<QVector<FixtureParameterData>>();
+    auto fixtures = m_inParam->resolvedValue();
 
     double offset = m_totalOffsetParam->value().toDouble();
     int seed = m_seedParam->value().toInt();

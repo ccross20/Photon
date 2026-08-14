@@ -9,8 +9,6 @@
 #include "model/node.h"
 #include "library/nodelibrary.h"
 #include "sequence/channeleffect.h"
-#include "falloff/falloffeffect.h"
-#include "fixture/maskeffect.h"
 #include "sequence/clip.h"
 #include "audio/audioprocessor.h"
 
@@ -52,14 +50,6 @@ public:
     void registerClip(const ClipInformation &info);
     QVector<ClipInformation> clips() const;
     Clip *createClip(const QByteArray &effectId) const;
-
-    void registerFalloffEffect(const FalloffEffectInformation &info);
-    QVector<FalloffEffectInformation> falloffEffects() const;
-    FalloffEffect *createFalloffEffect(const QByteArray &effectId) const;
-
-    void registerMaskEffect(const MaskEffectInformation &info);
-    QVector<MaskEffectInformation> maskEffects() const;
-    MaskEffect *createMaskEffect(const QByteArray &effectId) const;
 
     void registerNode(const keira::NodeInformation nodeInfo);
     keira::NodeLibrary *nodeLibrary() const;

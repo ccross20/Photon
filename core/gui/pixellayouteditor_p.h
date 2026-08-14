@@ -21,7 +21,7 @@ class SceneObject;
 // A QListWidget that also accepts a Fixture/PixelSource-capable SceneObject
 // dropped from the Project panel (or anywhere else SceneObjectMime is
 // dragged from), re-emitting the decoded objects for the side panel to
-// filter and add - mirrors the drop handling in FalloffView.
+// filter and add.
 class PixelSourceListWidget : public QListWidget
 {
     Q_OBJECT
@@ -43,8 +43,18 @@ class PixelLayoutScene : public QGraphicsScene
 public:
     PixelLayoutScene(PixelLayout *);
 
-    void setScale(QPointF);
+    // t_scale is always uniform (x==y) - the edit area is a fixed square
+    // regardless of the panel's own aspect ratio; t_offset positions that
+    // square's origin within the panel so it's centered rather than
+    // anchored to a corner, letterboxed on whichever axis is longer.
+    // Computed and applied together (not via the view's own transform/scroll
+    // - QGraphicsView's translate()/centerOn() didn't reliably move anything
+    // here once the scene rect already matched the viewport size 1:1) so
+    // point positioning stays simple, explicit scene-space arithmetic we
+    // control end to end.
+    void setViewport(QPointF scale, QPointF offset);
     QPointF scale() const{return m_scale;}
+    QPointF offset() const{return m_offset;}
 
     // Marks t_source (or none, for nullptr) as the active source, so its
     // points paint cyan instead of dark grey - kept in sync with the fixture
@@ -74,6 +84,7 @@ private:
     QHash<PixelSourceLayout*, QVector<PixelPointItem*>> m_pointItems;
     PixelSourceLayout *m_activeSourceLayout = nullptr;
     QPointF m_scale;
+    QPointF m_offset;
     QPointF m_inverseScale;
 
 };
@@ -90,8 +101,7 @@ protected:
 
 // One point per pixel (replaces the old one-item-per-source PixelSourceItem)
 // so individual pixels can be natively selected/dragged via QGraphicsScene's
-// built-in rubber-band selection, same pattern as SceneObjectItem/GizmoItem
-// in fixturefalloff2deditor.cpp.
+// built-in rubber-band selection.
 class PixelPointItem : public QGraphicsItem
 {
 public:
