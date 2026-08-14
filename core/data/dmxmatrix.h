@@ -188,7 +188,7 @@ public:
     friend QDataStream & operator<< (QDataStream& stream, const DMXMatrix &t_matrix)
     {
         stream << static_cast<uchar>(1); // version number
-        stream << t_matrix.channels.size();
+        stream << static_cast<quint64>(t_matrix.channels.size());
         for(auto universeIt = t_matrix.channels.cbegin(); universeIt != t_matrix.channels.cend(); ++universeIt)
         {
             const auto &universe = *universeIt;
@@ -201,7 +201,7 @@ public:
     friend QDataStream & operator>> (QDataStream& stream, DMXMatrix &t_matrix)
     {
         uchar version = 0;
-        size_t universeCount = 0;
+        quint64 universeCount = 0;
         stream >> version;
         stream >> universeCount;
 

@@ -143,21 +143,9 @@ void GuiManager::Impl::createAppWindow()
     #if defined(Q_OS_WIN)
     //menus->populateMenuBar(window->menuBar(), "exo.core.menus.root");
     #elif defined(Q_OS_MAC)
-
-    m_macMenubar = new QMenuBar(win);
-    m_macMenubar->setNativeMenuBar(true);
-
-    QAction *updateAction = m_macMenubar->addAction("Update",[](){
-        exoApp->updateChecker()->update();
-    });
-
-    updateAction->setMenuRole(QAction::ApplicationSpecificRole);
-
-    menus->populateMenuBar(m_macMenubar, "deco.core.menus.root");
-
-
-
-
+    // TODO: native macOS menu bar was never wired up (referenced undeclared
+    // `win`/`exoApp`/`menus` from an earlier codebase); left disabled until
+    // it's rebuilt against MenuFactory.
     #endif
 
 }

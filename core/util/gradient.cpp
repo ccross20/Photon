@@ -171,7 +171,7 @@ Gradient Gradient::mixed(const Gradient &a, const Gradient &b, double factor)
     for(const GradientStop &s : a.stops()) positions.append(s.position);
     for(const GradientStop &s : b.stops()) positions.append(s.position);
     if(positions.isEmpty())
-        return Gradient({});
+        return Gradient(QVector<GradientStop>());
     std::sort(positions.begin(), positions.end());
 
     QVector<GradientStop> out;

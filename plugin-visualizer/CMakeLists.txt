@@ -121,8 +121,14 @@ qt6_add_shaders(plugin-visualizer "visualizer_shaders"
 
 
 
-find_library(ASSIMP_LIBRARY assimp-vc142-mt "${PROJECT_SOURCE_DIR}/libs")
-target_link_libraries(plugin-visualizer PRIVATE "${ASSIMP_LIBRARY}")
+if(WIN32)
+    find_library(ASSIMP_LIBRARY assimp-vc142-mt "${PROJECT_SOURCE_DIR}/libs")
+    target_link_libraries(plugin-visualizer PRIVATE "${ASSIMP_LIBRARY}")
+    include_directories("${PROJECT_SOURCE_DIR}/third-party")
+else()
+    find_package(assimp REQUIRED)
+    target_link_libraries(plugin-visualizer PRIVATE assimp::assimp)
+endif()
 
 target_link_libraries(plugin-visualizer PRIVATE Qt${QT_VERSION_MAJOR}::Core)
 target_link_libraries(plugin-visualizer PRIVATE Qt${QT_VERSION_MAJOR}::Gui)
@@ -130,10 +136,9 @@ target_link_libraries(plugin-visualizer PRIVATE Qt${QT_VERSION_MAJOR}::GuiPrivat
 target_link_libraries(plugin-visualizer PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)
 target_link_libraries(plugin-visualizer PRIVATE Qt${QT_VERSION_MAJOR}::OpenGLWidgets)
 target_link_libraries(plugin-visualizer PRIVATE Qt${QT_VERSION_MAJOR}::OpenGL)
-target_link_libraries(plugin-visualizer PRIVATE ${OPENGL_LIBRARIES} Opengl32)
-
-
-include_directories("${PROJECT_SOURCE_DIR}/third-party")
+if(WIN32)
+    target_link_libraries(plugin-visualizer PRIVATE Opengl32)
+endif()
 
 #target_compile_definitions(plugin-visualizer PRIVATE PLUGINVISUALIZER_LIBRARY)
 
@@ -142,14 +147,21 @@ target_link_libraries(plugin-visualizer PRIVATE photon-core)
 set_target_properties(plugin-visualizer PROPERTIES
                       RUNTIME_OUTPUT_DIRECTORY_DEBUG "${PROJECT_BINARY_DIR}/../photon-desktop/extensions/visualizer/"
                       RUNTIME_OUTPUT_DIRECTORY_RELEASE "${PROJECT_BINARY_DIR}/../photon-desktop/extensions/visualizer/"
+                      LIBRARY_OUTPUT_DIRECTORY_DEBUG "${PROJECT_BINARY_DIR}/../photon-desktop/extensions/visualizer/"
+                      LIBRARY_OUTPUT_DIRECTORY_RELEASE "${PROJECT_BINARY_DIR}/../photon-desktop/extensions/visualizer/"
                       OUTPUT_NAME "visualizer"
+                      PREFIX ""
 )
 
-add_custom_command(TARGET plugin-visualizer POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/support-files" "${PROJECT_BINARY_DIR}/../photon-desktop/extensions/visualizer/"
-)
+if(EXISTS "${PROJECT_SOURCE_DIR}/support-files")
+    add_custom_command(TARGET plugin-visualizer POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/support-files" "${PROJECT_BINARY_DIR}/../photon-desktop/extensions/visualizer/"
+    )
+endif()
 
-add_custom_command(TARGET plugin-visualizer POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/dlls/windows" "${PROJECT_BINARY_DIR}/../photon-desktop/"
-)
+if(WIN32 AND EXISTS "${PROJECT_SOURCE_DIR}/dlls/windows")
+    add_custom_command(TARGET plugin-visualizer POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/dlls/windows" "${PROJECT_BINARY_DIR}/../photon-desktop/"
+    )
+endif()
 

@@ -27,6 +27,10 @@ Panel::Impl::Impl(const PanelId &id, Panel *panel) : id(id),
     layout->addWidget(toolbar);
     toolbar->setVisible(!toolbarIsHidden);
     menubar->setNativeMenuBar(false);
+    // Never added to the layout - populateMenuBar() wiring was never
+    // finished (see GuiManager::updatePanelMenu) - so it just floats at its
+    // default un-laid-out geometry in the panel's corner unless hidden.
+    menubar->setVisible(false);
     menubar->setSizePolicy(QSizePolicy::Maximum,QSizePolicy::Maximum);
     //backgroundBrush = QBrush(core::applicationSetting("deco.settings.ui.color.viewport.bg").value<QColor>());
     //backgroundBrush = QBrush(QColor(QRandomGenerator::global()->bounded(255),QRandomGenerator::global()->bounded(255),QRandomGenerator::global()->bounded(255)));

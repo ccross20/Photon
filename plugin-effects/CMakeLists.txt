@@ -68,13 +68,20 @@ target_link_libraries(plugin-effects PRIVATE keira)
 set_target_properties(plugin-effects PROPERTIES
                       RUNTIME_OUTPUT_DIRECTORY_DEBUG "${PROJECT_BINARY_DIR}/../photon-desktop/extensions/channel-effects/"
                       RUNTIME_OUTPUT_DIRECTORY_RELEASE "${PROJECT_BINARY_DIR}/../photon-desktop/extensions/channel-effects/"
+                      LIBRARY_OUTPUT_DIRECTORY_DEBUG "${PROJECT_BINARY_DIR}/../photon-desktop/extensions/channel-effects/"
+                      LIBRARY_OUTPUT_DIRECTORY_RELEASE "${PROJECT_BINARY_DIR}/../photon-desktop/extensions/channel-effects/"
                       OUTPUT_NAME "channel-effects"
+                      PREFIX ""
 )
 
-add_custom_command(TARGET plugin-effects POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/support-files" "${PROJECT_BINARY_DIR}/../photon-desktop/extensions/channel-effects/"
-)
-add_custom_command(TARGET plugin-effects POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/dlls/windows" "${PROJECT_BINARY_DIR}/../photon-desktop/"
-)
+if(EXISTS "${PROJECT_SOURCE_DIR}/support-files")
+    add_custom_command(TARGET plugin-effects POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/support-files" "${PROJECT_BINARY_DIR}/../photon-desktop/extensions/channel-effects/"
+    )
+endif()
+if(WIN32 AND EXISTS "${PROJECT_SOURCE_DIR}/dlls/windows")
+    add_custom_command(TARGET plugin-effects POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/dlls/windows" "${PROJECT_BINARY_DIR}/../photon-desktop/"
+    )
+endif()
 

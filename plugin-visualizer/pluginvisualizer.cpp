@@ -17,6 +17,7 @@ bool PluginVisualizer::initialize(const PluginContext &context)
     QSurfaceFormat format;
     format.setDepthBufferSize(24);
     format.setSamples(4);
+    format.setVersion(3, 3);
     format.setProfile(QSurfaceFormat::OpenGLContextProfile::CoreProfile);
     QSurfaceFormat::setDefaultFormat(format);
 

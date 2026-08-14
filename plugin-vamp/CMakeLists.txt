@@ -83,12 +83,19 @@ target_link_libraries(plugin-vamp PRIVATE photon-core)
 set_target_properties(plugin-vamp PROPERTIES
                       RUNTIME_OUTPUT_DIRECTORY_DEBUG "${PROJECT_BINARY_DIR}/../photon-desktop/extensions/vamp/"
                       RUNTIME_OUTPUT_DIRECTORY_RELEASE "${PROJECT_BINARY_DIR}/../photon-desktop/extensions/vamp/"
+                      LIBRARY_OUTPUT_DIRECTORY_DEBUG "${PROJECT_BINARY_DIR}/../photon-desktop/extensions/vamp/"
+                      LIBRARY_OUTPUT_DIRECTORY_RELEASE "${PROJECT_BINARY_DIR}/../photon-desktop/extensions/vamp/"
                       OUTPUT_NAME "vamp"
+                      PREFIX ""
 )
 
-add_custom_command(TARGET plugin-vamp POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/support-files" "${PROJECT_BINARY_DIR}/../photon-desktop/extensions/vamp/"
-)
-add_custom_command(TARGET plugin-vamp POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/dlls/windows" "${PROJECT_BINARY_DIR}/../photon-desktop/"
-)
+if(EXISTS "${PROJECT_SOURCE_DIR}/support-files")
+    add_custom_command(TARGET plugin-vamp POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/support-files" "${PROJECT_BINARY_DIR}/../photon-desktop/extensions/vamp/"
+    )
+endif()
+if(WIN32 AND EXISTS "${PROJECT_SOURCE_DIR}/dlls/windows")
+    add_custom_command(TARGET plugin-vamp POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/dlls/windows" "${PROJECT_BINARY_DIR}/../photon-desktop/"
+    )
+endif()

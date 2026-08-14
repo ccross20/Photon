@@ -93,10 +93,15 @@ target_link_libraries(plugin-nodes PRIVATE photon-core)
 set_target_properties(plugin-nodes PROPERTIES
                       RUNTIME_OUTPUT_DIRECTORY_DEBUG "${PROJECT_BINARY_DIR}/../photon-desktop/extensions/nodes/"
                       RUNTIME_OUTPUT_DIRECTORY_RELEASE "${PROJECT_BINARY_DIR}/../photon-desktop/extensions/nodes/"
+                      LIBRARY_OUTPUT_DIRECTORY_DEBUG "${PROJECT_BINARY_DIR}/../photon-desktop/extensions/nodes/"
+                      LIBRARY_OUTPUT_DIRECTORY_RELEASE "${PROJECT_BINARY_DIR}/../photon-desktop/extensions/nodes/"
                       OUTPUT_NAME "nodes"
+                      PREFIX ""
 )
 
-add_custom_command(TARGET plugin-nodes POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/support-files" "${PROJECT_BINARY_DIR}/../photon-desktop/extensions/nodes/"
-)
+if(EXISTS "${PROJECT_SOURCE_DIR}/support-files")
+    add_custom_command(TARGET plugin-nodes POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/support-files" "${PROJECT_BINARY_DIR}/../photon-desktop/extensions/nodes/"
+    )
+endif()
 

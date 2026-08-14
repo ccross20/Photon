@@ -341,7 +341,7 @@ void Viewer::wheelEvent(QWheelEvent *event)
         #if defined(Q_OS_WIN)
             zoom(m_impl->currentZoom + (event->angleDelta().y()/420.0), pt);
         #elif defined(Q_OS_MAC)
-            zoom(m_currentZoom + (event->angleDelta().y()/240.0), pt);
+            zoom(m_impl->currentZoom + (event->angleDelta().y()/240.0), pt);
         #endif
 
         return;

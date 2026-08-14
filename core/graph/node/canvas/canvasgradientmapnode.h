@@ -24,7 +24,7 @@ public:
     const static QByteArray Mix;
     const static QByteArray Output;
 
-    static const int MaxStops = 16;
+    static constexpr int MaxStops = 16;
 
     CanvasGradientMapNode();
 

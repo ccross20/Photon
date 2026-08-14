@@ -17,12 +17,6 @@ find_package(Qt6 REQUIRED COMPONENTS Gui GuiPrivate)  # QRhi (rhi/qrhi.h) for th
 find_package(Qt6 REQUIRED COMPONENTS ShaderTools)     # qt6_add_shaders for canvas node shaders
 find_package(Qt6 REQUIRED COMPONENTS Quick Qml QuickWidgets)
 find_package(Qt6 REQUIRED COMPONENTS
-    3DCore
-    3DRender
-    3DInput
-    3DLogic
-    3DExtras
-    3DAnimation
     MultimediaWidgets
 )
 find_package(Qt6 REQUIRED COMPONENTS Concurrent)
@@ -608,11 +602,6 @@ target_link_libraries(photon-core PRIVATE Qt6::Quick Qt6::Qml Qt6::QuickWidgets)
 
 target_link_libraries(photon-core PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)
 target_link_libraries(photon-core PRIVATE
-    Qt6::3DCore
-    Qt6::3DRender
-    Qt6::3DLogic
-    Qt6::3DExtras
-    Qt6::3DAnimation
     Qt6::MultimediaWidgets
     Qt6::Network
     Qt6::OpenGLWidgets
