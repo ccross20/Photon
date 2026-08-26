@@ -135,11 +135,20 @@ void sACNSentUniverse::setLevel(quint16 address, quint8 value)
         return;
     if(isSending())
     {
-        if (m_slotData[address] != value)
+        CStreamServer *server = CStreamServer::getInstance(m_networkInterface);
+        bool changed = false;
         {
-            m_slotData[address] =  value;
-            CStreamServer::getInstance(m_networkInterface)->SetUniverseDirty(m_handle);
+            // m_slotData aliases the same buffer TickLoop() reads/sends on its
+            // own thread, so writes here must hold the same lock it uses.
+            QMutexLocker locker(&server->writeMutex());
+            if (m_slotData[address] != value)
+            {
+                m_slotData[address] =  value;
+                changed = true;
+            }
         }
+        if (changed)
+            server->SetUniverseDirty(m_handle);
     }
 }
 
@@ -155,13 +164,20 @@ void sACNSentUniverse::setLevelRange(quint16 start, quint16 end, quint8 value)
     if(isSending())
     {
         size_t len = end-start+1;
-        std::unique_ptr<quint8[]> pTemp(new quint8[DMX_SLOT_MAX]);
-        memset(pTemp.get() + start, value, len);
-        if (memcmp(pTemp.get() + start, m_slotData + start, len) != 0)
+        CStreamServer *server = CStreamServer::getInstance(m_networkInterface);
+        bool changed = false;
         {
-            memset(m_slotData + start, value, end-start+1);
-            CStreamServer::getInstance(m_networkInterface)->SetUniverseDirty(m_handle);
+            QMutexLocker locker(&server->writeMutex());
+            std::unique_ptr<quint8[]> pTemp(new quint8[DMX_SLOT_MAX]);
+            memset(pTemp.get() + start, value, len);
+            if (memcmp(pTemp.get() + start, m_slotData + start, len) != 0)
+            {
+                memset(m_slotData + start, value, end-start+1);
+                changed = true;
+            }
         }
+        if (changed)
+            server->SetUniverseDirty(m_handle);
     }
 }
 
@@ -171,11 +187,18 @@ void sACNSentUniverse::setLevel(const quint8 *data, int len, int start)
     len = qMin(len, static_cast<decltype(len)>(m_slotCount));
     if(isSending())
     {
-        if (memcmp(data, m_slotData + start, static_cast<size_t>(len)) != 0)
+        CStreamServer *server = CStreamServer::getInstance(m_networkInterface);
+        bool changed = false;
         {
-            memcpy(m_slotData + start, data, static_cast<size_t>(len));
-            CStreamServer::getInstance(m_networkInterface)->SetUniverseDirty(m_handle);
+            QMutexLocker locker(&server->writeMutex());
+            if (memcmp(data, m_slotData + start, static_cast<size_t>(len)) != 0)
+            {
+                memcpy(m_slotData + start, data, static_cast<size_t>(len));
+                changed = true;
+            }
         }
+        if (changed)
+            server->SetUniverseDirty(m_handle);
     }
 }
 
@@ -185,13 +208,16 @@ void sACNSentUniverse::setVerticalBar(quint16 index, quint8 level)
 
     if(isSending())
     {
-        memset(m_slotData, 0, m_slotCount);
-        for(int i=0; i<16; i++)
+        CStreamServer *server = CStreamServer::getInstance(m_networkInterface);
         {
-            m_slotData[(i*32)+index] = level;
+            QMutexLocker locker(&server->writeMutex());
+            memset(m_slotData, 0, m_slotCount);
+            for(int i=0; i<16; i++)
+            {
+                m_slotData[(i*32)+index] = level;
+            }
         }
-
-        CStreamServer::getInstance(m_networkInterface)->SetUniverseDirty(m_handle);
+        server->SetUniverseDirty(m_handle);
     }
 }
 
@@ -202,10 +228,13 @@ void sACNSentUniverse::setHorizontalBar(quint16 index, quint8 level)
 
     if(isSending())
     {
-        memset(m_slotData, 0, m_slotCount);
-        memset(m_slotData + 32*index, level, 32);
-
-        CStreamServer::getInstance(m_networkInterface)->SetUniverseDirty(m_handle);
+        CStreamServer *server = CStreamServer::getInstance(m_networkInterface);
+        {
+            QMutexLocker locker(&server->writeMutex());
+            memset(m_slotData, 0, m_slotCount);
+            memset(m_slotData + 32*index, level, 32);
+        }
+        server->SetUniverseDirty(m_handle);
     }
 }
 
@@ -411,7 +440,10 @@ void CStreamServer::TickLoop()
     while (!m_thread_stop) {
         QThread::yieldCurrentThread();
         QCoreApplication::processEvents();
-        QThread::msleep(1);
+        // 1ms here polled at ~1000Hz for no benefit: the protocol's own timing
+        // floor is E1_11::MAX_REFRESH_RATE_HZ (44Hz, ~22ms), so a tighter poll
+        // just burns idle wake-ups without sending anything sooner.
+        QThread::msleep(10);
         QMutexLocker locker(&m_writeMutex);
 
         int valid_count = 0;
@@ -629,17 +661,20 @@ void CStreamServer::DoDestruction(uint handle)
 //sets the preview_data bit of the options field
 void CStreamServer::OptionsPreviewData(uint handle, bool preview)
 {
+  QMutexLocker locker(&m_writeMutex);
   SetPreviewData(m_multiverse[handle].psend, preview);
 }
 
 //sets the stream_terminated bit of the options field
 void CStreamServer::OptionsStreamTerminated(uint handle, bool terminated)
 {
+  QMutexLocker locker(&m_writeMutex);
   SetStreamTerminated(m_multiverse[handle].psend, terminated);
 }
 
 void CStreamServer::setUniverseName(uint handle, const char *name)
 {
+    QMutexLocker locker(&m_writeMutex);
     if(m_multiverse[handle].psend)
     {
         strncpy((char *)m_multiverse[handle].psend + SOURCE_NAME_ADDR,
@@ -651,6 +686,7 @@ void CStreamServer::setUniverseName(uint handle, const char *name)
 
 void CStreamServer::setUniversePriority(uint handle, quint8 priority)
 {
+    QMutexLocker locker(&m_writeMutex);
     if(m_multiverse[handle].psend && m_multiverse[handle].draft)
     {
         m_multiverse[handle].psend[DRAFT_PRIORITY_ADDR] = priority;
@@ -663,6 +699,7 @@ void CStreamServer::setUniversePriority(uint handle, quint8 priority)
 
 void CStreamServer::setSynchronizationAddress(uint handle, quint16 address)
 {
+    QMutexLocker locker(&m_writeMutex);
     if(m_multiverse[handle].psend && !m_multiverse[handle].draft)
     {
         m_multiverse[handle].psend[SYNC_ADDR] = address;

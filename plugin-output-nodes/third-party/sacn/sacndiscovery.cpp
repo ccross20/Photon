@@ -85,7 +85,7 @@ void sACNDiscoveryTX::sendDiscoveryPacket()
         // Get page count
         uint8_t page_count = ceil((double)universeList.count() / UniversesPerPage);
 
-        qDebug() << "DiscoveryTX : CID" << CID::CIDIntoQString(cid) << "universes" << universeList;
+        //qDebug() << "DiscoveryTX : CID" << CID::CIDIntoQString(cid) << "universes" << universeList;
 
         for (uint8_t page = 0; page < page_count; page++)
         {

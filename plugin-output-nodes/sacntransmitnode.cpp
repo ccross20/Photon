@@ -4,7 +4,6 @@
 #include "sacntransmitnode.h"
 #include "graph/parameter/dmxmatrixparameter.h"
 #include "model/parameter/stringoptionparameter.h"
-#include "model/parameter/integerparameter.h"
 #include "streamingacn.h"
 #include "sacnsender.h"
 
@@ -18,11 +17,12 @@ class SACNTransmitNode::Impl
 {
 public:
     void initialize();
+    void teardown();
     DMXMatrixParameter *dmxParam;
     keira::StringOptionParameter *networkParam;
-    keira::IntegerParameter *initParam;
     QVector<sACNManager::tSender> senders;
     bool isInitialized = false;
+    QString initializedInterfaceName;
 };
 
 void SACNTransmitNode::Impl::initialize()
@@ -52,7 +52,15 @@ void SACNTransmitNode::Impl::initialize()
         sender->startSending();
     }
 
+    initializedInterfaceName = ifaceName;
     isInitialized = true;
+}
+
+void SACNTransmitNode::Impl::teardown()
+{
+    isInitialized = false;
+    for(auto it = senders.begin(); it!= senders.end(); ++it)
+        (*it)->stopSending();
 }
 
 keira::NodeInformation SACNTransmitNode::info()
@@ -105,23 +113,18 @@ void SACNTransmitNode::createParameters()
         return opts;
     });
     addParameter(m_impl->networkParam);
-
-    m_impl->initParam = new keira::IntegerParameter("init","Initialize", 0);
-    addParameter(m_impl->initParam);
 }
 
 void SACNTransmitNode::evaluate(keira::EvaluationContext *) const
 {
-    if(m_impl->initParam->value().toInt() > 0 && !m_impl->isInitialized)
+    // Self-managing: initializes automatically (retrying each tick until the
+    // NIC is up) and re-initializes if the user picks a different interface,
+    // rather than requiring a manual "Initialize" toggle.
+    if(m_impl->isInitialized && m_impl->networkParam->value().toString() != m_impl->initializedInterfaceName)
+        m_impl->teardown();
+
+    if(!m_impl->isInitialized)
         m_impl->initialize();
-    else if(m_impl->initParam->value().toInt() <= 0)
-    {
-        m_impl->isInitialized = false;
-        for(auto it = m_impl->senders.begin(); it!= m_impl->senders.end(); ++it)
-        {
-            (*it)->stopSending();
-        }
-    }
 
     if(!m_impl->isInitialized)
         return;

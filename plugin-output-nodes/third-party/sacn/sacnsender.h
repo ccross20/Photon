@@ -294,6 +294,12 @@ public:
 
    //sets the stream_terminated bit of the options field
    virtual void OptionsStreamTerminated(uint handle, bool terminated);
+
+   // Exposes the write lock so callers that write directly into a universe's
+   // send buffer (the pslots out-param from CreateUniverse) can synchronize
+   // with TickLoop(), which reads/sends that same buffer memory from its own
+   // thread while holding this same mutex.
+   QMutex &writeMutex() { return m_writeMutex; }
 private slots:
   /**
    * @brief TickLoop - Handles transmission of sACN
