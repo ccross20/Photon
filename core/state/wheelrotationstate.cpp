@@ -31,12 +31,12 @@ void WheelRotationState::evaluate(const StateEvaluationContext &t_context) const
 
             if(rotationAmount > 0 && wheelSlot->maxSpeed() > 0)
             {
-                wheelSlot->setSpeed(rotationAmount,t_context.dmxMatrix,1.0);
+                wheelSlot->setSpeed(rotationAmount,t_context.dmxMatrix,t_context.strength);
                 return;
             }
             else if(rotationAmount < 0 && wheelSlot->maxSpeed() < 0)
             {
-                wheelSlot->setSpeed(rotationAmount,t_context.dmxMatrix,1.0);
+                wheelSlot->setSpeed(rotationAmount,t_context.dmxMatrix,t_context.strength);
                 return;
             }
 

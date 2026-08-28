@@ -14,7 +14,7 @@ public:
     const static QByteArray ParameterId;
 
     CanvasParameter();
-    CanvasParameter(const QByteArray &t_id, const QString &t_name, QImage t_default, int connectionOptions = keira::AllowMultipleOutput | keira::AllowSingleInput);
+    CanvasParameter(const QByteArray &t_id, const QString &t_name, QImage t_default, int connectionOptions = keira::AllowSingleInput);
     ~CanvasParameter();
 
     void readFromJson(const QJsonObject &) override;

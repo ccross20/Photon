@@ -5,7 +5,7 @@
 
 namespace photon {
 
-class SceneManager : public QObject
+class PHOTONCORE_EXPORT SceneManager : public QObject
 {
 public:
     SceneManager();

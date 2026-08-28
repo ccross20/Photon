@@ -14,6 +14,7 @@ public:
 
 private:
     QStringList wheelOptions;
+    QStringList rotateModeOptions;
 };
 
 } // namespace photon

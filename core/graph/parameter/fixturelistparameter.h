@@ -60,7 +60,7 @@ public:
     const static QByteArray ParameterId;
 
     FixtureListParameter();
-    FixtureListParameter(const QByteArray &t_id, const QString &t_name, QVector<FixtureParameterData> t_default, int connectionOptions = keira::AllowMultipleOutput | keira::AllowSingleInput);
+    FixtureListParameter(const QByteArray &t_id, const QString &t_name, QVector<FixtureParameterData> t_default, int connectionOptions = keira::AllowSingleInput);
     ~FixtureListParameter();
 
     QWidget *createWidget(keira::NodeEditor *) const override;

@@ -4,7 +4,7 @@
 #include "model/node.h"
 #include "model/parameter/decimalparameter.h"
 #include "model/parameter/booleanparameter.h"
-#include "graph/parameter/vector3dparameter.h"
+#include "graph/parameter/matrixparameter.h"
 
 namespace photon {
 
@@ -18,9 +18,8 @@ public:
     static keira::NodeInformation info();
 
 private:
-    Vector3DParameter *m_positionParam;
-    Vector3DParameter *m_rotationParam;
-    Vector3DParameter *m_targetParam;
+    MatrixParameter *m_matrixParam;
+    MatrixParameter *m_targetParam;
     keira::DecimalParameter *m_tiltParam;
     keira::DecimalParameter *m_panParam;
     keira::BooleanParameter *m_invertPanParam;

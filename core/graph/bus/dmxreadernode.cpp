@@ -36,7 +36,7 @@ DMXReaderNode::~DMXReaderNode()
 
 void DMXReaderNode::createParameters()
 {
-    m_impl->dmxParam = new DMXMatrixParameter(OutputDMX,"DMX Data", DMXMatrix());
+    m_impl->dmxParam = new DMXMatrixParameter(OutputDMX,"DMX Data", DMXMatrix(), keira::AllowMultipleOutput);
     addParameter(m_impl->dmxParam);
 }
 

@@ -91,7 +91,8 @@ public:
     void setModelType(const QString &);
 
     // Visualiser beam style override: "" = Auto (follow the global toggle),
-    // "cones" = basic cone, "volumetric" = raymarched volumetric beam.
+    // "cones" = basic cone, "volumetric" = raymarched volumetric beam,
+    // "none" = no beam rendered at all.
     QString beamStyle() const;
     void setBeamStyle(const QString &);
 

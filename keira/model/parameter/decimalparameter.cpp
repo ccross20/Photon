@@ -1,6 +1,7 @@
 #include <QLabel>
 #include "decimalparameter.h"
 #include "integerparameter.h"
+#include "booleanparameter.h"
 #include "view/nodeeditor.h"
 #include "view/numberscrubfield.h"
 
@@ -11,7 +12,11 @@ const QByteArray DecimalParameter::ParameterId = "decimal";
 bool DecimalParameter::acceptsConnectionFrom(const Parameter *source) const
 {
     return Parameter::acceptsConnectionFrom(source)
-        || source->typeId() == IntegerParameter::ParameterId;
+        || source->typeId() == IntegerParameter::ParameterId
+        // A boolean reads as 0 or 1 - setValue()'s toDouble() does the
+        // conversion, so a gate or comparison can drive a numeric input
+        // directly without a converter node in between.
+        || source->typeId() == BooleanParameter::ParameterId;
 }
 
 class DecimalParameter::Impl

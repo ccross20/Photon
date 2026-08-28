@@ -11,7 +11,7 @@ public:
     const static QByteArray ParameterId;
 
     DecimalParameter();
-    DecimalParameter(const QByteArray &t_id, const QString &t_name, double t_default, int connectionOptions = AllowMultipleOutput | AllowSingleInput);
+    DecimalParameter(const QByteArray &t_id, const QString &t_name, double t_default, int connectionOptions =  AllowSingleInput);
     ~DecimalParameter();
 
     void setMinimum(double);
@@ -20,7 +20,8 @@ public:
 
     void setValue(const QVariant &) override;
 
-    // Also accept an integer source (widened losslessly to a double).
+    // Also accept an integer source (widened losslessly to a double) and a
+    // boolean one (false = 0, true = 1).
     bool acceptsConnectionFrom(const Parameter *source) const override;
 
     QWidget *createWidget(NodeEditor *) const override;

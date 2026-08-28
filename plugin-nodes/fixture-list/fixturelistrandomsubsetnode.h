@@ -18,6 +18,7 @@ public:
     const static QByteArray OddsParam;
     const static QByteArray SeedParam;
     const static QByteArray FixturesOutParam;
+    const static QByteArray RemainingParam;
 
     FixtureListRandomSubsetNode();
 
@@ -30,6 +31,7 @@ public:
 private:
     FixtureListParameter *m_inParam;
     FixtureListParameter *m_outParam;
+    FixtureListParameter *m_remainingParam;
     keira::IntegerParameter *m_seedParam;
     keira::DecimalParameter *m_oddsParam;
 

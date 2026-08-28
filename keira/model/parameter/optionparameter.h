@@ -11,7 +11,7 @@ public:
     const static QByteArray ParameterId;
 
     OptionParameter();
-    OptionParameter(const QByteArray &t_id, const QString &t_name, const QStringList &t_options, int t_default, int connectionOptions = AllowMultipleOutput | AllowSingleInput);
+    OptionParameter(const QByteArray &t_id, const QString &t_name, const QStringList &t_options, int t_default, int connectionOptions =  AllowSingleInput);
     ~OptionParameter();
 
     void setOptions(const QStringList &);

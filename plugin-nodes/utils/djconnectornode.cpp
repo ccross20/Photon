@@ -50,31 +50,31 @@ DJConnectorNode::DJConnectorNode() : keira::Node("photon.utils.dj_connector") {}
 
 void DJConnectorNode::createParameters()
 {
-    bpmParam = new keira::DecimalParameter("bpm","BPM", 0.0);
+    bpmParam = new keira::DecimalParameter("bpm","BPM", 0.0, keira::AllowMultipleOutput);
     addParameter(bpmParam);
 
-    beatParam = new keira::IntegerParameter("beat","Beat",0);
+    beatParam = new keira::IntegerParameter("beat","Beat",0, keira::AllowMultipleOutput);
     addParameter(beatParam);
 
-    beatProgressParam = new keira::DecimalParameter("beatProgress","Beat Progress", 0.0);
+    beatProgressParam = new keira::DecimalParameter("beatProgress","Beat Progress", 0.0, keira::AllowMultipleOutput);
     addParameter(beatProgressParam);
 
-    beatProgress2Param = new keira::DecimalParameter("beatProgress2","Beat Progress x2", 0.0);
+    beatProgress2Param = new keira::DecimalParameter("beatProgress2","Beat Progress x2", 0.0, keira::AllowMultipleOutput);
     addParameter(beatProgress2Param);
 
-    beatProgress4Param = new keira::DecimalParameter("beatProgress4","Beat Progress x4", 0.0);
+    beatProgress4Param = new keira::DecimalParameter("beatProgress4","Beat Progress x4", 0.0, keira::AllowMultipleOutput);
     addParameter(beatProgress4Param);
 
-    beatIntensityParam = new keira::DecimalParameter("beatIntensity","Beat Intensity", 0.0);
+    beatIntensityParam = new keira::DecimalParameter("beatIntensity","Beat Intensity", 0.0, keira::AllowMultipleOutput);
     addParameter(beatIntensityParam);
 
-    beatAmountParam = new keira::DecimalParameter("beatAmount","Beat Amount", 0.0);
+    beatAmountParam = new keira::DecimalParameter("beatAmount","Beat Amount", 0.0, keira::AllowMultipleOutput);
     addParameter(beatAmountParam);
 
     // Pseudo-unique per track, for wiring into seed inputs so the graph
     // re-rolls its random values when the song changes (and lands on the same
     // values again whenever that same song comes back).
-    songIdParam = new keira::IntegerParameter("songId","Song ID", 0);
+    songIdParam = new keira::IntegerParameter("songId","Song ID", 0, keira::AllowMultipleOutput);
     addParameter(songIdParam);
 }
 

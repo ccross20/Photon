@@ -78,7 +78,10 @@ add_library(plugin-nodes SHARED ${SOURCES}
     pixel/pixelsfromfixturelist.h pixel/pixelsfromfixturelist.cpp
     pixel/setpixelcolor.h pixel/setpixelcolor.cpp
     math/remapvaluenode.h math/remapvaluenode.cpp
-    utils/djconnectornode.h utils/djconnectornode.cpp)
+    utils/djconnectornode.h utils/djconnectornode.cpp
+    fixture/scatterbeams.h fixture/scatterbeams.cpp
+    fixture-list/fixturelistmergenode.h fixture-list/fixturelistmergenode.cpp
+    math/ifnode.h math/ifnode.cpp)
 
 target_include_directories(plugin-nodes PUBLIC ../keira)
 target_link_libraries(plugin-nodes PRIVATE Qt${QT_VERSION_MAJOR}::Core)

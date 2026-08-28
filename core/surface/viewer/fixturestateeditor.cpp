@@ -176,16 +176,26 @@ void FixtureStateEditor::openAddMenu()
     if(!state)
         return;
 
+    // Kept in step with the clip state editor's menu (sequence/viewer/stateeditor.cpp)
+    // so both offer the same capabilities. Every entry here must have a case in
+    // State::Impl::addCapability, or addCapability returns null and nothing happens.
     struct Entry { const char *name; CapabilityType type; };
     static const Entry entries[] = {
         {"Dimmer", Capability_Dimmer},
         {"Color",  Capability_Color},
         {"Pan",    Capability_Pan},
         {"Tilt",   Capability_TiltAngleCentered},
+        {"Tilt (Percent)", Capability_Tilt},
+        {"Tilt Angle", Capability_TiltAngle},
         {"Strobe", Capability_Strobe},
         {"Focus",  Capability_Focus},
         {"Zoom",   Capability_Zoom},
+        {"Color Slot", Capability_ColorWheelSlot},
+        {"Gobo Slot", Capability_WheelSlot},
+        {"Wheel Rotation", Capability_WheelRotation},
+        {"Wheel Slot Rotation", Capability_WheelSlotRotation},
         {"Lens Rotation", Capability_LensRotation},
+        {"Prism", Capability_Prism},
     };
 
     QMenu menu;

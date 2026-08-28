@@ -12,7 +12,7 @@ public:
     const static QByteArray ParameterId;
 
     Vector3DParameter();
-    Vector3DParameter(const QByteArray &t_id, const QString &t_name, QVector3D t_default, int connectionOptions = keira::AllowMultipleOutput | keira::AllowSingleInput);
+    Vector3DParameter(const QByteArray &t_id, const QString &t_name, QVector3D t_default, int connectionOptions =  keira::AllowSingleInput);
 
     QWidget *createWidget(keira::NodeEditor *) const override;
     void updateWidget(QWidget *) const override;

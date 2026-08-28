@@ -8,7 +8,12 @@
 
 namespace photon {
 
-VisualizerPanel::VisualizerPanel() : Panel("Visualizer")
+// The id MUST match the one this panel is registered under in
+// PluginVisualizer::initialize (and the one GuiManager's "Open Visualizer"
+// action asks for). saveLayout() persists panel->id() and restoreLayout()
+// feeds it straight back to createPanel() as the lookup key, so a mismatch
+// saves fine and then restores as a "panel not found" placeholder.
+VisualizerPanel::VisualizerPanel() : Panel("visualizer")
 {
     m_viewport = new RhiViewport;
 

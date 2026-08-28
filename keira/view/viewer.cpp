@@ -1,6 +1,9 @@
 #include <QMouseEvent>
 #include <QScrollBar>
+#include <QJsonObject>
+#include <QUuid>
 #include "viewer.h"
+#include "library/nodelibrary.h"
 #include "nodeitem.h"
 #include "portitem.h"
 #include "wireitem.h"
@@ -33,6 +36,15 @@ public:
     WireItem *draggingWire = nullptr;
     NodeLibrary *library = nullptr;
     double currentZoom = 1.0;
+
+    // Ctrl was pressed on this node and the mouse hasn't moved far enough yet
+    // to say whether it's a clone-drag or just a Ctrl+click on the selection.
+    NodeItem *clonePendingItem = nullptr;
+    QPointF clonePressScenePos;
+
+    // The copy currently being dragged, once that decision has been made.
+    NodeItem *cloneDragItem = nullptr;
+    QPointF cloneGrabOffset;
 };
 
 Viewer::Viewer(NodeLibrary *t_library, QWidget *parent) : QGraphicsView{parent},m_impl(new Impl)
@@ -82,6 +94,47 @@ void Viewer::zoom(double t_value, QPointF pt)
     emit zoomChanged(m_impl->currentZoom);
 }
 
+NodeItem *Viewer::startCloneDrag(NodeItem *t_source, const QPointF &t_scenePos)
+{
+    if(!t_source || !m_impl->library || !graph())
+        return nullptr;
+
+    Node *sourceNode = t_source->node();
+    if(!sourceNode)
+        return nullptr;
+
+    Node *copy = m_impl->library->createNode(sourceNode->id());
+    if(!copy)
+        return nullptr;   // node type isn't registered in this library
+
+    QJsonObject json;
+    sourceNode->writeToJson(json);
+    // A node's uniqueId round-trips through its json, so reading it straight
+    // back would leave two nodes claiming the same id - which findNode() and
+    // saved connections both key on. Give the copy a fresh one instead.
+    json.insert("uniqueId", QString(QUuid::createUuid().toByteArray(QUuid::WithoutBraces)));
+    copy->readFromJson(json, m_impl->library);
+
+    // Connections live on the Graph rather than in a node's own json, so the
+    // copy comes out unwired - which is what's wanted here.
+    graph()->addNode(copy);
+    // addNode() only queues; drain so the Scene has actually built the item to
+    // hand the drag to. Forcing a drain from this thread is the same thing
+    // Sequence::save() does, and the queue's own mutexes cover the eval thread.
+    graph()->drainCommandQueue();
+
+    NodeItem *copyItem = static_cast<Scene*>(scene())->itemForNode(copy);
+    if(!copyItem)
+        return nullptr;
+
+    scene()->clearSelection();
+    copyItem->setSelected(true);
+
+    m_impl->cloneDragItem = copyItem;
+    m_impl->cloneGrabOffset = copyItem->pos() - t_scenePos;
+    return copyItem;
+}
+
 void Viewer::mousePressEvent(QMouseEvent *event)
 {
     m_impl->startPoint = event->scenePosition();
@@ -102,6 +155,27 @@ void Viewer::mousePressEvent(QMouseEvent *event)
         setDragMode(QGraphicsView::NoDrag);
     else
         setDragMode(QGraphicsView::RubberBandDrag);
+
+    // Ctrl on a node's own body arms a clone-drag. Whether it becomes one is
+    // decided on the first move, so a plain Ctrl+click still toggles selection
+    // the way it always did. The press is deliberately not forwarded: letting
+    // the base class see it would start Qt dragging the ORIGINAL node, and the
+    // whole point is that the original stays where it is.
+    //
+    // Testing for the NodeItem itself (rather than any descendant) keeps this
+    // off the parameter widgets, where Ctrl+drag already means something - a
+    // coarse scrub in NumberScrubField.
+    if(event->button() == Qt::LeftButton && (event->modifiers() & Qt::ControlModifier))
+    {
+        if(auto *nodeItem = dynamic_cast<NodeItem*>(pressItem))
+        {
+            setDragMode(QGraphicsView::NoDrag);
+            m_impl->clonePendingItem = nodeItem;
+            m_impl->clonePressScenePos = mapToScene(event->pos());
+            event->accept();
+            return;
+        }
+    }
 
     QGraphicsView::mousePressEvent(event);
 
@@ -168,6 +242,32 @@ void Viewer::mouseMoveEvent(QMouseEvent *event)
         return;
     }
 
+    if(m_impl->cloneDragItem)
+    {
+        // setPos goes through NodeItem::itemChange, which writes the position
+        // back to the node and repaints its wires - the same path Qt's own item
+        // dragging uses.
+        m_impl->cloneDragItem->setPos(mapToScene(event->pos()) + m_impl->cloneGrabOffset);
+        event->accept();
+        return;
+    }
+
+    if(m_impl->clonePendingItem)
+    {
+        const QPointF scenePos = mapToScene(event->pos());
+        // Same few-pixel threshold the wire drag uses, so a shaky Ctrl+click
+        // doesn't leave a stray copy behind.
+        if((scenePos - m_impl->clonePressScenePos).manhattanLength() < 3.0)
+            return;
+
+        NodeItem *pending = m_impl->clonePendingItem;
+        m_impl->clonePendingItem = nullptr;
+        if(startCloneDrag(pending, m_impl->clonePressScenePos))
+            m_impl->cloneDragItem->setPos(scenePos + m_impl->cloneGrabOffset);
+        event->accept();
+        return;
+    }
+
     if(m_impl->draggingWire)
     {
         auto itemsUnderCursor = items(event->pos());
@@ -215,6 +315,25 @@ void Viewer::mouseReleaseEvent(QMouseEvent *event)
 
     if(event->buttons() & Qt::MiddleButton || m_impl->key == Qt::Key_Space)
         return;
+
+    if(m_impl->cloneDragItem)
+    {
+        m_impl->cloneDragItem = nullptr;
+        event->accept();
+        return;
+    }
+
+    if(m_impl->clonePendingItem)
+    {
+        // Ctrl went down on a node but the mouse never moved, so this was a
+        // Ctrl+click after all - apply the add-to-selection the base class
+        // would have done if the press had been forwarded.
+        m_impl->clonePendingItem->setSelected(!m_impl->clonePendingItem->isSelected());
+        m_impl->clonePendingItem = nullptr;
+        event->accept();
+        return;
+    }
+
     if(m_impl->draggingWire)
     {
         //scene()->removeItem(m_impl->draggingWire);
@@ -227,10 +346,18 @@ void Viewer::mouseReleaseEvent(QMouseEvent *event)
             auto portItem = dynamic_cast<PortItem*>(item);
             if(portItem)
             {
-                if(portItem->direction() == Input)
-                    graph()->connectParameters(m_impl->startPort->parameter(), portItem->parameter());
-                else
-                    graph()->connectParameters(portItem->parameter(), m_impl->startPort->parameter());
+                // A plain click (press+release with no drag in between) on a port
+                // still goes through this whole start-a-wire/drop-a-wire path, and
+                // without moving the mouse the port under the cursor at release is
+                // the very port the drag started from - connecting it to itself.
+                // Just cancel the drag in that case instead.
+                if(portItem != m_impl->startPort)
+                {
+                    if(portItem->direction() == Input)
+                        graph()->connectParameters(m_impl->startPort->parameter(), portItem->parameter());
+                    else
+                        graph()->connectParameters(portItem->parameter(), m_impl->startPort->parameter());
+                }
                 QGraphicsView::mouseReleaseEvent(event);
                 return;
             }
@@ -315,6 +442,11 @@ void Viewer::keyReleaseEvent(QKeyEvent *event)
 
 void Viewer::deleteSelected()
 {
+    // Delete can be pressed mid-drag, and the item being dragged is the one
+    // most likely to be selected - drop the references before they dangle.
+    m_impl->clonePendingItem = nullptr;
+    m_impl->cloneDragItem = nullptr;
+
     auto selectedItems = scene()->selectedItems();
 
     for(auto item : selectedItems)

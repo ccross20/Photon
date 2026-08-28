@@ -36,7 +36,7 @@ public:
 
     RhiTextureParameter();
     RhiTextureParameter(const QByteArray &t_id, const QString &t_name, RhiTextureData t_default,
-                        int connectionOptions = keira::AllowMultipleOutput | keira::AllowSingleInput);
+                        int connectionOptions = keira::AllowSingleInput);
 };
 
 } // namespace photon

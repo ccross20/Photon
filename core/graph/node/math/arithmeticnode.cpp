@@ -1,4 +1,5 @@
 #include <QVariant>
+#include <cmath>
 #include "arithmeticnode.h"
 #include "model/parameter/decimalparameter.h"
 #include "model/parameter/optionparameter.h"
@@ -45,7 +46,9 @@ void ArithmeticNode::createParameters()
     addParameter(m_impl->inputAParam);
     m_impl->inputBParam = new keira::DecimalParameter(InputB,"Input B", 0.0);
     addParameter(m_impl->inputBParam);
-    m_impl->modeParam = new keira::OptionParameter(Mode,"Mode",{"Add","Subtract","Multiply","Divide"}, 0);
+    // Appended, never inserted: the stored value is the option's index, so
+    // reordering this list would silently change the mode of every saved node.
+    m_impl->modeParam = new keira::OptionParameter(Mode,"Mode",{"Add","Subtract","Multiply","Divide","Remainder"}, 0);
     addParameter(m_impl->modeParam);
 
     m_impl->outputParam = new keira::DecimalParameter(Output,"Output", 0.0, keira::AllowMultipleOutput);
@@ -72,6 +75,18 @@ void ArithmeticNode::evaluate(keira::EvaluationContext *t_context) const
                 m_impl->outputParam->setValue(0.0);
             else
                 m_impl->outputParam->setValue(m_impl->inputAParam->value().toDouble() / b);
+        }
+        break;
+        case 4:
+        {
+            // True remainder, so the sign follows A the way fmod defines it:
+            // -7 remainder 3 is -1, not 2. For the usual use - wrapping a
+            // counter that only ever climbs - the two conventions agree.
+            auto b = m_impl->inputBParam->value().toDouble();
+            if(qFuzzyIsNull(b))
+                m_impl->outputParam->setValue(0.0);   // matches Divide's answer for a zero divisor
+            else
+                m_impl->outputParam->setValue(std::fmod(m_impl->inputAParam->value().toDouble(), b));
         }
         break;
     }

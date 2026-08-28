@@ -45,15 +45,6 @@ SceneArrowEditorWidget::Impl::Impl()
     sizeSpin->setMinimum(.1);
     sizeSpin->setMaximum(20);
     formLayout->addRow("Size", sizeSpin);
-
-
-    positionEdit = new Vector3Edit;
-    formLayout->addRow("Position", positionEdit);
-
-    rotationEdit = new Vector3Edit;
-    formLayout->addRow("Rotation", rotationEdit);
-
-
 }
 
 SceneArrowEditorWidget::SceneArrowEditorWidget(SceneArrow *t_arrow, QWidget *parent)
@@ -65,8 +56,6 @@ SceneArrowEditorWidget::SceneArrowEditorWidget(SceneArrow *t_arrow, QWidget *par
 
     connect(m_impl->nameEdit, &QLineEdit::textEdited, this, &SceneArrowEditorWidget::setName);
     connect(m_impl->sizeSpin, &QDoubleSpinBox::valueChanged, this, &SceneArrowEditorWidget::setSize);
-    connect(m_impl->positionEdit, &Vector3Edit::valueChanged, this, &SceneArrowEditorWidget::setPosition);
-    connect(m_impl->rotationEdit, &Vector3Edit::valueChanged, this, &SceneArrowEditorWidget::setRotation);
 
     m_impl->arrow = t_arrow;
     // Keeps the tag row live if a tag is added/removed from outside this
@@ -77,6 +66,18 @@ SceneArrowEditorWidget::SceneArrowEditorWidget(SceneArrow *t_arrow, QWidget *par
     m_impl->tagEditor->refresh();
     m_impl->sizeSpin->setValue(t_arrow->size());
 
+    addHelperPropertyRows(m_impl->formLayout, t_arrow, this);
+
+    m_impl->positionEdit = new Vector3Edit;
+    m_impl->formLayout->addRow("Position", m_impl->positionEdit);
+    m_impl->rotationEdit = new Vector3Edit;
+    m_impl->formLayout->addRow("Rotation", m_impl->rotationEdit);
+
+    connect(m_impl->positionEdit, &Vector3Edit::valueChanged, this, &SceneArrowEditorWidget::setPosition);
+    connect(m_impl->rotationEdit, &Vector3Edit::valueChanged, this, &SceneArrowEditorWidget::setRotation);
+
+    m_impl->positionEdit->setValue(t_arrow->position());
+    m_impl->rotationEdit->setValue(t_arrow->rotation());
 }
 
 SceneArrowEditorWidget::~SceneArrowEditorWidget()
@@ -111,7 +112,7 @@ public:
     float size = 1.0f;
 };
 
-SceneArrow::SceneArrow() : SceneObject("arrow"),m_impl(new Impl)
+SceneArrow::SceneArrow() : SceneHelperObject("arrow"),m_impl(new Impl)
 {
 
 }
@@ -140,14 +141,14 @@ float SceneArrow::size() const
 
 void SceneArrow::readFromJson(const QJsonObject &t_json, const LoadContext &t_context)
 {
-    SceneObject::readFromJson(t_json, t_context);
+    SceneHelperObject::readFromJson(t_json, t_context);
 
     m_impl->size = t_json.value("size").toDouble(m_impl->size);
 }
 
 void SceneArrow::writeToJson(QJsonObject &t_json) const
 {
-    SceneObject::writeToJson(t_json);
+    SceneHelperObject::writeToJson(t_json);
     t_json.insert("size", m_impl->size);
 }
 

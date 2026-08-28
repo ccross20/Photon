@@ -3,7 +3,7 @@
 
 #include <QWidget>
 #include "photon-global.h"
-#include "scene/sceneobject.h"
+#include "scene/scenehelperobject.h"
 
 namespace photon {
 
@@ -35,8 +35,11 @@ private:
 
 
 
-class PHOTONCORE_EXPORT SceneArrow : public SceneObject
+// A viewport-only pointer/annotation shape, drawn as a shaft + arrowhead
+// along local +Y. Color and visibility mode come from SceneHelperObject.
+class PHOTONCORE_EXPORT SceneArrow : public SceneHelperObject
 {
+    Q_OBJECT
 public:
     SceneArrow();
     ~SceneArrow();

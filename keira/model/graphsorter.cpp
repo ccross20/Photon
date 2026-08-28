@@ -54,6 +54,20 @@ void GraphSorter::visit(Node *node)
     if(node->m_impl->visited)
         return;
 
+    if(m_visiting.contains(node))
+    {
+        // Cycle (a node depends, directly or transitively, on itself) - the
+        // graph isn't a DAG, so there's no correct position to give it. Stop
+        // recursing here instead of looping forever; the connection that
+        // caused this should really be rejected up where connections are
+        // made (see Graph::connectParametersInternal), but this keeps a
+        // malformed graph (e.g. loaded from an old/corrupt file) from being
+        // able to crash the app either way.
+        qWarning() << "GraphSorter: cycle detected at node" << node->name() << "- graph is not a DAG";
+        return;
+    }
+    m_visiting.insert(node);
+
     for(Parameter *param : node->parameters())
     {
         for(Parameter *inputParam : param->outputParameters())
@@ -62,6 +76,7 @@ void GraphSorter::visit(Node *node)
         }
     }
 
+    m_visiting.remove(node);
     node->m_impl->visited = true;
     m_sorted.push_front(node);
 }

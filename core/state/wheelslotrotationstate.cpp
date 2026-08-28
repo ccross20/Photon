@@ -32,19 +32,19 @@ void WheelSlotRotationState::evaluate(const StateEvaluationContext &t_context) c
 
             if(wheelSlot->supportsAngle() && useAngle)
             {
-                wheelSlot->setAngleDegrees(rotationAmount,t_context.dmxMatrix,1.0);
+                wheelSlot->setAngleDegrees(rotationAmount,t_context.dmxMatrix,t_context.strength);
                 return;
             }
             else
             {
                 if(rotationAmount > 0 && wheelSlot->maxSpeed() > 0)
                 {
-                    wheelSlot->setSpeed(rotationAmount,t_context.dmxMatrix,1.0);
+                    wheelSlot->setSpeed(rotationAmount,t_context.dmxMatrix,t_context.strength);
                     return;
                 }
                 else if(rotationAmount < 0 && wheelSlot->maxSpeed() < 0)
                 {
-                    wheelSlot->setSpeed(rotationAmount,t_context.dmxMatrix,1.0);
+                    wheelSlot->setSpeed(rotationAmount,t_context.dmxMatrix,t_context.strength);
                     return;
                 }
             }

@@ -14,12 +14,19 @@ class FixtureListParameter;
 class StateCapability;
 class Fixture;
 
-// A fixture-state node that applies a State (a set of capability values) to a
-// list of fixtures. Unlike the per-capability Set-Fixture nodes it holds many
-// capabilities at once and iterates its own fixture-list input, so it lives in
-// the surface/bus graph rather than inside a fixture subgraph. Its capabilities
-// are managed through a custom editor widget; individual capabilities can later
-// be exposed as graph input parameters so gizmos can drive them.
+// A fixture-state node that applies a State (a set of capability values) to
+// fixtures. It holds many capabilities at once, unlike the per-capability
+// Set-Fixture nodes. Its capabilities are managed through a custom editor
+// widget; individual capabilities can be exposed as graph input parameters so
+// gizmos and other nodes can drive them.
+//
+// It runs in two modes, chosen by whether the evaluation context names a
+// fixture (see evaluate()):
+//  - Standalone (bus/surface/routine graphs): iterates its own fixture-list
+//    input and staggers each fixture by its offset through a value history.
+//  - Per-fixture (inside a fixture subgraph): the subgraph has already picked
+//    the fixture and applied its time offset, so this applies to that one
+//    fixture and leaves the offsetting alone.
 class PHOTONCORE_EXPORT FixtureStateNode : public keira::Node
 {
 public:
@@ -54,6 +61,14 @@ public:
     void writeToJson(QJsonObject &) const override;
 
 private:
+    // Applies the state to one fixture, reading exposed channels from `values`.
+    void applyToFixture(struct RoutineEvaluationContext &, Fixture *,
+                        const QHash<QByteArray, QVariant> &overrides) const;
+    // Display label for an exposed channel's port: the channel's own name,
+    // qualified by the capability so two channels of one capability (and
+    // same-named channels of different capabilities) stay tellable apart.
+    static QString portNameFor(StateCapability *, int channelIndex);
+
     FixtureListParameter *m_fixturesParam = nullptr;
     keira::BooleanParameter *m_enableParam = nullptr;
     State *m_state = nullptr;

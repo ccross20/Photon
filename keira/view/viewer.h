@@ -37,6 +37,11 @@ protected:
 
 
 private:
+    // Duplicates a node into this graph and takes over the drag with the copy,
+    // so a Ctrl+drag leaves the original (and its wiring) untouched and moves
+    // the new one. Returns the copy's item, or null if it couldn't be made.
+    NodeItem *startCloneDrag(NodeItem *source, const QPointF &scenePos);
+
     class Impl;
     Impl *m_impl;
 };

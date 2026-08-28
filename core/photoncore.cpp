@@ -25,6 +25,7 @@
 #include "virtualdj/virtualdjconnector.h"
 #include "library/songlibrary.h"
 #include "settings/applicationsettings.h"
+#include "fixture/fixturelibrary.h"
 
 inline void initPluginResource() { Q_INIT_RESOURCE(resources); }
 
@@ -55,6 +56,7 @@ public:
     CanvasRenderManager *canvasRenderManager = nullptr;
     VirtualDJConnector *djConnector = nullptr;
     SongLibrary *songLibrary = nullptr;
+    FixtureLibrary *fixtureLibrary = nullptr;
 };
 
 PhotonCore::Impl::Impl(PhotonCore *t_core):
@@ -62,7 +64,8 @@ PhotonCore::Impl::Impl(PhotonCore *t_core):
     resources(new ResourceManager()),
     settings(new Settings(t_core)),
     plugins(new PluginFactory(t_core)),gui(new GuiManager),timekeeper(new Timekeeper),busEvaluator(new BusEvaluator),djConnector(new VirtualDJConnector),
-    songLibrary(new SongLibrary)
+    songLibrary(new SongLibrary),
+    fixtureLibrary(new FixtureLibrary)
 {
 }
 
@@ -91,6 +94,7 @@ PhotonCore::Impl::~Impl()
 
     delete djConnector;
     delete songLibrary;   // just a QSqlDatabase connection, no ordering hazard
+    delete fixtureLibrary;   // plain in-memory catalog, no ordering hazard
     delete canvasRenderManager;   // stop the render timer before the device it uses
     delete rhiContext;   // owns its own shared GL context; tear down before ours
     context->makeCurrent(surface);
@@ -157,6 +161,11 @@ void PhotonCore::init()
     const QString libraryPath = ApplicationSettings::songDataLibraryPath();
     if(!libraryPath.isEmpty())
         m_impl->songLibrary->open(libraryPath);
+
+    // Populates the "Add Fixture" picker's list; needs the app/org name set
+    // above (appDataPath() resolves through them) but nothing else, so it's
+    // safe this early.
+    m_impl->fixtureLibrary->scan();
 
     m_impl->resources->addResource(":/resources/styles.css", photon::Resource::ResourceStyle);
 
@@ -353,6 +362,11 @@ VirtualDJConnector *PhotonCore::djConnector() const
 SongLibrary *PhotonCore::songLibrary() const
 {
     return m_impl->songLibrary;
+}
+
+FixtureLibrary *PhotonCore::fixtureLibrary() const
+{
+    return m_impl->fixtureLibrary;
 }
 
 Timekeeper *PhotonCore::timekeeper() const

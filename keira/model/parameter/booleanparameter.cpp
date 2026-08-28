@@ -1,11 +1,49 @@
 #include <QPushButton>
 #include <QLabel>
 #include "booleanparameter.h"
+#include "integerparameter.h"
+#include "decimalparameter.h"
 #include "view/nodeeditor.h"
 
 namespace keira {
 
 const QByteArray BooleanParameter::ParameterId = "boolean";
+
+bool BooleanParameter::acceptsConnectionFrom(const Parameter *source) const
+{
+    return Parameter::acceptsConnectionFrom(source)
+        || source->typeId() == IntegerParameter::ParameterId
+        || source->typeId() == DecimalParameter::ParameterId;
+}
+
+void BooleanParameter::setValue(const QVariant &t_value)
+{
+    // Convert here rather than leaving the number stored raw: every reader
+    // (and the checkbox widget) goes through value().toBool(), which is a
+    // not-equal-to-zero test - so a negative number would come back true.
+    // Above zero is the rule, so -1 is false.
+    //
+    // Only actual numeric types are converted. A bool passes through as-is,
+    // and anything else keeps the base class's behaviour rather than being
+    // silently coerced through a meaningless double.
+    switch(t_value.typeId())
+    {
+    case QMetaType::Double:
+    case QMetaType::Float:
+    case QMetaType::Int:
+    case QMetaType::UInt:
+    case QMetaType::Short:
+    case QMetaType::UShort:
+    case QMetaType::LongLong:
+    case QMetaType::ULongLong:
+        Parameter::setValue(t_value.toDouble() > 0.0);
+        return;
+    default:
+        break;
+    }
+
+    Parameter::setValue(t_value);
+}
 
 
 BooleanParameter::BooleanParameter() : Parameter()

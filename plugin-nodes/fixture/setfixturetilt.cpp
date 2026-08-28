@@ -33,10 +33,8 @@ void SetFixtureTilt::createParameters()
     m_capabilityParam->setMaximum(100);
     addParameter(m_capabilityParam);
 
-    m_modeParam = new keira::IntegerParameter("mode","Mode", 0);
-    m_modeParam->setMinimum(0);
-    m_modeParam->setMaximum(1);
-    addParameter(m_modeParam);
+    m_centeredParam = new keira::BooleanParameter("centered","Centered", true);
+    addParameter(m_centeredParam);
 
     m_blendParam = new keira::DecimalParameter("blendInput","Blend", 1.0);
     m_blendParam->setMinimum(0.0);
@@ -54,10 +52,10 @@ void SetFixtureTilt::evaluate(keira::EvaluationContext *t_context) const
         int index = m_capabilityParam->value().toInt();
         if(index < pans.length())
         {
-            if(m_modeParam->value().toInt() == 0)
-                static_cast<AngleCapability*>(pans[index])->setAnglePercent(m_angleParam->value().toDouble(), context->dmxMatrix, m_blendParam->value().toDouble() * context->strength);
-            else
+            if(m_centeredParam->value().toBool())
                 static_cast<AngleCapability*>(pans[index])->setAngleDegreesCentered(m_angleParam->value().toDouble(), context->dmxMatrix, m_blendParam->value().toDouble() * context->strength);
+            else
+                static_cast<AngleCapability*>(pans[index])->setAnglePercent(m_angleParam->value().toDouble(), context->dmxMatrix, m_blendParam->value().toDouble() * context->strength);
         }
     }
 

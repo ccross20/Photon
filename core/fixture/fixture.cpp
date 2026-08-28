@@ -8,6 +8,7 @@
 #include "capability/colorcapability.h"
 #include "capability/anglecapability.h"
 #include "fixturewheel.h"
+#include "fixturelibrary.h"
 #include "project/project.h"
 #include "photoncore.h"
 
@@ -416,7 +417,7 @@ void Fixture::loadFixtureDefinition(const QString &t_path)
     if (!loadFile.open(QIODevice::ReadOnly)) {
 
         QFileInfo info(t_path);
-        loadFile.setFileName(QCoreApplication::applicationDirPath() + "/fixtures/" + info.fileName());
+        loadFile.setFileName(FixtureLibrary::defaultDirectory() + "/" + info.fileName());
 
         if (!loadFile.open(QIODevice::ReadOnly)) {
 

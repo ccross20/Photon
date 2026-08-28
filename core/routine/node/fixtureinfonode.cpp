@@ -2,6 +2,7 @@
 #include "routine/routineevaluationcontext.h"
 #include "fixture/fixture.h"
 #include "graph/parameter/vector3dparameter.h"
+#include "graph/parameter/matrixparameter.h"
 #include "graph/parameter/fixtureparameter.h"
 #include "project/project.h"
 #include "fixture/fixturecollection.h"
@@ -11,6 +12,7 @@ namespace photon {
 const QByteArray FixtureInfoNode::FixtureInput = "fixtureInput";
 const QByteArray FixtureInfoNode::PositionOutput = "positionOutput";
 const QByteArray FixtureInfoNode::RotationOutput = "rotationOutput";
+const QByteArray FixtureInfoNode::MatrixOutput = "matrixOutput";
 
 class FixtureInfoNode::Impl
 {
@@ -18,6 +20,7 @@ public:
     FixtureParameter *fixtureParam;
     Vector3DParameter *positionParam;
     Vector3DParameter *rotationParam;
+    MatrixParameter *matrixParam;
 };
 
 
@@ -45,10 +48,13 @@ void FixtureInfoNode::createParameters()
     m_impl->fixtureParam = new FixtureParameter(FixtureInput,"Fixture", "");
     addParameter(m_impl->fixtureParam);
 
-    m_impl->positionParam = new Vector3DParameter(PositionOutput,"Position",QVector3D{});
+    m_impl->positionParam = new Vector3DParameter(PositionOutput,"Position",QVector3D{}, keira::AllowMultipleOutput);
     addParameter(m_impl->positionParam);
-    m_impl->rotationParam = new Vector3DParameter(RotationOutput,"Rotation",QVector3D{});
+    m_impl->rotationParam = new Vector3DParameter(RotationOutput,"Rotation",QVector3D{}, keira::AllowMultipleOutput);
     addParameter(m_impl->rotationParam);
+
+    m_impl->matrixParam = new MatrixParameter(MatrixOutput,"Matrix",QMatrix4x4{}, keira::AllowMultipleOutput);
+    addParameter(m_impl->matrixParam);
 }
 
 void FixtureInfoNode::evaluate(keira::EvaluationContext *t_context) const
@@ -64,6 +70,7 @@ void FixtureInfoNode::evaluate(keira::EvaluationContext *t_context) const
 
     m_impl->positionParam->setValue(fixture->globalPosition());
     m_impl->rotationParam->setValue(fixture->globalRotation());
+    m_impl->matrixParam->setValue(QVariant::fromValue(fixture->globalMatrix()));
 }
 
 } // namespace photon

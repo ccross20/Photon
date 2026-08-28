@@ -1,22 +1,26 @@
 #include <QApplication>
 #include <QDrag>
-#include <QFileDialog>
 #include <QHBoxLayout>
 #include <QHeaderView>
 #include <QInputDialog>
 #include <QMenu>
 #include <QMouseEvent>
 #include <QPainter>
-#include <QSettings>
 #include <QStyle>
 #include <QTimer>
 #include "projectpanel_p.h"
+#include "gui/dialog/fixturelibrarydialog.h"
 #include "gui/tag/tagchip.h"
 #include "gui/tag/tagmime.h"
 #include "photoncore.h"
 #include "project/project.h"
 #include "fixture/fixture.h"
 #include "fixture/fixturecollection.h"
+#include "scene/scenedirection.h"
+#include "scene/sceneaxis.h"
+#include "scene/sceneboundaryrectangle.h"
+#include "scene/sceneboundaryoval.h"
+#include "scene/scenepointmarker.h"
 #include "fixture/fixturegroup.h"
 #include "pixel/pixellayout.h"
 #include "pixel/pixellayoutcollection.h"
@@ -483,6 +487,11 @@ void ProjectPanel::filterChanged()
                 visible.insert("zone");
                 visible.insert("pixelstrip");
                 visible.insert("arrow");
+                visible.insert("direction");
+                visible.insert("axis");
+                visible.insert("boundaryrectangle");
+                visible.insert("boundaryoval");
+                visible.insert("pointmarker");
             }
             else
                 visible.insert(type);
@@ -624,18 +633,9 @@ void ProjectPanel::populateAddActions(QMenu &t_menu, const QByteArray &t_content
     if(t_contentType == "scene")
     {
         t_menu.addAction("Fixture", [this, sceneParent](){
-            QSettings qsettings;
-            qsettings.beginGroup("app");
-            const QString startPath = QCoreApplication::applicationDirPath() + "/fixtures/";
-            qsettings.endGroup();
-
-            const QString loadPath = QFileDialog::getOpenFileName(nullptr, "Fixture Definition", startPath, "*.json");
-            if(loadPath.isNull())
+            const QString loadPath = FixtureLibraryDialog::getFixturePath(this);
+            if(loadPath.isEmpty())
                 return;
-
-            qsettings.beginGroup("app");
-            qsettings.setValue("definitionpath", QFileInfo(loadPath).path());
-            qsettings.endGroup();
 
             auto *fixture = new Fixture(loadPath);
             const auto sameName = photonApp->project()->fixtures()->fixturesWithName(fixture->name());
@@ -689,6 +689,35 @@ void ProjectPanel::populateAddActions(QMenu &t_menu, const QByteArray &t_content
             zone->setSize(QVector3D(4.0f, 4.0f, 4.0f));
             zone->setPosition(QVector3D(0.0f, 2.0f, 0.0f));
             zone->setParentSceneObject(sceneParent());
+        });
+        t_menu.addAction("Direction", [sceneParent](){
+            auto *direction = new SceneDirection;
+            direction->setName("Direction");
+            direction->setParentSceneObject(sceneParent());
+        });
+        t_menu.addAction("Axis", [sceneParent](){
+            auto *axis = new SceneAxis;
+            axis->setName("Axis");
+            axis->setParentSceneObject(sceneParent());
+        });
+        t_menu.addAction("Boundary Rectangle", [sceneParent](){
+            auto *rect = new SceneBoundaryRectangle;
+            rect->setName("Boundary Rectangle");
+            // Lay flat at ground level, matching its main use (marking a floor area).
+            rect->setRotation(QVector3D(-90.0f, 0.0f, 0.0f));
+            rect->setParentSceneObject(sceneParent());
+        });
+        t_menu.addAction("Boundary Oval", [sceneParent](){
+            auto *oval = new SceneBoundaryOval;
+            oval->setName("Boundary Oval");
+            oval->setRotation(QVector3D(-90.0f, 0.0f, 0.0f));
+            oval->setParentSceneObject(sceneParent());
+        });
+        t_menu.addAction("Point in Space", [sceneParent](){
+            auto *marker = new ScenePointMarker;
+            marker->setName("Point in Space");
+            marker->setRotation(QVector3D(-90.0f, 0.0f, 0.0f));
+            marker->setParentSceneObject(sceneParent());
         });
     }
     else if(t_contentType == "group")

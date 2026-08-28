@@ -12,7 +12,7 @@ public:
     const static QByteArray ParameterId;
 
     DMXMatrixParameter();
-    DMXMatrixParameter(const QByteArray &t_id, const QString &t_name, DMXMatrix t_default, int connectionOptions = keira::AllowMultipleOutput | keira::AllowSingleInput);
+    DMXMatrixParameter(const QByteArray &t_id, const QString &t_name, DMXMatrix t_default, int connectionOptions = keira::AllowSingleInput);
     ~DMXMatrixParameter();
 
 

@@ -14,7 +14,7 @@ public:
 
     GradientParameter();
     GradientParameter(const QByteArray &t_id, const QString &t_name, Gradient t_default = Gradient{},
-                      int connectionOptions = keira::AllowMultipleOutput | keira::AllowSingleInput);
+                      int connectionOptions = keira::AllowSingleInput);
 
     QWidget *createWidget(keira::NodeEditor *) const override;
     void updateWidget(QWidget *) const override;

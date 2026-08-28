@@ -11,8 +11,10 @@
 #include "fixture/setfixtureprismrotation.h"
 #include "fixture/setfixtureslotrotation.h"
 #include "fixture/lookattarget.h"
+#include "fixture/scatterbeams.h"
 #include "fixture-list/fixturelistrandomsubsetnode.h"
 #include "fixture-list/fixturelistintervalsubsetnode.h"
+#include "fixture-list/fixturelistmergenode.h"
 #include "canvas/canvasreader.h"
 #include "canvas/canvaswriter.h"
 #include "canvas/drawrectangle.h"
@@ -33,6 +35,7 @@
 #include "math/randomnumbernode.h"
 #include "math/stopwatchnode.h"
 #include "math/remapvaluenode.h"
+#include "math/ifnode.h"
 #include "animation/timer.h"
 #include "animation/pulsenode.h"
 #include "falloff/linearfalloffnode.h"
@@ -68,6 +71,7 @@ bool PluginNodes::initialize(const PluginContext &context)
     photonApp->plugins()->registerNode(RenderPath::info());
     photonApp->plugins()->registerNode(RenderStroke::info());
     photonApp->plugins()->registerNode(LookAtTarget::info());
+    photonApp->plugins()->registerNode(ScatterBeams::info());
     photonApp->plugins()->registerNode(CircleNode::info());
     photonApp->plugins()->registerNode(NoiseNode::info());
     photonApp->plugins()->registerNode(ColorFromHSV::info());
@@ -76,6 +80,7 @@ bool PluginNodes::initialize(const PluginContext &context)
     photonApp->plugins()->registerNode(TransformTextureNode::info());    
     photonApp->plugins()->registerNode(FixtureListRandomSubsetNode::info());
     photonApp->plugins()->registerNode(FixtureListIntervalSubsetNode::info());
+    photonApp->plugins()->registerNode(FixtureListMergeNode::info());
     photonApp->plugins()->registerNode(ColorPaletteNode::info());
     photonApp->plugins()->registerNode(ColorFromColorPalette::info());
     photonApp->plugins()->registerNode(FadeColorPaletteNode::info());
@@ -84,6 +89,7 @@ bool PluginNodes::initialize(const PluginContext &context)
     photonApp->plugins()->registerNode(StopwatchNode::info());
     photonApp->plugins()->registerNode(PulseNode::info());
     photonApp->plugins()->registerNode(RemapValueNode::info());
+    photonApp->plugins()->registerNode(IfNode::info());
     photonApp->plugins()->registerNode(RandomNumberNode::info());
     photonApp->plugins()->registerNode(LinearFalloffNode::info());
     photonApp->plugins()->registerNode(RandomFalloffNode::info());

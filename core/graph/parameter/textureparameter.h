@@ -28,7 +28,7 @@ public:
     const static QByteArray ParameterId;
 
     TextureParameter();
-    TextureParameter(const QByteArray &t_id, const QString &t_name, TextureData t_default, int connectionOptions = keira::AllowMultipleOutput | keira::AllowSingleInput);
+    TextureParameter(const QByteArray &t_id, const QString &t_name, TextureData t_default, int connectionOptions =  keira::AllowSingleInput);
 };
 
 } // namespace photon

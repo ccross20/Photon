@@ -32,19 +32,19 @@ void LensRotationState::evaluate(const StateEvaluationContext &t_context) const
 
             if(lensRotation->supportsAngle() && useAngle)
             {
-                lensRotation->setAngleDegrees(rotationAmount,t_context.dmxMatrix,1.0);
+                lensRotation->setAngleDegrees(rotationAmount,t_context.dmxMatrix,t_context.strength);
                 return;
             }
             else
             {
                 if(rotationAmount > 0 && lensRotation->maxSpeed() > 0)
                 {
-                    lensRotation->setSpeed(rotationAmount,t_context.dmxMatrix,1.0);
+                    lensRotation->setSpeed(rotationAmount,t_context.dmxMatrix,t_context.strength);
                     return;
                 }
                 else if(rotationAmount < 0 && lensRotation->maxSpeed() < 0)
                 {
-                    lensRotation->setSpeed(rotationAmount,t_context.dmxMatrix,1.0);
+                    lensRotation->setSpeed(rotationAmount,t_context.dmxMatrix,t_context.strength);
                     return;
                 }
             }

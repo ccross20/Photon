@@ -234,6 +234,16 @@ void Graph::removeNodeInternal(Node *t_node)
 
 void Graph::connectParametersInternal(Parameter *t_output, Parameter *t_input)
 {
+    if (t_output->node() == t_input->node()) {
+        // A node can't depend on itself - GraphSorter walks connections at
+        // node granularity, so any connection between two parameters of the
+        // SAME node (including a port connected to itself) is a one-node
+        // cycle, not just literal self-connection.
+        qWarning() << "Cannot connect a node's parameter to another parameter on the same node ("
+                   << t_output->node()->name() << ")";
+        return;
+    }
+
     if (!t_input->acceptsConnectionFrom(t_output)) {
         qWarning() << "Type mismatch: cannot connect"
                    << t_output->typeId() << "→" << t_input->typeId();

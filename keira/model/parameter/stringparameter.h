@@ -11,7 +11,7 @@ public:
     const static QByteArray ParameterId;
 
     StringParameter();
-    StringParameter(const QByteArray &t_id, const QString &t_name, QString t_default, int connectionOptions = AllowMultipleOutput | AllowSingleInput);
+    StringParameter(const QByteArray &t_id, const QString &t_name, QString t_default, int connectionOptions =  AllowSingleInput);
     ~StringParameter();
 
     void setMaxLength(int);

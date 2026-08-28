@@ -199,6 +199,7 @@ void StateEditor::openAddMenu()
     menu.addAction("Wheel Rotation",[state](){state->addCapability(Capability_WheelRotation);});
     menu.addAction("Wheel Slot Rotation",[state](){state->addCapability(Capability_WheelSlotRotation);});
     menu.addAction("Lens Rotation",[state](){state->addCapability(Capability_LensRotation);});
+    menu.addAction("Prism",[state](){state->addCapability(Capability_Prism);});
 
     menu.exec(m_addButton->mapToGlobal(QPoint(0,0)));
 }

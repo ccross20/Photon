@@ -78,8 +78,9 @@ FixtureEditorWidget::Impl::Impl()
 
     beamCombo = new QComboBox;
     // Index 0 = Auto (follow the visualiser's global beam toggle); 1 = basic
-    // cone, 2 = volumetric. Tokens stored on the fixture are "", "cones", "volumetric".
-    beamCombo->addItems(QStringList() << "Auto" << "Cones" << "Volumetric");
+    // cone, 2 = volumetric, 3 = no beam at all. Tokens stored on the fixture
+    // are "", "cones", "volumetric", "none".
+    beamCombo->addItems(QStringList() << "Auto" << "Cones" << "Volumetric" << "None");
     formLayout->addRow("Beam Style", beamCombo);
 
     // Shows the union of the current selection's tags. Adding a chip applies
@@ -341,6 +342,8 @@ void FixtureEditorWidget::setFixtures(QVector<Fixture*> t_fixtures)
         beamIndex = 1;
     else if(beamStyle == "volumetric")
         beamIndex = 2;
+    else if(beamStyle == "none")
+        beamIndex = 3;
     m_impl->beamCombo->setCurrentIndex(beamIndex);
 }
 
@@ -413,12 +416,15 @@ void FixtureEditorWidget::setModelType(int t_index)
 
 void FixtureEditorWidget::setBeamStyle(int t_index)
 {
-    // Index 0 = Auto (empty override, follow the global toggle); 1 = cones, 2 = volumetric.
+    // Index 0 = Auto (empty override, follow the global toggle); 1 = cones,
+    // 2 = volumetric, 3 = none (no beam rendered at all).
     QString style;
     if(t_index == 1)
         style = "cones";
     else if(t_index == 2)
         style = "volumetric";
+    else if(t_index == 3)
+        style = "none";
     for(auto fixture : m_impl->fixtures)
     {
         fixture->setBeamStyle(style);

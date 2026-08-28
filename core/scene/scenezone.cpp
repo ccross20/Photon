@@ -1,7 +1,5 @@
 #include <QFormLayout>
 #include <QLineEdit>
-#include <QPushButton>
-#include <QColorDialog>
 #include <QSignalBlocker>
 #include <QJsonObject>
 #include <QMatrix4x4>
@@ -23,7 +21,6 @@ public:
     QLineEdit *nameEdit;
     TagEditorWidget *tagEditor;
     Vector3Edit *sizeEdit;
-    QPushButton *colorButton;
     Vector3Edit *positionEdit;
     Vector3Edit *rotationEdit;
 };
@@ -43,15 +40,6 @@ SceneZoneEditorWidget::Impl::Impl()
 
     sizeEdit = new Vector3Edit;
     formLayout->addRow("Size", sizeEdit);
-
-    colorButton = new QPushButton;
-    formLayout->addRow("Color", colorButton);
-
-    positionEdit = new Vector3Edit;
-    formLayout->addRow("Position", positionEdit);
-
-    rotationEdit = new Vector3Edit;
-    formLayout->addRow("Rotation", rotationEdit);
 }
 
 SceneZoneEditorWidget::SceneZoneEditorWidget(SceneZone *t_zone, QWidget *parent)
@@ -64,9 +52,6 @@ SceneZoneEditorWidget::SceneZoneEditorWidget(SceneZone *t_zone, QWidget *parent)
 
     connect(m_impl->nameEdit, &QLineEdit::textEdited, this, &SceneZoneEditorWidget::setName);
     connect(m_impl->sizeEdit, &Vector3Edit::valueChanged, this, &SceneZoneEditorWidget::setSize);
-    connect(m_impl->colorButton, &QPushButton::clicked, this, &SceneZoneEditorWidget::chooseColor);
-    connect(m_impl->positionEdit, &Vector3Edit::valueChanged, this, &SceneZoneEditorWidget::setPosition);
-    connect(m_impl->rotationEdit, &Vector3Edit::valueChanged, this, &SceneZoneEditorWidget::setRotation);
 
     connect(t_zone, &SceneObject::positionChanged, this, &SceneZoneEditorWidget::refreshTransform);
     connect(t_zone, &SceneObject::rotationChanged, this, &SceneZoneEditorWidget::refreshTransform);
@@ -79,11 +64,19 @@ SceneZoneEditorWidget::SceneZoneEditorWidget(SceneZone *t_zone, QWidget *parent)
     m_impl->nameEdit->setText(t_zone->name());
     m_impl->tagEditor->refresh();
     m_impl->sizeEdit->setValue(t_zone->size());
+
+    addHelperPropertyRows(m_impl->formLayout, t_zone, this);
+
+    m_impl->positionEdit = new Vector3Edit;
+    m_impl->formLayout->addRow("Position", m_impl->positionEdit);
+    m_impl->rotationEdit = new Vector3Edit;
+    m_impl->formLayout->addRow("Rotation", m_impl->rotationEdit);
+
+    connect(m_impl->positionEdit, &Vector3Edit::valueChanged, this, &SceneZoneEditorWidget::setPosition);
+    connect(m_impl->rotationEdit, &Vector3Edit::valueChanged, this, &SceneZoneEditorWidget::setRotation);
+
     m_impl->positionEdit->setValue(t_zone->position());
     m_impl->rotationEdit->setValue(t_zone->rotation());
-
-    const QColor c = t_zone->color();
-    m_impl->colorButton->setStyleSheet(QString("background-color: %1;").arg(c.name()));
 }
 
 SceneZoneEditorWidget::~SceneZoneEditorWidget()
@@ -99,15 +92,6 @@ void SceneZoneEditorWidget::setName(const QString &t_value)
 void SceneZoneEditorWidget::setSize(const QVector3D &t_value)
 {
     m_impl->zone->setSize(t_value);
-}
-
-void SceneZoneEditorWidget::chooseColor()
-{
-    const QColor c = QColorDialog::getColor(m_impl->zone->color(), this, "Zone Color");
-    if (!c.isValid())
-        return;
-    m_impl->zone->setColor(c);
-    m_impl->colorButton->setStyleSheet(QString("background-color: %1;").arg(c.name()));
 }
 
 void SceneZoneEditorWidget::setPosition(const QVector3D &t_value)
@@ -140,11 +124,11 @@ class SceneZone::Impl
 {
 public:
     QVector3D size = QVector3D(4.0f, 4.0f, 4.0f);
-    QColor color = QColor(80, 180, 255);
 };
 
-SceneZone::SceneZone() : SceneObject("zone"), m_impl(new Impl)
+SceneZone::SceneZone() : SceneHelperObject("zone"), m_impl(new Impl)
 {
+    setColor(QColor(80, 180, 255));
 }
 
 SceneZone::~SceneZone()
@@ -163,20 +147,9 @@ void SceneZone::setSize(const QVector3D &t_value)
     emit metadataChanged(this);
 }
 
-void SceneZone::setColor(const QColor &t_value)
-{
-    m_impl->color = t_value;
-    emit metadataChanged(this);
-}
-
 QVector3D SceneZone::size() const
 {
     return m_impl->size;
-}
-
-QColor SceneZone::color() const
-{
-    return m_impl->color;
 }
 
 bool SceneZone::containsPoint(const QVector3D &worldPoint) const
@@ -231,7 +204,7 @@ QStringList SceneZone::zoneNames(Project *project)
 
 void SceneZone::readFromJson(const QJsonObject &t_json, const LoadContext &t_context)
 {
-    SceneObject::readFromJson(t_json, t_context);
+    SceneHelperObject::readFromJson(t_json, t_context);
     if (t_json.contains("size"))
     {
         const QJsonObject s = t_json.value("size").toObject();
@@ -239,19 +212,16 @@ void SceneZone::readFromJson(const QJsonObject &t_json, const LoadContext &t_con
                                  s.value("y").toDouble(m_impl->size.y()),
                                  s.value("z").toDouble(m_impl->size.z()));
     }
-    if (t_json.contains("color"))
-        m_impl->color = QColor(t_json.value("color").toString());
 }
 
 void SceneZone::writeToJson(QJsonObject &t_json) const
 {
-    SceneObject::writeToJson(t_json);
+    SceneHelperObject::writeToJson(t_json);
     QJsonObject s;
     s.insert("x", m_impl->size.x());
     s.insert("y", m_impl->size.y());
     s.insert("z", m_impl->size.z());
     t_json.insert("size", s);
-    t_json.insert("color", m_impl->color.name());
 }
 
 } // namespace photon

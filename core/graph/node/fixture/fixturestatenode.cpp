@@ -25,7 +25,7 @@ keira::NodeInformation FixtureStateNode::info()
     toReturn.name = "Fixture State";
     toReturn.nodeId = "photon.node.fixture-state";
     toReturn.categories = {"Fixture"};
-    toReturn.graphs = QByteArrayList{"bus", "surface", "dmx-subgraph", "routine"};
+    toReturn.graphs = QByteArrayList{"bus", "surface", "dmx-subgraph", "routine", "fixture"};
     return toReturn;
 }
 
@@ -50,6 +50,26 @@ bool FixtureStateNode::isChannelExposed(StateCapability *t_cap, int t_index) con
     return findParameter(t_cap->channelId(t_index)) != nullptr;
 }
 
+QString FixtureStateNode::portNameFor(StateCapability *t_cap, int t_index)
+{
+    const auto channels = t_cap->availableChannels();
+    if(t_index < 0 || t_index >= channels.size())
+        return t_cap->name();
+
+    const QString channelName = channels[t_index].name;
+    // Naming a port after the capability alone (as this used to) gives every
+    // channel of a capability the same label - three ports all called "Pan".
+    // Qualifying the channel with the capability keeps them apart from each
+    // other AND from same-named channels of other capabilities, since several
+    // states have a channel called "Name". Where the two already match, the
+    // capability name alone reads better than "Color Color".
+    if(channelName.isEmpty())
+        return t_cap->name();
+    if(channelName.compare(t_cap->name(), Qt::CaseInsensitive) == 0)
+        return t_cap->name();
+    return t_cap->name() + " " + channelName;
+}
+
 void FixtureStateNode::setChannelExposed(StateCapability *t_cap, int t_index, bool t_exposed)
 {
     const QByteArray channelId = t_cap->channelId(t_index);
@@ -59,8 +79,7 @@ void FixtureStateNode::setChannelExposed(StateCapability *t_cap, int t_index, bo
     {
         if(existing)
             return;
-        auto *param = new keira::AnyParameter(channelId, t_cap->name(),
-                                              keira::AllowMultipleOutput | keira::AllowSingleInput);
+        auto *param = new keira::AnyParameter(channelId, portNameFor(t_cap, t_index), keira::AllowSingleInput);
         // Apply the parameter change on the eval thread so it never races the
         // evaluator iterating this node's parameters.
         auto apply = [this, param]() { addParameter(param); portsChanged(); };
@@ -123,11 +142,11 @@ QVector<Fixture*> FixtureStateNode::resolvedFixtures() const
 void FixtureStateNode::createParameters()
 {
     m_fixturesParam = new FixtureListParameter(Fixtures, "Fixtures", QVector<FixtureParameterData>(),
-                                               keira::AllowMultipleOutput | keira::AllowSingleInput);
+                                                keira::AllowSingleInput);
     addParameter(m_fixturesParam);
 
     m_enableParam = new keira::BooleanParameter(Enable, "Enable", true,
-                                                keira::AllowMultipleOutput | keira::AllowSingleInput);
+                                                keira::AllowSingleInput);
     addParameter(m_enableParam);
 }
 
@@ -199,9 +218,91 @@ static bool enabledAt(const std::deque<FixtureStateNode::EnableSample> &t_histor
     return t_history[sampleIndexAt(t_history, t_time)].enabled;
 }
 
+void FixtureStateNode::applyToFixture(RoutineEvaluationContext &t_context, Fixture *t_fixture,
+                                      const QHash<QByteArray, QVariant> &t_overrides) const
+{
+    StateEvaluationContext local(t_context.dmxMatrix);
+    local.fixture      = t_fixture;
+    local.strength     = t_context.strength;
+    local.globalTime   = t_context.globalTime;
+    local.relativeTime = t_context.relativeTime;
+
+    // Seed from the capabilities' static values, then let any exposed
+    // (connected) channel override its entry.
+    local.channelValues.clear();
+    m_state->initializeValues(local);
+
+    for(auto it = t_overrides.cbegin(); it != t_overrides.cend(); ++it)
+        local.channelValues[it.key()] = it.value();
+
+    m_state->evaluate(local);
+}
+
 void FixtureStateNode::evaluate(keira::EvaluationContext *t_context) const
 {
-    auto context = static_cast<RoutineEvaluationContext*>(t_context);
+    // Guarded: a graph opened directly in the node editor is live-ticked with a
+    // plain keira::EvaluationContext, not a routine one (GraphContextNode
+    // guards the same way for the same reason).
+    auto context = dynamic_cast<RoutineEvaluationContext*>(t_context);
+    if(!context)
+        return;
+
+    // Per-fixture mode. Inside a fixture subgraph the enclosing
+    // FixtureSubGraphNode has already chosen this fixture, already applied its
+    // time offset to relativeTime, and is evaluating one clone per fixture in
+    // parallel. So: apply to that fixture only.
+    //
+    // Doing the standalone thing here instead would be actively wrong, not just
+    // redundant - each of the N clones would write all N fixtures (N² writes),
+    // and that breaks the invariant the parallel loop relies on, that fixture
+    // evaluations touch non-overlapping channels. DMXMatrix::setValuePercent is
+    // a read-modify-write, so with strength below 1 the output tears rather
+    // than merely repeating work.
+    //
+    // The value histories are skipped too: they exist to stagger ONE node
+    // across MANY fixtures, and here the subgraph has already done the
+    // staggering. Every upstream node in this clone has just been evaluated for
+    // this fixture, so the exposed parameters already hold the right values and
+    // reading them directly is the only way not to double-count the offset.
+    if(context->fixture)
+    {
+        // The Fixtures port stays useful here as an optional filter. Only
+        // consult it when it actually holds a selection - resolvedValue()'s
+        // "unwired means everything" fallback would make the filter a no-op
+        // while costing an all-fixtures build per clone per frame.
+        if(m_fixturesParam->hasInput()
+           || !m_fixturesParam->value().value<QVector<FixtureParameterData>>().isEmpty())
+        {
+            const auto allowed = m_fixturesParam->resolvedValue();
+            bool found = false;
+            for(const auto &fixtureData : allowed)
+            {
+                if(fixtureData.fixtureId == context->fixture->uniqueId())
+                {
+                    found = true;
+                    break;
+                }
+            }
+            if(!found)
+                return;
+        }
+
+        if(!m_enableParam->value().toBool())
+            return;
+
+        QHash<QByteArray, QVariant> overrides;
+        for(auto *param : parameters())
+        {
+            if(param == m_fixturesParam || param == m_enableParam || !param->hasInput())
+                continue;
+            overrides.insert(param->id(), param->value());
+        }
+
+        applyToFixture(*context, context->fixture, overrides);
+        return;
+    }
+
+    // Standalone mode: this node owns the fixture iteration and the staggering.
     const auto fixtures = m_fixturesParam->resolvedValue();
 
     const double now = context->globalTime;
@@ -254,17 +355,8 @@ void FixtureStateNode::evaluate(keira::EvaluationContext *t_context) const
         if(!enabledAt(m_enableHistory, delayedTime))
             continue;
 
-        StateEvaluationContext local(context->dmxMatrix);
-        local.fixture      = fixture;
-        local.strength     = context->strength;
-        local.globalTime   = context->globalTime;
-        local.relativeTime = context->relativeTime;
-
-        // Seed from the capabilities' static values, then override any exposed
-        // (connected) channel with its per-fixture offset-delayed driven value.
-        local.channelValues.clear();
-        m_state->initializeValues(local);
-
+        // Each exposed channel contributes its per-fixture offset-delayed value.
+        QHash<QByteArray, QVariant> overrides;
         for(auto *param : parameters())
         {
             if(param == m_fixturesParam || param == m_enableParam || !param->hasInput())
@@ -272,10 +364,10 @@ void FixtureStateNode::evaluate(keira::EvaluationContext *t_context) const
             const auto &history = m_inputHistory[param->id()];
             if(history.empty())
                 continue;
-            local.channelValues[param->id()] = sampleValueAt(history, delayedTime);
+            overrides.insert(param->id(), sampleValueAt(history, delayedTime));
         }
 
-        m_state->evaluate(local);
+        applyToFixture(*context, fixture, overrides);
     }
 }
 
@@ -294,6 +386,25 @@ void FixtureStateNode::readFromJson(const QJsonObject &t_json, keira::NodeLibrar
         delete m_state;
         m_state = new State;
         m_state->readFromJson(t_json.value("state").toObject(), context);
+    }
+
+    // Re-derive the exposed ports' labels rather than keeping whatever was
+    // saved. Parameter::readFromJson restores the stored name, so without this
+    // a project saved before port naming improved would keep its old ambiguous
+    // labels (every channel of a capability sharing one name) forever. Matching
+    // on channelId means only the display name moves - connections are keyed on
+    // the id and are untouched.
+    if(m_state)
+    {
+        for(auto *capability : m_state->capabilities())
+        {
+            const int channelCount = capability->availableChannels().size();
+            for(int i = 0; i < channelCount; ++i)
+            {
+                if(auto *param = findParameter(capability->channelId(i)))
+                    param->setName(portNameFor(capability, i));
+            }
+        }
     }
 }
 

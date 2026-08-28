@@ -11,13 +11,14 @@ public:
     const static QByteArray ParameterId;
 
     IntegerParameter();
-    IntegerParameter(const QByteArray &t_id, const QString &t_name, int t_default, int connectionOptions = AllowMultipleOutput | AllowSingleInput);
+    IntegerParameter(const QByteArray &t_id, const QString &t_name, int t_default, int connectionOptions = AllowSingleInput);
     ~IntegerParameter();
 
     void setMinimum(int);
     void setMaximum(int);
 
-    // Also accept a decimal source (its value is truncated/rounded on read).
+    // Also accept a decimal source (its value is truncated/rounded on read)
+    // and a boolean one (false = 0, true = 1).
     bool acceptsConnectionFrom(const Parameter *source) const override;
 
     QWidget *createWidget(NodeEditor *) const override;

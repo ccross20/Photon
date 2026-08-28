@@ -89,6 +89,8 @@ set(PROJECT_SOURCES
         fixture/fixturechannel.cpp
         fixture/fixturecollection.h
         fixture/fixturecollection.cpp
+        fixture/fixturelibrary.h
+        fixture/fixturelibrary.cpp
         fixture/fixturequery.h
         fixture/fixturequery.cpp
         fixture/fixturegroup.h
@@ -155,6 +157,8 @@ set(PROJECT_SOURCES
         graph/parameter/pathparameter.cpp
         graph/parameter/vector3dparameter.h
         graph/parameter/vector3dparameter.cpp
+        graph/parameter/matrixparameter.h
+        graph/parameter/matrixparameter.cpp
         gui/color/colorslider.h
         gui/color/colorslider.cpp
         gui/color/colorwheelswatch.h
@@ -173,6 +177,8 @@ set(PROJECT_SOURCES
         gui/dialog/appsettingspage.cpp
         gui/dialog/generalsettingspage.h
         gui/dialog/generalsettingspage.cpp
+        gui/dialog/fixturelibrarydialog.h
+        gui/dialog/fixturelibrarydialog.cpp
         gui/dmxviewer/dmxviewer.h
         gui/dmxviewer/dmxviewer.cpp
         gui/dmxviewer/dmxviewercells.h
@@ -464,6 +470,12 @@ add_library(photon-core SHARED ${PROJECT_SOURCES}
     gui/tag/tageditorwidget.h gui/tag/tageditorwidget.cpp
     gui/resourceeditorwidget.h gui/resourceeditorwidget.cpp
     scene/scenearrow.h scene/scenearrow.cpp
+    scene/scenehelperobject.h scene/scenehelperobject.cpp
+    scene/scenedirection.h scene/scenedirection.cpp
+    scene/sceneaxis.h scene/sceneaxis.cpp
+    scene/sceneboundaryrectangle.h scene/sceneboundaryrectangle.cpp
+    scene/sceneboundaryoval.h scene/sceneboundaryoval.cpp
+    scene/scenepointmarker.h scene/scenepointmarker.cpp
     state/gobostate.h state/gobostate.cpp
     fixture/capability/wheelshakecapability.h fixture/capability/wheelshakecapability.cpp
     fixture/capability/wheelrotationcapability.h fixture/capability/wheelrotationcapability.cpp
@@ -471,7 +483,7 @@ add_library(photon-core SHARED ${PROJECT_SOURCES}
     state/wheelrotationstate.h state/wheelrotationstate.cpp
     state/wheelslotrotationstate.h state/wheelslotrotationstate.cpp
     state/lensrotationstate.h state/lensrotationstate.cpp
-    state/slotstate.h state/slotstate.cpp
+    state/prismstate.h state/prismstate.cpp
     data/spline.cpp data/spline.h
     util/BezierUtils.h
     util/mathutils.h
@@ -517,8 +529,9 @@ add_library(photon-core SHARED ${PROJECT_SOURCES}
     graph/node/fixture/allfixturesnode.h graph/node/fixture/allfixturesnode.cpp
     graph/node/fixture/selectfixturesnode.h graph/node/fixture/selectfixturesnode.cpp
     graph/node/fixture/fixturegroupnode.h graph/node/fixture/fixturegroupnode.cpp
+    graph/node/scene/sceneobjectinfonode.h graph/node/scene/sceneobjectinfonode.cpp
+    graph/node/scene/matrixdecomposenode.h graph/node/scene/matrixdecomposenode.cpp
     data/commonmodel.h data/commonmodel.cpp
-    state/wheelslotanglestate.h state/wheelslotanglestate.cpp
     surface/gizmofactory.h surface/gizmofactory.cpp
     gui/color/colorpalettewidget.h gui/color/colorpalettewidget.cpp
     surface/palettegizmo.h surface/palettegizmo.cpp

@@ -38,6 +38,7 @@ public:
     RhiContext *rhiContext() const;
     VirtualDJConnector *djConnector() const;
     SongLibrary *songLibrary() const;
+    FixtureLibrary *fixtureLibrary() const;
 
 
     QString appDataPath() const;

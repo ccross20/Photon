@@ -25,6 +25,24 @@ static QString trimZeros(QString s)
     return s;
 }
 
+// qRound() returns an int and asserts (in debug) when the value it is handed
+// won't fit in one. This field works in doubles throughout, and the scrub,
+// step and text-entry paths all round BEFORE clamping - so stepping up from a
+// value already at INT_MAX, or typing something bigger, reaches qRound() out
+// of range and trips that assert. Bounding to the representable range first
+// makes the rounding always safe; the caller's own clamp() still applies the
+// field's actual min/max afterwards.
+static double roundToInt(double t_value)
+{
+    constexpr double lowest = double(std::numeric_limits<int>::lowest());
+    constexpr double highest = double(std::numeric_limits<int>::max());
+    if(!(t_value > lowest))    // also catches NaN
+        return lowest;
+    if(t_value >= highest)
+        return highest;
+    return double(qRound(t_value));
+}
+
 NumberScrubField::NumberScrubField(QWidget *parent) : QWidget(parent),
     m_minimum(std::numeric_limits<double>::lowest()),
     m_maximum(std::numeric_limits<double>::max())
@@ -50,7 +68,7 @@ void NumberScrubField::setIsInteger(bool t_isInteger)
 {
     m_isInteger = t_isInteger;
     if(m_isInteger)
-        m_value = qRound(m_value);
+        m_value = roundToInt(m_value);
     update();
 }
 
@@ -86,7 +104,7 @@ void NumberScrubField::setReadOnly(bool t_readOnly)
 
 double NumberScrubField::value() const
 {
-    return m_isInteger ? qRound(m_value) : m_value;
+    return m_isInteger ? roundToInt(m_value) : m_value;
 }
 
 void NumberScrubField::setValue(double t_value)
@@ -95,7 +113,7 @@ void NumberScrubField::setValue(double t_value)
     if(m_scrubbing || (m_edit && m_edit->isVisible()))
         return;
 
-    const double v = clamp(m_isInteger ? qRound(t_value) : t_value);
+    const double v = clamp(m_isInteger ? roundToInt(t_value) : t_value);
     if(qFuzzyCompare(v + 1.0, m_value + 1.0))
         return;
     m_value = v;
@@ -131,7 +149,7 @@ double NumberScrubField::step() const
 QString NumberScrubField::formatted(double v) const
 {
     if(m_isInteger)
-        return QString::number(qRound(v));
+        return QString::number(static_cast<int>(roundToInt(v)));
     return trimZeros(QString::number(v, 'f', m_decimals));
 }
 
@@ -161,7 +179,7 @@ void NumberScrubField::commitEdit()
 
     if(ok)
     {
-        const double v = clamp(m_isInteger ? qRound(parsed) : parsed);
+        const double v = clamp(m_isInteger ? roundToInt(parsed) : parsed);
         m_value = v;
         emit valueChanged(m_value);
         emit editingFinished();
@@ -246,7 +264,7 @@ void NumberScrubField::mouseMoveEvent(QMouseEvent *event)
     m_lastGlobal = g;
     m_scrubAccum += dx * perPixel;
 
-    const double nv = clamp(m_isInteger ? qRound(m_scrubAccum) : m_scrubAccum);
+    const double nv = clamp(m_isInteger ? roundToInt(m_scrubAccum) : m_scrubAccum);
     if(!qFuzzyCompare(nv + 1.0, m_value + 1.0))
     {
         m_value = nv;
@@ -323,7 +341,7 @@ void NumberScrubField::wheelEvent(QWheelEvent *event)
         s *= 10.0;
 
     const int dir = event->angleDelta().y() > 0 ? 1 : -1;
-    const double nv = clamp(m_isInteger ? qRound(m_value + dir * qMax(1.0, s))
+    const double nv = clamp(m_isInteger ? roundToInt(m_value + dir * qMax(1.0, s))
                                         : m_value + dir * s);
     if(!qFuzzyCompare(nv + 1.0, m_value + 1.0))
     {
@@ -354,7 +372,7 @@ void NumberScrubField::keyPressEvent(QKeyEvent *event)
         double s = step();
         if(event->modifiers() & Qt::ShiftModifier) s *= 0.1;
         else if(event->modifiers() & Qt::ControlModifier) s *= 10.0;
-        const double nv = clamp(m_isInteger ? qRound(m_value + dir * qMax(1.0, s))
+        const double nv = clamp(m_isInteger ? roundToInt(m_value + dir * qMax(1.0, s))
                                             : m_value + dir * s);
         if(!qFuzzyCompare(nv + 1.0, m_value + 1.0))
         {

@@ -2,10 +2,9 @@
 #define PHOTON_SCENEZONE_H
 
 #include <QWidget>
-#include <QColor>
 #include <QVector3D>
 #include "photon-global.h"
-#include "scene/sceneobject.h"
+#include "scene/scenehelperobject.h"
 
 namespace photon {
 
@@ -21,7 +20,6 @@ public:
 private slots:
     void setName(const QString &name);
     void setSize(const QVector3D &);
-    void chooseColor();
     void setPosition(const QVector3D &);
     void setRotation(const QVector3D &);
     void refreshTransform();
@@ -35,7 +33,8 @@ private:
 // A named 3D region (an oriented box) used to select fixtures spatially. The box is
 // centered at the object origin with full extents = size(); orient/position it with
 // the transform gizmo. A fixture is "in" the zone when its world position is inside.
-class PHOTONCORE_EXPORT SceneZone : public SceneObject
+// Color and visibility mode come from SceneHelperObject.
+class PHOTONCORE_EXPORT SceneZone : public SceneHelperObject
 {
     Q_OBJECT
 public:
@@ -43,10 +42,8 @@ public:
     ~SceneZone();
 
     void setSize(const QVector3D &);
-    void setColor(const QColor &);
 
     QVector3D size() const;
-    QColor color() const;
 
     // True if the given WORLD point lies inside the (possibly rotated) box.
     bool containsPoint(const QVector3D &worldPoint) const;

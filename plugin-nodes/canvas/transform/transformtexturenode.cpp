@@ -30,7 +30,7 @@ void TransformTextureNode::createParameters()
     m_rotationParam = new keira::DecimalParameter("rotation","Rotation", 0.0);
     addParameter(m_rotationParam);
 
-    m_textureOutputParam = new TextureParameter("texOutput","Texture Out",0);
+    m_textureOutputParam = new TextureParameter("texOutput","Texture Out",0, keira::AllowMultipleOutput);
     addParameter(m_textureOutputParam);
 }
 

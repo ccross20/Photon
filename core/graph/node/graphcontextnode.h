@@ -25,6 +25,7 @@ public:
     const static QByteArray FixtureListPort;
     const static QByteArray FixturePort;
     const static QByteArray FixtureIndexPort;
+    const static QByteArray FixtureTotalPort;
     const static QByteArray RelativeTimePort;
     const static QByteArray GlobalTimePort;
     const static QByteArray TimeOffsetPort;
@@ -37,7 +38,10 @@ public:
     GraphContextNode();
 
     // Add the given context ports (in order), creating the right parameter type
-    // for each id. Called once by the enclosing subgraph on fresh construction.
+    // for each id. Called by the enclosing subgraph on fresh construction, and
+    // again after loading - ports that already exist are left alone, so a graph
+    // saved before a new port existed picks it up on next load rather than being
+    // stuck without it forever.
     void configure(const QByteArrayList &portIds);
 
     // Set the ports this node actually has from the evaluation context. Only the

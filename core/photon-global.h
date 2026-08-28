@@ -68,6 +68,7 @@ class FixtureClip;
 class FixtureCollection;
 class FixtureGroup;
 class FixtureGroupCollection;
+class FixtureLibrary;
 class FixtureQuery;
 class ProjectFolder;
 class ProjectModel;

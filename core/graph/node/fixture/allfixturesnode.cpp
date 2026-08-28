@@ -45,7 +45,7 @@ void AllFixturesNode::createParameters()
 {
 
 
-    m_impl->fixtureParam = new FixtureListParameter(FixtureParam,"Fixture",{});
+    m_impl->fixtureParam = new FixtureListParameter(FixtureParam,"Fixture",{}, keira::AllowMultipleOutput);
     addParameter(m_impl->fixtureParam);
 
 }

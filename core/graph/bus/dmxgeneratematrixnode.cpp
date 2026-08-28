@@ -33,7 +33,7 @@ DMXGenerateMatrixNode::~DMXGenerateMatrixNode()
 
 void DMXGenerateMatrixNode::createParameters()
 {
-    m_impl->dmxParam = new DMXMatrixParameter(OutputDMX,"DMX Data", DMXMatrix(2));
+    m_impl->dmxParam = new DMXMatrixParameter(OutputDMX,"DMX Data", DMXMatrix(2), keira::AllowMultipleOutput);
     addParameter(m_impl->dmxParam);
 }
 

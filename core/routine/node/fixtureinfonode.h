@@ -12,6 +12,7 @@ public:
     const static QByteArray FixtureInput;
     const static QByteArray PositionOutput;
     const static QByteArray RotationOutput;
+    const static QByteArray MatrixOutput;
 
     FixtureInfoNode();
     ~FixtureInfoNode();

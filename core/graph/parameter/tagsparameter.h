@@ -19,7 +19,7 @@ public:
 
     TagsParameter();
     TagsParameter(const QByteArray &id, const QString &name, const QString &defaultValue,
-                 int connectionOptions = keira::AllowMultipleOutput | keira::AllowSingleInput);
+                 int connectionOptions = keira::AllowSingleInput);
 
     QWidget *createWidget(keira::NodeEditor *) const override;
     void updateWidget(QWidget *) const override;

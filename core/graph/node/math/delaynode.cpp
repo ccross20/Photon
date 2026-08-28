@@ -44,8 +44,7 @@ DelayNode::~DelayNode()
 
 void DelayNode::createParameters()
 {
-    m_impl->inputParam = new keira::AnyParameter(Input, "Input",
-                                                  keira::AllowMultipleOutput | keira::AllowSingleInput);
+    m_impl->inputParam = new keira::AnyParameter(Input, "Input", keira::AllowSingleInput);
     addParameter(m_impl->inputParam);
 
     m_impl->maxDelayParam = new keira::DecimalParameter(MaxDelay, "Max Delay", 10.0);

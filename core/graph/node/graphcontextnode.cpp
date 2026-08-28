@@ -13,6 +13,7 @@ const QByteArray GraphContextNode::DMXMatrixPort      = "dmxMatrix";
 const QByteArray GraphContextNode::FixtureListPort    = "fixtureList";
 const QByteArray GraphContextNode::FixturePort        = "fixture";
 const QByteArray GraphContextNode::FixtureIndexPort   = "fixtureIndex";
+const QByteArray GraphContextNode::FixtureTotalPort   = "fixtureTotal";
 const QByteArray GraphContextNode::RelativeTimePort   = "relativeTime";
 const QByteArray GraphContextNode::GlobalTimePort     = "globalTime";
 const QByteArray GraphContextNode::TimeOffsetPort     = "timeOffset";
@@ -45,7 +46,7 @@ GraphContextNode::GraphContextNode() : keira::Node("photon.graph.context")
 QByteArrayList GraphContextNode::fixturePorts()
 {
     return {DMXMatrixPort, FixtureListPort, FixturePort, FixtureIndexPort,
-            RelativeTimePort, GlobalTimePort, TimeOffsetPort};
+            FixtureTotalPort, RelativeTimePort, GlobalTimePort, TimeOffsetPort};
 }
 
 QByteArrayList GraphContextNode::canvasPorts()
@@ -71,6 +72,8 @@ keira::Parameter *GraphContextNode::addPort(const QByteArray &t_id)
         param = new FixtureParameter(t_id, "Fixture", "", keira::AllowMultipleOutput);
     else if(t_id == FixtureIndexPort)
         param = new keira::IntegerParameter(t_id, "Fixture Index", 0, keira::AllowMultipleOutput);
+    else if(t_id == FixtureTotalPort)
+        param = new keira::IntegerParameter(t_id, "Total Fixtures", 0, keira::AllowMultipleOutput);
     else if(t_id == RelativeTimePort)
         param = new keira::DecimalParameter(t_id, "Relative Time", 0, keira::AllowMultipleOutput);
     else if(t_id == GlobalTimePort)
@@ -95,8 +98,14 @@ keira::Parameter *GraphContextNode::addPort(const QByteArray &t_id)
 
 void GraphContextNode::configure(const QByteArrayList &t_portIds)
 {
+    // Idempotent: ports restored by readFromJson are left as they are (keeping
+    // their existing connections), and only genuinely missing ones are added.
+    // That lets the enclosing subgraph re-run this after loading so a graph
+    // saved before a port existed gains it, instead of being permanently
+    // stuck with the port set it was first created with.
     for(const QByteArray &id : t_portIds)
-        addPort(id);
+        if(!findParameter(id))
+            addPort(id);
 }
 
 void GraphContextNode::createParameters()

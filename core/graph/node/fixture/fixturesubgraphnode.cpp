@@ -97,6 +97,13 @@ void FixtureSubGraphNode::readFromJson(const QJsonObject &t_json, keira::NodeLib
 
     m_globalsNode = dynamic_cast<GraphContextNode*>(graph()->findNode("Globals"));
 
+    // Re-run configure so a graph saved before a context port existed picks it
+    // up here rather than being stuck with whatever port set it was created
+    // with. configure() only adds ports that are missing, so restored ports and
+    // their connections are untouched.
+    if(m_globalsNode)
+        m_globalsNode->configure(GraphContextNode::fixturePorts());
+
     // Pool must be rebuilt after deserialization
     qDeleteAll(m_subgraphPool);
     m_subgraphPool.clear();
@@ -108,6 +115,31 @@ void FixtureSubGraphNode::prepForEvaluation()
 {
     Node::prepForEvaluation();
     graph()->prepForEvaluation();
+}
+
+void FixtureSubGraphNode::markDirty(int t_dirty)
+{
+    // Deliberately Node::markDirty rather than SubGraphNode::markDirty. The
+    // base additionally relays THIS node's dirty down into the authored
+    // subgraph, which is what makes the inner graph re-evaluate for the other
+    // subgraph kinds - but this node never evaluates the authored graph at
+    // all, it only clones from it.
+    //
+    // With the relay in place, a value arriving on our own Fixtures input
+    // during evaluation (i.e. any time a fixture list is wired in, every
+    // frame) marked the authored graph dirty, which is indistinguishable from
+    // an edit inside the subgraph - so the clone pool was thrown away and
+    // rebuilt every frame. That silently reset any per-fixture node state the
+    // clones were holding: Scatter Beams' beam positions and headings (making
+    // it look frozen, as if Speed were 0), DelayNode's sample buffer, and
+    // StopwatchNode's trigger time.
+    //
+    // Genuine edits inside the subgraph don't need this relay: the edited node
+    // marks its own containing graph dirty through Node::markDirty, which is
+    // what the pool-stale connection in the constructor listens for. Input
+    // values reach the clones without a rebuild too - evaluate() pushes them
+    // in via applyInputs() every frame.
+    keira::Node::markDirty(t_dirty);
 }
 
 // Builds one cloned subgraph per fixture so each parallel evaluation has
@@ -170,7 +202,10 @@ void FixtureSubGraphNode::evaluate(keira::EvaluationContext *t_context) const
     for(int i = 0; i < m_subgraphPool.size(); ++i)
     {
         if(m_globalsPool[i])
+        {
             m_globalsPool[i]->setValue(GraphContextNode::FixtureListPort, fixtureListValue);
+            m_globalsPool[i]->setValue(GraphContextNode::FixtureTotalPort, fixtures.size());
+        }
         applyInputs(m_subgraphPool[i]);
     }
 

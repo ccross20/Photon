@@ -61,7 +61,7 @@ public:
     const static QByteArray ParameterId;
 
     PixelListParameter();
-    PixelListParameter(const QByteArray &t_id, const QString &t_name, QVector<PixelParameterData> t_default, int connectionOptions = keira::AllowMultipleOutput | keira::AllowSingleInput);
+    PixelListParameter(const QByteArray &t_id, const QString &t_name, QVector<PixelParameterData> t_default, int connectionOptions =  keira::AllowSingleInput);
 
 
     void readFromJson(const QJsonObject &) override;

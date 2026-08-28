@@ -1,10 +1,7 @@
-#include <QMatrix4x4>
-#include <QTransform>
 #include <QtGui>
 #include <cmath>
 
 #include "lookattarget.h"
-#include "routine/routineevaluationcontext.h"
 
 namespace photon {
 
@@ -24,11 +21,9 @@ LookAtTarget::LookAtTarget() : keira::Node("photon.plugin.node.look-at-target")
 
 void LookAtTarget::createParameters()
 {
-    m_positionParam = new Vector3DParameter("positionInput","Position", QVector3D{});
-    addParameter(m_positionParam);
-    m_rotationParam = new Vector3DParameter("rotationInput","Rotation", QVector3D{});
-    addParameter(m_rotationParam);
-    m_targetParam = new Vector3DParameter("targetInput","Target Position", QVector3D{});
+    m_matrixParam = new MatrixParameter("matrixInput","Matrix", QMatrix4x4{});
+    addParameter(m_matrixParam);
+    m_targetParam = new MatrixParameter("targetInput","Target Location", QMatrix4x4{});
     addParameter(m_targetParam);
 
     m_invertPanParam = new keira::BooleanParameter("invertPan","Invert Pan", false);
@@ -36,9 +31,9 @@ void LookAtTarget::createParameters()
     m_invertTiltParam = new keira::BooleanParameter("invertTilt","Invert Tilt", false);
     addParameter(m_invertTiltParam);
 
-    m_tiltParam = new keira::DecimalParameter("tiltOutput","Tilt", 0.0);
+    m_tiltParam = new keira::DecimalParameter("tiltOutput","Tilt", 0.0, keira::AllowMultipleOutput);
     addParameter(m_tiltParam);
-    m_panParam = new keira::DecimalParameter("panOutput","Pan", 0.0);
+    m_panParam = new keira::DecimalParameter("panOutput","Pan", 0.0, keira::AllowMultipleOutput);
     addParameter(m_panParam);
 
 }
@@ -47,14 +42,10 @@ void LookAtTarget::evaluate(keira::EvaluationContext *t_context) const
 {
     Q_UNUSED(t_context);
 
-    const QVector3D pos    = m_positionParam->value().value<QVector3D>();
-    const QVector3D rot    = m_rotationParam->value().value<QVector3D>();
-    const QVector3D target = m_targetParam->value().value<QVector3D>();
-
-    // Fixture world frame (matches Fixture::globalMatrix: translate, then rotate).
-    QMatrix4x4 frame;
-    frame.translate(pos);
-    frame.rotate(QQuaternion::fromEulerAngles(rot));
+    const QMatrix4x4 frame = m_matrixParam->value().value<QMatrix4x4>();
+    // Only the target's location matters for aiming, not its orientation -
+    // take the translation out of its matrix.
+    const QVector3D target = m_targetParam->value().value<QMatrix4x4>().map(QVector3D{});
 
     // Express the target in the fixture's local space. The fixture sits at the local
     // origin, so this local position is the direction the beam must point.

@@ -24,6 +24,7 @@ public:
     void createParameters() override;
     void evaluate(keira::EvaluationContext *) const override;
     void prepForEvaluation() override;
+    void markDirty(int) override;
 
     static keira::NodeInformation info();
 

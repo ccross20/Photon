@@ -15,6 +15,13 @@
 #include "scene/truss.h"
 #include "scene/scenesurface.h"
 #include "scene/scenezone.h"
+#include "scene/scenehelperobject.h"
+#include "scene/scenearrow.h"
+#include "scene/scenedirection.h"
+#include "scene/sceneaxis.h"
+#include "scene/sceneboundaryrectangle.h"
+#include "scene/sceneboundaryoval.h"
+#include "scene/scenepointmarker.h"
 #include "fixture/fixture.h"
 #include "fixture/capability/colorcapability.h"
 #include "fixture/capability/dimmercapability.h"
@@ -45,6 +52,108 @@ constexpr quint32 kFramePayload  = 24 * sizeof(float); // mat4 + vec4 lightDir +
 constexpr quint32 kObjectPayload = 20 * sizeof(float); // mat4 + vec4
 constexpr quint32 kBeamPayload   = 40 * sizeof(float); // mat4 + color + apex + axisCos + params + color2 + fadePlane
 constexpr quint32 kGizmoBytes    = 4096 * 6 * sizeof(float); // dynamic line verts
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Helper-object wireframe glyphs (Arrow, Direction, Axis, Boundary Rectangle/
+// Oval, Point Marker). All emitted into the same gizmo line buffer as
+// appendZoneWireframes below - no dedicated mesh/shader/pipeline needed.
+
+// Packs one (pos.xyz, color.rgb) vertex into the gizmo line buffer.
+void appendLineVert(QByteArray &out, const QVector3D &p, const QColor &c)
+{
+    const float v[6] = { p.x(), p.y(), p.z(), float(c.redF()), float(c.greenF()), float(c.blueF()) };
+    out.append(reinterpret_cast<const char *>(v), sizeof(v));
+}
+
+// Shaft along local +Y from the origin to (0,len,0), with a small 4-way
+// arrowhead at the tip. Shared by Arrow and Direction (same shape, different
+// scene types).
+void appendArrowLines(const QMatrix4x4 &m, float len, const QColor &c, QByteArray &out)
+{
+    appendLineVert(out, m.map(QVector3D(0, 0, 0)), c);
+    appendLineVert(out, m.map(QVector3D(0, len, 0)), c);
+
+    const float headLen = len * 0.25f, headW = len * 0.12f;
+    const QVector3D tip(0, len, 0);
+    const QVector3D headBase(0, len - headLen, 0);
+    const QVector3D sides[4] = { { headW, 0, 0 }, { -headW, 0, 0 }, { 0, 0, headW }, { 0, 0, -headW } };
+    for (const QVector3D &side : sides) {
+        appendLineVert(out, m.map(tip), c);
+        appendLineVert(out, m.map(headBase + side), c);
+    }
+}
+
+// 4-segment rectangle outline in the local XY plane, centered at the origin.
+void appendRectLines(const QMatrix4x4 &m, float halfW, float halfH, const QColor &c, QByteArray &out)
+{
+    const QVector3D corners[4] = { { -halfW, -halfH, 0 }, { halfW, -halfH, 0 },
+                                    { halfW, halfH, 0 }, { -halfW, halfH, 0 } };
+    for (int i = 0; i < 4; ++i) {
+        appendLineVert(out, m.map(corners[i]), c);
+        appendLineVert(out, m.map(corners[(i + 1) % 4]), c);
+    }
+}
+
+// N-segment polygon outline approximating an ellipse in the local XY plane.
+void appendEllipseLines(const QMatrix4x4 &m, float radiusX, float radiusY, int segments,
+                        const QColor &c, QByteArray &out)
+{
+    QVector<QVector3D> pts;
+    pts.reserve(segments);
+    for (int i = 0; i < segments; ++i) {
+        const float a = 2.0f * float(M_PI) * i / float(segments);
+        pts << QVector3D(radiusX * std::cos(a), radiusY * std::sin(a), 0.0f);
+    }
+    for (int i = 0; i < segments; ++i) {
+        appendLineVert(out, m.map(pts[i]), c);
+        appendLineVert(out, m.map(pts[(i + 1) % segments]), c);
+    }
+}
+
+// A small 2D "null object" glyph in the local XY plane, radius r - the shape
+// a ScenePointMarker is drawn as.
+void appendPointMarkerLines(const QMatrix4x4 &m, ScenePointMarker::Shape shape, float r,
+                            const QColor &c, QByteArray &out)
+{
+    switch (shape) {
+    case ScenePointMarker::ShapeCircle:
+        appendEllipseLines(m, r, r, 24, c, out);
+        return;
+    case ScenePointMarker::ShapeSquare:
+        appendRectLines(m, r, r, c, out);
+        return;
+    case ScenePointMarker::ShapeDiamond: {
+        const QVector3D pts[4] = { { 0, r, 0 }, { r, 0, 0 }, { 0, -r, 0 }, { -r, 0, 0 } };
+        for (int i = 0; i < 4; ++i) {
+            appendLineVert(out, m.map(pts[i]), c);
+            appendLineVert(out, m.map(pts[(i + 1) % 4]), c);
+        }
+        return;
+    }
+    case ScenePointMarker::ShapeCross:
+        appendLineVert(out, m.map(QVector3D(-r, 0, 0)), c);
+        appendLineVert(out, m.map(QVector3D(r, 0, 0)), c);
+        appendLineVert(out, m.map(QVector3D(0, -r, 0)), c);
+        appendLineVert(out, m.map(QVector3D(0, r, 0)), c);
+        return;
+    case ScenePointMarker::ShapeStar:
+    default: {
+        // 5-point star: alternating outer/inner radius around 10 points.
+        QVector<QVector3D> pts;
+        pts.reserve(10);
+        for (int i = 0; i < 10; ++i) {
+            const float a = float(M_PI) / 2.0f + 2.0f * float(M_PI) * i / 10.0f;
+            const float rad = (i % 2 == 0) ? r : r * 0.42f;
+            pts << QVector3D(rad * std::cos(a), rad * std::sin(a), 0.0f);
+        }
+        for (int i = 0; i < 10; ++i) {
+            appendLineVert(out, m.map(pts[i]), c);
+            appendLineVert(out, m.map(pts[(i + 1) % 10]), c);
+        }
+        return;
+    }
+    }
+}
 
 // Beam appearance.
 constexpr float kBeamLength    = 6.0f;    // reference throw (world units) at the reference angle
@@ -734,8 +843,11 @@ void RhiRenderer::collectDrawables(SceneObject *obj, QVector<Drawable> &out,
         } else if (type == "truss") {
             seenTrusses.insert(child);
             out.append({ trussMeshFor(child), child->globalMatrix(), sel ? highlight : QColor(150, 150, 155) });
-        } else if (type == "zone") {
-            // Zones draw as wireframe boxes in the gizmo line pass, not solid geometry.
+        } else if (type == "zone" || type == "arrow" || type == "direction" || type == "axis"
+                   || type == "boundaryrectangle" || type == "boundaryoval" || type == "pointmarker") {
+            // Helper/annotation objects draw as wireframe overlays in the gizmo
+            // line pass (see appendZoneWireframes / appendHelperWireframes),
+            // not solid geometry.
         } else if (type != "group") {
             out.append({ m_box, child->globalMatrix(), sel ? highlight : QColor(150, 130, 95) });
         }
@@ -1328,6 +1440,14 @@ void RhiRenderer::collectBeams(SceneObject *obj, QVector<Drawable> &out) const
     for (SceneObject *child : obj->sceneChildren()) {
         if (!child->isVisible())
             continue;
+        // "none" opts a fixture out of beam rendering entirely, unlike Auto/
+        // Cones/Volumetric which all still draw something - skip straight to
+        // recursing into its children (e.g. a nested group) instead of
+        // falling through either drawable-building branch below.
+        if (child->typeId() == "fixture" && static_cast<Fixture *>(child)->beamStyle() == QLatin1String("none")) {
+            collectBeams(child, out);
+            continue;
+        }
         if (child->typeId() == "fixture" && isMultiCell(static_cast<Fixture *>(child))) {
             // Multi-cell fixture: one static cone per lit LED cell, sharing the
             // fixture's orientation (parallel beams) - unless it's a bee-eye (see
@@ -1588,29 +1708,80 @@ void RhiRenderer::appendZoneWireframes(SceneObject *obj, QByteArray &out) const
             continue;
         if (child->typeId() == "zone") {
             auto *zone = static_cast<SceneZone *>(child);
-            const QMatrix4x4 m = zone->globalMatrix();
-            const QVector3D h = zone->size() * 0.5f;
-            const QColor c = isSelected(child) ? QColor(255, 170, 40) : zone->color();
-            const float r = float(c.redF()), g = float(c.greenF()), b = float(c.blueF());
+            const bool sel = isSelected(child);
+            // SelectedOnly zones still recurse into children below, just skip
+            // their own box when not the current selection.
+            if (zone->visibilityMode() != SceneHelperObject::SelectedOnly || sel) {
+                const QMatrix4x4 m = zone->globalMatrix();
+                const QVector3D h = zone->size() * 0.5f;
+                const QColor c = sel ? QColor(255, 170, 40) : zone->color();
+                const float r = float(c.redF()), g = float(c.greenF()), b = float(c.blueF());
 
-            // 8 corners, bit2=x bit1=y bit0=z.
-            QVector3D corner[8];
-            for (int i = 0; i < 8; ++i) {
-                const float sx = (i & 4) ? h.x() : -h.x();
-                const float sy = (i & 2) ? h.y() : -h.y();
-                const float sz = (i & 1) ? h.z() : -h.z();
-                corner[i] = m.map(QVector3D(sx, sy, sz));
+                // 8 corners, bit2=x bit1=y bit0=z.
+                QVector3D corner[8];
+                for (int i = 0; i < 8; ++i) {
+                    const float sx = (i & 4) ? h.x() : -h.x();
+                    const float sy = (i & 2) ? h.y() : -h.y();
+                    const float sz = (i & 1) ? h.z() : -h.z();
+                    corner[i] = m.map(QVector3D(sx, sy, sz));
+                }
+                auto addVert = [&](const QVector3D &p) {
+                    const float v[6] = { p.x(), p.y(), p.z(), r, g, b };
+                    out.append(reinterpret_cast<const char *>(v), sizeof(v));
+                };
+                // Edges connect corners differing in exactly one axis bit (12 edges).
+                for (int a = 0; a < 8; ++a)
+                    for (int d : {1, 2, 4})
+                        if (a < (a ^ d)) { addVert(corner[a]); addVert(corner[a ^ d]); }
             }
-            auto addVert = [&](const QVector3D &p) {
-                const float v[6] = { p.x(), p.y(), p.z(), r, g, b };
-                out.append(reinterpret_cast<const char *>(v), sizeof(v));
-            };
-            // Edges connect corners differing in exactly one axis bit (12 edges).
-            for (int a = 0; a < 8; ++a)
-                for (int d : {1, 2, 4})
-                    if (a < (a ^ d)) { addVert(corner[a]); addVert(corner[a ^ d]); }
         }
         appendZoneWireframes(child, out);
+    }
+}
+
+void RhiRenderer::appendHelperWireframes(SceneObject *obj, QByteArray &out) const
+{
+    if (!obj)
+        return;
+    for (SceneObject *child : obj->sceneChildren()) {
+        if (!child->isVisible())
+            continue;
+        const QByteArray type = child->typeId();
+        if (type == "arrow" || type == "direction" || type == "axis"
+            || type == "boundaryrectangle" || type == "boundaryoval" || type == "pointmarker") {
+            auto *helper = static_cast<SceneHelperObject *>(child);
+            const bool sel = isSelected(child);
+            if (helper->visibilityMode() != SceneHelperObject::SelectedOnly || sel) {
+                const QMatrix4x4 m = child->globalMatrix();
+                const QColor c = sel ? QColor(255, 170, 40) : helper->color();
+
+                if (type == "arrow")
+                    appendArrowLines(m, static_cast<SceneArrow *>(child)->size(), c, out);
+                else if (type == "direction")
+                    appendArrowLines(m, static_cast<SceneDirection *>(child)->size(), c, out);
+                else if (type == "axis") {
+                    auto *axis = static_cast<SceneAxis *>(child);
+                    const float half = axis->size() * 0.5f;
+                    appendRectLines(m, half, half, c, out);
+                    // appendArrowLines always shafts along local +Y; rotate the
+                    // frame so the "positive side" indicator points along the
+                    // plane's own local +Z (its normal) instead.
+                    QMatrix4x4 normalMatrix = m;
+                    normalMatrix.rotate(90.0f, 1.0f, 0.0f, 0.0f);
+                    appendArrowLines(normalMatrix, axis->size() * 0.6f, c, out);
+                } else if (type == "boundaryrectangle") {
+                    auto *rect = static_cast<SceneBoundaryRectangle *>(child);
+                    appendRectLines(m, rect->width() * 0.5f, rect->height() * 0.5f, c, out);
+                } else if (type == "boundaryoval") {
+                    auto *oval = static_cast<SceneBoundaryOval *>(child);
+                    appendEllipseLines(m, oval->width() * 0.5f, oval->height() * 0.5f, 32, c, out);
+                } else if (type == "pointmarker") {
+                    auto *marker = static_cast<ScenePointMarker *>(child);
+                    appendPointMarkerLines(m, marker->shape(), marker->size(), c, out);
+                }
+            }
+        }
+        appendHelperWireframes(child, out);
     }
 }
 
@@ -1695,7 +1866,39 @@ bool RhiRenderer::localBounds(SceneObject *obj, QVector3D &outMin, QVector3D &ou
         outMax =  h;
         return true;
     }
-    if (type == "fixture" || type == "arrow" || type != "group") {
+    if (type == "arrow" || type == "direction") {
+        const float len = (type == "arrow") ? static_cast<SceneArrow *>(obj)->size()
+                                             : static_cast<SceneDirection *>(obj)->size();
+        outMin = QVector3D(-len * 0.15f, 0.0f, -len * 0.15f);
+        outMax = QVector3D( len * 0.15f, len,   len * 0.15f);
+        return true;
+    }
+    if (type == "axis") {
+        auto *axis = static_cast<SceneAxis *>(obj);
+        const float half = axis->size() * 0.5f;
+        outMin = QVector3D(-half, -half, -0.05f);
+        outMax = QVector3D( half,  half,  axis->size() * 0.6f);
+        return true;
+    }
+    if (type == "boundaryrectangle") {
+        auto *rect = static_cast<SceneBoundaryRectangle *>(obj);
+        outMin = QVector3D(-rect->width() * 0.5f, -rect->height() * 0.5f, -0.05f);
+        outMax = QVector3D( rect->width() * 0.5f,  rect->height() * 0.5f,  0.05f);
+        return true;
+    }
+    if (type == "boundaryoval") {
+        auto *oval = static_cast<SceneBoundaryOval *>(obj);
+        outMin = QVector3D(-oval->width() * 0.5f, -oval->height() * 0.5f, -0.05f);
+        outMax = QVector3D( oval->width() * 0.5f,  oval->height() * 0.5f,  0.05f);
+        return true;
+    }
+    if (type == "pointmarker") {
+        const float r = static_cast<ScenePointMarker *>(obj)->size();
+        outMin = QVector3D(-r, -r, -0.05f);
+        outMax = QVector3D( r,  r,  0.05f);
+        return true;
+    }
+    if (type == "fixture" || type != "group") {
         // Same half-extents as the box mesh.
         outMin = QVector3D(-0.15f, -0.15f, -0.15f);
         outMax = QVector3D( 0.15f,  0.15f,  0.15f);
@@ -1994,6 +2197,7 @@ void RhiRenderer::render(QRhiCommandBuffer *cb, QRhiRenderTarget *rt, const RhiC
     QByteArray gizmoVerts;
     m_gizmo.buildLines(camera, gizmoVerts);
     appendZoneWireframes(m_sceneRoot, gizmoVerts);   // zone boxes drawn as overlay lines
+    appendHelperWireframes(m_sceneRoot, gizmoVerts); // arrow/direction/axis/boundary/point-marker glyphs
     if (gizmoVerts.size() > int(kGizmoBytes))
         gizmoVerts.truncate(int(kGizmoBytes));
     const int gizmoVertexCount = gizmoVerts.size() / int(6 * sizeof(float));

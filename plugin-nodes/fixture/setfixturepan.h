@@ -4,6 +4,7 @@
 #include "model/node.h"
 #include "model/parameter/decimalparameter.h"
 #include "model/parameter/integerparameter.h"
+#include "model/parameter/booleanparameter.h"
 
 namespace photon {
 
@@ -19,7 +20,7 @@ public:
 private:
     keira::DecimalParameter *m_angleParam;
     keira::DecimalParameter *m_blendParam;
-    keira::IntegerParameter *m_modeParam;
+    keira::BooleanParameter *m_centeredParam;
     keira::IntegerParameter *m_capabilityParam;
 };
 

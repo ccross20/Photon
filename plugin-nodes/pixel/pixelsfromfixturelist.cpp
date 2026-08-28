@@ -28,7 +28,7 @@ void PixelsFromFixtureList::createParameters()
 {
 
     m_inParam = new FixtureListParameter("fixturesIn","Fixtures In",{});
-    m_pixelsOut = new PixelListParameter("pixelsOut","Pixels",{});
+    m_pixelsOut = new PixelListParameter("pixelsOut","Pixels",{}, keira::AllowMultipleOutput);
 
     addParameter(m_inParam);
     addParameter(m_pixelsOut);

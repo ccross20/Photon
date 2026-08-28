@@ -14,7 +14,7 @@ public:
     const static QByteArray ParameterId;
 
     PathParameter();
-    PathParameter(const QByteArray &t_id, const QString &t_name, QPainterPath t_default, int connectionOptions = keira::AllowMultipleOutput | keira::AllowSingleInput);
+    PathParameter(const QByteArray &t_id, const QString &t_name, QPainterPath t_default, int connectionOptions = keira::AllowSingleInput);
 
 };
 

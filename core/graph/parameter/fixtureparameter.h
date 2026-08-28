@@ -12,7 +12,7 @@ public:
     const static QByteArray ParameterId;
 
     FixtureParameter();
-    FixtureParameter(const QByteArray &t_id, const QString &t_name, QByteArray t_default, int connectionOptions = keira::AllowMultipleOutput | keira::AllowSingleInput);
+    FixtureParameter(const QByteArray &t_id, const QString &t_name, QByteArray t_default, int connectionOptions =  keira::AllowSingleInput);
 };
 
 } // namespace photon

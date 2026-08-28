@@ -46,6 +46,8 @@
 #include "graph/node/fixture/allfixturesnode.h"
 #include "graph/node/fixture/selectfixturesnode.h"
 #include "graph/node/fixture/fixturegroupnode.h"
+#include "graph/node/scene/sceneobjectinfonode.h"
+#include "graph/node/scene/matrixdecomposenode.h"
 #include "graph/node/pixel/pixelgraph.h"
 #include "graph/node/canvas/canvassubgraphnode.h"
 #include "graph/node/canvas/canvasoutputnode.h"
@@ -87,6 +89,7 @@
 #include "graph/parameter/fixtureparameter.h"
 #include "graph/parameter/pathparameter.h"
 #include "graph/parameter/vector3dparameter.h"
+#include "graph/parameter/matrixparameter.h"
 #include "graph/parameter/textureparameter.h"
 #include "graph/parameter/point2dparameter.h"
 #include "graph/parameter/fixturelistparameter.h"
@@ -223,6 +226,8 @@ void PluginFactory::init()
     registerNode(ColorInputNode::info());
     registerNode(PointInputNode::info());
     registerNode(FixtureInfoNode::info());
+    registerNode(SceneObjectInfoNode::info());
+    registerNode(MatrixDecomposeNode::info());
     registerNode(CanvasWriterNode::info());
     registerNode(CreateTextureNode::info());
     registerNode(WriteDMXChannelNode::info());
@@ -293,6 +298,7 @@ void PluginFactory::init()
     m_impl->nodeLibrary.registerParameter(FixtureParameter::ParameterId,[](){return new FixtureParameter();});
     m_impl->nodeLibrary.registerParameter(PathParameter::ParameterId,[](){return new PathParameter();});
     m_impl->nodeLibrary.registerParameter(Vector3DParameter::ParameterId,[](){return new Vector3DParameter();});
+    m_impl->nodeLibrary.registerParameter(MatrixParameter::ParameterId,[](){return new MatrixParameter();});
     m_impl->nodeLibrary.registerParameter(TextureParameter::ParameterId,[](){return new TextureParameter();});
     m_impl->nodeLibrary.registerParameter(Point2DParameter::ParameterId,[](){return new Point2DParameter();});
     m_impl->nodeLibrary.registerParameter(FixtureListParameter::ParameterId,[](){return new FixtureListParameter();});
@@ -463,9 +469,30 @@ keira::FolderElement *PluginFactory::createNodeTree(std::function<bool(const kei
 
 Panel *PluginFactory::createPanel(const PanelId &panelId)
 {
-    return m_impl->panels.value(panelId, [panelId](){
+    auto factory = m_impl->panels.constFind(panelId);
+    if(factory == m_impl->panels.constEnd())
+    {
+        // Not fatal - DefaultPanel names the missing id in place so it's
+        // visible in the UI - but say it out loud too. The usual cause is a
+        // saved layout naming a panel whose plugin didn't register under that
+        // exact id, which is otherwise easy to misread as the plugin having
+        // failed to load.
+        qWarning() << "No panel registered for id" << panelId << "- using a placeholder";
         return new DefaultPanel(panelId);
-    })();
+    }
+
+    Panel *panel = (*factory)();
+
+    // saveLayout() persists panel->id() and restoreLayout() feeds that back in
+    // here as the lookup key, so a panel whose own id differs from the id it
+    // was registered under will save happily and then fail to restore. Catch
+    // that at the source rather than leaving it to surface later as a layout
+    // that quietly comes back broken.
+    if(panel && panel->id() != panelId)
+        qWarning() << "Panel registered as" << panelId << "reports its id as" << panel->id()
+                   << "- these must match or a saved layout won't restore it";
+
+    return panel;
 }
 
 } // namespace exo
