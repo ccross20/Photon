@@ -13,6 +13,12 @@ public:
     DMXPatchPanel();
     ~DMXPatchPanel();
 
+    // The grid sits in a QScrollArea with setWidgetResizable(false), so the
+    // scroll area's own sizeHint() doesn't reflect the grid's real (fixed)
+    // size - override so a floating window opens big enough to show the
+    // whole channel grid without a manual resize first.
+    QSize sizeHint() const override;
+
 protected:
     void projectDidOpen(photon::Project *project) override;
     void projectWillClose(photon::Project *project) override;

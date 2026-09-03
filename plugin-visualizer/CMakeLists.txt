@@ -165,3 +165,13 @@ if(WIN32 AND EXISTS "${PROJECT_SOURCE_DIR}/dlls/windows")
     )
 endif()
 
+# RhiRenderer::resolveModelPath() looks for <fixture-type>.<ext> files in
+# <app>/models/ at runtime (not a Qt resource - these are loaded from real
+# files, deduped/cached by path). Nothing deployed this folder before, so
+# every fixture silently fell back to the placeholder box.
+if(EXISTS "${PROJECT_SOURCE_DIR}/resources/model")
+    add_custom_command(TARGET plugin-visualizer POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/resources/model" "${PROJECT_BINARY_DIR}/../photon-desktop/models/"
+    )
+endif()
+

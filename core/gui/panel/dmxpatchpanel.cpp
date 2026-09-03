@@ -75,6 +75,15 @@ DMXPatchPanel::~DMXPatchPanel()
     delete m_impl;
 }
 
+QSize DMXPatchPanel::sizeHint() const
+{
+    const QSize gridSize = m_impl->grid->sizeHint();
+    const int toolbarHeight = m_impl->toolbarLayout->sizeHint().height();
+    // A little slack so the scroll area doesn't feel the need to grow
+    // scrollbars when the window lands at exactly this size.
+    return QSize(gridSize.width() + 24, gridSize.height() + toolbarHeight + 24);
+}
+
 void DMXPatchPanel::projectDidOpen(Project *project)
 {
     m_impl->grid->setProject(project);

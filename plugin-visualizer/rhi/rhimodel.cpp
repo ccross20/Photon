@@ -187,11 +187,26 @@ RhiModel *RhiModel::load(const QString &path)
         return nullptr;
     }
 
+    // glTF/GLB mandates metres by spec, so those load pre-scaled correctly. FBX has
+    // no fixed unit - assimp hands back whatever the exporting DCC tool used raw,
+    // with no conversion of its own - and this project's FBX assets are authored in
+    // centimetres (matching the legacy Entity/ModelLoader pipeline's equivalent
+    // 0.01 scale). Seed the root transform with that conversion so the scene sees
+    // the same metre-scale geometry the .glb models already provide.
+    QMatrix4x4 seed;
+    if (hint == "fbx")
+        seed.scale(0.01f);
+
     auto *model = new RhiModel;
     QVector3D gMin( std::numeric_limits<float>::max(),  std::numeric_limits<float>::max(),  std::numeric_limits<float>::max());
     QVector3D gMax(-std::numeric_limits<float>::max(), -std::numeric_limits<float>::max(), -std::numeric_limits<float>::max());
-    processNode(scene->mRootNode, scene, QMatrix4x4(), model->m_root, model->m_hasEmitter,
+    processNode(scene->mRootNode, scene, seed, model->m_root, model->m_hasEmitter,
                 model->m_hasOrigin, model->m_originTransform, gMin, gMax);
+    // processNode() only threads the seed through the parallel accum used for
+    // bounds/origin - node.local (what the renderer actually walks) always holds
+    // the file's raw per-node transform, so the root's own local needs the same
+    // seed baked in for the geometry itself to come out at scene scale.
+    model->m_root.local = seed * model->m_root.local;
 
     if (gMin.x() <= gMax.x()) {   // had geometry
         model->m_min = gMin;

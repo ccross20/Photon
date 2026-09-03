@@ -8,6 +8,8 @@
 #include <cstring>
 #include <limits>
 #include <utility>
+#include <functional>
+#include <QHash>
 #include "rhirenderer.h"
 #include "rhimesh.h"
 #include "rhicamera.h"
@@ -642,6 +644,29 @@ QString autoModelType(const QStringList &categories)
     }
     return "par";   // generic default
 }
+
+// Strips any accumulated scale from a node's world transform, keeping only
+// rotation + translation. Model geometry is meant to be scaled (that's how it
+// ends up at real-world size - see RhiModel::load()'s FBX unit conversion),
+// but callers that anchor a beam cone/cell disc off a "lamp"/"lens" node's
+// world transform size it themselves (baseRadius/length, lens radius, etc.),
+// so any scale baked into that transform would compound with theirs.
+QMatrix4x4 rigidPart(const QMatrix4x4 &m)
+{
+    QVector3D x(m(0,0), m(1,0), m(2,0));
+    QVector3D y(m(0,1), m(1,1), m(2,1));
+    QVector3D z(m(0,2), m(1,2), m(2,2));
+    x = x.length() > 1e-8f ? x.normalized() : QVector3D(1,0,0);
+    y = y.length() > 1e-8f ? y.normalized() : QVector3D(0,1,0);
+    z = z.length() > 1e-8f ? z.normalized() : QVector3D(0,0,1);
+
+    QMatrix4x4 out;
+    out.setColumn(0, QVector4D(x, 0.0f));
+    out.setColumn(1, QVector4D(y, 0.0f));
+    out.setColumn(2, QVector4D(z, 0.0f));
+    out.setColumn(3, QVector4D(m.column(3).toVector3D(), 1.0f));
+    return out;
+}
 } // namespace
 
 QString RhiRenderer::resolveModelPath(Fixture *fixture) const
@@ -730,9 +755,9 @@ void RhiRenderer::collectModelNodes(const RhiModel::Node &node, const QMatrix4x4
 
     if (node.emitter) {
         if (emitterWorld)
-            *emitterWorld = world;
+            *emitterWorld = rigidPart(world);
         if (emitterWorlds)
-            emitterWorlds->append(world);
+            emitterWorlds->append(rigidPart(world));
     }
 
     for (const RhiModel::Node &c : node.children)
@@ -1448,6 +1473,32 @@ void RhiRenderer::updateFixtureMotion(Fixture *fixture, float &panOut, float &ti
     panOut = mo.pan;
     tiltOut = mo.tilt;
     halfAngleOut = mo.zoom;
+
+    {
+        static QHash<Fixture*, QPair<float,float>> lastPrinted;
+        auto &last = lastPrinted[fixture];
+        if (qAbs(last.first - panTarget) > 0.5f || qAbs(last.second - tiltTarget) > 0.5f) {
+            last = {panTarget, tiltTarget};
+            AngleCapability *p = fixture->pan();
+            AngleCapability *t = fixture->tilt();
+            qWarning().noquote() << "DEBUG motion" << fixture->name()
+                << "pan% =" << (p ? p->getAnglePercent(m_dmx) : -1)
+                << "panRange=[" << (p ? p->angleStart() : 0) << "," << (p ? p->angleEnd() : 0) << "]"
+                << "panTarget=" << panTarget
+                << "| tilt% =" << (t ? t->getAnglePercent(m_dmx) : -1)
+                << "tiltRange=[" << (t ? t->angleStart() : 0) << "," << (t ? t->angleEnd() : 0) << "]"
+                << "tiltTarget=" << tiltTarget;
+            RhiModel *model = modelForFixture(fixture);
+            if (model) {
+                std::function<void(const RhiModel::Node&)> dumpAxes = [&](const RhiModel::Node &n) {
+                    if (n.panAxis >= 0 || n.tiltAxis >= 0)
+                        qWarning().noquote() << "DEBUG   node" << n.name << "panAxis=" << n.panAxis << "tiltAxis=" << n.tiltAxis;
+                    for (const auto &c : n.children) dumpAxes(c);
+                };
+                dumpAxes(model->root());
+            }
+        }
+    }
 }
 
 void RhiRenderer::collectBeams(SceneObject *obj, QVector<Drawable> &out) const

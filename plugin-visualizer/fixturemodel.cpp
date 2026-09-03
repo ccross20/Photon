@@ -1,3 +1,4 @@
+#include <QDebug>
 #include "fixturemodel.h"
 #include "entity.h"
 #include "modifier/panmodelmodifier.h"
@@ -12,8 +13,12 @@ namespace photon {
 FixtureModel::FixtureModel(SceneObject *t_sceneObj, QObject *t_parent) : SceneObjectModel(t_sceneObj, t_parent)
 {
     ModelLoader loader;
-    auto entity = loader.loadResource("C:\\Projects\\photon\\src\\plugin-visualizer\\resources\\model\\moving-head.fbx");
-
+    auto entity = loader.loadResource(":/resources/model/moving-head.fbx");
+    if(!entity)
+    {
+        qWarning() << "FixtureModel: failed to load moving-head.fbx";
+        return;
+    }
 
     TransformComponent *xform = entity->findComponent<TransformComponent*>();
 

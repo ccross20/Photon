@@ -64,7 +64,7 @@ void GuiManager::Impl::createAppWindow()
     QMenu *fileMenu = new QMenu("File");
     fileMenu->addAction("Settings...", [](){ SettingsDialog dialog; dialog.exec(); });
     fileMenu->addSeparator();
-    fileMenu->addAction("Quit");
+    fileMenu->addAction("Quit", QKeySequence::Quit, [](){ photonApp->closeAllWindows(); });
     menubar->addMenu(fileMenu);
 
     QMenu *windowMenu = new QMenu("Window");
@@ -419,7 +419,25 @@ Panel *GuiManager::createFloatingPanel(const PanelId &panelId)
 
     connect(panel, &Panel::nameUpdated, DockWidget, [panel, DockWidget](){ DockWidget->setWindowTitle(panel->name());});
 
-    m_impl->dockManager()->addDockWidgetFloating(DockWidget);
+    auto floatingContainer = m_impl->dockManager()->addDockWidgetFloating(DockWidget);
+
+    // addDockWidgetFloating() sizes the new window from the just-constructed
+    // DockWidget's size(), which is Qt's generic pre-layout default (~640x480)
+    // rather than anything derived from the panel's actual content - so a
+    // panel wider/taller than that (e.g. the DMX patch grid) opens clipped
+    // and needs a manual resize before it's usable. Size to the panel's
+    // preferred content size instead, capped to the available screen.
+    if(floatingContainer)
+    {
+        const QSize wanted = panel->sizeHint();
+        if(wanted.isValid() && !wanted.isEmpty())
+        {
+            const QScreen *screen = floatingContainer->screen();
+            const QSize maxSize = screen ? screen->availableSize() * 0.9 : QSize(1280, 800);
+            floatingContainer->resize(wanted.boundedTo(maxSize));
+        }
+    }
+
     return panel;
 }
 

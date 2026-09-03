@@ -69,7 +69,7 @@ void CanvasOutputNode::buttonClicked(const keira::Parameter *t_param)
     auto *gui = app->gui();
     Panel *panel = gui->findPanel("photon.canvas-preview");
     if (!panel)
-        panel = gui->createDockedPanel("photon.canvas-preview");
+        panel = gui->createFloatingPanel("photon.canvas-preview");
     if (!panel)
         return;
 

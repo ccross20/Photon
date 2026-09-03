@@ -1,3 +1,4 @@
+#include <QDebug>
 #include "arrowmodel.h"
 #include "modelloader.h"
 #include "scene/sceneobject.h"
@@ -9,8 +10,12 @@ namespace photon {
 ArrowModel::ArrowModel(SceneObject *t_sceneObj, QObject *t_parent) : SceneObjectModel(t_sceneObj, t_parent)
 {
     ModelLoader loader;
-    auto entity = loader.loadResource("C:\\Projects\\photon\\src\\plugin-visualizer\\resources\\model\\arrow.fbx");
-
+    auto entity = loader.loadResource(":/resources/model/arrow.fbx");
+    if(!entity)
+    {
+        qWarning() << "ArrowModel: failed to load arrow.fbx";
+        return;
+    }
 
     TransformComponent *xform = entity->findComponent<TransformComponent*>();
 
@@ -23,6 +28,8 @@ ArrowModel::ArrowModel(SceneObject *t_sceneObj, QObject *t_parent) : SceneObject
 
 void ArrowModel::metadataUpdated()
 {
+    if(!entity())
+        return;
 
     TransformComponent *xform = entity()->findComponent<TransformComponent*>();
 

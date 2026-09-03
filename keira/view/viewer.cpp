@@ -64,6 +64,13 @@ Viewer::Viewer(NodeLibrary *t_library, QWidget *parent) : QGraphicsView{parent},
     setSceneRect(QRect(-5000,-5000,10000,10000));
     setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    // Default MinimalViewportUpdate tracks per-item dirty rects, which can
+    // undercount after Scene::rebuildScene()'s clear()-then-rebuild on every
+    // graph switch (worse at HiDPI device-pixel boundaries), leaving stale
+    // slivers of the previous graph on screen. Graphs here are small, so a
+    // full repaint on every update is cheap - trade a little paint cost for
+    // never miscomputing what needs to be redrawn.
+    setViewportUpdateMode(QGraphicsView::FullViewportUpdate);
 }
 
 Viewer::~Viewer()
