@@ -28,9 +28,6 @@ void SplineEffectEditor::mousePressEvent(QMouseEvent *event)
     }
 }
 
-
-
-
 SplineChannelEffect::SplineChannelEffect(): ChannelEffect()
 {
 

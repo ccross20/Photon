@@ -46,6 +46,13 @@ public:
     static keira::NodeInformation info();
 
     State *state() const;
+    // Call after an in-place edit to the State (a capability value, or adding /
+    // removing a capability) made through the custom editor. The State is not a
+    // keira Parameter, so nothing else marks this node dirty - and without that,
+    // a FixtureSubGraphNode keeps evaluating the stale per-fixture clones of
+    // this node until an unrelated parameter change re-clones its pool (the
+    // "have to disable/re-enable the node" symptom).
+    void markStateEdited();
     // The node's currently assigned fixtures (resolved from the Fixtures input by
     // id), for editors that need to know what's targeted - e.g. to offer a
     // dropdown of a capability's available channel names on those fixtures.

@@ -2,6 +2,7 @@
 #include <QScrollBar>
 #include <QJsonObject>
 #include <QUuid>
+#include <QHash>
 #include "viewer.h"
 #include "library/nodelibrary.h"
 #include "nodeitem.h"
@@ -28,6 +29,16 @@ struct NodePositionData
 class Viewer::Impl
 {
 public:
+    // Remembered viewport centre (scene coords) and zoom for a graph, so it can
+    // be restored the next time that graph is shown.
+    struct ViewState
+    {
+        QPointF center;
+        double zoom = 1.0;
+    };
+    QHash<Graph*, ViewState> viewStates;
+    Graph *trackedGraph = nullptr;
+
     QPointF startPoint;
     QPoint lastPosition;
     int key = -1;
@@ -63,6 +74,72 @@ Viewer::~Viewer()
 Graph *Viewer::graph() const
 {
     return static_cast<Scene*>(scene())->graph();
+}
+
+void Viewer::setScene(QGraphicsScene *t_scene)
+{
+    if(auto *old = qobject_cast<Scene*>(scene()))
+    {
+        disconnect(old, &Scene::graphAboutToChange, this, &Viewer::graphAboutToChange);
+        disconnect(old, &Scene::graphUpdated, this, &Viewer::graphChanged);
+    }
+
+    QGraphicsView::setScene(t_scene);
+    m_impl->trackedGraph = nullptr;
+
+    if(auto *s = qobject_cast<Scene*>(t_scene))
+    {
+        connect(s, &Scene::graphAboutToChange, this, &Viewer::graphAboutToChange);
+        connect(s, &Scene::graphUpdated, this, &Viewer::graphChanged);
+        // The scene may already carry a graph (set before the view was attached).
+        if(s->graph())
+            graphChanged(s->graph());
+    }
+}
+
+void Viewer::graphAboutToChange(Graph *t_oldGraph)
+{
+    saveViewState(t_oldGraph);
+}
+
+void Viewer::graphChanged(Graph *t_newGraph)
+{
+    if(m_impl->trackedGraph == t_newGraph)
+        return;
+    m_impl->trackedGraph = t_newGraph;
+    restoreViewState(t_newGraph);
+}
+
+void Viewer::saveViewState(Graph *t_graph)
+{
+    if(!t_graph)
+        return;
+
+    if(!m_impl->viewStates.contains(t_graph))
+    {
+        // Drop the stashed state if the graph goes away (e.g. a subgraph whose
+        // container node is deleted) so a recycled pointer can't restore it.
+        connect(t_graph, &QObject::destroyed, this, [this, t_graph]{
+            m_impl->viewStates.remove(t_graph);
+            if(m_impl->trackedGraph == t_graph)
+                m_impl->trackedGraph = nullptr;
+        });
+    }
+
+    Impl::ViewState state;
+    state.center = mapToScene(viewport()->rect().center());
+    state.zoom = m_impl->currentZoom;
+    m_impl->viewStates.insert(t_graph, state);
+}
+
+void Viewer::restoreViewState(Graph *t_graph)
+{
+    auto it = m_impl->viewStates.constFind(t_graph);
+    if(it == m_impl->viewStates.constEnd())
+        return;
+
+    zoom(it->zoom);
+    centerOn(it->center);
 }
 
 void Viewer::drawBackground(QPainter *painter, const QRectF &rect)

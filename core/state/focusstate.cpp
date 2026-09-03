@@ -7,7 +7,7 @@ FocusState::FocusState() : StateCapability(CapabilityType::Capability_Focus)
 {
     setName("Focus");
 
-    addAvailableChannel(ChannelInfo(ChannelInfo::ChannelTypeNumber, "Focus","How much to focus",0));
+    addAvailableChannel(ChannelInfo(ChannelInfo::ChannelTypeNumber, "Focus","How much to focus",0, 0.0, 1.0));
 }
 
 void FocusState::evaluate(const StateEvaluationContext &t_context) const

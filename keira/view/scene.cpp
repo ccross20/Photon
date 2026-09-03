@@ -62,6 +62,9 @@ void Scene::setGraph(Graph *t_graph)
         return;
 
     if(m_impl->graph)
+        emit graphAboutToChange(m_impl->graph);
+
+    if(m_impl->graph)
     {
         disconnect(m_impl->graph, &Graph::nodeWasAdded, this, &Scene::nodeWasAdded);
         disconnect(m_impl->graph, &Graph::nodeWasRemoved, this, &Scene::nodeWasRemoved);

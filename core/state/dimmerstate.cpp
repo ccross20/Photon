@@ -7,7 +7,7 @@ DimmerState::DimmerState() : StateCapability(CapabilityType::Capability_Dimmer)
 {
     setName("Dimmer");
 
-    addAvailableChannel(ChannelInfo(ChannelInfo::ChannelTypeNumber, "Dimmer","Lamp Brightness",1.0));
+    addAvailableChannel(ChannelInfo(ChannelInfo::ChannelTypeNumber, "Dimmer","Lamp Brightness",1.0, 0.0, 1.0));
 }
 
 void DimmerState::evaluate(const StateEvaluationContext &t_context) const

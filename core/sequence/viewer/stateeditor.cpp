@@ -187,8 +187,6 @@ void StateEditor::openAddMenu()
     QMenu menu;
     menu.addAction("Strobe",[state](){state->addCapability(Capability_Strobe);});
     menu.addAction("Tilt",[state](){state->addCapability(Capability_Tilt);});
-    menu.addAction("Tilt Angle",[state](){state->addCapability(Capability_TiltAngle);});
-    menu.addAction("Tilt Angle Centered",[state](){state->addCapability(Capability_TiltAngleCentered);});
     menu.addAction("Dimmer",[state](){state->addCapability(Capability_Dimmer);});
     menu.addAction("Focus",[state](){state->addCapability(Capability_Focus);});
     menu.addAction("Zoom",[state](){state->addCapability(Capability_Zoom);});

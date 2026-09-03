@@ -127,7 +127,7 @@ void LampModifier::updateModel(const DMXMatrix &t_matrix, const double t_elapsed
 
     if(m_zoomCapability)
     {
-        float zoomPercent = m_zoomCapability->getAnglePercent(t_matrix);
+        float zoomPercent = m_zoomCapability->directedPercent(t_matrix);
 
         float angle = (zoomPercent * (fixture()->physical().lensMaximum - fixture()->physical().lensMinimum)) + fixture()->physical().lensMinimum;
 

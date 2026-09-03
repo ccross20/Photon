@@ -126,6 +126,16 @@ State *FixtureStateNode::state() const
     return m_state;
 }
 
+void FixtureStateNode::markStateEdited()
+{
+    // Dirty_Parameter, not Dirty_Eval: this node is always-dirty, so its
+    // Dirty_Eval bit is permanently set and markDirty(Dirty_Eval) short-circuits
+    // before it can re-raise Graph::dirtyStateChanged - the signal
+    // FixtureSubGraphNode listens on to re-clone its per-fixture pool. This
+    // matches how a real Parameter edit marks its node dirty.
+    markDirty(keira::Dirty_Parameter);
+}
+
 QVector<Fixture*> FixtureStateNode::resolvedFixtures() const
 {
     QVector<Fixture*> results;

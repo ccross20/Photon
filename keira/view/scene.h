@@ -27,6 +27,10 @@ public slots:
 
 signals:
     void graphUpdated(Graph*);
+    // Emitted at the very start of setGraph(), while the outgoing graph is still
+    // the one on screen - so a view can stash its scroll/zoom for that graph
+    // before the scene is rebuilt for the new one.
+    void graphAboutToChange(Graph *oldGraph);
 
 protected:
     void contextMenuEvent(QGraphicsSceneContextMenuEvent *contextMenuEvent) override;

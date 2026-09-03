@@ -71,7 +71,7 @@ void SelectFixturesNode::createParameters()
     });
     addParameter(m_impl->zoneParam);
 
-    m_impl->resultParam = new FixtureListParameter(ResultParam, "Fixtures", {});
+    m_impl->resultParam = new FixtureListParameter(ResultParam, "Fixtures", {}, keira::AllowMultipleOutput);
     addParameter(m_impl->resultParam);
 }
 

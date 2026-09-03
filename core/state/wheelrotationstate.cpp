@@ -9,7 +9,7 @@ WheelRotationState::WheelRotationState() : StateCapability(CapabilityType::Capab
     setName("Wheel Rotation");
 
     addAvailableChannel(ChannelInfo(ChannelInfo::ChannelTypeString, "Name","Name of the capability",""));
-    addAvailableChannel(ChannelInfo(ChannelInfo::ChannelTypeNumber, "Speed","How much to shake the gobo",0));
+    addAvailableChannel(ChannelInfo(ChannelInfo::ChannelTypeNumber, "Speed","Rotation speed (negative = reverse)",0, -1.0, 1.0));
 
 }
 

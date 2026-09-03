@@ -18,7 +18,7 @@ GoboState::GoboState() : StateCapability(CapabilityType::Capability_WheelSlot)
 
     addAvailableChannel(ChannelInfo(ChannelInfo::ChannelTypeInteger, "Wheel Index","Which Wheel",0));
     addAvailableChannel(ChannelInfo(ChannelInfo::ChannelTypeInteger, "Gobo Slot","Which Slot",0));
-    addAvailableChannel(ChannelInfo(ChannelInfo::ChannelTypeNumber, "Shake","How much to shake the gobo",0));
+    addAvailableChannel(ChannelInfo(ChannelInfo::ChannelTypeNumber, "Shake","How much to shake the gobo",0, 0.0, 1.0));
 
     // APPENDED, never inserted: StateCapability::readFromJson restores values by
     // index, so putting a channel anywhere but the end would silently shift every

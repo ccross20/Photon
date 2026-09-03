@@ -5,6 +5,7 @@
 #include "photon-global.h"
 
 class QVBoxLayout;
+class QScrollArea;
 
 namespace photon {
 
@@ -26,7 +27,10 @@ private:
     void rebuild();
 
     FixtureStateNode *m_node = nullptr;
-    QVBoxLayout *m_layout = nullptr;
+    QScrollArea *m_scroll = nullptr;
+    // Layout that holds the per-capability frames; lives inside m_scroll's
+    // content widget so a long list scrolls instead of squashing.
+    QVBoxLayout *m_listLayout = nullptr;
 };
 
 } // namespace photon

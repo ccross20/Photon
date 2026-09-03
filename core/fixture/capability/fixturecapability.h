@@ -38,6 +38,10 @@ enum CapabilityType{
     Capability_Unknown,
     Capability_Pan,
     Capability_Tilt,
+    // Retired: the split Tilt Angle / Tilt Angle Centered states were folded into
+    // Capability_Tilt (mode chosen by its Angles/Centered channels). Kept so old
+    // saved states still deserialize - State::readFromJson migrates them. Don't
+    // reuse or renumber (the value is serialized).
     Capability_TiltAngle,
     Capability_TiltAngleCentered,
     Capability_Focus,

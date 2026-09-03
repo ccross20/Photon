@@ -13,7 +13,7 @@ NodeEditor::NodeEditor(QWidget *parent)
     m_vLayout = new QVBoxLayout;
 
     setLayout(m_vLayout);
-    setMinimumWidth(300);
+    setMinimumWidth(330);
 }
 
 
@@ -63,14 +63,14 @@ void NodeEditor::rebuildParameters()
 
     m_vLayout->addLayout(m_gridLayout);
 
-    // Optional custom editor UI, below the parameter grid.
-    if(m_node)
-    {
-        if(QWidget *custom = m_node->createCustomWidget(this))
-            m_vLayout->addWidget(custom);
-    }
-
-    m_vLayout->addStretch();
+    // Optional custom editor UI, below the parameter grid. When present it takes
+    // the remaining height (so e.g. FixtureStateNode's scrolling capability list
+    // fills the panel); otherwise a stretch keeps the grid pinned to the top.
+    QWidget *custom = m_node ? m_node->createCustomWidget(this) : nullptr;
+    if(custom)
+        m_vLayout->addWidget(custom, 1);
+    else
+        m_vLayout->addStretch();
 
 }
 

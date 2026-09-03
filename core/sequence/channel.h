@@ -19,10 +19,12 @@ struct PHOTONCORE_EXPORT ChannelInfo
         ChannelTypeString
     };
 
-    ChannelInfo(ChannelType type = ChannelTypeNumber, const QString &name = QString{}, const QString &description = QString{}, const QVariant &defaultValue = QVariant{}):
+    ChannelInfo(ChannelType type = ChannelTypeNumber, const QString &name = QString{}, const QString &description = QString{}, const QVariant &defaultValue = QVariant{}, double minimum = 0.0, double maximum = 0.0):
     name(name),
       description(description),
       defaultValue(defaultValue),
+      minimum(minimum),
+      maximum(maximum),
       type(type)
     {
         uniqueId = QUuid::createUuid().toByteArray();
@@ -52,6 +54,12 @@ struct PHOTONCORE_EXPORT ChannelInfo
     QByteArray parentUniqueId;
     ChannelType type;
     int subChannelIndex = 0;
+
+    // Useful range for a numeric field's slider. maximum <= minimum means
+    // "no meaningful range" - the editor shows an unbounded scrub field.
+    double minimum = 0.0;
+    double maximum = 0.0;
+    bool hasRange() const { return maximum > minimum; }
 };
 
 class PHOTONCORE_EXPORT Channel : public QObject

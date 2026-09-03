@@ -21,6 +21,7 @@
 #include "scene/sceneboundaryrectangle.h"
 #include "scene/sceneboundaryoval.h"
 #include "scene/scenepointmarker.h"
+#include "scene/scenelinearfalloff.h"
 #include "fixture/fixturegroup.h"
 #include "pixel/pixellayout.h"
 #include "pixel/pixellayoutcollection.h"
@@ -492,6 +493,7 @@ void ProjectPanel::filterChanged()
                 visible.insert("boundaryrectangle");
                 visible.insert("boundaryoval");
                 visible.insert("pointmarker");
+                visible.insert("linearfalloff");
             }
             else
                 visible.insert(type);
@@ -718,6 +720,11 @@ void ProjectPanel::populateAddActions(QMenu &t_menu, const QByteArray &t_content
             marker->setName("Point in Space");
             marker->setRotation(QVector3D(-90.0f, 0.0f, 0.0f));
             marker->setParentSceneObject(sceneParent());
+        });
+        t_menu.addAction("Linear Falloff", [sceneParent](){
+            auto *falloff = new SceneLinearFalloff;
+            falloff->setName("Linear Falloff");
+            falloff->setParentSceneObject(sceneParent());
         });
     }
     else if(t_contentType == "group")

@@ -7,7 +7,7 @@ ZoomState::ZoomState() : StateCapability(CapabilityType::Capability_Zoom)
 {
     setName("Zoom");
 
-    addAvailableChannel(ChannelInfo(ChannelInfo::ChannelTypeNumber, "Zoom","How much to zoom",0));
+    addAvailableChannel(ChannelInfo(ChannelInfo::ChannelTypeNumber, "Zoom","How much to zoom",0, 0.0, 1.0));
 }
 
 void ZoomState::evaluate(const StateEvaluationContext &t_context) const

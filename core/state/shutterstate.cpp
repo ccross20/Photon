@@ -10,7 +10,7 @@ ShutterState::ShutterState() : StateCapability(CapabilityType::Capability_Strobe
     auto info = ChannelInfo(ChannelInfo::ChannelTypeIntegerStep, "Mode","The state of the shutter",ShutterStrobeCapability::Shutter_Open);
     info.options = {"Open","Closed","Strobe","Pulse","Ramp Up","Ramp Down","Ramp Up Down","Lightning","Spikes","Burst"};
     addAvailableChannel(info);
-    addAvailableChannel(ChannelInfo(ChannelInfo::ChannelTypeNumber, "Speed","How quickly the strobe fires",.5));
+    addAvailableChannel(ChannelInfo(ChannelInfo::ChannelTypeNumber, "Speed","How quickly the strobe fires",.5, 0.0, 1.0));
     addAvailableChannel(ChannelInfo(ChannelInfo::ChannelTypeBool, "Random","The strobe fires at a random rate",false));
     addAvailableChannel(ChannelInfo(ChannelInfo::ChannelTypeBool, "Sound Activated","Fire the shutter in sync with the sound",false));
 }

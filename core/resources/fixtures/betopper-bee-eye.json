@@ -83,12 +83,7 @@
     "Lens Rotation": {
       "capabilities": [
         {
-          "dmxRange": [0, 7],
-          "type": "LensRotation",
-          "speed": "stop"
-        },
-        {
-          "dmxRange": [8, 127],
+          "dmxRange": [0, 127],
           "type": "LensRotation",
           "angleStart": "0deg",
           "angleEnd": "60deg"

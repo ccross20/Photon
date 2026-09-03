@@ -11,6 +11,8 @@
 #include "fixture/setfixtureprismrotation.h"
 #include "fixture/setfixtureslotrotation.h"
 #include "fixture/lookattarget.h"
+#include "fixture/lookindirection.h"
+#include "fixture/mirrorpantilt.h"
 #include "fixture/scatterbeams.h"
 #include "fixture-list/fixturelistrandomsubsetnode.h"
 #include "fixture-list/fixturelistintervalsubsetnode.h"
@@ -25,6 +27,7 @@
 #include "canvas/masknode.h"
 #include "canvas/transform/transformtexturenode.h"
 #include "color/colorfromhsv.h"
+#include "color/randomcolornode.h"
 #include "color/sparklenode.h"
 #include "color-palette/colorpalettenode.h"
 #include "color-palette/colorfromcolorpalette.h"
@@ -38,7 +41,11 @@
 #include "math/ifnode.h"
 #include "animation/timer.h"
 #include "animation/pulsenode.h"
+#include "animation/oscillatornode.h"
+#include "animation/timenode.h"
+#include "animation/beatreducernode.h"
 #include "falloff/linearfalloffnode.h"
+#include "falloff/spatialfalloffnode.h"
 #include "falloff/randomfalloffnode.h"
 #include "pixel/pixelsfromfixturelist.h"
 #include "pixel/setpixelcolor.h"
@@ -71,10 +78,13 @@ bool PluginNodes::initialize(const PluginContext &context)
     photonApp->plugins()->registerNode(RenderPath::info());
     photonApp->plugins()->registerNode(RenderStroke::info());
     photonApp->plugins()->registerNode(LookAtTarget::info());
+    photonApp->plugins()->registerNode(LookInDirection::info());
+    photonApp->plugins()->registerNode(MirrorPanTilt::info());
     photonApp->plugins()->registerNode(ScatterBeams::info());
     photonApp->plugins()->registerNode(CircleNode::info());
     photonApp->plugins()->registerNode(NoiseNode::info());
     photonApp->plugins()->registerNode(ColorFromHSV::info());
+    photonApp->plugins()->registerNode(RandomColorNode::info());
     photonApp->plugins()->registerNode(MaskNode::info());
     photonApp->plugins()->registerNode(SparkleNode::info());
     photonApp->plugins()->registerNode(TransformTextureNode::info());    
@@ -88,11 +98,15 @@ bool PluginNodes::initialize(const PluginContext &context)
     photonApp->plugins()->registerNode(Timer::info());
     photonApp->plugins()->registerNode(StopwatchNode::info());
     photonApp->plugins()->registerNode(PulseNode::info());
+    photonApp->plugins()->registerNode(OscillatorNode::info());
+    photonApp->plugins()->registerNode(TimeNode::info());
+    photonApp->plugins()->registerNode(BeatReducerNode::info());
     photonApp->plugins()->registerNode(RemapValueNode::info());
     photonApp->plugins()->registerNode(IfNode::info());
     photonApp->plugins()->registerNode(RandomNumberNode::info());
     photonApp->plugins()->registerNode(LinearFalloffNode::info());
     photonApp->plugins()->registerNode(RandomFalloffNode::info());
+    photonApp->plugins()->registerNode(SpatialFalloffNode::info());
     photonApp->plugins()->registerNode(SetPixelColor::info());
     photonApp->plugins()->registerNode(PixelsFromFixtureList::info());
     photonApp->plugins()->registerNode(DJConnectorNode::info());

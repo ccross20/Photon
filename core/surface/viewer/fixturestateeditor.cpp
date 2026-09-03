@@ -3,13 +3,14 @@
 #include <QPushButton>
 #include <QMenu>
 #include <QLabel>
-#include <QDoubleSpinBox>
-#include <QSpinBox>
 #include <QComboBox>
 #include <QCheckBox>
-#include <QColorDialog>
 #include <QFrame>
+#include <QScrollArea>
+#include <functional>
 #include "fixturestateeditor.h"
+#include "view/numberscrubfield.h"
+#include "gui/color/colorwheelswatch.h"
 #include "graph/node/fixture/fixturestatenode.h"
 #include "state/state.h"
 #include "state/statecapability.h"
@@ -23,8 +24,10 @@ namespace photon {
 // t_nameOptions is only used for ChannelTypeString (the fixture channel names
 // available for the capability's type, so e.g. a rotation's "Name" field offers a
 // dropdown of the actual matching channels instead of free-text entry).
+// t_onEdit is invoked after every value change so the node can mark itself dirty
+// (the State isn't a keira Parameter, so nothing else does).
 static QWidget *makeChannelEditor(StateCapability *t_cap, int t_index, const ChannelInfo &t_info,
-                                  const QStringList &t_nameOptions)
+                                  const QStringList &t_nameOptions, std::function<void()> t_onEdit)
 {
     switch(t_info.type)
     {
@@ -39,49 +42,52 @@ static QWidget *makeChannelEditor(StateCapability *t_cap, int t_index, const Cha
             combo->setCurrentIndex(idx);
         else
             combo->setCurrentText(current);
-        QObject::connect(combo, &QComboBox::currentTextChanged, combo, [t_cap, t_index](const QString &v){ t_cap->setChannelValue(t_index, v); });
+        QObject::connect(combo, &QComboBox::currentTextChanged, combo, [t_cap, t_index, t_onEdit](const QString &v){ t_cap->setChannelValue(t_index, v); t_onEdit(); });
         return combo;
     }
     case ChannelInfo::ChannelTypeColor:
     {
-        auto *btn = new QPushButton;
-        auto apply = [btn](const QColor &c){
-            btn->setText(c.name());
-            btn->setStyleSheet(QString("background:%1; color:%2;")
-                .arg(c.name(), c.lightness() > 127 ? "black" : "white"));
-        };
-        apply(t_cap->getChannelValue(t_index).value<QColor>());
-        QObject::connect(btn, &QPushButton::clicked, btn, [t_cap, t_index, apply](){
-            const QColor c = QColorDialog::getColor(t_cap->getChannelValue(t_index).value<QColor>());
-            if(c.isValid()) { t_cap->setChannelValue(t_index, c); apply(c); }
+        // Swatch that opens the app's ColorSelectorDialog, same as the node
+        // editor's color parameter - not the OS colour picker.
+        auto *swatch = new ColorWheelSwatch(t_cap->getChannelValue(t_index).value<QColor>());
+        QObject::connect(swatch, &ColorWheelSwatch::colorChanged, swatch, [t_cap, t_index, t_onEdit](const QColor &c){
+            t_cap->setChannelValue(t_index, c);
+            t_onEdit();
         });
-        return btn;
+        return swatch;
     }
     case ChannelInfo::ChannelTypeBool:
     {
         auto *chk = new QCheckBox;
         chk->setChecked(t_cap->getChannelValue(t_index).toBool());
-        QObject::connect(chk, &QCheckBox::toggled, chk, [t_cap, t_index](bool v){ t_cap->setChannelValue(t_index, v); });
+        QObject::connect(chk, &QCheckBox::toggled, chk, [t_cap, t_index, t_onEdit](bool v){ t_cap->setChannelValue(t_index, v); t_onEdit(); });
         return chk;
     }
     case ChannelInfo::ChannelTypeInteger:
     case ChannelInfo::ChannelTypeIntegerStep:
     {
-        auto *spin = new QSpinBox;
-        spin->setRange(0, 255);
-        spin->setValue(t_cap->getChannelValue(t_index).toInt());
-        QObject::connect(spin, qOverload<int>(&QSpinBox::valueChanged), spin, [t_cap, t_index](int v){ t_cap->setChannelValue(t_index, v); });
-        return spin;
+        // Same click-to-type / drag-to-scrub field the node editor uses. Typed
+        // values commit on Return or focus-out, not on every keystroke; a
+        // drag-scrub still updates live.
+        auto *field = new keira::NumberScrubField;
+        field->setIsInteger(true);
+        field->setRange(0, 255);
+        field->setValue(t_cap->getChannelValue(t_index).toInt());
+        QObject::connect(field, &keira::NumberScrubField::valueChanged, field, [t_cap, t_index, t_onEdit](double v){ t_cap->setChannelValue(t_index, int(v)); t_onEdit(); });
+        return field;
     }
     default: // Number and anything else
     {
-        auto *spin = new QDoubleSpinBox;
-        spin->setRange(-10000.0, 10000.0);
-        spin->setSingleStep(0.01);
-        spin->setDecimals(3);
-        spin->setValue(t_cap->getChannelValue(t_index).toDouble());
-        QObject::connect(spin, qOverload<double>(&QDoubleSpinBox::valueChanged), spin, [t_cap, t_index](double v){ t_cap->setChannelValue(t_index, v); });
-        return spin;
+        auto *field = new keira::NumberScrubField;
+        field->setDecimals(3);
+        // A channel with a known useful range gets a bounded slider (fill bar,
+        // width mapped to the range, typed values clamped); dual-purpose ones
+        // like Pan/Tilt (percent or degrees) stay unbounded.
+        if(t_info.hasRange())
+            field->setRange(t_info.minimum, t_info.maximum);
+        field->setValue(t_cap->getChannelValue(t_index).toDouble());
+        QObject::connect(field, &keira::NumberScrubField::valueChanged, field, [t_cap, t_index, t_onEdit](double v){ t_cap->setChannelValue(t_index, v); t_onEdit(); });
+        return field;
     }
     }
 }
@@ -89,15 +95,38 @@ static QWidget *makeChannelEditor(StateCapability *t_cap, int t_index, const Cha
 FixtureStateEditor::FixtureStateEditor(FixtureStateNode *t_node, QWidget *parent)
     : QWidget(parent), m_node(t_node)
 {
-    m_layout = new QVBoxLayout(this);
-    m_layout->setContentsMargins(0, 0, 0, 0);
+    setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Expanding);
+
+    auto *outer = new QVBoxLayout(this);
+    outer->setContentsMargins(0, 0, 0, 0);
+
+    // The capability frames go in a scroll area so a long list scrolls rather
+    // than compressing each frame (the node editor panel isn't itself
+    // scrollable). It expands to fill whatever height the panel gives it.
+    m_scroll = new QScrollArea;
+    m_scroll->setWidgetResizable(true);
+    m_scroll->setFrameShape(QFrame::NoFrame);
+    m_scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    m_scroll->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Expanding);
+
+    auto *content = new QWidget;
+    m_listLayout = new QVBoxLayout(content);
+    m_listLayout->setContentsMargins(0, 0, 0, 0);
+    m_listLayout->setSpacing(4);
+    m_scroll->setWidget(content);
+    outer->addWidget(m_scroll, 1);
+
+    auto *addButton = new QPushButton("Add Capability");
+    connect(addButton, &QPushButton::clicked, this, &FixtureStateEditor::openAddMenu);
+    outer->addWidget(addButton);
+
     rebuild();
 }
 
 void FixtureStateEditor::rebuild()
 {
     QLayoutItem *item;
-    while((item = m_layout->takeAt(0)) != nullptr)
+    while((item = m_listLayout->takeAt(0)) != nullptr)
     {
         if(item->widget())
             item->widget()->deleteLater();
@@ -112,16 +141,19 @@ void FixtureStateEditor::rebuild()
             auto *frame = new QFrame;
             frame->setFrameShape(QFrame::StyledPanel);
             auto *v = new QVBoxLayout(frame);
-            v->setContentsMargins(4, 4, 4, 4);
+            v->setContentsMargins(6, 4, 6, 4);
+            v->setSpacing(3);
 
             auto *header = new QHBoxLayout;
             header->addWidget(new QLabel("<b>" + cap->name() + "</b>"));
             header->addStretch();
             auto *removeBtn = new QPushButton("×");
-            removeBtn->setMaximumWidth(24);
+            removeBtn->setFixedWidth(22);
             connect(removeBtn, &QPushButton::clicked, this, [this, state, cap](){
                 state->removeCapability(cap);
                 delete cap;
+                if(m_node)
+                    m_node->markStateEdited();
                 rebuild();
             });
             header->addWidget(removeBtn);
@@ -131,6 +163,7 @@ void FixtureStateEditor::rebuild()
             for(int i = 0; i < channels.size(); ++i)
             {
                 auto *row = new QHBoxLayout;
+                row->setSpacing(4);
                 row->addWidget(new QLabel(channels[i].name));
 
                 QStringList nameOptions;
@@ -142,7 +175,17 @@ void FixtureStateEditor::rebuild()
                                 nameOptions.append(n);
                 }
 
-                auto *editor = makeChannelEditor(cap, i, channels[i], nameOptions);
+                auto *node = m_node;
+                auto *editor = makeChannelEditor(cap, i, channels[i], nameOptions,
+                                                 [node](){ if(node) node->markStateEdited(); });
+                // Let the editor shrink freely so a narrow panel squeezes it
+                // rather than clipping the expose checkbox off the right edge.
+                editor->setMinimumWidth(0);
+                if(auto *combo = qobject_cast<QComboBox *>(editor))
+                {
+                    combo->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);
+                    combo->setMinimumContentsLength(3);
+                }
                 row->addWidget(editor, 1);
 
                 // Expose the channel as a graph input port; static editor is
@@ -161,13 +204,13 @@ void FixtureStateEditor::rebuild()
                 v->addLayout(row);
             }
 
-            m_layout->addWidget(frame);
+            m_listLayout->addWidget(frame);
         }
     }
 
-    auto *addButton = new QPushButton("Add Capability");
-    connect(addButton, &QPushButton::clicked, this, &FixtureStateEditor::openAddMenu);
-    m_layout->addWidget(addButton);
+    // Keep the frames packed at the top; the stretch absorbs any extra height
+    // so they stay at their natural size instead of spreading to fill.
+    m_listLayout->addStretch();
 }
 
 void FixtureStateEditor::openAddMenu()
@@ -184,9 +227,7 @@ void FixtureStateEditor::openAddMenu()
         {"Dimmer", Capability_Dimmer},
         {"Color",  Capability_Color},
         {"Pan",    Capability_Pan},
-        {"Tilt",   Capability_TiltAngleCentered},
-        {"Tilt (Percent)", Capability_Tilt},
-        {"Tilt Angle", Capability_TiltAngle},
+        {"Tilt",   Capability_Tilt},
         {"Strobe", Capability_Strobe},
         {"Focus",  Capability_Focus},
         {"Zoom",   Capability_Zoom},
@@ -204,6 +245,8 @@ void FixtureStateEditor::openAddMenu()
         const CapabilityType type = entry.type;
         menu.addAction(entry.name, this, [this, state, type](){
             state->addCapability(type);
+            if(m_node)
+                m_node->markStateEdited();
             rebuild();
         });
     }

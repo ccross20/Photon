@@ -14,43 +14,35 @@ PanState::PanState() : StateCapability(CapabilityType::Capability_Pan)
 
 void PanState::evaluate(const StateEvaluationContext &t_context) const
 {
-    auto tilts = getFixtureCapabilities(t_context);
-    double tiltPercent = getChannelFloat(t_context,0);
-    bool useAngles = getChannelBool(t_context,1);
-    bool useCentered = getChannelBool(t_context,2);
+    const auto pans = getFixtureCapabilities(t_context);
+    const double value = getChannelFloat(t_context, 0);
+    const bool useAngles = getChannelBool(t_context, 1);
+    const bool useCentered = getChannelBool(t_context, 2);
 
-    if(!useAngles)
+    for(auto *cap : pans)
     {
-        for(auto curTilt : tilts)
+        auto *pan = static_cast<AngleCapability*>(cap);
+
+        if(useAngles)
         {
-            auto pan = static_cast<AngleCapability*>(curTilt);
-            pan->setAnglePercent(tiltPercent,t_context.dmxMatrix, t_context.strength);
-            return;
-        }
-    }
-    else
-    {
-        if(useCentered)
-        {
-            for(auto curTilt : tilts)
-            {
-                auto pan = static_cast<AngleCapability*>(curTilt);
-                pan->setAngleDegreesCentered(tiltPercent,t_context.dmxMatrix, t_context.strength);
-                return;
-            }
+            // Input is degrees. Centered: 0 = straight ahead; otherwise absolute
+            // within the fixture's pan range.
+            if(useCentered)
+                pan->setAngleDegreesCentered(value, t_context.dmxMatrix, t_context.strength);
+            else
+                pan->setAngleDegrees(value, t_context.dmxMatrix, t_context.strength);
         }
         else
         {
-            for(auto curTilt : tilts)
-            {
-                auto pan = static_cast<AngleCapability*>(curTilt);
-                pan->setAngleDegrees(tiltPercent,t_context.dmxMatrix, t_context.strength);
-                return;
-            }
+            // Input is a fraction. Plain: 0..1 -> DMX 0..255. Centered: -1..1 ->
+            // DMX 0..255 with 0 landing at the middle.
+            if(useCentered)
+                pan->setAnglePercentCentered(value, t_context.dmxMatrix, t_context.strength);
+            else
+                pan->setAnglePercent(value, t_context.dmxMatrix, t_context.strength);
         }
-
+        return;
     }
-
 }
 
 } // namespace photon

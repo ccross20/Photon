@@ -91,6 +91,10 @@ public:
         double currentValue = valuePercent(t_channel);
         double newValue = blendDouble(currentValue, t_value, t_blend);
 
+        // Hard clamp: an over-range value (e.g. a dimmer set to 1.5) saturates
+        // at full rather than wrapping through floor()*255 -> uchar overflow.
+        if(newValue < 0.0) newValue = 0.0;
+        else if(newValue > 1.0) newValue = 1.0;
 
         uint universe = t_channel->universe() - 1;
         uint channel = t_channel->universalChannelNumber();
@@ -120,8 +124,9 @@ public:
         }
 
 
+        const double v = t_value < 0.0 ? 0.0 : (t_value > 1.0 ? 1.0 : t_value);
         if(t_universe < channels.size() && t_channel < 512)
-            blend(channels[t_universe][t_channel], floor(t_value * 255.0), t_blend);
+            blend(channels[t_universe][t_channel], floor(v * 255.0), t_blend);
     }
     void setValueIntFloor(uint t_universe, uint t_channel, int t_value, double t_blend = 1.0, DMXTimeMachine *t_machine = nullptr)
     {

@@ -32,8 +32,15 @@ set(SOURCES
     canvas/renderstroke.cpp
     color/colorfromhsv.h
     color/colorfromhsv.cpp
+    color/randomcolornode.h
+    color/randomcolornode.cpp
     fixture/lookattarget.h
     fixture/lookattarget.cpp
+    fixture/lookindirection.h
+    fixture/lookindirection.cpp
+    fixture/mirrorpantilt.h
+    fixture/mirrorpantilt.cpp
+    fixture/beamangles.h
     fixture/setfixturecolor.h
     fixture/setfixturecolor.cpp
     fixture/setfixturedimmer.h
@@ -70,7 +77,11 @@ add_library(plugin-nodes SHARED ${SOURCES}
     math/randomnumbernode.h math/randomnumbernode.cpp
     falloff/linearfalloffnode.h falloff/linearfalloffnode.cpp
     falloff/randomfalloffnode.h falloff/randomfalloffnode.cpp
+    falloff/spatialfalloffnode.h falloff/spatialfalloffnode.cpp
     animation/pulsenode.h animation/pulsenode.cpp
+    animation/oscillatornode.h animation/oscillatornode.cpp
+    animation/timenode.h animation/timenode.cpp
+    animation/beatreducernode.h animation/beatreducernode.cpp
     math/stopwatchnode.h math/stopwatchnode.cpp
     color-palette/fadecolorpalettenode.h color-palette/fadecolorpalettenode.cpp
     color-palette/colortheorypalettenode.h color-palette/colortheorypalettenode.cpp

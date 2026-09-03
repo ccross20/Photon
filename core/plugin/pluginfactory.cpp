@@ -48,6 +48,17 @@
 #include "graph/node/fixture/fixturegroupnode.h"
 #include "graph/node/scene/sceneobjectinfonode.h"
 #include "graph/node/scene/matrixdecomposenode.h"
+#include "graph/node/math/pointcomposenode.h"
+#include "graph/node/math/pointdecomposenode.h"
+#include "graph/node/math/roundnode.h"
+#include "graph/node/math/mathconstantnode.h"
+#include "graph/node/math/absolutenode.h"
+#include "graph/node/math/squarerootnode.h"
+#include "graph/node/math/mathfunctionnode.h"
+#include "graph/node/math/clampnode.h"
+#include "graph/node/math/powernode.h"
+#include "graph/node/math/minmaxnode.h"
+#include "graph/node/math/logarithmnode.h"
 #include "graph/node/pixel/pixelgraph.h"
 #include "graph/node/canvas/canvassubgraphnode.h"
 #include "graph/node/canvas/canvasoutputnode.h"
@@ -228,6 +239,17 @@ void PluginFactory::init()
     registerNode(FixtureInfoNode::info());
     registerNode(SceneObjectInfoNode::info());
     registerNode(MatrixDecomposeNode::info());
+    registerNode(PointComposeNode::info());
+    registerNode(PointDecomposeNode::info());
+    registerNode(RoundNode::info());
+    registerNode(MathConstantNode::info());
+    registerNode(AbsoluteNode::info());
+    registerNode(SquareRootNode::info());
+    registerNode(MathFunctionNode::info());
+    registerNode(ClampNode::info());
+    registerNode(PowerNode::info());
+    registerNode(MinMaxNode::info());
+    registerNode(LogarithmNode::info());
     registerNode(CanvasWriterNode::info());
     registerNode(CreateTextureNode::info());
     registerNode(WriteDMXChannelNode::info());

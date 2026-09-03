@@ -11,6 +11,7 @@
 #include "scene/sceneboundaryrectangle.h"
 #include "scene/sceneboundaryoval.h"
 #include "scene/scenepointmarker.h"
+#include "scene/scenelinearfalloff.h"
 
 namespace photon {
 
@@ -46,6 +47,8 @@ SceneObject *SceneFactory::createObject(const QByteArray &id)
         return new SceneBoundaryOval();
     if(id == "pointmarker")
         return new ScenePointMarker();
+    if(id == "linearfalloff")
+        return new SceneLinearFalloff();
 
     return nullptr;
 }

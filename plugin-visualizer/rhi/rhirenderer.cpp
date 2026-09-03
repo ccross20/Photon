@@ -22,6 +22,7 @@
 #include "scene/sceneboundaryrectangle.h"
 #include "scene/sceneboundaryoval.h"
 #include "scene/scenepointmarker.h"
+#include "scene/scenelinearfalloff.h"
 #include "fixture/fixture.h"
 #include "fixture/capability/colorcapability.h"
 #include "fixture/capability/dimmercapability.h"
@@ -81,6 +82,22 @@ void appendArrowLines(const QMatrix4x4 &m, float len, const QColor &c, QByteArra
         appendLineVert(out, m.map(tip), c);
         appendLineVert(out, m.map(headBase + side), c);
     }
+}
+
+// An arrow along local +Y (origin to (0,len,0)) with a perpendicular cross-bar
+// at each end - the glyph a SceneLinearFalloff is drawn as. The start bar marks
+// "full", the tip (arrowhead) marks "zero".
+void appendLinearFalloffLines(const QMatrix4x4 &m, float len, const QColor &c, QByteArray &out)
+{
+    appendArrowLines(m, len, c, out);
+
+    // Bars run along local X, a little wider than the arrowhead so the end cap
+    // stays legible against it.
+    const float barHalf = len * 0.18f;
+    appendLineVert(out, m.map(QVector3D(-barHalf, 0, 0)), c);
+    appendLineVert(out, m.map(QVector3D( barHalf, 0, 0)), c);
+    appendLineVert(out, m.map(QVector3D(-barHalf, len, 0)), c);
+    appendLineVert(out, m.map(QVector3D( barHalf, len, 0)), c);
 }
 
 // 4-segment rectangle outline in the local XY plane, centered at the origin.
@@ -844,7 +861,8 @@ void RhiRenderer::collectDrawables(SceneObject *obj, QVector<Drawable> &out,
             seenTrusses.insert(child);
             out.append({ trussMeshFor(child), child->globalMatrix(), sel ? highlight : QColor(150, 150, 155) });
         } else if (type == "zone" || type == "arrow" || type == "direction" || type == "axis"
-                   || type == "boundaryrectangle" || type == "boundaryoval" || type == "pointmarker") {
+                   || type == "boundaryrectangle" || type == "boundaryoval" || type == "pointmarker"
+                   || type == "linearfalloff") {
             // Helper/annotation objects draw as wireframe overlays in the gizmo
             // line pass (see appendZoneWireframes / appendHelperWireframes),
             // not solid geometry.
@@ -1056,10 +1074,12 @@ float RhiRenderer::beamHalfAngleFor(Fixture *fixture) const
     if (!zoom)
         return kBeamHalfAngle;
 
-    // Zoom percent maps across the fixture's physical lens range to a full beam angle.
+    // Zoom maps across the fixture's physical lens range to a full beam angle.
+    // directedPercent() honors the fixture's declared zoom direction, so a
+    // reversed fixture (DMX 0 = wide, e.g. Betopper Bee Eye) renders correctly.
     const Fixture::Physical phys = fixture->physical();
-    const double pct = zoom->getAnglePercent(m_dmx);
-    const double fullAngle = pct * (phys.lensMaximum - phys.lensMinimum) + phys.lensMinimum;
+    const double openFrac = zoom->directedPercent(m_dmx);
+    const double fullAngle = openFrac * (phys.lensMaximum - phys.lensMinimum) + phys.lensMinimum;
     return qBound(1.0f, float(fullAngle) * 0.5f, 80.0f);
 }
 
@@ -1748,7 +1768,8 @@ void RhiRenderer::appendHelperWireframes(SceneObject *obj, QByteArray &out) cons
             continue;
         const QByteArray type = child->typeId();
         if (type == "arrow" || type == "direction" || type == "axis"
-            || type == "boundaryrectangle" || type == "boundaryoval" || type == "pointmarker") {
+            || type == "boundaryrectangle" || type == "boundaryoval" || type == "pointmarker"
+            || type == "linearfalloff") {
             auto *helper = static_cast<SceneHelperObject *>(child);
             const bool sel = isSelected(child);
             if (helper->visibilityMode() != SceneHelperObject::SelectedOnly || sel) {
@@ -1778,6 +1799,8 @@ void RhiRenderer::appendHelperWireframes(SceneObject *obj, QByteArray &out) cons
                 } else if (type == "pointmarker") {
                     auto *marker = static_cast<ScenePointMarker *>(child);
                     appendPointMarkerLines(m, marker->shape(), marker->size(), c, out);
+                } else if (type == "linearfalloff") {
+                    appendLinearFalloffLines(m, static_cast<SceneLinearFalloff *>(child)->length(), c, out);
                 }
             }
         }
@@ -1871,6 +1894,12 @@ bool RhiRenderer::localBounds(SceneObject *obj, QVector3D &outMin, QVector3D &ou
                                              : static_cast<SceneDirection *>(obj)->size();
         outMin = QVector3D(-len * 0.15f, 0.0f, -len * 0.15f);
         outMax = QVector3D( len * 0.15f, len,   len * 0.15f);
+        return true;
+    }
+    if (type == "linearfalloff") {
+        const float len = static_cast<SceneLinearFalloff *>(obj)->length();
+        outMin = QVector3D(-len * 0.18f, 0.0f, -len * 0.15f);
+        outMax = QVector3D( len * 0.18f, len,   len * 0.15f);
         return true;
     }
     if (type == "axis") {

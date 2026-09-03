@@ -143,6 +143,28 @@ set(PROJECT_SOURCES
         graph/node/math/delaynode.cpp
         graph/node/math/trigonometrynode.h
         graph/node/math/trigonometrynode.cpp
+        graph/node/math/pointcomposenode.h
+        graph/node/math/pointcomposenode.cpp
+        graph/node/math/pointdecomposenode.h
+        graph/node/math/pointdecomposenode.cpp
+        graph/node/math/roundnode.h
+        graph/node/math/roundnode.cpp
+        graph/node/math/mathconstantnode.h
+        graph/node/math/mathconstantnode.cpp
+        graph/node/math/absolutenode.h
+        graph/node/math/absolutenode.cpp
+        graph/node/math/squarerootnode.h
+        graph/node/math/squarerootnode.cpp
+        graph/node/math/mathfunctionnode.h
+        graph/node/math/mathfunctionnode.cpp
+        graph/node/math/clampnode.h
+        graph/node/math/clampnode.cpp
+        graph/node/math/powernode.h
+        graph/node/math/powernode.cpp
+        graph/node/math/minmaxnode.h
+        graph/node/math/minmaxnode.cpp
+        graph/node/math/logarithmnode.h
+        graph/node/math/logarithmnode.cpp
         graph/parameter/canvasparameter.h
         graph/parameter/canvasparameter.cpp
         graph/parameter/colorparameter.h
@@ -412,10 +434,6 @@ set(PROJECT_SOURCES
         state/state.cpp
         state/statecapability.h
         state/statecapability.cpp
-        state/tiltanglestate.h
-        state/tiltanglestate.cpp
-        state/tiltanglecenteredstate.h
-        state/tiltanglecenteredstate.cpp
         state/tiltstate.h
         state/tiltstate.cpp
         state/zoomstate.h
@@ -476,6 +494,7 @@ add_library(photon-core SHARED ${PROJECT_SOURCES}
     scene/sceneboundaryrectangle.h scene/sceneboundaryrectangle.cpp
     scene/sceneboundaryoval.h scene/sceneboundaryoval.cpp
     scene/scenepointmarker.h scene/scenepointmarker.cpp
+    scene/scenelinearfalloff.h scene/scenelinearfalloff.cpp
     state/gobostate.h state/gobostate.cpp
     fixture/capability/wheelshakecapability.h fixture/capability/wheelshakecapability.cpp
     fixture/capability/wheelrotationcapability.h fixture/capability/wheelrotationcapability.cpp

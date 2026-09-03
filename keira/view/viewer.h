@@ -17,6 +17,10 @@ public:
     void zoom(double value);
     void zoom(double value, QPointF pt);
 
+    // Takes over scene wiring so each graph's scroll/zoom is remembered and
+    // restored as the user dives into and back out of subgraphs.
+    void setScene(QGraphicsScene *scene);
+
     void deleteSelected();
 
 signals:
@@ -36,7 +40,16 @@ protected:
     void wheelEvent(QWheelEvent *event) override;
 
 
+private slots:
+    void graphAboutToChange(Graph *oldGraph);
+    void graphChanged(Graph *newGraph);
+
 private:
+    // Stash the current viewport centre (in scene coords) and zoom for t_graph.
+    void saveViewState(Graph *t_graph);
+    // Re-apply a previously stashed view state for t_graph, if there is one.
+    void restoreViewState(Graph *t_graph);
+
     // Duplicates a node into this graph and takes over the drag with the copy,
     // so a Ctrl+drag leaves the original (and its wiring) untouched and moves
     // the new one. Returns the copy's item, or null if it couldn't be made.

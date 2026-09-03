@@ -2,8 +2,6 @@
 #include "statecapability.h"
 #include "shutterstate.h"
 #include "tiltstate.h"
-#include "tiltanglestate.h"
-#include "tiltanglecenteredstate.h"
 #include "dimmerstate.h"
 #include "zoomstate.h"
 #include "focusstate.h"
@@ -38,12 +36,6 @@ StateCapability *State::Impl::addCapability(CapabilityType t_type)
             break;
         case Capability_Tilt:
             toAdd = new TiltState;
-            break;
-        case Capability_TiltAngle:
-            toAdd = new TiltAngleState;
-            break;
-        case Capability_TiltAngleCentered:
-            toAdd = new TiltAngleCenteredState;
             break;
         case Capability_Dimmer:
             toAdd = new DimmerState;
@@ -121,7 +113,7 @@ void State::addDefaultCapabilities()
 
     addCapability(Capability_Strobe)->setChannelValue(1,ShutterStrobeCapability::Shutter_Open);
     addCapability(Capability_Dimmer)->setChannelValue(0,0);
-    addCapability(Capability_TiltAngleCentered)->setChannelValue(0,0);
+    addCapability(Capability_Tilt)->setChannelValue(0,0);
     addCapability(Capability_Pan)->setChannelValue(0,0);
     addCapability(Capability_Focus)->setChannelValue(0,0);
     addCapability(Capability_Zoom)->setChannelValue(0,0);
@@ -183,7 +175,24 @@ void State::readFromJson(const QJsonObject &t_json, const LoadContext &t_context
 
             auto type = static_cast<CapabilityType>(capabilityObj.value("type").toInt());
 
+            // The separate Tilt Angle / Tilt Angle Centered states were folded
+            // into Tilt (mode selected by its Angles/Centered channels), the way
+            // Pan already worked. Migrate any saved as the old types.
+            if(type == Capability_TiltAngle || type == Capability_TiltAngleCentered)
+            {
+                QJsonArray values = capabilityObj.value("values").toArray();
+                while(values.size() < 3)
+                    values.append(false);
+                values[1] = true;                                       // Angles
+                values[2] = (type == Capability_TiltAngleCentered);     // Centered
+                capabilityObj["values"] = values;
+                capabilityObj["type"] = static_cast<int>(Capability_Tilt);
+                type = Capability_Tilt;
+            }
+
             auto addedCapability = m_impl->addCapability(type);
+            if(!addedCapability)
+                continue;
             addedCapability->readFromJson(capabilityObj, t_context);
         }
     }

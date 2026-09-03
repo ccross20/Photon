@@ -1,3 +1,4 @@
+#include <QtGlobal>
 #include "anglecapability.h"
 #include "data/dmxmatrix.h"
 #include "fixture/fixturechannel.h"
@@ -7,9 +8,13 @@ namespace photon {
 class AngleCapability::Impl
 {
 public:
-    double angle;
-    double startAngle;
-    double endAngle;
+    double angle = 0.0;
+    double startAngle = 0.0;
+    double endAngle = 0.0;
+    // Fractional beam openness at the ends of the DMX range (see
+    // directedPercent). Default 0 -> 1: low DMX = tight, high DMX = wide.
+    double startPercent = 0.0;
+    double endPercent = 1.0;
 };
 
 AngleCapability::AngleCapability(CapabilityType t_capability, DMXRange t_range) : FixtureCapability(t_range, t_capability),m_impl(new Impl)
@@ -50,6 +55,12 @@ void AngleCapability::setAnglePercentCentered(double value, DMXMatrix &t_matrix,
 double AngleCapability::getAnglePercent(const DMXMatrix &t_matrix) const
 {
     return t_matrix.valuePercent(channel());
+}
+
+double AngleCapability::directedPercent(const DMXMatrix &t_matrix) const
+{
+    const double raw = getAnglePercent(t_matrix);
+    return m_impl->startPercent + raw * (m_impl->endPercent - m_impl->startPercent);
 }
 
 double AngleCapability::angle() const
@@ -93,7 +104,7 @@ void AngleCapability::readFromOpenFixtureJson(const QJsonObject &t_json)
 
         if(unit == Unit_Percent)
         {
-
+            m_impl->startPercent = qBound(0.0, value, 1.0);
         }
         if(unit == Unit_Degrees)
         {
@@ -108,7 +119,7 @@ void AngleCapability::readFromOpenFixtureJson(const QJsonObject &t_json)
 
         if(unit == Unit_Percent)
         {
-
+            m_impl->endPercent = qBound(0.0, value, 1.0);
         }
         if(unit == Unit_Degrees)
         {
