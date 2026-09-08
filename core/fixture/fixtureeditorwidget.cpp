@@ -4,16 +4,33 @@
 #include <QComboBox>
 #include <QLabel>
 #include <QSpinBox>
+#include <QDoubleSpinBox>
+#include <QCheckBox>
 #include <QSignalBlocker>
 #include "fixtureeditorwidget.h"
 #include "fixture.h"
 #include "scene/sceneobject.h"
 #include "gui/vector3edit.h"
+#include "gui/propertycombobox.h"
 #include "gui/tag/tageditorwidget.h"
 #include "photoncore.h"
 #include "project/project.h"
 
 namespace photon {
+
+// A bold, slightly-inset label spanning both form columns, used to break the
+// property list into named groups (see styles.css for the look — this just
+// marks which QLabels are headers via object name). Forced to expand: a
+// QFormLayout spanning row otherwise sizes the widget to its text, which
+// left the underline in styles.css only running under the word itself
+// instead of the full row width.
+static QLabel *makeSectionHeader(const QString &text)
+{
+    QLabel *label = new QLabel(text.toUpper());
+    label->setObjectName("propertySectionHeader");
+    label->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    return label;
+}
 
 class FixtureEditorWidget::Impl
 {
@@ -29,16 +46,33 @@ public:
     QLabel *descriptionLabel;
     QSpinBox *universeSpin;
     QSpinBox *offsetSpin;
-    QComboBox *modeCombo;
+    PropertyComboBox *modeCombo;
     Vector3Edit *positionEdit;
     Vector3Edit *rotationEdit;
-    QComboBox *modelCombo;
-    QComboBox *beamCombo;
+    QDoubleSpinBox *panOffsetSpin;
+    QDoubleSpinBox *tiltOffsetSpin;
+    QCheckBox *panInvertCheck;
+    QCheckBox *tiltInvertCheck;
+    PropertyComboBox *modelCombo;
+    PropertyComboBox *beamCombo;
 };
 
 FixtureEditorWidget::Impl::Impl()
 {
     formLayout = new QFormLayout;
+    // Default QFormLayout spacing reads as cramped once rows are grouped
+    // under headers - give fields room to breathe and let the header rows
+    // (below) supply the separation between groups instead.
+    formLayout->setVerticalSpacing(8);
+    formLayout->setHorizontalSpacing(12);
+    formLayout->setLabelAlignment(Qt::AlignRight | Qt::AlignVCenter);
+    // Default policy (FieldsStayAtSizeHint) leaves every field its own
+    // natural width - a spin box row noticeably narrower than a combo box
+    // row, narrower still than a line edit. Growing them all to fill the
+    // column lines every field up to the same right edge.
+    formLayout->setFieldGrowthPolicy(QFormLayout::AllNonFixedFieldsGrow);
+
+    formLayout->addRow(makeSectionHeader("General"));
 
     nameEdit = new QLineEdit;
     formLayout->addRow("Name", nameEdit);
@@ -47,15 +81,19 @@ FixtureEditorWidget::Impl::Impl()
     formLayout->addRow("Identifier", identifierEdit);
 
     commentEdit = new QTextEdit;
-    commentEdit->setMaximumHeight(70);
+    commentEdit->setMaximumHeight(60);
     commentEdit->setAcceptRichText(false);
     formLayout->addRow("Comment", commentEdit);
 
     manufacturerLabel = new QLabel;
+    manufacturerLabel->setProperty("readOnlyField", true);
     formLayout->addRow("Manufacturer", manufacturerLabel);
 
     descriptionLabel = new QLabel;
+    descriptionLabel->setProperty("readOnlyField", true);
     formLayout->addRow("Description", descriptionLabel);
+
+    formLayout->addRow(makeSectionHeader("Patch"));
 
     universeSpin = new QSpinBox;
     universeSpin->setMinimum(1);
@@ -67,16 +105,18 @@ FixtureEditorWidget::Impl::Impl()
     offsetSpin->setMaximum(511);
     formLayout->addRow("Starting Channel", offsetSpin);
 
-    modeCombo = new QComboBox;
+    modeCombo = new PropertyComboBox;
     formLayout->addRow("DMX Mode", modeCombo);
 
-    modelCombo = new QComboBox;
+    formLayout->addRow(makeSectionHeader("Appearance"));
+
+    modelCombo = new PropertyComboBox;
     // Index 0 = Auto (empty override); the rest are visualiser model types.
     modelCombo->addItems(QStringList() << "Auto" << "mover" << "par" << "uplight"
                                        << "strobe" << "blinder" << "bar" << "wash" << "beeeye");
     formLayout->addRow("Model", modelCombo);
 
-    beamCombo = new QComboBox;
+    beamCombo = new PropertyComboBox;
     // Index 0 = Auto (follow the visualiser's global beam toggle); 1 = basic
     // cone, 2 = volumetric, 3 = no beam at all. Tokens stored on the fixture
     // are "", "cones", "volumetric", "none".
@@ -126,12 +166,48 @@ FixtureEditorWidget::Impl::Impl()
         [](){ return photonApp->project() ? photonApp->project()->allTags() : QStringList(); });
     formLayout->addRow("Tags", tagEditor);
 
+    formLayout->addRow(makeSectionHeader("Transform"));
+
     positionEdit = new Vector3Edit;
     formLayout->addRow("Position", positionEdit);
 
     rotationEdit = new Vector3Edit;
     formLayout->addRow("Rotation", rotationEdit);
 
+    panOffsetSpin = new QDoubleSpinBox;
+    panOffsetSpin->setRange(-180.0, 180.0);
+    panOffsetSpin->setDecimals(1);
+    panOffsetSpin->setSuffix(QStringLiteral("°"));
+    panOffsetSpin->setToolTip(
+        "Degrees added to the pan channel before it's written to DMX.\n"
+        "Lets a fixture mounted at an odd angle still be controlled as if it\n"
+        "were mounted normally: Pan centered (0%) points wherever it actually\n"
+        "needs to - shown live by the front-facing arrow drawn on the fixture\n"
+        "in the visualiser while it's selected.");
+    formLayout->addRow("Pan Offset", panOffsetSpin);
+
+    panInvertCheck = new QCheckBox;
+    panInvertCheck->setToolTip(
+        "Flips the visualiser's preview of the pan channel's direction of\n"
+        "travel, for eyeballing a fixture mounted flipped. Visualiser-only -\n"
+        "unlike Pan Offset, this does not change the real DMX value.");
+    formLayout->addRow("Pan Invert", panInvertCheck);
+
+    tiltOffsetSpin = new QDoubleSpinBox;
+    tiltOffsetSpin->setRange(-180.0, 180.0);
+    tiltOffsetSpin->setDecimals(1);
+    tiltOffsetSpin->setSuffix(QStringLiteral("°"));
+    tiltOffsetSpin->setToolTip(
+        "Degrees added to the tilt channel before it's written to DMX - the\n"
+        "same idea as Pan Offset, for a fixture hung or mounted at an odd\n"
+        "tilt angle.");
+    formLayout->addRow("Tilt Offset", tiltOffsetSpin);
+
+    tiltInvertCheck = new QCheckBox;
+    tiltInvertCheck->setToolTip(
+        "Same idea as Pan Invert, for the tilt channel - visualiser-only,\n"
+        "does not change the real DMX value.");
+    formLayout->addRow("Tilt Invert", tiltInvertCheck);
 }
 
 FixtureEditorWidget::FixtureEditorWidget(QWidget *parent)
@@ -151,6 +227,10 @@ FixtureEditorWidget::FixtureEditorWidget(QWidget *parent)
     connect(m_impl->beamCombo, &QComboBox::activated, this, &FixtureEditorWidget::setBeamStyle);
     connect(m_impl->positionEdit, &Vector3Edit::valueChanged, this, &FixtureEditorWidget::setPosition);
     connect(m_impl->rotationEdit, &Vector3Edit::valueChanged, this, &FixtureEditorWidget::setRotation);
+    connect(m_impl->panOffsetSpin, &QDoubleSpinBox::valueChanged, this, &FixtureEditorWidget::setPanOffset);
+    connect(m_impl->tiltOffsetSpin, &QDoubleSpinBox::valueChanged, this, &FixtureEditorWidget::setTiltOffset);
+    connect(m_impl->panInvertCheck, &QCheckBox::toggled, this, &FixtureEditorWidget::setPanInvert);
+    connect(m_impl->tiltInvertCheck, &QCheckBox::toggled, this, &FixtureEditorWidget::setTiltInvert);
 }
 
 FixtureEditorWidget::~FixtureEditorWidget()
@@ -194,6 +274,14 @@ void FixtureEditorWidget::setFixtures(QVector<Fixture*> t_fixtures)
         m_impl->beamCombo->setEnabled(false);
         m_impl->positionEdit->setEnabled(false);
         m_impl->rotationEdit->setEnabled(false);
+        m_impl->panOffsetSpin->setValue(0.0);
+        m_impl->panOffsetSpin->setEnabled(false);
+        m_impl->tiltOffsetSpin->setValue(0.0);
+        m_impl->tiltOffsetSpin->setEnabled(false);
+        m_impl->panInvertCheck->setChecked(false);
+        m_impl->panInvertCheck->setEnabled(false);
+        m_impl->tiltInvertCheck->setChecked(false);
+        m_impl->tiltInvertCheck->setEnabled(false);
         m_impl->tagEditor->setEnabled(false);
         m_impl->tagEditor->refresh();
         return;
@@ -210,6 +298,10 @@ void FixtureEditorWidget::setFixtures(QVector<Fixture*> t_fixtures)
     m_impl->beamCombo->setEnabled(true);
     m_impl->positionEdit->setEnabled(true);
     m_impl->rotationEdit->setEnabled(true);
+    m_impl->panOffsetSpin->setEnabled(true);
+    m_impl->tiltOffsetSpin->setEnabled(true);
+    m_impl->panInvertCheck->setEnabled(true);
+    m_impl->tiltInvertCheck->setEnabled(true);
     m_impl->tagEditor->setEnabled(true);
 
     auto it = m_impl->fixtures.cbegin();
@@ -245,6 +337,18 @@ void FixtureEditorWidget::setFixtures(QVector<Fixture*> t_fixtures)
 
     QVector3D rotation = firstFixture->rotation();
     bool multiRotation = false;
+
+    float panOffset = firstFixture->panOffset();
+    bool multiPanOffset = false;
+
+    float tiltOffset = firstFixture->tiltOffset();
+    bool multiTiltOffset = false;
+
+    bool panInvert = firstFixture->panInvert();
+    bool multiPanInvert = false;
+
+    bool tiltInvert = firstFixture->tiltInvert();
+    bool multiTiltInvert = false;
 
     if(m_impl->fixtures.length() > 1)
     {
@@ -311,6 +415,30 @@ void FixtureEditorWidget::setFixtures(QVector<Fixture*> t_fixtures)
                 rotation = QVector3D();
                 multiRotation = true;
             }
+
+            if(!multiPanOffset && !qFuzzyCompare(currentFixture->panOffset() + 1.0f, panOffset + 1.0f))
+            {
+                panOffset = 0.0f;
+                multiPanOffset = true;
+            }
+
+            if(!multiTiltOffset && !qFuzzyCompare(currentFixture->tiltOffset() + 1.0f, tiltOffset + 1.0f))
+            {
+                tiltOffset = 0.0f;
+                multiTiltOffset = true;
+            }
+
+            if(!multiPanInvert && currentFixture->panInvert() != panInvert)
+            {
+                panInvert = false;
+                multiPanInvert = true;
+            }
+
+            if(!multiTiltInvert && currentFixture->tiltInvert() != tiltInvert)
+            {
+                tiltInvert = false;
+                multiTiltInvert = true;
+            }
         }
     }
 
@@ -323,6 +451,10 @@ void FixtureEditorWidget::setFixtures(QVector<Fixture*> t_fixtures)
     m_impl->offsetSpin->setValue(offset);
     m_impl->positionEdit->setValue(position);
     m_impl->rotationEdit->setValue(rotation);
+    m_impl->panOffsetSpin->setValue(double(panOffset));
+    m_impl->tiltOffsetSpin->setValue(double(tiltOffset));
+    m_impl->panInvertCheck->setChecked(panInvert);
+    m_impl->tiltInvertCheck->setChecked(tiltInvert);
     m_impl->tagEditor->refresh();
 
     for(const auto &mode : modes)
@@ -444,6 +576,38 @@ void FixtureEditorWidget::setRotation(const QVector3D &t_rotation)
     for(auto fixture : m_impl->fixtures)
     {
         fixture->setRotation(t_rotation);
+    }
+}
+
+void FixtureEditorWidget::setPanOffset(double t_offset)
+{
+    for(auto fixture : m_impl->fixtures)
+    {
+        fixture->setPanOffset(float(t_offset));
+    }
+}
+
+void FixtureEditorWidget::setTiltOffset(double t_offset)
+{
+    for(auto fixture : m_impl->fixtures)
+    {
+        fixture->setTiltOffset(float(t_offset));
+    }
+}
+
+void FixtureEditorWidget::setPanInvert(bool t_invert)
+{
+    for(auto fixture : m_impl->fixtures)
+    {
+        fixture->setPanInvert(t_invert);
+    }
+}
+
+void FixtureEditorWidget::setTiltInvert(bool t_invert)
+{
+    for(auto fixture : m_impl->fixtures)
+    {
+        fixture->setTiltInvert(t_invert);
     }
 }
 

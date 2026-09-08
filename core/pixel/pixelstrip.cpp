@@ -5,6 +5,7 @@
 #include <QLabel>
 #include <QSpinBox>
 #include <QDoubleSpinBox>
+#include <QSignalBlocker>
 #include "pixelstrip.h"
 #include "gui/vector3edit.h"
 #include "gui/tag/tageditorwidget.h"
@@ -120,6 +121,9 @@ PixelStripEditorWidget::PixelStripEditorWidget(PixelStrip *t_strip, QWidget *par
     m_impl->offsetSpin->setValue(t_strip->dmxOffset());
     m_impl->lengthSpin->setValue(t_strip->length());
     m_impl->rotationSpin->setValue(t_strip->angle());
+    connect(t_strip, &SceneObject::positionChanged, this, &PixelStripEditorWidget::refreshTransform);
+    connect(t_strip, &SceneObject::rotationChanged, this, &PixelStripEditorWidget::refreshTransform);
+
     m_impl->positionEdit->setValue(t_strip->position());
     m_impl->rotationEdit->setValue(t_strip->rotation());
 }
@@ -177,6 +181,14 @@ void PixelStripEditorWidget::setPosition(const QVector3D &t_value)
 void PixelStripEditorWidget::setRotation(const QVector3D &t_value)
 {
     m_impl->pixelStrip->setRotation(t_value);
+}
+
+void PixelStripEditorWidget::refreshTransform()
+{
+    QSignalBlocker pb(m_impl->positionEdit);
+    QSignalBlocker rb(m_impl->rotationEdit);
+    m_impl->positionEdit->setValue(m_impl->pixelStrip->position());
+    m_impl->rotationEdit->setValue(m_impl->pixelStrip->rotation());
 }
 
 

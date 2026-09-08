@@ -1,6 +1,7 @@
 #include <QFormLayout>
 #include <QLineEdit>
 #include <QDoubleSpinBox>
+#include <QSignalBlocker>
 #include "scenelinearfalloff.h"
 #include "gui/vector3edit.h"
 #include "gui/tag/tageditorwidget.h"
@@ -67,6 +68,8 @@ SceneLinearFalloffEditorWidget::SceneLinearFalloffEditorWidget(SceneLinearFallof
 
     connect(m_impl->positionEdit, &Vector3Edit::valueChanged, this, &SceneLinearFalloffEditorWidget::setPosition);
     connect(m_impl->rotationEdit, &Vector3Edit::valueChanged, this, &SceneLinearFalloffEditorWidget::setRotation);
+    connect(t_falloff, &SceneObject::positionChanged, this, &SceneLinearFalloffEditorWidget::refreshTransform);
+    connect(t_falloff, &SceneObject::rotationChanged, this, &SceneLinearFalloffEditorWidget::refreshTransform);
 
     m_impl->positionEdit->setValue(t_falloff->position());
     m_impl->rotationEdit->setValue(t_falloff->rotation());
@@ -95,6 +98,14 @@ void SceneLinearFalloffEditorWidget::setPosition(const QVector3D &t_value)
 void SceneLinearFalloffEditorWidget::setRotation(const QVector3D &t_value)
 {
     m_impl->falloff->setRotation(t_value);
+}
+
+void SceneLinearFalloffEditorWidget::refreshTransform()
+{
+    QSignalBlocker pb(m_impl->positionEdit);
+    QSignalBlocker rb(m_impl->rotationEdit);
+    m_impl->positionEdit->setValue(m_impl->falloff->position());
+    m_impl->rotationEdit->setValue(m_impl->falloff->rotation());
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

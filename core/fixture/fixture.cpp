@@ -31,6 +31,10 @@ public:
     QStringList categories;   // from the OpenFixture definition
     QString modelType;        // per-fixture model override ("" = auto from category)
     QString beamStyle;        // per-fixture beam style override ("" = follow global toggle)
+    float panOffset = 0.0f;   // degrees added to the pan channel before aiming (mounting calibration)
+    float tiltOffset = 0.0f;  // same, for tilt
+    bool panInvert = false;   // reverses the pan channel's direction of travel
+    bool tiltInvert = false;  // same, for tilt
     int dmxOffset = 0;
     int dmxSize = 0;
     int universe = 1;
@@ -296,6 +300,60 @@ void Fixture::setBeamStyle(const QString &t_value)
     if(m_impl->beamStyle == t_value)
         return;
     m_impl->beamStyle = t_value;
+    emit metadataChanged(this);
+}
+
+float Fixture::panOffset() const
+{
+    return m_impl->panOffset;
+}
+
+void Fixture::setPanOffset(float t_value)
+{
+    // qFuzzyCompare is unreliable near zero (its tolerance scales with the
+    // values being compared), and 0 is this property's common/default value.
+    if(qAbs(m_impl->panOffset - t_value) < 0.0001f)
+        return;
+    m_impl->panOffset = t_value;
+    emit metadataChanged(this);
+}
+
+float Fixture::tiltOffset() const
+{
+    return m_impl->tiltOffset;
+}
+
+void Fixture::setTiltOffset(float t_value)
+{
+    if(qAbs(m_impl->tiltOffset - t_value) < 0.0001f)
+        return;
+    m_impl->tiltOffset = t_value;
+    emit metadataChanged(this);
+}
+
+bool Fixture::panInvert() const
+{
+    return m_impl->panInvert;
+}
+
+void Fixture::setPanInvert(bool t_value)
+{
+    if(m_impl->panInvert == t_value)
+        return;
+    m_impl->panInvert = t_value;
+    emit metadataChanged(this);
+}
+
+bool Fixture::tiltInvert() const
+{
+    return m_impl->tiltInvert;
+}
+
+void Fixture::setTiltInvert(bool t_value)
+{
+    if(m_impl->tiltInvert == t_value)
+        return;
+    m_impl->tiltInvert = t_value;
     emit metadataChanged(this);
 }
 
@@ -761,6 +819,10 @@ void Fixture::readFromJson(const QJsonObject &json, const LoadContext &t_context
     m_impl->comments = json.value("comments").toString();
     m_impl->modelType = json.value("modelType").toString();
     m_impl->beamStyle = json.value("beamStyle").toString();
+    m_impl->panOffset = float(json.value("panOffset").toDouble(0.0));
+    m_impl->tiltOffset = float(json.value("tiltOffset").toDouble(0.0));
+    m_impl->panInvert = json.value("panInvert").toBool(false);
+    m_impl->tiltInvert = json.value("tiltInvert").toBool(false);
     m_impl->identifier = json.value("identifier").toString();
     m_impl->definitionPath = json.value("definitionPath").toString();
     m_impl->uniqueIndex = json.value("uniqueIndex").toInt(0);
@@ -780,6 +842,10 @@ void Fixture::writeToJson(QJsonObject &json) const
     json.insert("comments", m_impl->comments);
     json.insert("modelType", m_impl->modelType);
     json.insert("beamStyle", m_impl->beamStyle);
+    json.insert("panOffset", double(m_impl->panOffset));
+    json.insert("tiltOffset", double(m_impl->tiltOffset));
+    json.insert("panInvert", m_impl->panInvert);
+    json.insert("tiltInvert", m_impl->tiltInvert);
     json.insert("identifier", m_impl->identifier);
     json.insert("selectedMode", m_impl->selectedMode);
     json.insert("definitionPath", m_impl->definitionPath);

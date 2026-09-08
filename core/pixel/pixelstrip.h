@@ -30,6 +30,7 @@ private slots:
     void setBend(float);
     void setPosition(const QVector3D &);
     void setRotation(const QVector3D &);
+    void refreshTransform();
 
 
 private:

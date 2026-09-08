@@ -22,6 +22,7 @@ private slots:
     void setHeight(double);
     void setPosition(const QVector3D &);
     void setRotation(const QVector3D &);
+    void refreshTransform();
 
 private:
     class Impl;

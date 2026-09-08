@@ -24,6 +24,8 @@ set(PROJECT_SOURCES
     fixture/fixturecollectiontest.cpp
     sequence/sequencetest.h
     sequence/sequencetest.cpp
+    scene/sceneobjecttest.h
+    scene/sceneobjecttest.cpp
     project/surfaceownershiptest.h
     project/surfaceownershiptest.cpp
     project/projectresourcetest.h

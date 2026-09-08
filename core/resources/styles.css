@@ -2,3 +2,152 @@ QSplitter::handle:vertical {
     width: 2px;
     background: red;
 }
+
+/* ---------------------------------------------------------------------- */
+/* Properties panel                                                        */
+/*                                                                          */
+/* Every resource/scene-object editor is hosted inside the single Panel    */
+/* object named "propertiesPanel" (see PropertiesPanel::PropertiesPanel()  */
+/* and ::propertiesWidgetChanged()), so scoping rules to that object name  */
+/* reaches all of them - Fixture, Group, scene helper objects, resources,  */
+/* node property editors that get embedded there, etc. - without every     */
+/* editor widget needing its own stylesheet.                               */
+/* ---------------------------------------------------------------------- */
+
+/* Editable fields get a visibly-inset "well" so it's obvious at a glance
+   which rows are editable, instead of blending into the panel background. */
+QWidget#propertiesPanel QLineEdit,
+QWidget#propertiesPanel QTextEdit,
+QWidget#propertiesPanel QPlainTextEdit,
+QWidget#propertiesPanel QAbstractSpinBox,
+QWidget#propertiesPanel QComboBox {
+    background: #262626;
+    border: 1px solid #1a1a1a;
+    border-radius: 4px;
+    padding: 3px 6px;
+    selection-background-color: #3fa66c;
+    selection-color: #ffffff;
+}
+
+/* The popup's height sizing is left to Qt's own defaults - every attempt at
+   overriding it (forcing the classic popup mode, custom row/padding
+   geometry, resizing the frame after the fact, pre-sizing the view before
+   it) made the clipping/oversizing worse or just moved it around rather
+   than fixing it. Color only, nothing that touches row geometry, so Qt's
+   own (correct) size calculation is left alone. */
+QWidget#propertiesPanel QComboBox QAbstractItemView {
+    background: #262626;
+    selection-background-color: #3fa66c;
+    selection-color: #ffffff;
+}
+
+QWidget#propertiesPanel QLineEdit:focus,
+QWidget#propertiesPanel QTextEdit:focus,
+QWidget#propertiesPanel QPlainTextEdit:focus,
+QWidget#propertiesPanel QAbstractSpinBox:focus,
+QWidget#propertiesPanel QComboBox:focus {
+    border: 1px solid #3fa66c;
+}
+
+QWidget#propertiesPanel QLineEdit:disabled,
+QWidget#propertiesPanel QTextEdit:disabled,
+QWidget#propertiesPanel QPlainTextEdit:disabled,
+QWidget#propertiesPanel QAbstractSpinBox:disabled,
+QWidget#propertiesPanel QComboBox:disabled {
+    color: #6f6f6f;
+    background: #2c2c2c;
+    border-color: #232323;
+}
+
+/* Gives combo boxes a visible drop-down button so they read as "pick one of
+   several" rather than looking like a plain text field. Qt stops drawing the
+   native arrow entirely once QComboBox is otherwise styled, so it's redrawn
+   here from a border-only triangle (no image asset needed). */
+QWidget#propertiesPanel QComboBox::drop-down {
+    subcontrol-origin: padding;
+    subcontrol-position: top right;
+    width: 20px;
+    border-left: 1px solid #1a1a1a;
+}
+
+QWidget#propertiesPanel QComboBox::down-arrow {
+    width: 0px;
+    height: 0px;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 5px solid #c8c8c8;
+    margin-right: 7px;
+}
+
+QWidget#propertiesPanel QComboBox::down-arrow:on {
+    border-top: 5px solid #3fa66c;
+}
+
+QWidget#propertiesPanel QAbstractSpinBox::up-button,
+QWidget#propertiesPanel QAbstractSpinBox::down-button {
+    width: 14px;
+    border: none;
+}
+
+/* Tag editor: give the whole row the same well as every other field, sized
+   to the full column width by AllNonFixedFieldsGrow - not just the small
+   trailing "+ tag" input, which otherwise is the only thing with a visible
+   box and reads as short/indented against the rest of the form. */
+QWidget#propertiesPanel QWidget#tagEditor {
+    background: #262626;
+    border: 1px solid #1a1a1a;
+    border-radius: 4px;
+    padding: 2px;
+}
+
+/* The add-field sits inside that well now, so it shouldn't draw its own
+   nested box on top of it - just blend in and pick up the container's. */
+QWidget#propertiesPanel QWidget#tagEditor QLineEdit {
+    background: transparent;
+    border: none;
+    padding: 2px 4px;
+}
+
+/* Read-only value fields (Manufacturer, Description, ...) are plain QLabels
+   with no visual presence of their own - flagged with the readOnlyField
+   property so they read as a value slot even when empty, instead of a gap
+   in the layout that looks broken. */
+QWidget#propertiesPanel QLabel[readOnlyField="true"] {
+    background: #232323;
+    border: 1px solid #1a1a1a;
+    border-radius: 4px;
+    padding: 3px 6px;
+    color: #a0a0a0;
+}
+
+/* Section headers ("General", "Patch", "Transform", ...) that break a long
+   property list into named groups. Bumped up in size/color/weight (plus the
+   C++ side upper-cases the text) so they read as structure, not just another
+   row - and forced to Expanding size policy on the widget so this underline
+   runs the full row width instead of just under the word. */
+QWidget#propertiesPanel QLabel#propertySectionHeader {
+    color: #6fd398;
+    font-weight: bold;
+    font-size: 11px;
+    padding-top: 10px;
+    padding-bottom: 4px;
+    margin-bottom: 4px;
+    border-bottom: 1px solid #3fa66c;
+}
+
+/* Buttons inside the panel (checkable boolean toggles style themselves via
+   their own widget-level stylesheet, which takes precedence over this). */
+QWidget#propertiesPanel QPushButton {
+    background: #4a4a4a;
+    border: 1px solid #2b2b2b;
+    border-radius: 4px;
+    padding: 4px 10px;
+}
+
+QWidget#propertiesPanel QPushButton:hover {
+    border: 1px solid #6a6a6a;
+}
+
+QWidget#propertiesPanel QPushButton:pressed {
+    background: #3a3a3a;
+}

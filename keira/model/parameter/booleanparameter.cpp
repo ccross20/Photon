@@ -81,10 +81,26 @@ QWidget *BooleanParameter::createWidget(NodeEditor *item) const
 
     button->setSizePolicy(QSizePolicy(QSizePolicy::Maximum, QSizePolicy::Minimum));
 
+    // The default checkable QPushButton relies on the platform style to show
+    // checked vs. unchecked, which on macOS is just a subtle shade-of-gray
+    // difference that's easy to miss at a glance. Give the two states
+    // distinct colors (and a text label) instead of leaning on style alone.
+    button->setStyleSheet(
+        "QPushButton { background-color: #4a4a4a; border: 1px solid #2b2b2b; border-radius: 3px; color: #cfcfcf; }"
+        "QPushButton:hover { border: 1px solid #777777; }"
+        "QPushButton:checked { background-color: #3fa66c; border: 1px solid #2c7d4f; color: #ffffff; font-weight: bold; }"
+        "QPushButton:checked:hover { background-color: #48ba79; }"
+    );
+    updateButtonText(button);
 
     const BooleanParameter *param = this;
-    QPushButton::connect(button, &QPushButton::toggled, button,[item, button, param](bool value){item->widgetUpdated(button, param);});
+    QPushButton::connect(button, &QPushButton::toggled, button,[item, button, param](bool value){updateButtonText(button); item->widgetUpdated(button, param);});
     return button;
+}
+
+void BooleanParameter::updateButtonText(QPushButton *button)
+{
+    button->setText(button->isChecked() ? "On" : "Off");
 }
 
 void BooleanParameter::updateWidget(QWidget *t_widget) const
@@ -98,6 +114,7 @@ void BooleanParameter::updateWidget(QWidget *t_widget) const
     {
         QPushButton *spinBox = static_cast<QPushButton*>(t_widget);
         spinBox->setChecked(value().toBool());
+        updateButtonText(spinBox);
     }
 
 }

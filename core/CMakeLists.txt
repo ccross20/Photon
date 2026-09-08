@@ -256,6 +256,8 @@ set(PROJECT_SOURCES
         gui/xypad.cpp
         gui/vector3edit.h
         gui/vector3edit.cpp
+        gui/propertycombobox.h
+        gui/propertycombobox.cpp
         gui/waveformwidget.h
         gui/waveformwidget.cpp
         gui/window.h

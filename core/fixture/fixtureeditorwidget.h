@@ -29,6 +29,10 @@ private slots:
     void setBeamStyle(int index);
     void setPosition(const QVector3D &);
     void setRotation(const QVector3D &);
+    void setPanOffset(double);
+    void setTiltOffset(double);
+    void setPanInvert(bool);
+    void setTiltInvert(bool);
     void refreshTransform();
 
 

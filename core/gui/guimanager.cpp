@@ -649,6 +649,15 @@ bool GuiManager::restoreLayout(const QString &t_filename)
         if(m_impl->dockManager()->findDockWidget(QString::fromUtf8(id)))
             continue;
         createDockedPanel(id);
+
+        // Give the event loop a beat between panels. The DMX Viewer, Canvas
+        // Preview and Visualizer are all QOpenGLWidgets; recreating several of
+        // them back-to-back here (before the window is even shown) queues up
+        // multiple OpenGL contexts' first paint/flush in the same burst, which
+        // has been a source of a rare startup crash in macOS's OpenGL driver.
+        // Processing events after each one lets that settle before the next
+        // panel's context gets created.
+        QCoreApplication::processEvents();
     }
 
     //m_impl->window->restoreGeometry(Settings.value("mainWindow/Geometry").toByteArray());

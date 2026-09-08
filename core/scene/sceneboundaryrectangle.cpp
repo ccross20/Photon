@@ -1,6 +1,7 @@
 #include <QFormLayout>
 #include <QLineEdit>
 #include <QDoubleSpinBox>
+#include <QSignalBlocker>
 #include "sceneboundaryrectangle.h"
 #include "gui/vector3edit.h"
 #include "gui/tag/tageditorwidget.h"
@@ -75,6 +76,8 @@ SceneBoundaryRectangleEditorWidget::SceneBoundaryRectangleEditorWidget(SceneBoun
 
     connect(m_impl->positionEdit, &Vector3Edit::valueChanged, this, &SceneBoundaryRectangleEditorWidget::setPosition);
     connect(m_impl->rotationEdit, &Vector3Edit::valueChanged, this, &SceneBoundaryRectangleEditorWidget::setRotation);
+    connect(t_rect, &SceneObject::positionChanged, this, &SceneBoundaryRectangleEditorWidget::refreshTransform);
+    connect(t_rect, &SceneObject::rotationChanged, this, &SceneBoundaryRectangleEditorWidget::refreshTransform);
 
     m_impl->positionEdit->setValue(t_rect->position());
     m_impl->rotationEdit->setValue(t_rect->rotation());
@@ -108,6 +111,14 @@ void SceneBoundaryRectangleEditorWidget::setPosition(const QVector3D &t_value)
 void SceneBoundaryRectangleEditorWidget::setRotation(const QVector3D &t_value)
 {
     m_impl->rect->setRotation(t_value);
+}
+
+void SceneBoundaryRectangleEditorWidget::refreshTransform()
+{
+    QSignalBlocker pb(m_impl->positionEdit);
+    QSignalBlocker rb(m_impl->rotationEdit);
+    m_impl->positionEdit->setValue(m_impl->rect->position());
+    m_impl->rotationEdit->setValue(m_impl->rect->rotation());
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

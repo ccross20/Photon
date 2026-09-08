@@ -2,6 +2,8 @@
 #define BOOLEANPARAMETER_H
 #include "parameter.h"
 
+class QPushButton;
+
 namespace keira {
 
 class KEIRA_EXPORT BooleanParameter : public Parameter
@@ -26,6 +28,12 @@ public:
 
     void readFromJson(const QJsonObject &) override;
     void writeToJson(QJsonObject &) const override;
+
+private:
+    // Keeps the button's label in sync with its checked state ("On"/"Off"),
+    // since the label is the only cue besides color that survives at a
+    // glance / in a screenshot.
+    static void updateButtonText(QPushButton *button);
 };
 
 } // namespace keira

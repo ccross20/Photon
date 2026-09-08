@@ -97,6 +97,7 @@ void SceneObject::Impl::removeChild(SceneObject *object)
 
     disconnect(object, &SceneObject::descendantAdded, facade, &SceneObject::descendantAdded);
     disconnect(object, &SceneObject::descendantRemoved, facade, &SceneObject::descendantRemoved);
+    disconnect(object, &SceneObject::descendantModified, facade, &SceneObject::descendantModified);
     disconnect(object, &SceneObject::metadataChanged, facade, &SceneObject::descendantModified);
     emit facade->childWasRemoved(object);
     emit facade->descendantRemoved(object);

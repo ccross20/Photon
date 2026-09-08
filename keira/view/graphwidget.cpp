@@ -21,8 +21,16 @@ GraphWidget::GraphWidget(NodeLibrary *t_library, QWidget *parent)
     m_upButton = new QPushButton("Up");
     connect(m_upButton, &QPushButton::clicked,this, &GraphWidget::gotoParentGraph);
 
+    m_centerButton = new QPushButton("Center");
+    connect(m_centerButton, &QPushButton::clicked, m_viewer, &Viewer::centerOnAllNodes);
+
+    m_frameButton = new QPushButton("Frame");
+    connect(m_frameButton, &QPushButton::clicked, m_viewer, &Viewer::frameAllNodes);
+
     QHBoxLayout *navLayout = new QHBoxLayout;
     navLayout->addWidget(m_navigationLabel);
+    navLayout->addWidget(m_centerButton);
+    navLayout->addWidget(m_frameButton);
     navLayout->addWidget(m_upButton);
 
     vLayout->addLayout(navLayout);

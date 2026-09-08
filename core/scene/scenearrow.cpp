@@ -5,6 +5,7 @@
 #include <QLabel>
 #include <QSpinBox>
 #include <QDoubleSpinBox>
+#include <QSignalBlocker>
 #include "scenearrow.h"
 #include "gui/vector3edit.h"
 #include "gui/tag/tageditorwidget.h"
@@ -75,6 +76,8 @@ SceneArrowEditorWidget::SceneArrowEditorWidget(SceneArrow *t_arrow, QWidget *par
 
     connect(m_impl->positionEdit, &Vector3Edit::valueChanged, this, &SceneArrowEditorWidget::setPosition);
     connect(m_impl->rotationEdit, &Vector3Edit::valueChanged, this, &SceneArrowEditorWidget::setRotation);
+    connect(t_arrow, &SceneObject::positionChanged, this, &SceneArrowEditorWidget::refreshTransform);
+    connect(t_arrow, &SceneObject::rotationChanged, this, &SceneArrowEditorWidget::refreshTransform);
 
     m_impl->positionEdit->setValue(t_arrow->position());
     m_impl->rotationEdit->setValue(t_arrow->rotation());
@@ -103,6 +106,14 @@ void SceneArrowEditorWidget::setPosition(const QVector3D &t_value)
 void SceneArrowEditorWidget::setRotation(const QVector3D &t_value)
 {
     m_impl->arrow->setRotation(t_value);
+}
+
+void SceneArrowEditorWidget::refreshTransform()
+{
+    QSignalBlocker pb(m_impl->positionEdit);
+    QSignalBlocker rb(m_impl->rotationEdit);
+    m_impl->positionEdit->setValue(m_impl->arrow->position());
+    m_impl->rotationEdit->setValue(m_impl->arrow->rotation());
 }
 
 

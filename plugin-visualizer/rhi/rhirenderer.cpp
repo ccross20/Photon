@@ -8,8 +8,6 @@
 #include <cstring>
 #include <limits>
 #include <utility>
-#include <functional>
-#include <QHash>
 #include "rhirenderer.h"
 #include "rhimesh.h"
 #include "rhicamera.h"
@@ -83,6 +81,32 @@ void appendArrowLines(const QMatrix4x4 &m, float len, const QColor &c, QByteArra
     for (const QVector3D &side : sides) {
         appendLineVert(out, m.map(tip), c);
         appendLineVert(out, m.map(headBase + side), c);
+    }
+}
+
+// Same arrowhead shape as appendArrowLines, but from an explicit world-space
+// origin/direction rather than a transform's local +Y - used where the
+// direction is computed directly (e.g. a fixture's calibrated pan-zero
+// heading) rather than coming from a scene object's own orientation.
+void appendDirectedArrowLines(const QVector3D &origin, const QVector3D &dir, float len,
+                              const QColor &c, QByteArray &out)
+{
+    const QVector3D tip = origin + dir * len;
+    appendLineVert(out, origin, c);
+    appendLineVert(out, tip, c);
+
+    // Two arbitrary perpendiculars to `dir`, spanning the arrowhead cross.
+    const QVector3D up = qAbs(QVector3D::dotProduct(dir, QVector3D(0, 1, 0))) > 0.95f
+        ? QVector3D(1, 0, 0) : QVector3D(0, 1, 0);
+    const QVector3D side1 = QVector3D::crossProduct(dir, up).normalized();
+    const QVector3D side2 = QVector3D::crossProduct(dir, side1).normalized();
+
+    const float headLen = len * 0.25f, headW = len * 0.12f;
+    const QVector3D headBase = tip - dir * headLen;
+    const QVector3D sides[4] = { side1 * headW, -side1 * headW, side2 * headW, -side2 * headW };
+    for (const QVector3D &side : sides) {
+        appendLineVert(out, tip, c);
+        appendLineVert(out, headBase + side, c);
     }
 }
 
@@ -181,6 +205,14 @@ constexpr float kBeamGain      = 0.55f;   // overall additive strength
 constexpr float kBeamMinLevel  = 0.02f;   // skip beams dimmer than this
 constexpr float kBeamThrowMin  = 0.5f;    // throw scale clamp (wide washes)
 constexpr float kBeamThrowMax  = 2.0f;    // throw scale clamp (tight spots)
+
+// "Front" indicator: a horizontal arrow drawn from a selected fixture's base,
+// showing where Pan centered (0%) currently aims once panOffset is applied -
+// the calibration reference the offset control is meant to be dialed in
+// against. Cyan so it doesn't blend into the orange selection highlight the
+// fixture body itself gets.
+constexpr float kFrontIndicatorLength = 0.35f;
+const QColor kFrontIndicatorColor(80, 220, 255);
 
 constexpr int    kGoboSize     = 1024;    // gobo texture layer resolution
 
@@ -643,6 +675,19 @@ QString autoModelType(const QStringList &categories)
         if (lc.contains("bar") || lc.contains("matrix")) return "bar";
     }
     return "par";   // generic default
+}
+
+// Appends obj, and - if it's a group - every descendant, to out (skipping
+// anything already present). Used to build the highlight set for setSelection():
+// selecting a group should show its whole subtree as selected in the viewport.
+void collectWithGroupDescendants(SceneObject *obj, QVector<SceneObject *> &out)
+{
+    if (!obj || out.contains(obj))
+        return;
+    out.append(obj);
+    if (obj->typeId() == "group")
+        for (SceneObject *child : obj->sceneChildren())
+            collectWithGroupDescendants(child, out);
 }
 
 // Strips any accumulated scale from a node's world transform, keeping only
@@ -1449,11 +1494,23 @@ void RhiRenderer::updateFixtureMotion(Fixture *fixture, float &panOut, float &ti
     float panTarget = 0.0f, tiltTarget = 0.0f;
     if (AngleCapability *p = fixture->pan()) {
         const float range = float(p->angleEnd() - p->angleStart());
-        panTarget = float(p->getAnglePercent(m_dmx)) * range - range * 0.5f;
+        // panOffset (mounting calibration - see Fixture::panOffset) is baked
+        // into the DMX percent itself by AngleCapability::writePercent(), so
+        // reading it back here already reflects the offset - it must not be
+        // added again on this end, or the fixture would visibly over-rotate.
+        // panInvert is the opposite: a visualiser-only preview flip that
+        // never touches DMX, so it's applied here on the read side instead.
+        float percent = float(p->getAnglePercent(m_dmx));
+        if (fixture->panInvert())
+            percent = 1.0f - percent;
+        panTarget = percent * range - range * 0.5f;
     }
     if (AngleCapability *t = fixture->tilt()) {
         const float range = float(t->angleEnd() - t->angleStart());
-        tiltTarget = float(t->getAnglePercent(m_dmx)) * range - range * 0.5f;
+        float percent = float(t->getAnglePercent(m_dmx));
+        if (fixture->tiltInvert())
+            percent = 1.0f - percent;
+        tiltTarget = percent * range - range * 0.5f;
     }
     const float zoomTarget = beamHalfAngleFor(fixture);
 
@@ -1473,32 +1530,6 @@ void RhiRenderer::updateFixtureMotion(Fixture *fixture, float &panOut, float &ti
     panOut = mo.pan;
     tiltOut = mo.tilt;
     halfAngleOut = mo.zoom;
-
-    {
-        static QHash<Fixture*, QPair<float,float>> lastPrinted;
-        auto &last = lastPrinted[fixture];
-        if (qAbs(last.first - panTarget) > 0.5f || qAbs(last.second - tiltTarget) > 0.5f) {
-            last = {panTarget, tiltTarget};
-            AngleCapability *p = fixture->pan();
-            AngleCapability *t = fixture->tilt();
-            qWarning().noquote() << "DEBUG motion" << fixture->name()
-                << "pan% =" << (p ? p->getAnglePercent(m_dmx) : -1)
-                << "panRange=[" << (p ? p->angleStart() : 0) << "," << (p ? p->angleEnd() : 0) << "]"
-                << "panTarget=" << panTarget
-                << "| tilt% =" << (t ? t->getAnglePercent(m_dmx) : -1)
-                << "tiltRange=[" << (t ? t->angleStart() : 0) << "," << (t ? t->angleEnd() : 0) << "]"
-                << "tiltTarget=" << tiltTarget;
-            RhiModel *model = modelForFixture(fixture);
-            if (model) {
-                std::function<void(const RhiModel::Node&)> dumpAxes = [&](const RhiModel::Node &n) {
-                    if (n.panAxis >= 0 || n.tiltAxis >= 0)
-                        qWarning().noquote() << "DEBUG   node" << n.name << "panAxis=" << n.panAxis << "tiltAxis=" << n.tiltAxis;
-                    for (const auto &c : n.children) dumpAxes(c);
-                };
-                dumpAxes(model->root());
-            }
-        }
-    }
 }
 
 void RhiRenderer::collectBeams(SceneObject *obj, QVector<Drawable> &out) const
@@ -1859,6 +1890,40 @@ void RhiRenderer::appendHelperWireframes(SceneObject *obj, QByteArray &out) cons
     }
 }
 
+void RhiRenderer::appendFixtureFrontIndicators(SceneObject *obj, QByteArray &out) const
+{
+    if (!obj)
+        return;
+    for (SceneObject *child : obj->sceneChildren()) {
+        if (!child->isVisible())
+            continue;
+        if (child->typeId() == "fixture") {
+            auto *fix = static_cast<Fixture *>(child);
+            if (isSelected(child) && fix->pan()) {
+                RhiModel *model = modelForFixture(fix);
+                // Mount transform only - no live pan/tilt sweep - so this is
+                // a fixed calibration reference, not something that spins
+                // with the beam as the fixture actually moves.
+                const QMatrix4x4 base = fixtureModelMatrix(fix, model);
+
+                // Legacy rig convention: the pan joint always rotates about
+                // local Y (see rhimodel.h). "Front" itself is an arbitrary
+                // horizontal reference (local -Z of the mount frame) - the
+                // panOffset control is exactly how that gets calibrated to
+                // match reality, not something this needs to guess right.
+                QMatrix4x4 frontFrame = base;
+                frontFrame.rotate(fix->panOffset(), 0.0f, 1.0f, 0.0f);
+
+                const QVector3D origin = base.map(QVector3D(0, 0, 0));
+                const QVector3D dirWorld = frontFrame.mapVector(QVector3D(0, 0, -1)).normalized();
+
+                appendDirectedArrowLines(origin, dirWorld, kFrontIndicatorLength, kFrontIndicatorColor, out);
+            }
+        }
+        appendFixtureFrontIndicators(child, out);
+    }
+}
+
 void RhiRenderer::gatherSurfacePlanes(SceneObject *obj) const
 {
     if (!obj)
@@ -1912,7 +1977,11 @@ QVector4D RhiRenderer::fadePlaneFor(const QVector3D &apex, const QVector3D &axis
 void RhiRenderer::setSelection(const QVector<SceneObject *> &objs)
 {
     m_selectedObjects = objs;
-    m_gizmo.setTarget(objs.isEmpty() ? nullptr : objs.last());
+    m_gizmo.setTargets(objs);
+
+    m_highlightedObjects.clear();
+    for (SceneObject *obj : objs)
+        collectWithGroupDescendants(obj, m_highlightedObjects);
 }
 
 bool RhiRenderer::localBounds(SceneObject *obj, QVector3D &outMin, QVector3D &outMax)
@@ -2278,6 +2347,7 @@ void RhiRenderer::render(QRhiCommandBuffer *cb, QRhiRenderTarget *rt, const RhiC
     m_gizmo.buildLines(camera, gizmoVerts);
     appendZoneWireframes(m_sceneRoot, gizmoVerts);   // zone boxes drawn as overlay lines
     appendHelperWireframes(m_sceneRoot, gizmoVerts); // arrow/direction/axis/boundary/point-marker glyphs
+    appendFixtureFrontIndicators(m_sceneRoot, gizmoVerts); // selected fixtures' pan-zero heading
     if (gizmoVerts.size() > int(kGizmoBytes))
         gizmoVerts.truncate(int(kGizmoBytes));
     const int gizmoVertexCount = gizmoVerts.size() / int(6 * sizeof(float));

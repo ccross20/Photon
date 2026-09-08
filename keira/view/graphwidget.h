@@ -36,6 +36,8 @@ private:
     NodeEditor *m_editor = nullptr;
     QLabel *m_navigationLabel;
     QPushButton *m_upButton;
+    QPushButton *m_centerButton;
+    QPushButton *m_frameButton;
 };
 
 } // namespace keira

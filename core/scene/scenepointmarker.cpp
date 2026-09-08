@@ -2,6 +2,7 @@
 #include <QFormLayout>
 #include <QLineEdit>
 #include <QDoubleSpinBox>
+#include <QSignalBlocker>
 #include "scenepointmarker.h"
 #include "gui/vector3edit.h"
 #include "gui/tag/tageditorwidget.h"
@@ -80,6 +81,8 @@ ScenePointMarkerEditorWidget::ScenePointMarkerEditorWidget(ScenePointMarker *t_m
 
     connect(m_impl->positionEdit, &Vector3Edit::valueChanged, this, &ScenePointMarkerEditorWidget::setPosition);
     connect(m_impl->rotationEdit, &Vector3Edit::valueChanged, this, &ScenePointMarkerEditorWidget::setRotation);
+    connect(t_marker, &SceneObject::positionChanged, this, &ScenePointMarkerEditorWidget::refreshTransform);
+    connect(t_marker, &SceneObject::rotationChanged, this, &ScenePointMarkerEditorWidget::refreshTransform);
 
     m_impl->positionEdit->setValue(t_marker->position());
     m_impl->rotationEdit->setValue(t_marker->rotation());
@@ -113,6 +116,14 @@ void ScenePointMarkerEditorWidget::setPosition(const QVector3D &t_value)
 void ScenePointMarkerEditorWidget::setRotation(const QVector3D &t_value)
 {
     m_impl->marker->setRotation(t_value);
+}
+
+void ScenePointMarkerEditorWidget::refreshTransform()
+{
+    QSignalBlocker pb(m_impl->positionEdit);
+    QSignalBlocker rb(m_impl->rotationEdit);
+    m_impl->positionEdit->setValue(m_impl->marker->position());
+    m_impl->rotationEdit->setValue(m_impl->marker->rotation());
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

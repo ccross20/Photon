@@ -8,6 +8,7 @@
 #include <QPainter>
 #include <QStyle>
 #include <QTimer>
+#include <QVector>
 #include "projectpanel_p.h"
 #include "gui/dialog/fixturelibrarydialog.h"
 #include "gui/tag/tagchip.h"
@@ -561,6 +562,16 @@ void ProjectPanel::syncSelectionFromProject(const QList<ProjectResource*> &t_res
             const QModelIndex index = m_impl->proxy->mapFromSource(m_impl->model->indexForResource(resource));
             if(index.isValid())
             {
+                // Expand every collapsed ancestor so a selected row (e.g. a
+                // newly-created child object) actually ends up visible rather
+                // than just technically selected. Top-down, in case a future
+                // model populates children lazily on expand.
+                QVector<QModelIndex> ancestors;
+                for(QModelIndex p = index.parent(); p.isValid(); p = p.parent())
+                    ancestors.prepend(p);
+                for(const QModelIndex &ancestor : ancestors)
+                    m_impl->treeView->expand(ancestor);
+
                 selection.select(index, index);
                 last = index;
             }
@@ -634,6 +645,10 @@ void ProjectPanel::populateAddActions(QMenu &t_menu, const QByteArray &t_content
 
     if(t_contentType == "scene")
     {
+        // Selecting the new object publishes it to Project, which (via
+        // syncSelectionFromProject) both highlights it in the tree and expands
+        // whatever collapsed ancestors were hiding it - so a child created under
+        // a collapsed parent still ends up visible.
         t_menu.addAction("Fixture", [this, sceneParent](){
             const QString loadPath = FixtureLibraryDialog::getFixturePath(this);
             if(loadPath.isEmpty())
@@ -645,26 +660,31 @@ void ProjectPanel::populateAddActions(QMenu &t_menu, const QByteArray &t_content
                 fixture->setName(fixture->name() + " " + QString::number(sameName.length() + 1));
 
             fixture->setParentSceneObject(sceneParent());
+            photonApp->project()->setSelectedSceneObjects({fixture});
         });
         t_menu.addAction("Group", [sceneParent](){
             auto *group = new SceneGroup;
             group->setName("Group");
             group->setParentSceneObject(sceneParent());
+            photonApp->project()->setSelectedSceneObjects({group});
         });
         t_menu.addAction("Truss", [sceneParent](){
             auto *truss = new Truss;
             truss->setName("Truss");
             truss->setParentSceneObject(sceneParent());
+            photonApp->project()->setSelectedSceneObjects({truss});
         });
         t_menu.addAction("Light Strip", [sceneParent](){
             auto *strip = new PixelStrip;
             strip->setName("Pixel Strip");
             strip->setParentSceneObject(sceneParent());
+            photonApp->project()->setSelectedSceneObjects({strip});
         });
         t_menu.addAction("Arrow", [sceneParent](){
             auto *arrow = new SceneArrow;
             arrow->setName("Arrow");
             arrow->setParentSceneObject(sceneParent());
+            photonApp->project()->setSelectedSceneObjects({arrow});
         });
         t_menu.addAction("Wall", [sceneParent](){
             auto *wall = new SceneSurface;
@@ -674,6 +694,7 @@ void ProjectPanel::populateAddActions(QMenu &t_menu, const QByteArray &t_content
             // Vertical plane standing on the floor, set back behind the rig.
             wall->setPosition(QVector3D(0.0f, 3.0f, -6.0f));
             wall->setParentSceneObject(sceneParent());
+            photonApp->project()->setSelectedSceneObjects({wall});
         });
         t_menu.addAction("Floor", [sceneParent](){
             auto *floor = new SceneSurface;
@@ -684,6 +705,7 @@ void ProjectPanel::populateAddActions(QMenu &t_menu, const QByteArray &t_content
             floor->setRotation(QVector3D(-90.0f, 0.0f, 0.0f));
             floor->setPosition(QVector3D(0.0f, 0.0f, 0.0f));
             floor->setParentSceneObject(sceneParent());
+            photonApp->project()->setSelectedSceneObjects({floor});
         });
         t_menu.addAction("Zone", [sceneParent](){
             auto *zone = new SceneZone;
@@ -691,16 +713,19 @@ void ProjectPanel::populateAddActions(QMenu &t_menu, const QByteArray &t_content
             zone->setSize(QVector3D(4.0f, 4.0f, 4.0f));
             zone->setPosition(QVector3D(0.0f, 2.0f, 0.0f));
             zone->setParentSceneObject(sceneParent());
+            photonApp->project()->setSelectedSceneObjects({zone});
         });
         t_menu.addAction("Direction", [sceneParent](){
             auto *direction = new SceneDirection;
             direction->setName("Direction");
             direction->setParentSceneObject(sceneParent());
+            photonApp->project()->setSelectedSceneObjects({direction});
         });
         t_menu.addAction("Axis", [sceneParent](){
             auto *axis = new SceneAxis;
             axis->setName("Axis");
             axis->setParentSceneObject(sceneParent());
+            photonApp->project()->setSelectedSceneObjects({axis});
         });
         t_menu.addAction("Boundary Rectangle", [sceneParent](){
             auto *rect = new SceneBoundaryRectangle;
@@ -708,23 +733,27 @@ void ProjectPanel::populateAddActions(QMenu &t_menu, const QByteArray &t_content
             // Lay flat at ground level, matching its main use (marking a floor area).
             rect->setRotation(QVector3D(-90.0f, 0.0f, 0.0f));
             rect->setParentSceneObject(sceneParent());
+            photonApp->project()->setSelectedSceneObjects({rect});
         });
         t_menu.addAction("Boundary Oval", [sceneParent](){
             auto *oval = new SceneBoundaryOval;
             oval->setName("Boundary Oval");
             oval->setRotation(QVector3D(-90.0f, 0.0f, 0.0f));
             oval->setParentSceneObject(sceneParent());
+            photonApp->project()->setSelectedSceneObjects({oval});
         });
         t_menu.addAction("Point in Space", [sceneParent](){
             auto *marker = new ScenePointMarker;
             marker->setName("Point in Space");
             marker->setRotation(QVector3D(-90.0f, 0.0f, 0.0f));
             marker->setParentSceneObject(sceneParent());
+            photonApp->project()->setSelectedSceneObjects({marker});
         });
         t_menu.addAction("Linear Falloff", [sceneParent](){
             auto *falloff = new SceneLinearFalloff;
             falloff->setName("Linear Falloff");
             falloff->setParentSceneObject(sceneParent());
+            photonApp->project()->setSelectedSceneObjects({falloff});
         });
     }
     else if(t_contentType == "group")
@@ -833,6 +862,7 @@ void ProjectPanel::duplicateClicked()
             nextDMX = end;
     }
 
+    QList<SceneObject*> clones;
     for(auto *resource : m_impl->selectedResources())
     {
         auto *sceneObject = dynamic_cast<SceneObject*>(resource);
@@ -844,6 +874,7 @@ void ProjectPanel::duplicateClicked()
             continue;
 
         clone->setParentSceneObject(sceneObject->parentSceneObject());
+        clones.append(clone);
 
         auto clonedFixtures = SceneIterator::FindMany(clone, [](SceneObject *object, bool *){
             return dynamic_cast<Fixture*>(object) != nullptr;
@@ -855,6 +886,13 @@ void ProjectPanel::duplicateClicked()
             nextDMX += fixture->dmxSize();
         }
     }
+
+    // Select the duplicates in place of the originals - same convention as
+    // most apps' Cmd/Ctrl+D, and it reuses syncSelectionFromProject()'s
+    // ancestor-expansion so a duplicate lands visible even under a collapsed
+    // parent.
+    if(!clones.isEmpty())
+        photonApp->project()->setSelectedSceneObjects(clones);
 }
 
 void ProjectPanel::contextMenuRequested(const QPoint &t_pos)

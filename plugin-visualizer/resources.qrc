@@ -6,9 +6,12 @@
         <file>resources/shader/basic_lighting.frag</file>
         <file>resources/shader/visible_light.vert</file>
         <file>resources/shader/visible_light.frag</file>
-        <file>resources/model/moving-head.fbx</file>
         <file>resources/model/arrow.fbx</file>
         <file>resources/shader/lighting.frag</file>
         <file>resources/cookie.png</file>
+        <file>resources/model/bar.glb</file>
+        <file>resources/model/beeeye.glb</file>
+        <file>resources/model/mover.glb</file>
+        <file>resources/model/uplight.glb</file>
     </qresource>
 </RCC>

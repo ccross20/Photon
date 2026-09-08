@@ -1,6 +1,7 @@
 #include <QFormLayout>
 #include <QLineEdit>
 #include <QDoubleSpinBox>
+#include <QSignalBlocker>
 #include "sceneboundaryoval.h"
 #include "gui/vector3edit.h"
 #include "gui/tag/tageditorwidget.h"
@@ -75,6 +76,8 @@ SceneBoundaryOvalEditorWidget::SceneBoundaryOvalEditorWidget(SceneBoundaryOval *
 
     connect(m_impl->positionEdit, &Vector3Edit::valueChanged, this, &SceneBoundaryOvalEditorWidget::setPosition);
     connect(m_impl->rotationEdit, &Vector3Edit::valueChanged, this, &SceneBoundaryOvalEditorWidget::setRotation);
+    connect(t_oval, &SceneObject::positionChanged, this, &SceneBoundaryOvalEditorWidget::refreshTransform);
+    connect(t_oval, &SceneObject::rotationChanged, this, &SceneBoundaryOvalEditorWidget::refreshTransform);
 
     m_impl->positionEdit->setValue(t_oval->position());
     m_impl->rotationEdit->setValue(t_oval->rotation());
@@ -108,6 +111,14 @@ void SceneBoundaryOvalEditorWidget::setPosition(const QVector3D &t_value)
 void SceneBoundaryOvalEditorWidget::setRotation(const QVector3D &t_value)
 {
     m_impl->oval->setRotation(t_value);
+}
+
+void SceneBoundaryOvalEditorWidget::refreshTransform()
+{
+    QSignalBlocker pb(m_impl->positionEdit);
+    QSignalBlocker rb(m_impl->rotationEdit);
+    m_impl->positionEdit->setValue(m_impl->oval->position());
+    m_impl->rotationEdit->setValue(m_impl->oval->rotation());
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

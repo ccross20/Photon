@@ -1,6 +1,7 @@
 #include <QFormLayout>
 #include <QLineEdit>
 #include <QDoubleSpinBox>
+#include <QSignalBlocker>
 #include "scenedirection.h"
 #include "gui/vector3edit.h"
 #include "gui/tag/tageditorwidget.h"
@@ -67,6 +68,8 @@ SceneDirectionEditorWidget::SceneDirectionEditorWidget(SceneDirection *t_directi
 
     connect(m_impl->positionEdit, &Vector3Edit::valueChanged, this, &SceneDirectionEditorWidget::setPosition);
     connect(m_impl->rotationEdit, &Vector3Edit::valueChanged, this, &SceneDirectionEditorWidget::setRotation);
+    connect(t_direction, &SceneObject::positionChanged, this, &SceneDirectionEditorWidget::refreshTransform);
+    connect(t_direction, &SceneObject::rotationChanged, this, &SceneDirectionEditorWidget::refreshTransform);
 
     m_impl->positionEdit->setValue(t_direction->position());
     m_impl->rotationEdit->setValue(t_direction->rotation());
@@ -95,6 +98,14 @@ void SceneDirectionEditorWidget::setPosition(const QVector3D &t_value)
 void SceneDirectionEditorWidget::setRotation(const QVector3D &t_value)
 {
     m_impl->direction->setRotation(t_value);
+}
+
+void SceneDirectionEditorWidget::refreshTransform()
+{
+    QSignalBlocker pb(m_impl->positionEdit);
+    QSignalBlocker rb(m_impl->rotationEdit);
+    m_impl->positionEdit->setValue(m_impl->direction->position());
+    m_impl->rotationEdit->setValue(m_impl->direction->rotation());
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

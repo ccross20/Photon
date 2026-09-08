@@ -17,6 +17,14 @@ public:
     void zoom(double value);
     void zoom(double value, QPointF pt);
 
+    // Pans to the centre of every node in the current graph, leaving the
+    // current zoom alone.
+    void centerOnAllNodes();
+    // Also zooms so every node in the current graph is visible at once. What a
+    // graph with no remembered view state (see restoreViewState()) gets shown
+    // the first time it's opened, instead of an arbitrary default.
+    void frameAllNodes();
+
     // Takes over scene wiring so each graph's scroll/zoom is remembered and
     // restored as the user dives into and back out of subgraphs.
     void setScene(QGraphicsScene *scene);
@@ -49,6 +57,10 @@ private:
     void saveViewState(Graph *t_graph);
     // Re-apply a previously stashed view state for t_graph, if there is one.
     void restoreViewState(Graph *t_graph);
+
+    // Union of every NodeItem's scene bounding rect in the current scene.
+    // ok is set to false (rect undefined) if there are no nodes.
+    QRectF allNodesBounds(bool &ok) const;
 
     // Duplicates a node into this graph and takes over the drag with the copy,
     // so a Ctrl+drag leaves the original (and its wiring) untouched and moves

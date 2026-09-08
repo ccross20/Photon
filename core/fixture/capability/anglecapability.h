@@ -35,6 +35,15 @@ public:
     void readFromOpenFixtureJson(const QJsonObject &) override;
 
 private:
+    // Every setAngle*/setPercent* variant above funnels its final DMX percent
+    // through here. For the pan capability specifically, this is where the
+    // fixture's panOffset mounting calibration (Fixture::panOffset) actually
+    // gets baked into the DMX value that goes out - not just the visualiser's
+    // preview - so real output, the visualiser, and anything else reading
+    // this capability back all agree, with the offset applied in exactly one
+    // place rather than threaded through every write path individually.
+    void writePercent(double percent, DMXMatrix &t_matrix, double blend);
+
     class Impl;
     Impl *m_impl;
 };

@@ -143,10 +143,65 @@ void Viewer::restoreViewState(Graph *t_graph)
 {
     auto it = m_impl->viewStates.constFind(t_graph);
     if(it == m_impl->viewStates.constEnd())
+    {
+        // Nothing remembered for this graph yet - frame its nodes instead of
+        // leaving whatever view was left over from wherever we came from.
+        frameAllNodes();
         return;
+    }
 
     zoom(it->zoom);
     centerOn(it->center);
+}
+
+QRectF Viewer::allNodesBounds(bool &ok) const
+{
+    QRectF bounds;
+    ok = false;
+    if(!scene())
+        return bounds;
+
+    for(QGraphicsItem *item : scene()->items())
+    {
+        if(auto *nodeItem = dynamic_cast<NodeItem*>(item))
+        {
+            bounds = ok ? bounds.united(nodeItem->sceneBoundingRect()) : nodeItem->sceneBoundingRect();
+            ok = true;
+        }
+    }
+    return bounds;
+}
+
+void Viewer::centerOnAllNodes()
+{
+    bool any = false;
+    const QRectF bounds = allNodesBounds(any);
+    centerOn(any ? bounds.center() : QPointF(0.0, 0.0));
+}
+
+void Viewer::frameAllNodes()
+{
+    bool any = false;
+    QRectF bounds = allNodesBounds(any);
+
+    if(!any)
+    {
+        // Empty graph: just reset to a sane default view rather than leaving
+        // whatever was previously on screen.
+        zoom(1.0);
+        centerOn(0.0, 0.0);
+        return;
+    }
+
+    // Pad so the nodes aren't flush against the viewport edge.
+    const qreal margin = qMax(bounds.width(), bounds.height()) * 0.1 + 40.0;
+    bounds.adjust(-margin, -margin, margin, margin);
+
+    const QSize vp = viewport()->size();
+    const qreal scaleX = bounds.width()  > 0 ? vp.width()  / bounds.width()  : 3.25;
+    const qreal scaleY = bounds.height() > 0 ? vp.height() / bounds.height() : 3.25;
+    zoom(qMin(scaleX, scaleY));   // zoom() clamps to the usual [0.25, 3.25] range
+    centerOn(bounds.center());
 }
 
 void Viewer::drawBackground(QPainter *painter, const QRectF &rect)

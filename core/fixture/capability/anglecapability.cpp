@@ -1,6 +1,7 @@
 #include <QtGlobal>
 #include "anglecapability.h"
 #include "data/dmxmatrix.h"
+#include "fixture/fixture.h"
 #include "fixture/fixturechannel.h"
 
 namespace photon {
@@ -27,12 +28,44 @@ AngleCapability::~AngleCapability()
     delete m_impl;
 }
 
+void AngleCapability::writePercent(double percent, DMXMatrix &t_matrix, double t_blend)
+{
+    // Pan/tilt only: shifts the DMX percent by the fixture's mounting-
+    // calibration offset (in degrees, converted to a fraction of this
+    // capability's own declared physical range) before it's written. A
+    // fixture with no offset set (the default) writes exactly what it
+    // always did.
+    //
+    // panInvert/tiltInvert deliberately do NOT apply here - they're a
+    // visualiser-only preview flip (see RhiRenderer::updateFixtureMotion),
+    // not a real output transform, so the actual DMX sent to hardware is
+    // untouched by them.
+    float offsetDegrees = 0.0f;
+    if(type() == Capability_Pan && fixture())
+        offsetDegrees = fixture()->panOffset();
+    else if(type() == Capability_Tilt && fixture())
+        offsetDegrees = fixture()->tiltOffset();
+
+    if(offsetDegrees != 0.0f)
+    {
+        const double range = m_impl->endAngle - m_impl->startAngle;
+        if(qAbs(range) > 0.0001)
+            percent += offsetDegrees / range;
+    }
+
+    // Real hardware can't pan/tilt past its end-stops - once the offset
+    // pushes past what's physically selectable, it clamps there rather than
+    // wrap.
+    percent = qBound(0.0, percent, 1.0);
+    t_matrix.setValuePercent(channel(), percent, t_blend);
+}
+
 void AngleCapability::setAngleDegrees(double value, DMXMatrix &t_matrix, double t_blend)
 {
     value = std::max(std::min(value, m_impl->endAngle), m_impl->startAngle);
 
     double percent = (value - m_impl->startAngle) / (m_impl->endAngle - m_impl->startAngle);
-    t_matrix.setValuePercent(channel(), percent, t_blend);
+    writePercent(percent, t_matrix, t_blend);
 }
 
 void AngleCapability::setAngleDegreesCentered(double value, DMXMatrix &t_matrix, double t_blend)
@@ -44,12 +77,12 @@ void AngleCapability::setAngleDegreesCentered(double value, DMXMatrix &t_matrix,
 
 void AngleCapability::setAnglePercent(double value, DMXMatrix &t_matrix, double t_blend)
 {
-    t_matrix.setValuePercent(channel(), value, t_blend);
+    writePercent(value, t_matrix, t_blend);
 }
 
 void AngleCapability::setAnglePercentCentered(double value, DMXMatrix &t_matrix, double t_blend)
 {
-    t_matrix.setValuePercent(channel(), .5 + value/2.0, t_blend);
+    writePercent(.5 + value/2.0, t_matrix, t_blend);
 }
 
 double AngleCapability::getAnglePercent(const DMXMatrix &t_matrix) const

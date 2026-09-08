@@ -99,11 +99,12 @@ bool rayPlane(const QVector3D &O, const QVector3D &D,
 
 QVector3D RhiGizmo::axisDir(int i) const
 {
-    if (m_space == Global || !m_target)
+    if (m_space == Global || m_targets.isEmpty())
         return kAxis[i];
-    // Extract column i from the upper-left 3x3 of the global matrix — that gives
-    // the object's local axis i expressed in world space.
-    const QMatrix4x4 gm = m_target->globalMatrix();
+    // Local space with multiple targets: orient by the last-selected ("active")
+    // target's frame, matching how most DCC tools pick the active object's
+    // local axes to drive a multi-select local-space gizmo.
+    const QMatrix4x4 gm = m_targets.last()->globalMatrix();
     return QVector3D(gm(0, i), gm(1, i), gm(2, i)).normalized();
 }
 
@@ -112,10 +113,28 @@ float RhiGizmo::scaleFor(const RhiCamera &cam, const QVector3D &center) const
     return qMax(0.05f, float((cam.position() - center).length()) * 0.18f);
 }
 
-QMatrix4x4 RhiGizmo::parentGlobalMatrix() const
+QVector3D RhiGizmo::pivotPosition() const
 {
-    SceneObject *p = m_target ? m_target->parentSceneObject() : nullptr;
-    return p ? p->globalMatrix() : QMatrix4x4();
+    if (m_targets.isEmpty())
+        return QVector3D();
+    QVector3D sum;
+    for (SceneObject *t : m_targets)
+        sum += t->globalPosition();
+    return sum / float(m_targets.size());
+}
+
+void RhiGizmo::captureTargetState(bool includeRotation)
+{
+    m_startWorldPos.clear();
+    m_parentInvs.clear();
+    m_startQuats.clear();
+    for (SceneObject *t : m_targets) {
+        m_startWorldPos.append(t->globalPosition());
+        SceneObject *p = t->parentSceneObject();
+        m_parentInvs.append(p ? p->globalMatrix().inverted() : QMatrix4x4());
+        if (includeRotation)
+            m_startQuats.append(QQuaternion::fromEulerAngles(t->rotation()));
+    }
 }
 
 void RhiGizmo::buildLines(const RhiCamera &cam, QByteArray &out) const
@@ -124,7 +143,7 @@ void RhiGizmo::buildLines(const RhiCamera &cam, QByteArray &out) const
     if (!hasGizmo())
         return;
 
-    const QVector3D center = m_target->globalPosition();
+    const QVector3D center = pivotPosition();
     const float scale = scaleFor(cam, center);
 
     if (m_mode == Translate) {
@@ -165,11 +184,12 @@ void RhiGizmo::buildLines(const RhiCamera &cam, QByteArray &out) const
         }
     } else if (m_mode == Scale) {
         // Per-axis size handles for a zone box (symmetric scaling about the center).
-        SceneZone *zone = asZone(m_target);
+        // Single-target only: the last selected object, if it's a zone.
+        SceneZone *zone = asZone(m_targets.last());
         if (!zone)
             return;
         const QVector3D sz = zone->size();
-        const QMatrix4x4 gm = m_target->globalMatrix();
+        const QMatrix4x4 gm = m_targets.last()->globalMatrix();
         for (int i = 0; i < 3; ++i) {
             const QVector3D ax = QVector3D(gm(0, i), gm(1, i), gm(2, i)).normalized();
             const QVector3D handle = center + ax * (comp(sz, i) * 0.5f);
@@ -200,7 +220,7 @@ bool RhiGizmo::beginDrag(const QVector3D &O, const QVector3D &D, const RhiCamera
     if (!hasGizmo())
         return false;
 
-    const QVector3D center = m_target->globalPosition();
+    const QVector3D center = pivotPosition();
     const float scale = scaleFor(cam, center);
 
     if (m_mode == Translate) {
@@ -221,7 +241,7 @@ bool RhiGizmo::beginDrag(const QVector3D &O, const QVector3D &D, const RhiCamera
             m_dragAxisDir = axisDir(bestAxis);
             float dist;
             closestAxisParam(O, D, m_grabCenter, m_dragAxisDir, dist, m_startParam);
-            m_parentInv = parentGlobalMatrix().inverted();
+            captureTargetState(false);
             m_dragging  = true;
             return true;
         }
@@ -245,7 +265,7 @@ bool RhiGizmo::beginDrag(const QVector3D &O, const QVector3D &D, const RhiCamera
                 m_grabCenter  = center;
                 m_grabPoint   = hit;
                 m_dragAxisDir = perpDir; // plane normal — reused for rayPlane in update
-                m_parentInv   = parentGlobalMatrix().inverted();
+                captureTargetState(false);
                 m_dragging    = true;
                 return true;
             }
@@ -255,11 +275,11 @@ bool RhiGizmo::beginDrag(const QVector3D &O, const QVector3D &D, const RhiCamera
     }
 
     if (m_mode == Scale) {
-        SceneZone *zone = asZone(m_target);
+        SceneZone *zone = asZone(m_targets.last());
         if (!zone)
             return false;
         const QVector3D sz = zone->size();
-        const QMatrix4x4 gm = m_target->globalMatrix();
+        const QMatrix4x4 gm = m_targets.last()->globalMatrix();
         float bestDist = scale * 0.12f;
         int bestAxis = -1;
         float bestS = 0.0f;
@@ -303,7 +323,7 @@ bool RhiGizmo::beginDrag(const QVector3D &O, const QVector3D &D, const RhiCamera
         return false;
 
     m_activeAxis  = bestAxis;
-    m_center      = center;
+    m_grabCenter  = center;   // orbit pivot for this drag
     m_dragAxisDir = axisDir(bestAxis);
     m_planeU = perp1(m_dragAxisDir);
     m_planeW = perp2(m_dragAxisDir);
@@ -312,18 +332,18 @@ bool RhiGizmo::beginDrag(const QVector3D &O, const QVector3D &D, const RhiCamera
     const QVector3D v = (O + D * t) - center;
     m_startAngle = std::atan2(QVector3D::dotProduct(v, m_planeW),
                               QVector3D::dotProduct(v, m_planeU));
-    m_startQuat  = QQuaternion::fromEulerAngles(m_target->rotation());
+    captureTargetState(true);
     m_dragging = true;
     return true;
 }
 
 void RhiGizmo::updateDrag(const QVector3D &O, const QVector3D &D)
 {
-    if (!m_dragging || !m_target || m_activeAxis < 0)
+    if (!m_dragging || m_targets.isEmpty() || m_activeAxis < 0)
         return;
 
     if (m_mode == Scale) {
-        SceneZone *zone = asZone(m_target);
+        SceneZone *zone = asZone(m_targets.last());
         if (!zone)
             return;
         float dist, s;
@@ -337,25 +357,29 @@ void RhiGizmo::updateDrag(const QVector3D &O, const QVector3D &D)
     }
 
     if (m_mode == Translate) {
+        // Shared world-space delta from the drag, applied to every target.
+        QVector3D delta;
         if (m_activeAxis >= 3) {
             // Plane handle: slide along the captured plane.
             float t;
             if (!rayPlane(O, D, m_grabCenter, m_dragAxisDir, t))
                 return;
-            const QVector3D newWorld = m_grabCenter + (O + D * t) - m_grabPoint;
-            m_target->setPosition(m_parentInv.map(newWorld));
+            delta = (O + D * t) - m_grabPoint;
         } else {
             // Single-axis arrow.
             float dist, s;
             closestAxisParam(O, D, m_grabCenter, m_dragAxisDir, dist, s);
-            const QVector3D newWorld = m_grabCenter + m_dragAxisDir * (s - m_startParam);
-            m_target->setPosition(m_parentInv.map(newWorld));
+            delta = m_dragAxisDir * (s - m_startParam);
+        }
+        for (int i = 0; i < m_targets.size(); ++i) {
+            const QVector3D newWorld = m_startWorldPos[i] + delta;
+            m_targets[i]->setPosition(m_parentInvs[i].map(newWorld));
         }
     } else {
         float t;
-        if (!rayPlane(O, D, m_center, m_dragAxisDir, t))
+        if (!rayPlane(O, D, m_grabCenter, m_dragAxisDir, t))
             return;
-        const QVector3D v = (O + D * t) - m_center;
+        const QVector3D v = (O + D * t) - m_grabCenter;
         const float ang = std::atan2(QVector3D::dotProduct(v, m_planeW),
                                      QVector3D::dotProduct(v, m_planeU));
         const float deltaDegs = float(qRadiansToDegrees(ang - m_startAngle));
@@ -366,10 +390,17 @@ void RhiGizmo::updateDrag(const QVector3D &O, const QVector3D &D)
         //   Local:  rotate in object frame → newQ = startQ * deltaQ
         const QQuaternion deltaQ =
             QQuaternion::fromAxisAndAngle(kAxis[m_activeAxis], deltaDegs);
-        const QQuaternion newQuat = (m_space == Local)
-            ? m_startQuat * deltaQ
-            : deltaQ * m_startQuat;
-        m_target->setRotation(newQuat.toEulerAngles());
+        for (int i = 0; i < m_targets.size(); ++i) {
+            // Orbit around the shared pivot (a no-op for a single target, since
+            // it IS the pivot), then spin the target's own orientation.
+            const QVector3D newWorldPos = m_grabCenter + deltaQ.rotatedVector(m_startWorldPos[i] - m_grabCenter);
+            m_targets[i]->setPosition(m_parentInvs[i].map(newWorldPos));
+
+            const QQuaternion newQuat = (m_space == Local)
+                ? m_startQuats[i] * deltaQ
+                : deltaQ * m_startQuats[i];
+            m_targets[i]->setRotation(newQuat.toEulerAngles());
+        }
     }
 }
 

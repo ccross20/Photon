@@ -9,6 +9,7 @@
 #include "fixture/fixturecollectiontest.h"
 #include "fixture/fixturecapabilitytest.h"
 #include "sequence/sequencetest.h"
+#include "scene/sceneobjecttest.h"
 #include "project/surfaceownershiptest.h"
 #include "project/projectresourcetest.h"
 #include "project/projectmodeltest.h"
@@ -40,6 +41,7 @@ int main(int argc, char *argv[])
     tests.emplace("fixture_collection_test", std::make_unique<photon::FixtureCollectionTest>());
     tests.emplace("fixture_capability_test", std::make_unique<photon::FixtureCapabilityTest>());
     tests.emplace("sequence_test", std::make_unique<photon::SequenceTest>());
+    tests.emplace("scene_object_test", std::make_unique<photon::SceneObjectTest>());
     tests.emplace("surface_ownership_test", std::make_unique<photon::SurfaceOwnershipTest>());
     tests.emplace("project_resource_test", std::make_unique<photon::ProjectResourceTest>());
     tests.emplace("project_model_test", std::make_unique<photon::ProjectModelTest>());

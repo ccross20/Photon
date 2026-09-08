@@ -77,12 +77,18 @@ public:
 
     // Ray-pick the nearest selectable scene object (world-space ray). Null = miss.
     SceneObject *pick(const QVector3D &origin, const QVector3D &dir) const;
-    // Replaces the whole selection; the gizmo attaches to the last (primary) entry.
+    // Replaces the whole selection; the gizmo attaches to every entry (moving/
+    // rotating together). objs is the exact, unexpanded selection — it round-trips
+    // back out via selectionList()/selection() for click-to-toggle and for the
+    // project-wide selection state, so it must stay exactly what was passed in.
     void setSelection(const QVector<SceneObject *> &objs);
     // The primary (most-recently-selected) object, or null if nothing is selected.
     SceneObject *selection() const { return m_selectedObjects.isEmpty() ? nullptr : m_selectedObjects.last(); }
     const QVector<SceneObject *> &selectionList() const { return m_selectedObjects; }
-    bool isSelected(SceneObject *obj) const { return obj && m_selectedObjects.contains(obj); }
+    // True for the exact selection AND, for a selected group, everything under it -
+    // the highlight should show a selected group's whole subtree, even though the
+    // group's own transform (which the gizmo uses) already carries its descendants.
+    bool isSelected(SceneObject *obj) const { return obj && m_highlightedObjects.contains(obj); }
 
     RhiGizmo &gizmo() { return m_gizmo; }
 
@@ -116,6 +122,11 @@ private:
     // annotation/marker types (Arrow, Direction, Axis, Boundary Rectangle/Oval,
     // Point Marker) - kept as one shared tree-walk rather than one per type.
     void appendHelperWireframes(SceneObject *obj, QByteArray &out) const;
+    // Draws a horizontal "front" arrow at each selected fixture with a pan
+    // capability, pointing where Pan centered (0%) currently aims once its
+    // panOffset calibration is applied - lets that offset be dialed in by
+    // eye rather than blind. Selected-only, into the same gizmo line buffer.
+    void appendFixtureFrontIndicators(SceneObject *obj, QByteArray &out) const;
     // Collects every surface plane (world point + unit normal) for volumetric beam
     // soft-fade against opaque surfaces. Rebuilt each frame before collectBeams.
     void gatherSurfacePlanes(SceneObject *obj) const;
@@ -291,7 +302,8 @@ private:
 
     RhiGizmo     m_gizmo;
     SceneObject *m_sceneRoot = nullptr;
-    QVector<SceneObject *> m_selectedObjects;
+    QVector<SceneObject *> m_selectedObjects;      // exact selection - see setSelection()
+    QVector<SceneObject *> m_highlightedObjects;   // m_selectedObjects + descendants of any selected group
     BeamMode     m_beamMode = BeamMode::Basic;
     int          m_goboIndex = 0;
     QElapsedTimer m_clock;   // drives gobo rotation

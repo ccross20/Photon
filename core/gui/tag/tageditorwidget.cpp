@@ -36,6 +36,17 @@ TagEditorWidget::TagEditorWidget(std::function<QStringList()> t_get,
     m_impl->set = t_set;
     m_impl->knownTags = t_knownTags;
 
+    // Lets styles.css give this the same "well" look as every other property
+    // field - otherwise the only thing visibly boxed is the small trailing
+    // add-field, which reads as a short, indented field rather than a row
+    // that lines up with the rest of the form. A plain QWidget subclass
+    // doesn't paint its stylesheet's background/border at all unless it
+    // opts in with WA_StyledBackground - QLineEdit/QComboBox get theirs for
+    // free because they're style-aware widgets to begin with, but this one
+    // needed telling.
+    setObjectName("tagEditor");
+    setAttribute(Qt::WA_StyledBackground, true);
+
     setAcceptDrops(true);
 
     m_impl->layout = new FlowLayout(this, 4, 4, 4);

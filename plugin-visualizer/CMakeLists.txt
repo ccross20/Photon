@@ -169,8 +169,15 @@ endif()
 # <app>/models/ at runtime (not a Qt resource - these are loaded from real
 # files, deduped/cached by path). Nothing deployed this folder before, so
 # every fixture silently fell back to the placeholder box.
+#
+# rm -rf before copy_directory: resolveModelPath() prefers .fbx over .glb/etc
+# by extension order, so a stale <type>.fbx left behind in an existing build
+# directory after the source asset was renamed/removed (copy_directory only
+# copies/overwrites - it never deletes) would silently keep shadowing a
+# replacement in another format.
 if(EXISTS "${PROJECT_SOURCE_DIR}/resources/model")
     add_custom_command(TARGET plugin-visualizer POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E rm -rf "${PROJECT_BINARY_DIR}/../photon-desktop/models/"
         COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/resources/model" "${PROJECT_BINARY_DIR}/../photon-desktop/models/"
     )
 endif()

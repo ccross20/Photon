@@ -9,7 +9,14 @@ PropertiesPanel::PropertiesPanel() : Panel("photon.properties"), m_impl(new Impl
 {
     setName("Properties");
 
+    // Every resource/scene-object editor gets routed through this one panel
+    // (see propertiesWidgetChanged() below), so styling scoped to this
+    // object name in styles.css reaches all of them without each editor
+    // widget needing its own stylesheet.
+    setObjectName("propertiesPanel");
+
     m_impl->layout = new QVBoxLayout;
+    m_impl->layout->setContentsMargins(10, 10, 10, 10);
 
     m_impl->emptyLabel = new QLabel("No selection");
     m_impl->emptyLabel->setAlignment(Qt::AlignCenter);

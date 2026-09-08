@@ -96,6 +96,30 @@ public:
     QString beamStyle() const;
     void setBeamStyle(const QString &);
 
+    // Degrees added to the pan/tilt channel before it's written to DMX (see
+    // AngleCapability::writePercent), so a fixture mounted at an odd angle -
+    // rotated on its yoke, hung upside-down, whatever - can still be aimed as
+    // if it were mounted the "normal" way: Pan/Tilt centered (0%) points
+    // wherever it actually needs to for that fixture, without needing to
+    // rewrite every cue/effect that aims it. Doesn't touch the fixture's own
+    // Position/Rotation, which stays an accurate record of how it's really
+    // mounted.
+    float panOffset() const;
+    void setPanOffset(float);
+    float tiltOffset() const;
+    void setTiltOffset(float);
+
+    // Flips the visualiser's preview of the pan/tilt channel's direction of
+    // travel (mirrored about its own center) - for eyeballing how a fixture
+    // mounted flipped (upside-down, or rotated 180 on its yoke) would look
+    // without needing to actually mirror it. Visualiser-only: unlike the
+    // offset above, this never touches the real DMX value (see
+    // RhiRenderer::updateFixtureMotion).
+    bool panInvert() const;
+    void setPanInvert(bool);
+    bool tiltInvert() const;
+    void setTiltInvert(bool);
+
     void setComments(const QString &);
     void setIdentifier(const QString &);
 

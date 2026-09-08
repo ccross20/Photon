@@ -1,6 +1,7 @@
 #include <QFormLayout>
 #include <QLineEdit>
 #include <QDoubleSpinBox>
+#include <QSignalBlocker>
 #include "sceneaxis.h"
 #include "gui/vector3edit.h"
 #include "gui/tag/tageditorwidget.h"
@@ -67,6 +68,8 @@ SceneAxisEditorWidget::SceneAxisEditorWidget(SceneAxis *t_axis, QWidget *parent)
 
     connect(m_impl->positionEdit, &Vector3Edit::valueChanged, this, &SceneAxisEditorWidget::setPosition);
     connect(m_impl->rotationEdit, &Vector3Edit::valueChanged, this, &SceneAxisEditorWidget::setRotation);
+    connect(t_axis, &SceneObject::positionChanged, this, &SceneAxisEditorWidget::refreshTransform);
+    connect(t_axis, &SceneObject::rotationChanged, this, &SceneAxisEditorWidget::refreshTransform);
 
     m_impl->positionEdit->setValue(t_axis->position());
     m_impl->rotationEdit->setValue(t_axis->rotation());
@@ -95,6 +98,14 @@ void SceneAxisEditorWidget::setPosition(const QVector3D &t_value)
 void SceneAxisEditorWidget::setRotation(const QVector3D &t_value)
 {
     m_impl->axis->setRotation(t_value);
+}
+
+void SceneAxisEditorWidget::refreshTransform()
+{
+    QSignalBlocker pb(m_impl->positionEdit);
+    QSignalBlocker rb(m_impl->rotationEdit);
+    m_impl->positionEdit->setValue(m_impl->axis->position());
+    m_impl->rotationEdit->setValue(m_impl->axis->rotation());
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
