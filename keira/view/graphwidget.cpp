@@ -17,7 +17,12 @@ GraphWidget::GraphWidget(NodeLibrary *t_library, QWidget *parent)
     m_editor = new keira::NodeEditor;
 
     QVBoxLayout *vLayout = new QVBoxLayout;
-    m_navigationLabel = new QLabel;
+
+    m_breadcrumbBar = new QWidget;
+    m_breadcrumbLayout = new QHBoxLayout(m_breadcrumbBar);
+    m_breadcrumbLayout->setContentsMargins(0, 0, 0, 0);
+    m_breadcrumbLayout->setSpacing(4);
+
     m_upButton = new QPushButton("Up");
     connect(m_upButton, &QPushButton::clicked,this, &GraphWidget::gotoParentGraph);
 
@@ -28,7 +33,7 @@ GraphWidget::GraphWidget(NodeLibrary *t_library, QWidget *parent)
     connect(m_frameButton, &QPushButton::clicked, m_viewer, &Viewer::frameAllNodes);
 
     QHBoxLayout *navLayout = new QHBoxLayout;
-    navLayout->addWidget(m_navigationLabel);
+    navLayout->addWidget(m_breadcrumbBar);
     navLayout->addWidget(m_centerButton);
     navLayout->addWidget(m_frameButton);
     navLayout->addWidget(m_upButton);
@@ -53,7 +58,7 @@ GraphWidget::GraphWidget(NodeLibrary *t_library, QWidget *parent)
 GraphWidget::~GraphWidget()
 {
     // QWidget's destructor tears down our widget children (m_viewer, m_editor,
-    // m_navigationLabel, ...) before ~QObject() gets to plain-QObject children
+    // m_breadcrumbBar, ...) before ~QObject() gets to plain-QObject children
     // like a Scene parented to us - so if m_scene outlives them even briefly,
     // its own destructor removing/deselecting items fires selectionChanged(),
     // which is still connected to selectionUpdated() and would dereference the
@@ -83,7 +88,7 @@ void GraphWidget::setScene(Scene *t_scene)
     m_viewer->setScene(m_scene);
 
     if(m_scene && m_scene->graph())
-        m_navigationLabel->setText(m_scene->graph()->familyName());
+        rebuildBreadcrumbs(m_scene->graph());
 
     connect(m_scene, &QGraphicsScene::selectionChanged, this, &GraphWidget::selectionUpdated);
     connect(m_scene, &Scene::graphUpdated, this, &GraphWidget::graphUpdated);
@@ -94,16 +99,74 @@ Scene *GraphWidget::scene() const
     return m_scene;
 }
 
+void GraphWidget::navigateToGraph(Graph *t_graph)
+{
+    if(!t_graph || !m_scene || t_graph == m_scene->graph())
+        return;
+
+    m_editor->setNode(nullptr);
+    m_scene->setGraph(t_graph);
+}
+
 void GraphWidget::gotoParentGraph()
 {
-    m_editor->setNode(nullptr);
-
     if(m_scene->graph()->parentNode())
-        m_scene->setGraph(m_scene->graph()->parentNode()->graph());
+        navigateToGraph(m_scene->graph()->parentNode()->graph());
 }
 
 void GraphWidget::graphUpdated(Graph *t_graph){
-    m_navigationLabel->setText(t_graph->familyName());
+    rebuildBreadcrumbs(t_graph);
+}
+
+void GraphWidget::rebuildBreadcrumbs(Graph *t_graph)
+{
+    QLayoutItem *item;
+    while((item = m_breadcrumbLayout->takeAt(0)) != nullptr)
+    {
+        delete item->widget();
+        delete item;
+    }
+
+    if(!t_graph)
+        return;
+
+    // Root first, t_graph last. Every entry but the last is clickable; the
+    // last is shown plain since it's already the graph on screen. Everything
+    // after the root is labelled by the node that contains it (its own name,
+    // renameable by the user) rather than the graph's own fixed name (see
+    // Graph::familyName()) - "Subgraph" told the user nothing about which
+    // node they were actually looking inside.
+    const QVector<Graph*> chain = t_graph->ancestryChain();
+    for(int i = 0; i < chain.size(); ++i)
+    {
+        Graph *g = chain[i];
+        const bool isRoot = (i == 0);
+        const bool isCurrent = (i == chain.size() - 1);
+        const QString label = (isRoot || !g->parentNode()) ? g->name() : g->parentNode()->name();
+
+        if(isCurrent)
+        {
+            QLabel *current = new QLabel(label);
+            current->setStyleSheet("color: #f0f0f0; font-weight: bold;");
+            m_breadcrumbLayout->addWidget(current);
+        }
+        else
+        {
+            QPushButton *crumb = new QPushButton(label);
+            crumb->setFlat(true);
+            crumb->setCursor(Qt::PointingHandCursor);
+            crumb->setStyleSheet(
+                "QPushButton { border: none; background: transparent; padding: 0px; "
+                "color: #8fc7ff; text-decoration: underline; }"
+                "QPushButton:hover { color: #ffffff; }");
+            connect(crumb, &QPushButton::clicked, this, [this, g](){ navigateToGraph(g); });
+            m_breadcrumbLayout->addWidget(crumb);
+
+            QLabel *sep = new QLabel(">");
+            sep->setStyleSheet("color: #777777;");
+            m_breadcrumbLayout->addWidget(sep);
+        }
+    }
 }
 
 void GraphWidget::selectionUpdated()

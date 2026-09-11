@@ -40,6 +40,12 @@ private:
     keira::BooleanParameter *m_useTimeMachineParam;
     PixelListParameter *m_pixelsParam;
     GraphContextNode *m_globalsNode;
+    // The default "Set Pixel Color" node seeded in the constructor - tracked
+    // so readFromJson can remove it the same way it does m_globalsNode,
+    // rather than leaving a stray extra node once a saved graph (which
+    // already has its own nodes) is loaded in over it. Null if the node
+    // library couldn't create it (e.g. plugin-nodes not loaded).
+    keira::Node *m_seedSetColorNode = nullptr;
     DMXTimeMachine *m_timeMachine;
 };
 

@@ -30,21 +30,34 @@ AngleCapability::~AngleCapability()
 
 void AngleCapability::writePercent(double percent, DMXMatrix &t_matrix, double t_blend)
 {
-    // Pan/tilt only: shifts the DMX percent by the fixture's mounting-
-    // calibration offset (in degrees, converted to a fraction of this
-    // capability's own declared physical range) before it's written. A
-    // fixture with no offset set (the default) writes exactly what it
-    // always did.
+    // Pan/tilt only: mirrors the DMX percent about its own center (panFlip/
+    // tiltFlip) and/or shifts it by the fixture's mounting-calibration
+    // offset (in degrees, converted to a fraction of this capability's own
+    // declared physical range) before it's written. A fixture with neither
+    // set (the default) writes exactly what it always did.
     //
     // panInvert/tiltInvert deliberately do NOT apply here - they're a
-    // visualiser-only preview flip (see RhiRenderer::updateFixtureMotion),
-    // not a real output transform, so the actual DMX sent to hardware is
-    // untouched by them.
+    // separate, visualiser-only preview flip (see
+    // RhiRenderer::updateFixtureMotion) for eyeballing a flip without
+    // actually committing to one; panFlip/tiltFlip are the real thing.
     float offsetDegrees = 0.0f;
+    bool flip = false;
     if(type() == Capability_Pan && fixture())
+    {
         offsetDegrees = fixture()->panOffset();
+        flip = fixture()->panFlip();
+    }
     else if(type() == Capability_Tilt && fixture())
+    {
         offsetDegrees = fixture()->tiltOffset();
+        flip = fixture()->tiltFlip();
+    }
+
+    // Flip first, so the offset that follows is always measured in
+    // whichever direction the fixture now actually responds to, rather than
+    // the un-flipped one.
+    if(flip)
+        percent = 1.0 - percent;
 
     if(offsetDegrees != 0.0f)
     {

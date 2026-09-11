@@ -3,6 +3,7 @@
 #include "model/node.h"
 #include "model/parameter/decimalparameter.h"
 #include "model/parameter/integerparameter.h"
+#include "model/parameter/optionparameter.h"
 
 namespace photon {
 
@@ -19,12 +20,18 @@ public:
 private:
     keira::DecimalParameter *bpmParam;
     keira::DecimalParameter *beatProgressParam;
-    keira::DecimalParameter *beatProgress2Param;
-    keira::DecimalParameter *beatProgress4Param;
     keira::DecimalParameter *beatIntensityParam;
     keira::DecimalParameter *beatAmountParam;
     keira::IntegerParameter *beatParam;
     keira::IntegerParameter *songIdParam;
+
+    // Beat-reducer controls: Rate re-grids the beat/progress outputs onto a
+    // slower ("/4","/2") or faster ("x2","x4","x8") pulse than the DJ's own
+    // beat, replacing the old fixed Beat Progress x2/x4 outputs with one
+    // general control; Offset (in beats, may be fractional) shifts where
+    // that grid's zero point falls.
+    keira::OptionParameter *beatRateParam;
+    keira::DecimalParameter *beatOffsetParam;
 
     // Cache the derived song id so evaluate() only re-hashes when the track
     // actually changes, rather than every frame.

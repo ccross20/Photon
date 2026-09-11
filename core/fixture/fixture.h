@@ -109,11 +109,22 @@ public:
     float tiltOffset() const;
     void setTiltOffset(float);
 
-    // Flips the visualiser's preview of the pan/tilt channel's direction of
-    // travel (mirrored about its own center) - for eyeballing how a fixture
-    // mounted flipped (upside-down, or rotated 180 on its yoke) would look
-    // without needing to actually mirror it. Visualiser-only: unlike the
-    // offset above, this never touches the real DMX value (see
+    // Reverses the pan/tilt channel's direction of travel (mirrored about its
+    // own center) before it's written to DMX (see AngleCapability::
+    // writePercent) - for a fixture mounted flipped (upside-down, or rotated
+    // 180 on its yoke) so "more" still moves it the way it's expected to,
+    // rather than backwards. Applied before panOffset/tiltOffset, so the
+    // offset is always measured in whichever direction the fixture now
+    // actually responds to.
+    bool panFlip() const;
+    void setPanFlip(bool);
+    bool tiltFlip() const;
+    void setTiltFlip(bool);
+
+    // Flips the visualiser's own preview of the pan/tilt direction of travel
+    // - for eyeballing how a fixture mounted flipped would look without
+    // needing to actually flip it. Visualiser-only: unlike panFlip/tiltFlip
+    // above, this never touches the real DMX value (see
     // RhiRenderer::updateFixtureMotion).
     bool panInvert() const;
     void setPanInvert(bool);
@@ -167,6 +178,11 @@ public:
         for(auto it = channels().cbegin(); it != channels().cend(); ++it)
         {
             auto channel = *it;
+
+            // Skip channels outside the selected mode (see the non-template
+            // findCapability overloads).
+            if(!channel->isValid())
+                continue;
 
             for(auto capabilityIt = channel->capabilities().cbegin(); capabilityIt != channel->capabilities().cend(); ++capabilityIt)
             {

@@ -9,7 +9,7 @@ ColorState::ColorState() : StateCapability(CapabilityType::Capability_Color)
 {
     setName("Color");
 
-    addAvailableChannel(ChannelInfo(ChannelInfo::ChannelTypeColor, "Color","Color of the light",0));
+    addAvailableChannel(ChannelInfo(ChannelInfo::ChannelTypeColor, "Color","Color of the light",QColor(255, 0, 0)));
     addAvailableChannel(ChannelInfo(ChannelInfo::ChannelTypeString, "Name","Name of the capability",""));
 }
 

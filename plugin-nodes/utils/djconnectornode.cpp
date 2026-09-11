@@ -1,3 +1,4 @@
+#include <cmath>
 #include "djconnectornode.h"
 #include "virtualdj/virtualdjconnector.h"
 #include "photoncore.h"
@@ -59,11 +60,12 @@ void DJConnectorNode::createParameters()
     beatProgressParam = new keira::DecimalParameter("beatProgress","Beat Progress", 0.0, keira::AllowMultipleOutput);
     addParameter(beatProgressParam);
 
-    beatProgress2Param = new keira::DecimalParameter("beatProgress2","Beat Progress x2", 0.0, keira::AllowMultipleOutput);
-    addParameter(beatProgress2Param);
+    // Index order must track kRateMultipliers in evaluate().
+    beatRateParam = new keira::OptionParameter("beatRate", "Rate", {"/4", "/2", "1", "x2", "x4", "x8"}, 2);
+    addParameter(beatRateParam);
 
-    beatProgress4Param = new keira::DecimalParameter("beatProgress4","Beat Progress x4", 0.0, keira::AllowMultipleOutput);
-    addParameter(beatProgress4Param);
+    beatOffsetParam = new keira::DecimalParameter("beatOffset", "Offset", 0.0);
+    addParameter(beatOffsetParam);
 
     beatIntensityParam = new keira::DecimalParameter("beatIntensity","Beat Intensity", 0.0, keira::AllowMultipleOutput);
     addParameter(beatIntensityParam);
@@ -81,10 +83,26 @@ void DJConnectorNode::createParameters()
 void DJConnectorNode::evaluate(keira::EvaluationContext *t_context) const
 {
     bpmParam->setValue(photonApp->djConnector()->bpm);
-    beatParam->setValue(photonApp->djConnector()->beatNumber);
-    beatProgressParam->setValue(photonApp->djConnector()->beatProgress);
-    beatProgress2Param->setValue(photonApp->djConnector()->beatProgress2);
-    beatProgress4Param->setValue(photonApp->djConnector()->beatProgress4);
+
+    // Beat reducer: re-grid the continuous beat position onto a slower or
+    // faster pulse before splitting it back into a whole-beat count + 0..1
+    // progress, the same shape "Beat"/"Beat Progress" always had - so "1"
+    // (the default) reproduces the raw DJ beat exactly, and downstream
+    // graphs built against these two outputs keep working whatever rate is
+    // picked. Order must track the option list in createParameters().
+    static const double kRateMultipliers[] = { 0.25, 0.5, 1.0, 2.0, 4.0, 8.0 };
+    const int rateIndex = qBound(0, beatRateParam->value().toInt(), 5);
+    const double rate = kRateMultipliers[rateIndex];
+    const double offset = beatOffsetParam->value().toDouble();
+
+    const double rawBeatPosition = double(photonApp->djConnector()->beatNumber)
+        + photonApp->djConnector()->beatProgress;
+    const double scaledPosition = (rawBeatPosition - offset) * rate;
+    const double reducedBeat = std::floor(scaledPosition);
+
+    beatParam->setValue(int(reducedBeat));
+    beatProgressParam->setValue(scaledPosition - reducedBeat);
+
     beatIntensityParam->setValue(photonApp->djConnector()->beatIntensity);
     beatAmountParam->setValue(photonApp->djConnector()->beatAmount);
 

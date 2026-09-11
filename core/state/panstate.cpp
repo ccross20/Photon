@@ -8,8 +8,8 @@ PanState::PanState() : StateCapability(CapabilityType::Capability_Pan)
     setName("Pan");
 
     addAvailableChannel(ChannelInfo(ChannelInfo::ChannelTypeNumber, "Pan","How much to pan",0));
-    addAvailableChannel(ChannelInfo(ChannelInfo::ChannelTypeBool, "Angles","Use angles in degrees",0));
-    addAvailableChannel(ChannelInfo(ChannelInfo::ChannelTypeBool, "Centered","Centered",0));
+    addAvailableChannel(ChannelInfo(ChannelInfo::ChannelTypeBool, "Angles","Use angles in degrees",true));
+    addAvailableChannel(ChannelInfo(ChannelInfo::ChannelTypeBool, "Centered","Centered",true));
 }
 
 void PanState::evaluate(const StateEvaluationContext &t_context) const

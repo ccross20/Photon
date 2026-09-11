@@ -174,15 +174,6 @@ void VirtualDJConnector::processLine(const QByteArray &line)
         beatNumber = int(std::floor(beatProgress));
         beatProgress -= beatNumber;
 
-        if (beatProgressOrig > 0) {
-            beatProgress4 = ((beatNumber % 4) + beatProgress) / 4.0;
-            beatProgress2 = ((beatNumber % 2) + beatProgress) / 2.0;
-            beatProgress4 = std::abs((beatProgress4 - 0.5) * 2.0);
-            beatProgress2 = std::abs((beatProgress2 - 0.5) * 2.0);
-        } else {
-            beatProgress4 = 0.0;
-            beatProgress2 = 0.0;
-        }
         beatAmount = std::abs((beatProgress - 0.5) * 2.0);
     }
 

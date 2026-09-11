@@ -65,6 +65,12 @@ public:
     void setName(const QString &);
     QString name() const;
     QString familyName() const;
+    // This graph's ancestry, outermost root first and this graph last - e.g.
+    // [Bus graph, a Canvas Graph node's inner graph, ...]. Each entry after
+    // the first is reached via the previous entry's containing node
+    // (parentNode()). Lets a breadcrumb bar navigate to any ancestor level,
+    // not just show the joined name familyName() returns.
+    QVector<Graph*> ancestryChain() const;
 
     virtual void readFromJson(const QJsonObject &, NodeLibrary *library);
     virtual void writeToJson(QJsonObject &) const;

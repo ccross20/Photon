@@ -60,8 +60,6 @@ public:
     double beatProgress = 0.0;
     double beatAmount = 0.0;
     double beatIntensity = 0.0;
-    double beatProgress2 = 0.0;
-    double beatProgress4 = 0.0;
     int beatNumber = 0;
     double bpm = 0.0;
     double firstBeat = 0.0;

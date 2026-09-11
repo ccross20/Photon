@@ -4,6 +4,7 @@
 #include <QWidget>
 #include <QLabel>
 #include <QPushButton>
+#include <QHBoxLayout>
 #include "keira-global.h"
 
 namespace keira {
@@ -31,10 +32,18 @@ private slots:
     void gotoParentGraph();
 
 private:
+    // Rebuilds the breadcrumb row (m_breadcrumbBar) for t_graph's ancestry -
+    // one clickable crumb per ancestor (named for the node that contains it),
+    // plus a final plain, non-clickable crumb for t_graph itself.
+    void rebuildBreadcrumbs(Graph *t_graph);
+    // Common landing point for both the Up button and a breadcrumb click.
+    void navigateToGraph(Graph *t_graph);
+
     Scene *m_scene = nullptr;
     Viewer *m_viewer = nullptr;
     NodeEditor *m_editor = nullptr;
-    QLabel *m_navigationLabel;
+    QWidget *m_breadcrumbBar;
+    QHBoxLayout *m_breadcrumbLayout;
     QPushButton *m_upButton;
     QPushButton *m_centerButton;
     QPushButton *m_frameButton;

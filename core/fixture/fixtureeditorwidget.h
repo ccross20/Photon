@@ -31,6 +31,8 @@ private slots:
     void setRotation(const QVector3D &);
     void setPanOffset(double);
     void setTiltOffset(double);
+    void setPanFlip(bool);
+    void setTiltFlip(bool);
     void setPanInvert(bool);
     void setTiltInvert(bool);
     void refreshTransform();

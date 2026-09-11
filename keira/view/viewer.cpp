@@ -198,9 +198,11 @@ void Viewer::frameAllNodes()
     bounds.adjust(-margin, -margin, margin, margin);
 
     const QSize vp = viewport()->size();
-    const qreal scaleX = bounds.width()  > 0 ? vp.width()  / bounds.width()  : 3.25;
-    const qreal scaleY = bounds.height() > 0 ? vp.height() / bounds.height() : 3.25;
-    zoom(qMin(scaleX, scaleY));   // zoom() clamps to the usual [0.25, 3.25] range
+    const qreal scaleX = bounds.width()  > 0 ? vp.width()  / bounds.width()  : 1.0;
+    const qreal scaleY = bounds.height() > 0 ? vp.height() / bounds.height() : 1.0;
+    // zoom() clamps to [0.25, 1.0] - a small graph (as little as one node)
+    // would otherwise compute a scale well past 1:1 here.
+    zoom(qMin(scaleX, scaleY));
     centerOn(bounds.center());
 }
 
@@ -213,8 +215,8 @@ void Viewer::zoom(double t_value)
 {
     if(t_value < .25)
         t_value = .25;
-    else if(t_value > 3.25)
-        t_value = 3.25;
+    else if(t_value > 1.0)
+        t_value = 1.0;
     m_impl->currentZoom = t_value;
     setTransform(QTransform::fromScale(t_value, t_value));
     emit zoomChanged(m_impl->currentZoom);
@@ -224,8 +226,8 @@ void Viewer::zoom(double t_value, QPointF pt)
 {
     if(t_value < .25)
         t_value = .25;
-    else if(t_value > 3.25)
-        t_value = 3.25;
+    else if(t_value > 1.0)
+        t_value = 1.0;
     m_impl->currentZoom = t_value;
     setTransformationAnchor(QGraphicsView::AnchorUnderMouse);
     setTransform(QTransform::fromScale(t_value, t_value));

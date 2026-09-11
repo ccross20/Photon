@@ -8,8 +8,8 @@ TiltState::TiltState() : StateCapability(CapabilityType::Capability_Tilt)
     setName("Tilt");
 
     addAvailableChannel(ChannelInfo(ChannelInfo::ChannelTypeNumber, "Tilt","How much to tilt",0));
-    addAvailableChannel(ChannelInfo(ChannelInfo::ChannelTypeBool, "Angles","Use angles in degrees",0));
-    addAvailableChannel(ChannelInfo(ChannelInfo::ChannelTypeBool, "Centered","Centered",0));
+    addAvailableChannel(ChannelInfo(ChannelInfo::ChannelTypeBool, "Angles","Use angles in degrees",true));
+    addAvailableChannel(ChannelInfo(ChannelInfo::ChannelTypeBool, "Centered","Centered",true));
 }
 
 void TiltState::evaluate(const StateEvaluationContext &t_context) const

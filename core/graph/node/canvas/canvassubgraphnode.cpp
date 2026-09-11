@@ -52,6 +52,9 @@ CanvasSubGraphNode::CanvasSubGraphNode() : keira::SubGraphNode("photon.node.canv
 
     m_outputNode = new CanvasOutputNode;
     m_outputNode->createParameters();
+    // Otherwise lands directly on top of the Globals node - both default to
+    // the same (0,0) graph position.
+    m_outputNode->setPosition(m_globalsNode->position() + QPointF(500, 0));
     graph()->addNode(m_outputNode);
 
     graph()->drainCommandQueue();   // apply the addNodes immediately (see readFromJson)

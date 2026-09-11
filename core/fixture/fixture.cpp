@@ -33,7 +33,9 @@ public:
     QString beamStyle;        // per-fixture beam style override ("" = follow global toggle)
     float panOffset = 0.0f;   // degrees added to the pan channel before aiming (mounting calibration)
     float tiltOffset = 0.0f;  // same, for tilt
-    bool panInvert = false;   // reverses the pan channel's direction of travel
+    bool panFlip = false;     // reverses the pan channel's direction of travel (real DMX)
+    bool tiltFlip = false;    // same, for tilt
+    bool panInvert = false;   // reverses the visualiser's pan preview only (no DMX effect)
     bool tiltInvert = false;  // same, for tilt
     int dmxOffset = 0;
     int dmxSize = 0;
@@ -121,6 +123,14 @@ QVector<FixtureCapability*> Fixture::findCapability(CapabilityType t_type, int t
     {
         auto channel = *it;
 
+        // Skip channels the selected mode doesn't map to a DMX slot: their
+        // channelNumber is -1, so reading/writing their capabilities either
+        // no-ops or aliases onto slot 0. e.g. a fixture with a Dimmer channel
+        // only in its 10-channel mode must fall back to full intensity when
+        // patched in a 6-channel mode that has none.
+        if(!channel->isValid())
+            continue;
+
         //if(channel->capabilityType() == t_type)
         {
             //if(t_index < 0 || channelCounter == t_index)
@@ -143,6 +153,9 @@ QVector<FixtureCapability*> Fixture::findCapability(CapabilityType t_type, int t
     for(auto it = m_impl->virtualChannels.cbegin(); it != m_impl->virtualChannels.cend(); ++it)
     {
         auto channel = *it;
+
+        if(!channel->isValid())
+            continue;
 
         //if(channel->capabilityType() == t_type)
         {
@@ -176,6 +189,11 @@ QVector<FixtureCapability*> Fixture::findCapability(CapabilityType t_type, const
     {
         auto channel = *it;
 
+        // See findCapability(type, index): channels outside the selected mode
+        // aren't part of the fixture's live DMX footprint.
+        if(!channel->isValid())
+            continue;
+
         if(channel->name().toLower() == t_name.toLower())
         {
             for(auto capabilityIt = channel->capabilities().cbegin(); capabilityIt != channel->capabilities().cend(); ++capabilityIt)
@@ -190,6 +208,9 @@ QVector<FixtureCapability*> Fixture::findCapability(CapabilityType t_type, const
     for(auto it = m_impl->virtualChannels.cbegin(); it != m_impl->virtualChannels.cend(); ++it)
     {
         auto channel = *it;
+
+        if(!channel->isValid())
+            continue;
 
         if(channel->name().toLower() == t_name.toLower())
         {
@@ -328,6 +349,32 @@ void Fixture::setTiltOffset(float t_value)
     if(qAbs(m_impl->tiltOffset - t_value) < 0.0001f)
         return;
     m_impl->tiltOffset = t_value;
+    emit metadataChanged(this);
+}
+
+bool Fixture::panFlip() const
+{
+    return m_impl->panFlip;
+}
+
+void Fixture::setPanFlip(bool t_value)
+{
+    if(m_impl->panFlip == t_value)
+        return;
+    m_impl->panFlip = t_value;
+    emit metadataChanged(this);
+}
+
+bool Fixture::tiltFlip() const
+{
+    return m_impl->tiltFlip;
+}
+
+void Fixture::setTiltFlip(bool t_value)
+{
+    if(m_impl->tiltFlip == t_value)
+        return;
+    m_impl->tiltFlip = t_value;
     emit metadataChanged(this);
 }
 
@@ -821,6 +868,8 @@ void Fixture::readFromJson(const QJsonObject &json, const LoadContext &t_context
     m_impl->beamStyle = json.value("beamStyle").toString();
     m_impl->panOffset = float(json.value("panOffset").toDouble(0.0));
     m_impl->tiltOffset = float(json.value("tiltOffset").toDouble(0.0));
+    m_impl->panFlip = json.value("panFlip").toBool(false);
+    m_impl->tiltFlip = json.value("tiltFlip").toBool(false);
     m_impl->panInvert = json.value("panInvert").toBool(false);
     m_impl->tiltInvert = json.value("tiltInvert").toBool(false);
     m_impl->identifier = json.value("identifier").toString();
@@ -844,6 +893,8 @@ void Fixture::writeToJson(QJsonObject &json) const
     json.insert("beamStyle", m_impl->beamStyle);
     json.insert("panOffset", double(m_impl->panOffset));
     json.insert("tiltOffset", double(m_impl->tiltOffset));
+    json.insert("panFlip", m_impl->panFlip);
+    json.insert("tiltFlip", m_impl->tiltFlip);
     json.insert("panInvert", m_impl->panInvert);
     json.insert("tiltInvert", m_impl->tiltInvert);
     json.insert("identifier", m_impl->identifier);

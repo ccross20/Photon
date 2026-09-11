@@ -70,7 +70,28 @@ void FixtureInfoNode::evaluate(keira::EvaluationContext *t_context) const
 
     m_impl->positionParam->setValue(fixture->globalPosition());
     m_impl->rotationParam->setValue(fixture->globalRotation());
-    m_impl->matrixParam->setValue(QVariant::fromValue(fixture->globalMatrix()));
+
+    // The Matrix output is what aim-solving nodes (Look At Target, Look In
+    // Direction) use as the fixture's "zero" reference frame to compute the
+    // pan needed to hit a target - but Set Fixture Pan then adds panOffset
+    // on top of whatever pan value it's given (see AngleCapability::
+    // writePercent), before that reaches DMX. Left uncorrected, a solved
+    // node's answer - already the true physical angle - gets panOffset
+    // added a second time, so the fixture visibly over/under-aims by
+    // exactly the offset. Pre-rotating the frame here by panOffset around
+    // the (legacy-rig-convention) pan axis exactly cancels that out
+    // regardless of tilt, since pan is the outermost rotation in the
+    // pan-then-tilt chain.
+    //
+    // tiltOffset does NOT get the same treatment: tilt is the innermost
+    // rotation (applied in the already-panned frame), so a fixed correction
+    // to this frame can't compensate it exactly once pan is nonzero. Tilt
+    // Offset still works correctly for Set Fixture Tilt driven directly
+    // (cues, manual values) - just not through an aim-solving node combined
+    // with a nonzero pan.
+    QMatrix4x4 aimMatrix = fixture->globalMatrix();
+    aimMatrix.rotate(fixture->panOffset(), 0.0f, 1.0f, 0.0f);
+    m_impl->matrixParam->setValue(QVariant::fromValue(aimMatrix));
 }
 
 } // namespace photon

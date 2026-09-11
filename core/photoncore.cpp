@@ -111,12 +111,25 @@ PhotonCore::Impl::~Impl()
 PhotonCore::PhotonCore(int &argc, char **argv) : QApplication(argc, argv),
     m_impl(new Impl(this))
 {
-    // Pin Qt Quick to OpenGL to match the rest of the app (visualizer +
-    // shared GL contexts). On Windows Quick defaults to Direct3D 11, and the
-    // graphics-API mismatch forces the top-level window to be recreated the
-    // first time a QQuickWidget (surface view) appears, which flashes the
-    // whole window. Must run before the first QQuickWindow is created.
+    // Qt Quick backend for the surface views (the only Quick content in the
+    // app). Must run before the first QQuickWindow is created.
+    //
+    // macOS: the software renderer. QQuickWidget on macOS's deprecated
+    // OpenGL crashes in the driver (gldUpdateReadFramebuffer, inside
+    // CGLFlushDrawable) whenever its FBO is recreated - which happens on any
+    // scene-graph change, e.g. adding a gizmo. The surface QML is all 2D
+    // controls with no shader effects, so software rasterisation renders it
+    // fine and skips GL/Metal for the Quick content entirely.
+    //
+    // Elsewhere: OpenGL, to match the rest of the app. On Windows Quick
+    // otherwise defaults to Direct3D 11, and the graphics-API mismatch
+    // forces the top-level window to be recreated the first time a
+    // QQuickWidget appears, flashing the whole window.
+#if defined(Q_OS_MACOS)
+    QQuickWindow::setGraphicsApi(QSGRendererInterface::Software);
+#else
     QQuickWindow::setGraphicsApi(QSGRendererInterface::OpenGL);
+#endif
 
     qRegisterMetaType<TextureData>();
     qRegisterMetaType<RhiTextureData>();

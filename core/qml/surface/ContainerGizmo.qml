@@ -24,6 +24,11 @@ Item {
     readonly property int cols: cont.gizmo ? Math.max(1, cont.gizmo.values.columns || 1) : 1
     readonly property bool stretch: cont.gizmo ? (cont.gizmo.values.stretch || false) : false
     readonly property int count: cont.gizmo ? cont.gizmo.childItems.length : 0
+    // Null-safe child model for the Repeaters below. Without the guard, the
+    // `model: cont.gizmo.childItems` bindings throw a TypeError whenever
+    // gizmo is transiently null (delegate teardown, layout reload), which
+    // leaves the scene graph mid-rebuild.
+    readonly property var childModel: cont.gizmo ? cont.gizmo.childItems : []
 
     readonly property string title: cont.gizmo ? (cont.gizmo.values.title || "") : ""
     readonly property bool hasTitle: cont.title.length > 0
@@ -155,7 +160,7 @@ Item {
         Item {
             anchors.fill: parent
             Repeater {
-                model: cont.gizmo.childItems
+                model: cont.childModel
                 delegate: GizmoFrame {
                     required property var modelData
                     gizmo: modelData
@@ -183,7 +188,7 @@ Item {
             readonly property real cellH: (parent && cont.count > 0)
                 ? Math.max(20, (parent.height - (cont.count - 1) * cont.gap) / cont.count) : 20
             Repeater {
-                model: cont.gizmo.childItems
+                model: cont.childModel
                 delegate: GizmoFrame {
                     required property var modelData
                     gizmo: modelData
@@ -208,7 +213,7 @@ Item {
             readonly property real cellW: (parent && cont.count > 0)
                 ? Math.max(30, (parent.width - (cont.count - 1) * cont.gap) / cont.count) : 30
             Repeater {
-                model: cont.gizmo.childItems
+                model: cont.childModel
                 delegate: GizmoFrame {
                     required property var modelData
                     gizmo: modelData
@@ -236,7 +241,7 @@ Item {
             readonly property real cellH: parent
                 ? Math.max(20, (parent.height - (gridPositioner.rowCount - 1) * cont.gap) / gridPositioner.rowCount) : 20
             Repeater {
-                model: cont.gizmo.childItems
+                model: cont.childModel
                 delegate: GizmoFrame {
                     required property var modelData
                     gizmo: modelData
@@ -264,7 +269,7 @@ Item {
                 onCurrentIndexChanged: if (cont.gizmo) cont.gizmo.currentPage = bar.currentIndex
 
                 Repeater {
-                    model: cont.gizmo.childItems
+                    model: cont.childModel
                     delegate: TabButton {
                         required property var modelData
                         required property int index
@@ -304,7 +309,7 @@ Item {
             Item {
                 anchors { top: bar.bottom; left: parent.left; right: parent.right; bottom: parent.bottom }
                 Repeater {
-                    model: cont.gizmo.childItems
+                    model: cont.childModel
                     delegate: GizmoFrame {
                         required property var modelData
                         required property int index

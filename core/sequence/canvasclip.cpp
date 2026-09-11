@@ -40,6 +40,9 @@ void CanvasClip::Impl::createGraph()
 
     outputNode = new CanvasOutputNode;
     outputNode->createParameters();
+    // Otherwise lands directly on top of the Globals node - both default to
+    // the same (0,0) graph position.
+    outputNode->setPosition(globalsNode->position() + QPointF(500, 0));
     graph->addNode(outputNode);
 
     graph->drainCommandQueue();   // apply the addNodes immediately (see readFromJson)

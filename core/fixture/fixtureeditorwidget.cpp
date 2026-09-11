@@ -51,6 +51,8 @@ public:
     Vector3Edit *rotationEdit;
     QDoubleSpinBox *panOffsetSpin;
     QDoubleSpinBox *tiltOffsetSpin;
+    QCheckBox *panFlipCheck;
+    QCheckBox *tiltFlipCheck;
     QCheckBox *panInvertCheck;
     QCheckBox *tiltInvertCheck;
     PropertyComboBox *modelCombo;
@@ -186,12 +188,19 @@ FixtureEditorWidget::Impl::Impl()
         "in the visualiser while it's selected.");
     formLayout->addRow("Pan Offset", panOffsetSpin);
 
+    panFlipCheck = new QCheckBox;
+    panFlipCheck->setToolTip(
+        "Reverses the pan channel's direction of travel before it's written\n"
+        "to DMX, for a fixture mounted flipped so \"more\" pan currently moves\n"
+        "it the wrong way. Applied before Pan Offset, so the offset always\n"
+        "reads in whichever direction the fixture now actually responds to.");
+    formLayout->addRow("Pan Flip", panFlipCheck);
+
     panInvertCheck = new QCheckBox;
     panInvertCheck->setToolTip(
-        "Flips the visualiser's preview of the pan channel's direction of\n"
-        "travel, for eyeballing a fixture mounted flipped. Visualiser-only -\n"
-        "unlike Pan Offset, this does not change the real DMX value.");
-    formLayout->addRow("Pan Invert", panInvertCheck);
+        "Flips only the visualiser's preview of the pan direction, without\n"
+        "touching DMX - for eyeballing a flip before committing to Pan Flip.");
+    formLayout->addRow("Pan Invert (preview only)", panInvertCheck);
 
     tiltOffsetSpin = new QDoubleSpinBox;
     tiltOffsetSpin->setRange(-180.0, 180.0);
@@ -203,11 +212,15 @@ FixtureEditorWidget::Impl::Impl()
         "tilt angle.");
     formLayout->addRow("Tilt Offset", tiltOffsetSpin);
 
+    tiltFlipCheck = new QCheckBox;
+    tiltFlipCheck->setToolTip("Same idea as Pan Flip, for the tilt channel - changes real DMX.");
+    formLayout->addRow("Tilt Flip", tiltFlipCheck);
+
     tiltInvertCheck = new QCheckBox;
     tiltInvertCheck->setToolTip(
         "Same idea as Pan Invert, for the tilt channel - visualiser-only,\n"
         "does not change the real DMX value.");
-    formLayout->addRow("Tilt Invert", tiltInvertCheck);
+    formLayout->addRow("Tilt Invert (preview only)", tiltInvertCheck);
 }
 
 FixtureEditorWidget::FixtureEditorWidget(QWidget *parent)
@@ -229,6 +242,8 @@ FixtureEditorWidget::FixtureEditorWidget(QWidget *parent)
     connect(m_impl->rotationEdit, &Vector3Edit::valueChanged, this, &FixtureEditorWidget::setRotation);
     connect(m_impl->panOffsetSpin, &QDoubleSpinBox::valueChanged, this, &FixtureEditorWidget::setPanOffset);
     connect(m_impl->tiltOffsetSpin, &QDoubleSpinBox::valueChanged, this, &FixtureEditorWidget::setTiltOffset);
+    connect(m_impl->panFlipCheck, &QCheckBox::toggled, this, &FixtureEditorWidget::setPanFlip);
+    connect(m_impl->tiltFlipCheck, &QCheckBox::toggled, this, &FixtureEditorWidget::setTiltFlip);
     connect(m_impl->panInvertCheck, &QCheckBox::toggled, this, &FixtureEditorWidget::setPanInvert);
     connect(m_impl->tiltInvertCheck, &QCheckBox::toggled, this, &FixtureEditorWidget::setTiltInvert);
 }
@@ -278,6 +293,10 @@ void FixtureEditorWidget::setFixtures(QVector<Fixture*> t_fixtures)
         m_impl->panOffsetSpin->setEnabled(false);
         m_impl->tiltOffsetSpin->setValue(0.0);
         m_impl->tiltOffsetSpin->setEnabled(false);
+        m_impl->panFlipCheck->setChecked(false);
+        m_impl->panFlipCheck->setEnabled(false);
+        m_impl->tiltFlipCheck->setChecked(false);
+        m_impl->tiltFlipCheck->setEnabled(false);
         m_impl->panInvertCheck->setChecked(false);
         m_impl->panInvertCheck->setEnabled(false);
         m_impl->tiltInvertCheck->setChecked(false);
@@ -300,6 +319,8 @@ void FixtureEditorWidget::setFixtures(QVector<Fixture*> t_fixtures)
     m_impl->rotationEdit->setEnabled(true);
     m_impl->panOffsetSpin->setEnabled(true);
     m_impl->tiltOffsetSpin->setEnabled(true);
+    m_impl->panFlipCheck->setEnabled(true);
+    m_impl->tiltFlipCheck->setEnabled(true);
     m_impl->panInvertCheck->setEnabled(true);
     m_impl->tiltInvertCheck->setEnabled(true);
     m_impl->tagEditor->setEnabled(true);
@@ -343,6 +364,12 @@ void FixtureEditorWidget::setFixtures(QVector<Fixture*> t_fixtures)
 
     float tiltOffset = firstFixture->tiltOffset();
     bool multiTiltOffset = false;
+
+    bool panFlip = firstFixture->panFlip();
+    bool multiPanFlip = false;
+
+    bool tiltFlip = firstFixture->tiltFlip();
+    bool multiTiltFlip = false;
 
     bool panInvert = firstFixture->panInvert();
     bool multiPanInvert = false;
@@ -428,6 +455,18 @@ void FixtureEditorWidget::setFixtures(QVector<Fixture*> t_fixtures)
                 multiTiltOffset = true;
             }
 
+            if(!multiPanFlip && currentFixture->panFlip() != panFlip)
+            {
+                panFlip = false;
+                multiPanFlip = true;
+            }
+
+            if(!multiTiltFlip && currentFixture->tiltFlip() != tiltFlip)
+            {
+                tiltFlip = false;
+                multiTiltFlip = true;
+            }
+
             if(!multiPanInvert && currentFixture->panInvert() != panInvert)
             {
                 panInvert = false;
@@ -453,6 +492,8 @@ void FixtureEditorWidget::setFixtures(QVector<Fixture*> t_fixtures)
     m_impl->rotationEdit->setValue(rotation);
     m_impl->panOffsetSpin->setValue(double(panOffset));
     m_impl->tiltOffsetSpin->setValue(double(tiltOffset));
+    m_impl->panFlipCheck->setChecked(panFlip);
+    m_impl->tiltFlipCheck->setChecked(tiltFlip);
     m_impl->panInvertCheck->setChecked(panInvert);
     m_impl->tiltInvertCheck->setChecked(tiltInvert);
     m_impl->tagEditor->refresh();
@@ -592,6 +633,22 @@ void FixtureEditorWidget::setTiltOffset(double t_offset)
     for(auto fixture : m_impl->fixtures)
     {
         fixture->setTiltOffset(float(t_offset));
+    }
+}
+
+void FixtureEditorWidget::setPanFlip(bool t_flip)
+{
+    for(auto fixture : m_impl->fixtures)
+    {
+        fixture->setPanFlip(t_flip);
+    }
+}
+
+void FixtureEditorWidget::setTiltFlip(bool t_flip)
+{
+    for(auto fixture : m_impl->fixtures)
+    {
+        fixture->setTiltFlip(t_flip);
     }
 }
 

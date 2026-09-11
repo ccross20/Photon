@@ -46,9 +46,29 @@ QString Graph::name() const
 QString Graph::familyName() const
 {
     if(m_impl->parentNode)
-        return m_impl->parentNode->graph()->familyName() + " > " + m_impl->name;
+        // The containing node's own (renameable) name, not this graph's own
+        // name - a SubGraphNode's inner graph defaults to a generic name
+        // like "Subgraph" that never changes, which told the user nothing
+        // about which node they were inside. The node's name is what they
+        // actually renamed and recognise in the project tree.
+        return m_impl->parentNode->graph()->familyName() + " > " + m_impl->parentNode->name();
     else
         return m_impl->name;
+}
+
+QVector<Graph*> Graph::ancestryChain() const
+{
+    QVector<Graph*> chain;
+    Graph *current = const_cast<Graph*>(this);
+    chain.prepend(current);
+    Node *parent = m_impl->parentNode;
+    while(parent)
+    {
+        current = parent->graph();
+        chain.prepend(current);
+        parent = current->parentNode();
+    }
+    return chain;
 }
 
 Node *Graph::parentNode() const

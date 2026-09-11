@@ -34,6 +34,19 @@ PixelGraph::PixelGraph() : keira::SubGraphNode("photon.node.pixel-graph") {
     m_globalsNode = new GraphContextNode;
     m_globalsNode->configure(GraphContextNode::pixelPorts());
     graph()->addNode(m_globalsNode);
+
+    // Seed with a Set Pixel Color node - the whole point of a pixel graph is
+    // to drive pixel color, so an empty graph is never actually useful as-is.
+    // Created by id through the plugin factory rather than a direct #include:
+    // Set Pixel Color lives in plugin-nodes, which depends on core, not the
+    // other way around.
+    m_seedSetColorNode = photonApp->plugins()->nodeLibrary()->createNode("photon.plugin.node.set-pixel-color");
+    if(m_seedSetColorNode)
+    {
+        m_seedSetColorNode->setPosition(m_globalsNode->position() + QPointF(500, 0));
+        graph()->addNode(m_seedSetColorNode);
+    }
+
     graph()->drainCommandQueue(); // apply immediately so the queued addNode never
                                   // outlives m_globalsNode (see readFromJson below)
     graph()->setName("Pixel Graph");
@@ -82,10 +95,14 @@ void PixelGraph::parameterWasModified(keira::Parameter *t_param)
 void PixelGraph::readFromJson(const QJsonObject &t_json, keira::NodeLibrary *t_library)
 {
     graph()->removeNode(m_globalsNode);
+    if(m_seedSetColorNode)
+        graph()->removeNode(m_seedSetColorNode);
     graph()->drainCommandQueue(); // apply the removal (and any still-pending addNode
                                   // from construction) BEFORE freeing the pointer, so
                                   // no queued command is left referencing freed memory
     delete m_globalsNode;
+    delete m_seedSetColorNode;
+    m_seedSetColorNode = nullptr;
 
 
     keira::SubGraphNode::readFromJson(t_json, t_library);
