@@ -16,6 +16,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(PROJECT_SOURCES
     desktop.cpp
+    resources.qrc
 )
 
 enable_testing(true)

@@ -290,6 +290,14 @@ set(PROJECT_SOURCES
         routine/node/numberinputnode.cpp
         routine/node/colorinputnode.h
         routine/node/colorinputnode.cpp
+        routine/node/booleaninputnode.h
+        routine/node/booleaninputnode.cpp
+        routine/node/integerinputnode.h
+        routine/node/integerinputnode.cpp
+        routine/node/stringinputnode.h
+        routine/node/stringinputnode.cpp
+        routine/node/colorpaletteinputnode.h
+        routine/node/colorpaletteinputnode.cpp
         routine/node/fixtureinfonode.h
         routine/node/fixtureinfonode.cpp
         routine/routineevaluationcontext.h

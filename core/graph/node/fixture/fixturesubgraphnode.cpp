@@ -150,31 +150,37 @@ void FixtureSubGraphNode::syncSubgraphPool(int count) const
     m_subgraphPool.clear();
     m_globalsPool.clear();
 
-    if(count == 0)
+    if(count > 0)
     {
-        m_poolStale = false;
-        return;
-    }
+        graph()->drainCommandQueue();
 
-    graph()->drainCommandQueue();
+        QJsonObject subgraphJson;
+        graph()->writeToJson(subgraphJson);
 
-    QJsonObject subgraphJson;
-    graph()->writeToJson(subgraphJson);
+        auto *library = photonApp->plugins()->nodeLibrary();
 
-    auto *library = photonApp->plugins()->nodeLibrary();
+        for(int i = 0; i < count; ++i)
+        {
+            auto *clone = new keira::Graph;
+            clone->readFromJson(subgraphJson, library);
 
-    for(int i = 0; i < count; ++i)
-    {
-        auto *clone = new keira::Graph;
-        clone->readFromJson(subgraphJson, library);
-
-        auto *globals = dynamic_cast<GraphContextNode*>(clone->findNode("Globals"));
-        m_subgraphPool.append(clone);
-        m_globalsPool.append(globals);
+            auto *globals = dynamic_cast<GraphContextNode*>(clone->findNode("Globals"));
+            m_subgraphPool.append(clone);
+            m_globalsPool.append(globals);
+        }
     }
 
     // Reset the source graph's parameter-dirty bits so the *next* edit re-fires
-    // dirtyStateChanged (markDirty short-circuits while a bit is still set).
+    // dirtyStateChanged (markDirty short-circuits while a bit is still set) -
+    // unconditionally, even with zero fixtures. Skipping this while count == 0
+    // (as a plain early return used to) left Dirty_Structure permanently set
+    // the moment a graph edit landed while the fixture list happened to be
+    // empty (e.g. before anything was wired into Fixtures): every *later*
+    // structural edit - adding another exposed parameter, wiring one up -
+    // then found the bit already set and silently failed to re-fire
+    // dirtyStateChanged, so the pool never rebuilt and the new parameter had
+    // no effect on evaluation even though it was sitting right there in the
+    // graph.
     graph()->markClean();
     m_poolStale = false;
 }

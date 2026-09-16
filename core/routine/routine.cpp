@@ -7,6 +7,9 @@
 #include "node/baseroutinenode.h"
 #include "node/colorinputnode.h"
 #include "node/pointinputnode.h"
+#include "node/booleaninputnode.h"
+#include "node/integerinputnode.h"
+#include "node/stringinputnode.h"
 #include "opengl/openglframebuffer.h"
 #include "gui/resourceeditorwidget.h"
 #include "photoncore.h"
@@ -150,6 +153,24 @@ void Routine::nodeAdded(keira::Node *t_node)
         addChannel(pointInput->channelInfo());
         pointInput->setChannelIndex(m_impl->channels.length()-1);
     }
+    BooleanInputNode *boolInput = dynamic_cast<BooleanInputNode *>(t_node);
+    if(boolInput)
+    {
+        addChannel(boolInput->channelInfo());
+        boolInput->setChannelIndex(m_impl->channels.length()-1);
+    }
+    IntegerInputNode *intInput = dynamic_cast<IntegerInputNode *>(t_node);
+    if(intInput)
+    {
+        addChannel(intInput->channelInfo());
+        intInput->setChannelIndex(m_impl->channels.length()-1);
+    }
+    StringInputNode *stringInput = dynamic_cast<StringInputNode *>(t_node);
+    if(stringInput)
+    {
+        addChannel(stringInput->channelInfo());
+        stringInput->setChannelIndex(m_impl->channels.length()-1);
+    }
 
     auto baseNode = dynamic_cast<BaseRoutineNode*>(t_node);
     if(baseNode)
@@ -172,6 +193,21 @@ void Routine::nodeRemoved(keira::Node *t_node)
     if(pointInput)
     {
         removeChannel(pointInput->channelIndex());
+    }
+    BooleanInputNode *boolInput = dynamic_cast<BooleanInputNode *>(t_node);
+    if(boolInput)
+    {
+        removeChannel(boolInput->channelIndex());
+    }
+    IntegerInputNode *intInput = dynamic_cast<IntegerInputNode *>(t_node);
+    if(intInput)
+    {
+        removeChannel(intInput->channelIndex());
+    }
+    StringInputNode *stringInput = dynamic_cast<StringInputNode *>(t_node);
+    if(stringInput)
+    {
+        removeChannel(stringInput->channelIndex());
     }
 
     auto baseNode = dynamic_cast<BaseRoutineNode*>(t_node);
@@ -241,6 +277,21 @@ void Routine::readFromJson(const QJsonObject &t_json, keira::NodeLibrary *t_libr
         if(pointInput)
         {
             m_impl->channels.append(pointInput->channelInfo());
+        }
+        BooleanInputNode *boolInput = dynamic_cast<BooleanInputNode *>(node);
+        if(boolInput)
+        {
+            m_impl->channels.append(boolInput->channelInfo());
+        }
+        IntegerInputNode *intInput = dynamic_cast<IntegerInputNode *>(node);
+        if(intInput)
+        {
+            m_impl->channels.append(intInput->channelInfo());
+        }
+        StringInputNode *stringInput = dynamic_cast<StringInputNode *>(node);
+        if(stringInput)
+        {
+            m_impl->channels.append(stringInput->channelInfo());
         }
     }
 }

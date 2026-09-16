@@ -1,6 +1,7 @@
 #include <QApplication>
 #include <QDrag>
 #include <QHBoxLayout>
+#include <QHash>
 #include <QHeaderView>
 #include <QInputDialog>
 #include <QMenu>
@@ -72,6 +73,25 @@ QByteArray contentTypeForResource(ProjectResource *t_resource)
     if(dynamic_cast<SceneObject*>(t_resource))
         return QByteArray("scene");
     return t_resource->resourceTypeId();
+}
+
+// The lowest DMX offset past every currently-patched fixture's channel range
+// in the given universe. Not true gap-filling (a hole left by a deleted
+// fixture won't be reused) - just append-after-the-highest, which is what
+// patching a new or duplicated fixture almost always wants, and cheap to
+// compute from the project's flat fixture list rather than walking the scene.
+int nextAvailableDMXOffset(int t_universe)
+{
+    int next = 0;
+    for(auto *fixture : photonApp->project()->fixtures()->fixtures())
+    {
+        if(fixture->universe() != t_universe)
+            continue;
+        const int end = fixture->dmxOffset() + fixture->dmxSize();
+        if(end > next)
+            next = end;
+    }
+    return next;
 }
 
 } // namespace
@@ -659,6 +679,10 @@ void ProjectPanel::populateAddActions(QMenu &t_menu, const QByteArray &t_content
             if(sameName.length() > 0)
                 fixture->setName(fixture->name() + " " + QString::number(sameName.length() + 1));
 
+            // Patch it onto the next free run of channels in its universe
+            // instead of always landing back at channel 1.
+            fixture->setDMXOffset(nextAvailableDMXOffset(fixture->universe()));
+
             fixture->setParentSceneObject(sceneParent());
             photonApp->project()->setSelectedSceneObjects({fixture});
         });
@@ -849,18 +873,21 @@ void ProjectPanel::removeClicked()
 void ProjectPanel::duplicateClicked()
 {
     // Carried over from RigPanel: cloned fixtures are renumbered past the
-    // highest DMX address currently in use so they don't collide.
-    auto fixtures = SceneIterator::FindMany(photonApp->project()->sceneRoot(), [](SceneObject *object, bool *){
-        return dynamic_cast<Fixture*>(object) != nullptr;
-    });
-
-    int nextDMX = 0;
-    for(auto *object : fixtures)
-    {
-        const int end = static_cast<Fixture*>(object)->dmxOffset() + static_cast<Fixture*>(object)->dmxSize();
-        if(end > nextDMX)
-            nextDMX = end;
-    }
+    // highest DMX address currently in use in their own universe, so they
+    // don't collide with the fixtures they were copied from. Tracked lazily
+    // per universe (seeded from the existing patch on first use) rather than
+    // one shared counter, so duplicating a mixed-universe selection doesn't
+    // scatter later universes' clones onto whatever address an earlier
+    // universe happened to reach.
+    QHash<int, int> nextDMXByUniverse;
+    auto claimNextDMX = [&nextDMXByUniverse](int t_universe, int t_size) {
+        auto it = nextDMXByUniverse.find(t_universe);
+        if(it == nextDMXByUniverse.end())
+            it = nextDMXByUniverse.insert(t_universe, nextAvailableDMXOffset(t_universe));
+        const int offset = it.value();
+        it.value() += t_size;
+        return offset;
+    };
 
     QList<SceneObject*> clones;
     for(auto *resource : m_impl->selectedResources())
@@ -882,8 +909,7 @@ void ProjectPanel::duplicateClicked()
         for(auto *object : clonedFixtures)
         {
             auto *fixture = static_cast<Fixture*>(object);
-            fixture->setDMXOffset(nextDMX);
-            nextDMX += fixture->dmxSize();
+            fixture->setDMXOffset(claimNextDMX(fixture->universe(), fixture->dmxSize()));
         }
     }
 

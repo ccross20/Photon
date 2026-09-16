@@ -82,6 +82,7 @@ add_library(plugin-nodes SHARED ${SOURCES}
     animation/oscillatornode.h animation/oscillatornode.cpp
     animation/timenode.h animation/timenode.cpp
     animation/beatreducernode.h animation/beatreducernode.cpp
+    animation/retimenode.h animation/retimenode.cpp
     math/stopwatchnode.h math/stopwatchnode.cpp
     color-palette/fadecolorpalettenode.h color-palette/fadecolorpalettenode.cpp
     color-palette/colortheorypalettenode.h color-palette/colortheorypalettenode.cpp

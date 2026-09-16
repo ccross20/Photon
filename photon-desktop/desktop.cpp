@@ -1,5 +1,6 @@
 #include <QDebug>
 #include <QApplication>
+#include <QIcon>
 #include <memory>
 #include <map>
 #include "photoncore.h"
@@ -25,6 +26,13 @@ int main(int argc, char *argv[])
     QSurfaceFormat::setDefaultFormat(format);
 
     photon::PhotonCore w(argc, argv);
+
+    // The bundle's Info.plist (see CMakeLists.txt) is what Finder/Dock read
+    // before launch; this is what actually drives the Dock icon when running
+    // the bare, non-bundled binary directly (Qt Creator's run button, ninja
+    // + launching straight from build/), since there's no bundle for the OS
+    // to read an icon from in that case.
+    w.setWindowIcon(QIcon(":/icon.png"));
 
     w.init();
 

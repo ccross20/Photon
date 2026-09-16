@@ -29,6 +29,10 @@
 #include "routine/node/numberinputnode.h"
 #include "routine/node/pointinputnode.h"
 #include "routine/node/colorinputnode.h"
+#include "routine/node/booleaninputnode.h"
+#include "routine/node/integerinputnode.h"
+#include "routine/node/stringinputnode.h"
+#include "routine/node/colorpaletteinputnode.h"
 #include "routine/node/fixtureinfonode.h"
 #include "routine/node/canvaswriternode.h"
 #include "routine/node/createtexturenode.h"
@@ -236,6 +240,10 @@ void PluginFactory::init()
     registerNode(NumberInputNode::info());
     registerNode(ColorInputNode::info());
     registerNode(PointInputNode::info());
+    registerNode(BooleanInputNode::info());
+    registerNode(IntegerInputNode::info());
+    registerNode(StringInputNode::info());
+    registerNode(ColorPaletteInputNode::info());
     registerNode(FixtureInfoNode::info());
     registerNode(SceneObjectInfoNode::info());
     registerNode(MatrixDecomposeNode::info());

@@ -44,6 +44,7 @@
 #include "animation/oscillatornode.h"
 #include "animation/timenode.h"
 #include "animation/beatreducernode.h"
+#include "animation/retimenode.h"
 #include "falloff/linearfalloffnode.h"
 #include "falloff/spatialfalloffnode.h"
 #include "falloff/randomfalloffnode.h"
@@ -101,6 +102,7 @@ bool PluginNodes::initialize(const PluginContext &context)
     photonApp->plugins()->registerNode(OscillatorNode::info());
     photonApp->plugins()->registerNode(TimeNode::info());
     photonApp->plugins()->registerNode(BeatReducerNode::info());
+    photonApp->plugins()->registerNode(RetimeNode::info());
     photonApp->plugins()->registerNode(RemapValueNode::info());
     photonApp->plugins()->registerNode(IfNode::info());
     photonApp->plugins()->registerNode(RandomNumberNode::info());

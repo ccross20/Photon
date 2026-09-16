@@ -23,7 +23,7 @@ ColorPaletteNode::ColorPaletteNode() : keira::Node("photon.color-palette.create"
 void ColorPaletteNode::createParameters()
 {
 
-    addParameter(new ColorPaletteParameter(PaletteParam, "Palette", ColorPalette{}));
+    addParameter(new ColorPaletteParameter(PaletteParam, "Palette", ColorPalette{}, keira::AllowMultipleOutput | keira::AllowSingleInput));
 
 }
 
