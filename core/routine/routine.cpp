@@ -10,7 +10,6 @@
 #include "node/booleaninputnode.h"
 #include "node/integerinputnode.h"
 #include "node/stringinputnode.h"
-#include "opengl/openglframebuffer.h"
 #include "gui/resourceeditorwidget.h"
 #include "photoncore.h"
 
@@ -21,7 +20,6 @@ class Routine::Impl
 public:
     QString name;
     QVector<ChannelInfo> channels;
-    QSet<BaseRoutineNode*> toInitialize;
 };
 
 Routine::Routine(const QString &t_name, QObject *parent)
@@ -46,30 +44,6 @@ Routine::Routine(const QString &t_name, QObject *parent)
 Routine::~Routine()
 {
     delete m_impl;
-}
-
-void Routine::initializeContext(QOpenGLContext *t_context, Canvas *t_canvas)
-{
-    for(auto node : nodes())
-    {
-        auto baseNode = dynamic_cast<BaseRoutineNode*>(node);
-        if(baseNode)
-        {
-            baseNode->initializeContext(t_context, t_canvas);
-        }
-    }
-}
-
-void Routine::canvasResized(QOpenGLContext *t_context, Canvas *t_canvas)
-{
-    for(auto node : nodes())
-    {
-        auto baseNode = dynamic_cast<BaseRoutineNode*>(node);
-        if(baseNode)
-        {
-            baseNode->canvasResized(t_context, t_canvas);
-        }
-    }
 }
 
 QWidget *Routine::createResourceEditor()
@@ -105,12 +79,6 @@ void Routine::evaluate(keira::EvaluationContext *t_context) const
 
     if(routineContext)
     {
-        for(auto it = m_impl->toInitialize.cbegin(); it != m_impl->toInitialize.cend(); ++it)
-        {
-            (*it)->initializeContext(routineContext->openglContext, routineContext->canvas);
-        }
-        m_impl->toInitialize.clear();
-
         Graph::evaluate(routineContext);
     }
     else
@@ -171,10 +139,6 @@ void Routine::nodeAdded(keira::Node *t_node)
         addChannel(stringInput->channelInfo());
         stringInput->setChannelIndex(m_impl->channels.length()-1);
     }
-
-    auto baseNode = dynamic_cast<BaseRoutineNode*>(t_node);
-    if(baseNode)
-        m_impl->toInitialize << baseNode;
 }
 
 void Routine::nodeRemoved(keira::Node *t_node)
@@ -209,10 +173,6 @@ void Routine::nodeRemoved(keira::Node *t_node)
     {
         removeChannel(stringInput->channelIndex());
     }
-
-    auto baseNode = dynamic_cast<BaseRoutineNode*>(t_node);
-    if(baseNode)
-        m_impl->toInitialize.remove(baseNode);
 }
 
 void Routine::addChannel(const ChannelInfo &info)

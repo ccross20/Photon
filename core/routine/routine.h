@@ -5,7 +5,6 @@
 #include "photon-global.h"
 #include "project/projectresource.h"
 #include "sequence/channel.h"
-#include "opengl/openglframebuffer.h"
 
 namespace photon {
 
@@ -19,8 +18,6 @@ public:
     explicit Routine(const QString &t_name = QString{}, QObject *parent = nullptr);
     ~Routine();
 
-    void initializeContext(QOpenGLContext *, Canvas *);
-    void canvasResized(QOpenGLContext *, Canvas *);
 
     QString name() const;
     void setName(const QString &);

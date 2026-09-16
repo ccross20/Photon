@@ -16,15 +16,14 @@ namespace photon {
 // Unlike the visualizer (where each RhiWindow owns a QRhi bound to a window +
 // swapchain), the canvas pipeline must render with no window visible — DMX
 // output has to work whether or not a preview panel is open. So this owns a
-// single offscreen QRhi built on the OpenGL backend, over a QOpenGLContext that
-// *shares* QOpenGLContext::globalShareContext(). Sharing the global context is
-// what lets a preview window (a separate QRhi) later import a canvas's texture
-// by its GL id, and keeps these GPU resources interoperable with the existing
-// Canvas OpenGLTexture and the visualizer.
+// single offscreen QRhi, created through rhiBackend (Metal on macOS, OpenGL
+// elsewhere).
 //
-// Phase 1 (this spike) proves the device can be created and can render+read
-// back an offscreen texture while coexisting with the visualizer's per-window
-// QRhi. Later phases build the texture pool and the canvas nodes on top.
+// This is the first device created in the process, and the other two (the
+// visualizer window and the canvas preview window) are built to interoperate
+// with it: on Metal they import the MTLDevice it seeds, on OpenGL it lives in
+// the global share group. Either way a preview window's separate QRhi can
+// import a canvas texture by its native handle. See core/rhi/rhibackend.h.
 class PHOTONCORE_EXPORT RhiContext
 {
 public:

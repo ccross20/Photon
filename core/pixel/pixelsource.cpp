@@ -1,6 +1,5 @@
 #include "pixelsource.h"
 #include "sequence/sequence.h"
-#include "opengl/openglframebuffer.h"
 #include "pixel/canvas.h"
 
 namespace photon {

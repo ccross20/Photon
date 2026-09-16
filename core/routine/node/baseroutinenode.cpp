@@ -9,14 +9,4 @@ BaseRoutineNode::~BaseRoutineNode()
 
 }
 
-void BaseRoutineNode::initializeContext(QOpenGLContext *, Canvas *)
-{
-
-}
-
-void BaseRoutineNode::canvasResized(QOpenGLContext *, Canvas *)
-{
-
-}
-
 } // namespace photon

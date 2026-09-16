@@ -13,14 +13,10 @@ bool PluginVisualizer::initialize(const PluginContext &context)
 
     //initPluginResource();
 
-
-    QSurfaceFormat format;
-    format.setDepthBufferSize(24);
-    format.setSamples(4);
-    format.setVersion(3, 3);
-    format.setProfile(QSurfaceFormat::OpenGLContextProfile::CoreProfile);
-    QSurfaceFormat::setDefaultFormat(format);
-
+    // The default QSurfaceFormat used to be set here too. It belongs in main()
+    // (photon-desktop/desktop.cpp), which runs before the QApplication exists -
+    // setting it here, at plugin-load time, was already too late to affect the
+    // platform integration, and the viewport now renders through QRhi anyway.
 
     photonApp->plugins()->registerPluginPanel("visualizer",[](){return new VisualizerPanel;});
 
@@ -44,7 +40,7 @@ QVersionNumber PluginVisualizer::minimumHostVersion()
 
 QString PluginVisualizer::name()
 {
-    return "OpenGL Visualization";
+    return "Visualization";
 }
 
 QString PluginVisualizer::description()

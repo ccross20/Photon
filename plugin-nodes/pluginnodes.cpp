@@ -22,10 +22,7 @@
 #include "canvas/drawrectangle.h"
 #include "canvas/drawellipse.h"
 #include "canvas/fadecanvas.h"
-#include "canvas/renderpath.h"
 #include "canvas/renderstroke.h"
-#include "canvas/masknode.h"
-#include "canvas/transform/transformtexturenode.h"
 #include "color/colorfromhsv.h"
 #include "color/randomcolornode.h"
 #include "color/sparklenode.h"
@@ -76,7 +73,6 @@ bool PluginNodes::initialize(const PluginContext &context)
     //photonApp->plugins()->registerNode(CanvasWriter::info());
     photonApp->plugins()->registerNode(DrawRectangle::info());
     photonApp->plugins()->registerNode(DrawEllipse::info());
-    photonApp->plugins()->registerNode(RenderPath::info());
     photonApp->plugins()->registerNode(RenderStroke::info());
     photonApp->plugins()->registerNode(LookAtTarget::info());
     photonApp->plugins()->registerNode(LookInDirection::info());
@@ -86,9 +82,7 @@ bool PluginNodes::initialize(const PluginContext &context)
     photonApp->plugins()->registerNode(NoiseNode::info());
     photonApp->plugins()->registerNode(ColorFromHSV::info());
     photonApp->plugins()->registerNode(RandomColorNode::info());
-    photonApp->plugins()->registerNode(MaskNode::info());
     photonApp->plugins()->registerNode(SparkleNode::info());
-    photonApp->plugins()->registerNode(TransformTextureNode::info());    
     photonApp->plugins()->registerNode(FixtureListRandomSubsetNode::info());
     photonApp->plugins()->registerNode(FixtureListIntervalSubsetNode::info());
     photonApp->plugins()->registerNode(FixtureListMergeNode::info());

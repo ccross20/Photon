@@ -5,14 +5,17 @@
 #include <QList>
 #include <QDebug>
 #include "rhicontext.h"
+#include "rhibackend.h"
 
 namespace photon {
 
 class RhiContext::Impl
 {
 public:
+    // Both null on Metal; on OpenGL they are the fallback surface and the
+    // share-group context the device was built on, owned by us.
     QOffscreenSurface *fallbackSurface = nullptr;
-    QOpenGLContext *context = nullptr;   // shares globalShareContext; owned by QRhi import
+    QOpenGLContext *context = nullptr;
     QRhi *rhi = nullptr;
 
     // Pooled render textures. A pointer sits in exactly one of the lists.
@@ -32,35 +35,21 @@ RhiContext::RhiContext() : m_impl(new Impl)
     fmt.setDepthBufferSize(24);
     fmt.setStencilBufferSize(8);
 
-    m_impl->fallbackSurface = QRhiGles2InitParams::newFallbackSurface(fmt);
+    // shareGL: on the OpenGL backend this device must live in the global share
+    // group so the preview window's separate device can see its textures. On
+    // Metal the equivalent device sharing is handled inside rhiBackend, and
+    // this is the first device created in the process - it seeds the MTLDevice
+    // every later QRhi imports.
+    rhiBackend::Result created = rhiBackend::create(fmt, /*window=*/nullptr, /*shareGL=*/true);
+    m_impl->rhi             = created.rhi;
+    m_impl->context         = created.context;
+    m_impl->fallbackSurface = created.fallbackSurface;
 
-    // Our own GL context, sharing the app-wide share context. This is the same
-    // sharing model Canvas already uses (see canvas.cpp), so texture ids created
-    // here are visible to other contexts in the share group.
-    m_impl->context = new QOpenGLContext;
-    m_impl->context->setShareContext(QOpenGLContext::globalShareContext());
-    m_impl->context->setFormat(fmt);
-    if (!m_impl->context->create()) {
-        qWarning() << "RhiContext: failed to create shared QOpenGLContext";
-        delete m_impl->context;
-        m_impl->context = nullptr;
-        return;
-    }
-
-    QRhiGles2InitParams params;
-    params.format = fmt;
-    params.fallbackSurface = m_impl->fallbackSurface;
-
-    // Import our shared context rather than letting QRhi create its own, so the
-    // device lives in the global share group.
-    QRhiGles2NativeHandles importDevice;
-    importDevice.context = m_impl->context;
-
-    m_impl->rhi = QRhi::create(QRhi::OpenGLES2, &params, {}, &importDevice);
     if (!m_impl->rhi)
-        qWarning() << "RhiContext: failed to create offscreen QRhi (OpenGL backend)";
+        qWarning() << "RhiContext: failed to create offscreen QRhi ("
+                   << rhiBackend::apiName() << "backend )";
     else
-        qInfo() << "RhiContext: offscreen QRhi created —" << m_impl->rhi->backendName()
+        qInfo() << "RhiContext: offscreen QRhi created -" << m_impl->rhi->backendName()
                 << m_impl->rhi->driverInfo().deviceName;
 }
 
@@ -72,9 +61,9 @@ RhiContext::~RhiContext()
     m_impl->free.clear();
     m_impl->inUse.clear();
 
-    delete m_impl->rhi;             // releases the imported context's GPU resources
-    delete m_impl->context;         // we own the QOpenGLContext (imported, not created by QRhi)
-    delete m_impl->fallbackSurface;
+    delete m_impl->rhi;             // releases the device's GPU resources
+    delete m_impl->context;         // OpenGL only; we own the imported context (null on Metal)
+    delete m_impl->fallbackSurface; // OpenGL only (null on Metal)
     delete m_impl;
 }
 

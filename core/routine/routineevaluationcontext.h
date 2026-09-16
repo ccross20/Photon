@@ -7,10 +7,8 @@
 #include "data/dmxmatrix.h"
 #include "model/node.h"
 
-class QOpenGLContext;
 class QRhiCommandBuffer;
 namespace photon {
-class OpenGLFrameBuffer;
 
 struct RoutineEvaluationContext : keira::EvaluationContext
 {
@@ -26,9 +24,6 @@ struct RoutineEvaluationContext : keira::EvaluationContext
         project      = o.project;
         fixture      = o.fixture;
         surface      = o.surface;
-        frameBuffer  = o.frameBuffer;
-        openglContext = o.openglContext;
-        resources    = o.resources;
         canvas       = o.canvas;
         frame        = o.frame;
         relativeTime = o.relativeTime;
@@ -47,9 +42,6 @@ struct RoutineEvaluationContext : keira::EvaluationContext
     Project *project = nullptr;
     Fixture *fixture = nullptr;
     Surface *surface = nullptr;
-    OpenGLFrameBuffer *frameBuffer = nullptr;
-    QOpenGLContext *openglContext = nullptr;
-    OpenGLResources *resources = nullptr;
     Canvas *canvas = nullptr;
     qlonglong frame = 0;
     double relativeTime = 0.0;

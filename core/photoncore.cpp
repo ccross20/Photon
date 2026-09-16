@@ -2,7 +2,6 @@
 #include <QFileDialog>
 #include <QSettings>
 #include <QInputDialog>
-#include <QOpenGLContext>
 #include <QQuickWindow>
 #include "photoncore.h"
 #include "gui/guimanager.h"
@@ -17,7 +16,6 @@
 #include "sequence/sequencecollection.h"
 #include "sequence/sequence.h"
 #include "surface/surfacecollection.h"
-#include "opengl/openglresources.h"
 #include "rhi/rhicontext.h"
 #include "graph/node/canvas/canvasrendermanager.h"
 #include "graph/parameter/textureparameter.h"
@@ -49,9 +47,6 @@ public:
     Sequence *activeSequence = nullptr;
     SequencePanel *activeSequencePanel = nullptr;
     QVersionNumber version;
-    QOffscreenSurface *surface = nullptr;
-    OpenGLResources *openGLResources = nullptr;
-    QOpenGLContext *context = nullptr;
     RhiContext *rhiContext = nullptr;
     CanvasRenderManager *canvasRenderManager = nullptr;
     VirtualDJConnector *djConnector = nullptr;
@@ -96,10 +91,7 @@ PhotonCore::Impl::~Impl()
     delete songLibrary;   // just a QSqlDatabase connection, no ordering hazard
     delete fixtureLibrary;   // plain in-memory catalog, no ordering hazard
     delete canvasRenderManager;   // stop the render timer before the device it uses
-    delete rhiContext;   // owns its own shared GL context; tear down before ours
-    context->makeCurrent(surface);
-    openGLResources->destroy(context);
-    delete openGLResources;
+    delete rhiContext;   // owns the process-wide graphics device
 
     delete plugins;
     delete timekeeper;
@@ -114,19 +106,22 @@ PhotonCore::PhotonCore(int &argc, char **argv) : QApplication(argc, argv),
     // Qt Quick backend for the surface views (the only Quick content in the
     // app). Must run before the first QQuickWindow is created.
     //
-    // macOS: the software renderer. QQuickWidget on macOS's deprecated
-    // OpenGL crashes in the driver (gldUpdateReadFramebuffer, inside
-    // CGLFlushDrawable) whenever its FBO is recreated - which happens on any
-    // scene-graph change, e.g. adding a gizmo. The surface QML is all 2D
-    // controls with no shader effects, so software rasterisation renders it
-    // fine and skips GL/Metal for the Quick content entirely.
+    // macOS: Metal. This used to be the software renderer, because QQuickWidget
+    // on macOS's deprecated OpenGL crashed in the driver
+    // (gldUpdateReadFramebuffer, inside CGLFlushDrawable) whenever its FBO was
+    // recreated - which any scene-graph change triggers, e.g. adding a gizmo.
+    // Metal has no such problem and keeps Quick GPU-accelerated. It also has to
+    // match the widget backing store, which goes Metal on macOS as soon as a
+    // QQuickWidget is composited; mixing that with a QOpenGLWidget in the same
+    // top-level is unsupported, which is why none are left (see the Canvas
+    // Preview panel, now QRhi-backed).
     //
     // Elsewhere: OpenGL, to match the rest of the app. On Windows Quick
     // otherwise defaults to Direct3D 11, and the graphics-API mismatch
     // forces the top-level window to be recreated the first time a
     // QQuickWidget appears, flashing the whole window.
 #if defined(Q_OS_MACOS)
-    QQuickWindow::setGraphicsApi(QSGRendererInterface::Software);
+    QQuickWindow::setGraphicsApi(QSGRendererInterface::Metal);
 #else
     QQuickWindow::setGraphicsApi(QSGRendererInterface::OpenGL);
 #endif
@@ -189,8 +184,6 @@ void PhotonCore::init()
     m_impl->plugins->init();
     m_impl->gui->init();
 
-    initSurface();
-    initOpenGLResources();
 
     // Create the offscreen QRhi device now, on the main thread — canvas nodes are
     // evaluated on the graph worker thread and must never trigger its (main-thread-
@@ -226,44 +219,11 @@ ResourceManager *PhotonCore::resources() const
     return m_impl->resources;
 }
 
-void PhotonCore::initSurface()
-{
-    QSurfaceFormat fmt;
-    //fmt.setVersion(3, 3);
-    //fmt.setProfile(QSurfaceFormat::CoreProfile);
-    fmt.setSwapBehavior(QSurfaceFormat::SingleBuffer);
-
-    m_impl->surface = new QOffscreenSurface;
-    m_impl->surface->create();
-}
-
-void PhotonCore::initOpenGLResources()
-{
-    m_impl->context = new QOpenGLContext;
-    m_impl->context->setShareContext(QOpenGLContext::globalShareContext());
-    m_impl->context->create();
-    m_impl->context->makeCurrent(m_impl->surface);
-
-    m_impl->openGLResources = new OpenGLResources;
-    m_impl->openGLResources->init(m_impl->context);
-}
-
-OpenGLResources *PhotonCore::openGLResources() const
-{
-    return m_impl->openGLResources;
-}
-
 RhiContext *PhotonCore::rhiContext() const
 {
     if (!m_impl->rhiContext)
         m_impl->rhiContext = new RhiContext;
     return m_impl->rhiContext;
-}
-
-QOffscreenSurface *PhotonCore::surface() const
-{
-    return m_impl->surface;
-
 }
 
 void PhotonCore::loadSequence(const QString &t_path)

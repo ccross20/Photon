@@ -11,8 +11,8 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(QT NAMES Qt6 COMPONENTS Widgets Network OpenGLWidgets)
-find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Widgets Network OpenGLWidgets)
+find_package(QT NAMES Qt6 COMPONENTS Widgets Network)
+find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Widgets Network)
 find_package(Qt6 REQUIRED COMPONENTS Gui GuiPrivate)  # QRhi (rhi/qrhi.h) for the canvas system
 find_package(Qt6 REQUIRED COMPONENTS ShaderTools)     # qt6_add_shaders for canvas node shaders
 find_package(Qt6 REQUIRED COMPONENTS Quick Qml QuickWidgets)
@@ -226,8 +226,6 @@ set(PROJECT_SOURCES
         gui/panel/projectpanel.h
         gui/panel/projectpanel_p.h
         gui/panel/projectpanel.cpp
-        gui/panel/canvasviewerpanel.h
-        gui/panel/canvasviewerpanel.cpp
         gui/panel/dmxviewerpanel.h
         gui/panel/dmxviewerpanel.cpp
         gui/panel/dmxpatchpanel.h
@@ -262,18 +260,6 @@ set(PROJECT_SOURCES
         gui/waveformwidget.cpp
         gui/window.h
         gui/window.cpp
-        opengl/offscreenrenderer.h
-        opengl/offscreenrenderer.cpp
-        opengl/openglframebuffer.h
-        opengl/openglframebuffer.cpp
-        opengl/openglplane.h
-        opengl/openglplane.cpp
-        opengl/openglshader.h
-        opengl/openglshader.cpp
-        opengl/opengltexture.h
-        opengl/opengltexture.cpp
-        opengl/opengltexturedplane.h
-        opengl/opengltexturedplane.cpp
         photoncore.h
         photoncore.cpp
         project/project.h
@@ -520,12 +506,8 @@ add_library(photon-core SHARED ${PROJECT_SOURCES}
     channel/parameter/channelparametercontainer.h channel/parameter/channelparametercontainer.cpp
     channel/parameter/fileparameter.h channel/parameter/fileparameter.cpp
     channel/parameter/view/filechannelparameterview.h channel/parameter/view/filechannelparameterview.cpp
-    opengl/distancetransform.cpp opengl/distancetransform.h
     graph/parameter/textureparameter.h graph/parameter/textureparameter.cpp
-    routine/node/canvaswriternode.h routine/node/canvaswriternode.cpp
-    routine/node/createtexturenode.h routine/node/createtexturenode.cpp
     routine/node/baseroutinenode.h routine/node/baseroutinenode.cpp
-    opengl/openglresources.h opengl/openglresources.cpp
     graph/parameter/point2dparameter.h graph/parameter/point2dparameter.cpp
     routine/node/pointinputnode.h routine/node/pointinputnode.cpp
     pixel/fixturepixellayout.h pixel/fixturepixellayout.cpp
@@ -585,6 +567,7 @@ add_library(photon-core SHARED ${PROJECT_SOURCES}
     resources/fixtures/elation-dartz-360.json
     resources/fixtures/bee-eye.json
     rhi/rhicontext.h rhi/rhicontext.cpp
+    rhi/rhibackend.h rhi/rhibackend.cpp
     graph/parameter/rhitextureparameter.h graph/parameter/rhitextureparameter.cpp
     graph/parameter/pixellayoutlistparameter.h graph/parameter/pixellayoutlistparameter.cpp
     graph/node/canvas/canvasoutputnode.h graph/node/canvas/canvasoutputnode.cpp
@@ -646,8 +629,6 @@ target_link_libraries(photon-core PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)
 target_link_libraries(photon-core PRIVATE
     Qt6::MultimediaWidgets
     Qt6::Network
-    Qt6::OpenGLWidgets
-    Qt6::OpenGL
     Qt6::GuiPrivate
 )
 target_link_libraries(photon-core PRIVATE Qt6::Core)

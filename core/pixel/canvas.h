@@ -31,11 +31,6 @@ public:
     QString name() const;
     void setName(const QString &);
 
-    void paint(const QImage &);
-
-    OpenGLTexture *texture() const;
-    void updateTexture();
-
     void restore(Project &);
     void readFromJson(const QJsonObject &, const LoadContext &);
     void writeToJson(QJsonObject &) const;
@@ -43,7 +38,6 @@ public:
 signals:
     void sizeUpdated(QSize);
     void metadataUpdated();
-    void textureDidUpdate();
 
 private:
     class Impl;

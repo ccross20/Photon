@@ -3,7 +3,6 @@
 
 #include "photon-global.h"
 #include "model/node.h"
-#include "opengl/openglframebuffer.h"
 #include "routine/routineevaluationcontext.h"
 
 namespace photon {
@@ -14,8 +13,6 @@ public:
     BaseRoutineNode(const QByteArray &id);
     virtual ~BaseRoutineNode();
 
-    virtual void initializeContext(QOpenGLContext *, Canvas *);
-    virtual void canvasResized(QOpenGLContext *, Canvas *);
 };
 
 } // namespace photon

@@ -4,6 +4,7 @@
 #include <QOffscreenSurface>
 #include <QDebug>
 #include "canvaspreviewwindow.h"
+#include "rhi/rhibackend.h"
 #include "graph/node/canvas/canvassubgraphnode.h"
 #include "graph/node/canvas/canvasoutputnode.h"
 #include "graph/node/canvas/canvasrendermanager.h"
@@ -24,7 +25,8 @@ QShader loadShader(const QString &path)
 
 CanvasPreviewWindow::CanvasPreviewWindow()
 {
-    setSurfaceType(QSurface::OpenGLSurface);
+    // Must match the QRhi backend (Metal on macOS) or the swapchain is refused.
+    setSurfaceType(rhiBackend::surfaceType());
 
     QSurfaceFormat fmt = QSurfaceFormat::defaultFormat();
     fmt.setDepthBufferSize(24);
@@ -81,12 +83,12 @@ void CanvasPreviewWindow::initRhi()
     if (m_rhi)
         return;
 
-    m_fallbackSurface = QRhiGles2InitParams::newFallbackSurface(format());
-    QRhiGles2InitParams params;
-    params.fallbackSurface = m_fallbackSurface;
-    params.window = this;
-    params.format = format();
-    m_rhi = QRhi::create(QRhi::OpenGLES2, &params);
+    // Metal on macOS, OpenGL elsewhere. Either way this device shares the
+    // canvas device's device/share-group, which is what makes importing the
+    // sink texture by its native handle below legal.
+    rhiBackend::Result created = rhiBackend::create(format(), this);
+    m_rhi             = created.rhi;
+    m_fallbackSurface = created.fallbackSurface;
     if (!m_rhi) {
         qWarning() << "CanvasPreviewWindow: failed to create QRhi";
         return;

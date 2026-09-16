@@ -7,9 +7,7 @@
 #include "data/dmxmatrix.h"
 #include "model/node.h"
 
-class QOpenGLContext;
 namespace photon {
-class OpenGLFrameBuffer;
 
 struct SurfaceEvaluationContext : keira::EvaluationContext
 {
@@ -18,9 +16,6 @@ struct SurfaceEvaluationContext : keira::EvaluationContext
     DMXTimeMachine *timeMachine = nullptr;
     Project *project = nullptr;
     Fixture *fixture = nullptr;
-    OpenGLFrameBuffer *frameBuffer = nullptr;
-    QOpenGLContext *openglContext = nullptr;
-    OpenGLResources *resources = nullptr;
     Canvas *canvas = nullptr;
     qlonglong frame = 0;
     QHash<QByteArray,QVariant> channelValues;

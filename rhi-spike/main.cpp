@@ -2,17 +2,18 @@
 //
 // Two checks, both printed with an explicit verdict; exit 0 only if all pass:
 //
-//   1. Offscreen round-trip: the core-owned RhiContext creates a headless
-//      OpenGL-backed QRhi over a context in the global share group and
+//   1. Offscreen round-trip: the core-owned RhiContext creates a headless QRhi
+//      on the app's backend (Metal on macOS, OpenGL elsewhere) and
 //      renders+reads back an offscreen texture (no window).
 //
 //   2. Coexistence: a SECOND, independent QRhi is stood up exactly the way the
-//      visualizer does it (QRhiGles2InitParams with a window + swapchain +
+//      visualizer does it (rhiBackend::create with a window + swapchain +
 //      depth-stencil, see plugin-visualizer/rhi/rhiwindow.cpp) and its frames
 //      are interleaved with the offscreen device's render+readback. This
 //      reproduces the real risk — two live QRhi devices in one process sharing
-//      the global GL context (AA_ShareOpenGLContexts), one windowed, one
-//      offscreen — without pulling in the whole visualizer plugin.
+//      a graphics device (one MTLDevice on Metal, the global GL share group on
+//      OpenGL), one windowed, one offscreen — without pulling in the whole
+//      visualizer plugin.
 //
 //     rhi-spike.exe
 #include <cstdio>
@@ -25,6 +26,7 @@
 #include <QElapsedTimer>
 #include <QColor>
 #include "rhi/rhicontext.h"
+#include "rhi/rhibackend.h"
 #include "graph/parameter/rhitextureparameter.h"
 #include "graph/node/canvas/canvassubgraphnode.h"
 #include "graph/node/canvas/canvasrendermanager.h"
@@ -839,7 +841,7 @@ bool runPoolTest(photon::RhiContext &ctx)
 }
 
 // Mirrors RhiWindow::initRhi(): an independent QRhi bound to a window + swapchain.
-// Relies on AA_ShareOpenGLContexts to land in the global share group (the
+// Relies on the shared graphics device set up by rhiBackend (the
 // visualizer doesn't call setShareContext either).
 struct WindowRhi
 {
@@ -856,7 +858,7 @@ struct WindowRhi
         const QSurfaceFormat fmt = QSurfaceFormat::defaultFormat();
 
         window = new QWindow;
-        window->setSurfaceType(QSurface::OpenGLSurface);
+        window->setSurfaceType(photon::rhiBackend::surfaceType());
         window->setFormat(fmt);
         window->resize(320, 240);
         window->setTitle("rhi-spike coexistence window");
@@ -872,12 +874,12 @@ struct WindowRhi
             return false;
         }
 
-        fallback = QRhiGles2InitParams::newFallbackSurface(fmt);
-        QRhiGles2InitParams params;
-        params.format = fmt;
-        params.fallbackSurface = fallback;
-        params.window = window;
-        rhi = QRhi::create(QRhi::OpenGLES2, &params);
+        // Same backend the app uses (Metal on macOS, OpenGL elsewhere), created
+        // the same way RhiWindow does it, so this really is a second device
+        // alongside the core-owned offscreen one.
+        photon::rhiBackend::Result created = photon::rhiBackend::create(fmt, window);
+        rhi = created.rhi;
+        fallback = created.fallbackSurface;
         if (!rhi) {
             std::printf("  (coexistence) window QRhi create failed\n");
             return false;
@@ -934,14 +936,19 @@ int main(int argc, char *argv[])
     qSetMessagePattern("%{function} [%{line}] %{message}");
     setvbuf(stdout, nullptr, _IONBF, 0);   // unbuffered so a crash still shows progress
 
-    // Same startup contract as photon-desktop's main().
+    // Same startup contract as photon-desktop's main(): the GL share group and
+    // default format matter only on the OpenGL backend.
+#if !defined(Q_OS_MACOS)
     QCoreApplication::setAttribute(Qt::AA_ShareOpenGLContexts);
+#endif
     QApplication app(argc, argv);
 
+#if !defined(Q_OS_MACOS)
     QSurfaceFormat format;
     format.setSamples(4);
     format.setDepthBufferSize(24);
     QSurfaceFormat::setDefaultFormat(format);
+#endif
 
     // --- Check 1: offscreen round-trip -------------------------------------
     photon::RhiContext ctx;

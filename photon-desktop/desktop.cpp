@@ -1,5 +1,6 @@
 #include <QDebug>
 #include <QApplication>
+#include <QSurfaceFormat>
 #include <QIcon>
 #include <memory>
 #include <map>
@@ -12,18 +13,28 @@ int main(int argc, char *argv[])
 
     qSetMessagePattern("%{function} [%{line}] %{message}");
 
-    QCoreApplication::setAttribute(Qt::AA_ShareOpenGLContexts);
     //QCoreApplication::setAttribute(Qt::AA_DontCreateNativeWidgetSiblings);
 
-    // Must be set before the QApplication is constructed: on macOS the
-    // requested core profile only takes effect if the default format is in
-    // place before the platform integration initializes.
+#if !defined(Q_OS_MACOS)
+    // OpenGL-backend platforms only. macOS runs every QRhi on Metal (see
+    // core/rhi/rhibackend.h), where the graphics device is shared explicitly
+    // and neither the global GL share group nor a default GL surface format
+    // means anything.
+    //
+    // The share group is what lets the canvas device's textures be imported by
+    // the preview window's separate device, so it has to be set before the
+    // QApplication is constructed - as does the format: the requested core
+    // profile only takes effect if the default is in place before the platform
+    // integration initializes.
+    QCoreApplication::setAttribute(Qt::AA_ShareOpenGLContexts);
+
     QSurfaceFormat format;
     format.setVersion(3, 3);
     format.setProfile(QSurfaceFormat::CoreProfile);
     format.setSamples(4);
     format.setDepthBufferSize(24);
     QSurfaceFormat::setDefaultFormat(format);
+#endif
 
     photon::PhotonCore w(argc, argv);
 

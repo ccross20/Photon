@@ -9,8 +9,8 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(QT NAMES Qt6 REQUIRED COMPONENTS Core Widgets OpenGLWidgets)
-find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Widgets OpenGLWidgets)
+find_package(QT NAMES Qt6 REQUIRED COMPONENTS Core Widgets)
+find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Widgets)
 
 set(SOURCES
     plugin-nodes-global.h
@@ -26,8 +26,6 @@ set(SOURCES
     canvas/drawrectangle.cpp
     canvas/fadecanvas.h
     canvas/fadecanvas.cpp
-    canvas/renderpath.h
-    canvas/renderpath.cpp
     canvas/renderstroke.h
     canvas/renderstroke.cpp
     color/colorfromhsv.h
@@ -64,9 +62,7 @@ set(SOURCES
 )
 
 add_library(plugin-nodes SHARED ${SOURCES}
-    canvas/masknode.h canvas/masknode.cpp
     nodes-resources.qrc
-    canvas/transform/transformtexturenode.h canvas/transform/transformtexturenode.cpp
     fixture-list/fixturelistrandomsubsetnode.h fixture-list/fixturelistrandomsubsetnode.cpp
     fixture-list/fixturelistintervalsubsetnode.h fixture-list/fixturelistintervalsubsetnode.cpp
     fixture/setfixtureslotrotation.h fixture/setfixtureslotrotation.cpp
@@ -98,8 +94,7 @@ add_library(plugin-nodes SHARED ${SOURCES}
 target_include_directories(plugin-nodes PUBLIC ../keira)
 target_link_libraries(plugin-nodes PRIVATE Qt${QT_VERSION_MAJOR}::Core)
 target_link_libraries(plugin-nodes PRIVATE Qt${QT_VERSION_MAJOR}::Widgets
-    Qt6::OpenGLWidgets
-    Qt6::OpenGL)
+)
 
 #target_compile_definitions(plugin-visualizer PRIVATE PLUGINVISUALIZER_LIBRARY)
 target_link_libraries(plugin-nodes PRIVATE keira)

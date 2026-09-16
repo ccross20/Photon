@@ -2,7 +2,6 @@
 #include "fixturepixelsource.h"
 #include "fixture/capability/colorcapability.h"
 #include "fixture/fixture.h"
-#include "opengl/openglframebuffer.h"
 #include "pixel/canvas.h"
 #include "sequence/sequence.h"
 

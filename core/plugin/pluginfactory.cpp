@@ -12,7 +12,6 @@
 #include "gui/panel/routineeditpanel.h"
 #include "gui/panel/dmxviewerpanel.h"
 #include "gui/panel/dmxpatchpanel.h"
-#include "gui/panel/canvasviewerpanel.h"
 #include "gui/panel/canvaspreviewpanel.h"
 #include "gui/panel/surfacepanel.h"
 #include "gui/panel/songlibrarypanel.h"
@@ -34,8 +33,6 @@
 #include "routine/node/stringinputnode.h"
 #include "routine/node/colorpaletteinputnode.h"
 #include "routine/node/fixtureinfonode.h"
-#include "routine/node/canvaswriternode.h"
-#include "routine/node/createtexturenode.h"
 #include "graph/node/math/trigonometrynode.h"
 #include "graph/node/math/arithmeticnode.h"
 #include "graph/node/switchnode.h"
@@ -220,7 +217,6 @@ void PluginFactory::init()
     registerPluginPanel("photon.routine",[](){return new RoutineEditPanel;});
     registerPluginPanel("photon.dmx-viewer",[](){return new DMXViewerPanel;});
     registerPluginPanel("photon.dmx-patch",[](){return new DMXPatchPanel;});
-    registerPluginPanel("photon.canvas-viewer",[](){return new CanvasViewerPanel;});
     registerPluginPanel("photon.canvas-preview",[](){return new CanvasPreviewPanel;});
     registerPluginPanel("photon.song-library",[](){return new SongLibraryPanel;});
 
@@ -258,8 +254,6 @@ void PluginFactory::init()
     registerNode(PowerNode::info());
     registerNode(MinMaxNode::info());
     registerNode(LogarithmNode::info());
-    registerNode(CanvasWriterNode::info());
-    registerNode(CreateTextureNode::info());
     registerNode(WriteDMXChannelNode::info());
     registerNode(ButtonGizmoNode::info());
     registerNode(SliderGizmoNode::info());

@@ -4,7 +4,6 @@
 #include <QApplication>
 #include <QDir>
 #include <QVersionNumber>
-#include <QOffscreenSurface>
 #include "photon-global.h"
 
 namespace photon {
@@ -31,10 +30,6 @@ public:
 
     SequenceCollection *sequences() const;
     SurfaceCollection *surfaces() const;
-    QOffscreenSurface *surface() const;
-    void initSurface();
-    void initOpenGLResources();
-    OpenGLResources *openGLResources() const;
     RhiContext *rhiContext() const;
     VirtualDJConnector *djConnector() const;
     SongLibrary *songLibrary() const;

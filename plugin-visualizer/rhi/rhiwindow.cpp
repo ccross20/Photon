@@ -5,6 +5,7 @@
 #include <QWheelEvent>
 #include <QKeyEvent>
 #include "rhiwindow.h"
+#include "rhi/rhibackend.h"
 #include "rhirenderer.h"
 #include "rhigizmo.h"
 
@@ -21,7 +22,8 @@ void rayFor(const RhiCamera &cam, const QPointF &logicalPos, qreal dpr,
 
 RhiWindow::RhiWindow()
 {
-    setSurfaceType(QSurface::OpenGLSurface);
+    // Must match the QRhi backend (Metal on macOS) or the swapchain is refused.
+    setSurfaceType(rhiBackend::surfaceType());
 
     QSurfaceFormat fmt = QSurfaceFormat::defaultFormat();
     fmt.setDepthBufferSize(24);
@@ -141,15 +143,13 @@ void RhiWindow::initRhi()
     if (m_rhi)
         return;
 
-    m_fallbackSurface = QRhiGles2InitParams::newFallbackSurface(format());
-
-    QRhiGles2InitParams params;
-    params.fallbackSurface = m_fallbackSurface;
-    params.window = this;
-    params.format = format();
-    m_rhi = QRhi::create(QRhi::OpenGLES2, &params);
+    // Metal on macOS, OpenGL elsewhere; on Metal this imports the same
+    // MTLDevice as the canvas device so textures stay interoperable.
+    rhiBackend::Result created = rhiBackend::create(format(), this);
+    m_rhi             = created.rhi;
+    m_fallbackSurface = created.fallbackSurface;
     if (!m_rhi) {
-        qWarning("RhiWindow: failed to create QRhi (OpenGL backend)");
+        qWarning("RhiWindow: failed to create QRhi (%s backend)", rhiBackend::apiName());
         return;
     }
 
