@@ -1,7 +1,7 @@
 #include <QVBoxLayout>
 #include <QLabel>
 #include <QComboBox>
-#include "view/numberscrubfield.h"
+#include "numberscrubfield.h"
 #include <QStyleOptionGraphicsItem>
 #include <QPainter>
 #include <QEasingCurve>
@@ -9,8 +9,9 @@
 #include "sequence/channel.h"
 #include "sequence/viewer/stackedparameterwidget.h"
 #include "sequence/sequence.h"
-#include "gui/gizmo/gizmohandle.h"
+#include "gizmo/gizmohandle.h"
 #include "util/utils.h"
+#include "propertywidgets.h"
 
 namespace photon {
 
@@ -18,45 +19,45 @@ PulseEffectEditor::PulseEffectEditor(PulseEffect *t_effect):ChannelEffectEditor(
 {
     //setMaximumHeight(40);
 
-    keira::NumberScrubField *freqSpin = new keira::NumberScrubField;
+    photon::NumberScrubField *freqSpin = new photon::NumberScrubField;
     freqSpin->setMinimum(.001);
     freqSpin->setMaximum(9999);
     freqSpin->setValue(m_effect->frequency());
-    connect(freqSpin, &keira::NumberScrubField::valueChanged, this, &PulseEffectEditor::frequencyChanged);
+    connect(freqSpin, &photon::NumberScrubField::valueChanged, this, &PulseEffectEditor::frequencyChanged);
 
 
-    keira::NumberScrubField *durationSpin = new keira::NumberScrubField;
+    photon::NumberScrubField *durationSpin = new photon::NumberScrubField;
     durationSpin->setMinimum(.001);
     durationSpin->setMaximum(9999);
     durationSpin->setValue(m_effect->duration());
-    connect(durationSpin, &keira::NumberScrubField::valueChanged, this, &PulseEffectEditor::durationChanged);
+    connect(durationSpin, &photon::NumberScrubField::valueChanged, this, &PulseEffectEditor::durationChanged);
 
 
-    keira::NumberScrubField *offsetSpin = new keira::NumberScrubField;
+    photon::NumberScrubField *offsetSpin = new photon::NumberScrubField;
     offsetSpin->setMinimum(-9999);
     offsetSpin->setMaximum(9999);
     offsetSpin->setValue(m_effect->offset());
-    connect(offsetSpin, &keira::NumberScrubField::valueChanged, this, &PulseEffectEditor::timeOffsetChanged);
+    connect(offsetSpin, &photon::NumberScrubField::valueChanged, this, &PulseEffectEditor::timeOffsetChanged);
 
 
-    keira::NumberScrubField *ampSpin = new keira::NumberScrubField;
+    photon::NumberScrubField *ampSpin = new photon::NumberScrubField;
     ampSpin->setMinimum(-255);
     ampSpin->setMaximum(255);
     ampSpin->setValue(m_effect->amplitude());
-    connect(ampSpin, &keira::NumberScrubField::valueChanged, this, &PulseEffectEditor::amplitudeChanged);
+    connect(ampSpin, &photon::NumberScrubField::valueChanged, this, &PulseEffectEditor::amplitudeChanged);
 
 
-    keira::NumberScrubField *easeInDurationSpin = new keira::NumberScrubField;
+    photon::NumberScrubField *easeInDurationSpin = new photon::NumberScrubField;
     easeInDurationSpin->setMinimum(.001);
     easeInDurationSpin->setMaximum(9999);
     easeInDurationSpin->setValue(m_effect->easeInDuration());
-    connect(easeInDurationSpin, &keira::NumberScrubField::valueChanged, this, &PulseEffectEditor::easeInDurationChanged);
+    connect(easeInDurationSpin, &photon::NumberScrubField::valueChanged, this, &PulseEffectEditor::easeInDurationChanged);
 
-    keira::NumberScrubField *easeOutDurationSpin = new keira::NumberScrubField;
+    photon::NumberScrubField *easeOutDurationSpin = new photon::NumberScrubField;
     easeOutDurationSpin->setMinimum(.001);
     easeOutDurationSpin->setMaximum(9999);
     easeOutDurationSpin->setValue(m_effect->easeOutDuration());
-    connect(easeOutDurationSpin, &keira::NumberScrubField::valueChanged, this, &PulseEffectEditor::easeOutDurationChanged);
+    connect(easeOutDurationSpin, &photon::NumberScrubField::valueChanged, this, &PulseEffectEditor::easeOutDurationChanged);
 
     QStringList easeList = easeStrings();
 
@@ -302,6 +303,34 @@ float * PulseEffect::process(float *value, uint size, double time) const
 ChannelEffectEditor *PulseEffect::createEditor()
 {
     return new PulseEffectEditor(this);
+}
+
+QWidget *PulseEffect::createPropertyEditor()
+{
+    auto *form = new PropertyForm;
+    form->addRow("Offset", PropertyWidgets::createNumber(m_offset,
+        {{PropertyWidgets::MetaMinimum, -9999.0}, {PropertyWidgets::MetaMaximum, 9999.0}},
+        [this](double v){ setOffset(v); }));
+    form->addRow("Frequency", PropertyWidgets::createNumber(m_frequency,
+        {{PropertyWidgets::MetaMinimum, .001}, {PropertyWidgets::MetaMaximum, 9999.0}},
+        [this](double v){ setFrequency(v); }));
+    form->addRow("Amplitude", PropertyWidgets::createNumber(m_amplitude,
+        {{PropertyWidgets::MetaMinimum, -255.0}, {PropertyWidgets::MetaMaximum, 255.0}},
+        [this](double v){ setAmplitude(v); }));
+    form->addRow("Duration", PropertyWidgets::createNumber(m_duration,
+        {{PropertyWidgets::MetaMinimum, .001}, {PropertyWidgets::MetaMaximum, 9999.0}},
+        [this](double v){ setDuration(v); }));
+    form->addRow("Ease In Duration", PropertyWidgets::createNumber(m_easeInDuration,
+        {{PropertyWidgets::MetaMinimum, .001}, {PropertyWidgets::MetaMaximum, 9999.0}},
+        [this](double v){ setEaseInDuration(v); }));
+    form->addRow("Ease In", PropertyWidgets::createOptions(easeStrings(), m_easeInType, {},
+        [this](int v){ setEaseInType(static_cast<QEasingCurve::Type>(v)); }));
+    form->addRow("Ease Out Duration", PropertyWidgets::createNumber(m_easeOutDuration,
+        {{PropertyWidgets::MetaMinimum, .001}, {PropertyWidgets::MetaMaximum, 9999.0}},
+        [this](double v){ setEaseOutDuration(v); }));
+    form->addRow("Ease Out", PropertyWidgets::createOptions(easeStrings(), m_easeOutType, {},
+        [this](int v){ setEaseOutType(static_cast<QEasingCurve::Type>(v)); }));
+    return form;
 }
 
 void PulseEffect::readFromJson(const QJsonObject &t_json)

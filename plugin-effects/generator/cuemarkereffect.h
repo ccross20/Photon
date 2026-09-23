@@ -43,16 +43,15 @@ private:
 // falloffDuration along falloffType. A pure generator (like BeatIntegerEffect) -
 // it replaces the upstream chain's value rather than building on it.
 //
-// CueLayer has no persistent unique id (see cuelayer.h), so the selected layer
-// is persisted/resolved by name (resolveLayer()) rather than by pointer - a
-// renamed layer will need to be reselected.
+// The selected layer is persisted/resolved by CueLayer::uniqueId() (see
+// resolveLayer()), so renaming a layer doesn't detach this effect from it.
 class CueMarkerEffect : public ChannelEffect
 {
 public:
     CueMarkerEffect();
 
-    void setLayerName(const QString &);
-    QString layerName() const { return m_layerName; }
+    void setLayerId(const QByteArray &);
+    QByteArray layerId() const { return m_layerId; }
     void setOnValue(double);
     double onValue() const { return m_onValue; }
     void setOffValue(double);
@@ -64,13 +63,15 @@ public:
     void setFalloffDuration(double);
     double falloffDuration() const { return m_falloffDuration; }
 
-    // The CueLayer currently resolved from layerName() (by name lookup - see the
-    // class comment), or nullptr. Public so the editor can connect to its
-    // markersChanged/metadataChanged to know when to repaint the curve.
+    // The CueLayer currently resolved from layerId() - falling back to a
+    // by-name match for effects saved before CueLayer had a uniqueId - or
+    // nullptr. Public so the editor can connect to its markersChanged/
+    // metadataChanged to know when to repaint the curve.
     CueLayer *resolveLayer() const;
 
     float *process(float *value, uint size, double time) const override;
     ChannelEffectEditor *createEditor() override;
+    QWidget *createPropertyEditor() override;
 
     void readFromJson(const QJsonObject &) override;
     void writeToJson(QJsonObject &) const override;
@@ -80,7 +81,11 @@ public:
 private:
     double computeValue(double globalTime) const;
 
-    QString m_layerName;
+    QByteArray m_layerId;
+    // Set only when reading a project saved before CueLayer had a uniqueId;
+    // resolveLayer() falls back to matching this by name when m_layerId is
+    // empty or doesn't resolve.
+    QString m_legacyLayerName;
     double m_onValue = 1.0;
     double m_offValue = 0.0;
     double m_holdDuration = 0.1;

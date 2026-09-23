@@ -6,6 +6,7 @@
 #include "fixturevirtualchannel.h"
 #include "fixtureeditorwidget.h"
 #include "capability/colorcapability.h"
+#include "capability/fixturecolorcalibration.h"
 #include "capability/anglecapability.h"
 #include "fixturewheel.h"
 #include "fixturelibrary.h"
@@ -515,6 +516,11 @@ bool extractRange(QString text, int *start, int *end, QString *prefix)
     return false;
 }
 
+QString Fixture::definitionPath() const
+{
+    return m_impl->definitionPath;
+}
+
 void Fixture::loadFixtureDefinition(const QString &t_path)
 {
     QFile loadFile(t_path);
@@ -844,6 +850,14 @@ void Fixture::setMode(uchar t_mode)
                 m_impl->colors.append(colorCap);
             }
         }
+    }
+
+    if(!m_impl->definitionPath.isEmpty() && !m_impl->colors.isEmpty())
+    {
+        const FixtureColorCalibration calibration = FixtureColorCalibrationStore::load(m_impl->definitionPath);
+        if(calibration.isValid())
+            for(auto *colorCap : m_impl->colors)
+                colorCap->setCalibration(calibration);
     }
 
     emit metadataChanged(this);

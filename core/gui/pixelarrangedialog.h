@@ -8,7 +8,7 @@ namespace photon {
 
 // Small parameter dialogs for the Pixel Layout editor's "Arrange" commands -
 // one shape, one dialog, matching this codebase's existing widget-
-// construction style (QFormLayout of keira::NumberScrubFields) rather than a
+// construction style (QFormLayout of photon::NumberScrubFields) rather than a
 // single unified shape-picker dialog.
 class PHOTONCORE_EXPORT LinearArrangeDialog : public QDialog
 {

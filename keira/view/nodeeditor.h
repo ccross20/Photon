@@ -3,8 +3,10 @@
 
 #include "keira-global.h"
 #include <QWidget>
-#include <QGridLayout>
-#include <QVBoxLayout>
+
+class QVBoxLayout;
+
+namespace photon { class PropertyForm; }
 
 namespace keira {
 
@@ -26,11 +28,10 @@ public slots:
 
 private:
     void rebuildParameters();
-    void removeAllFromLayout(QLayout *layout);
 
     Node *m_node = nullptr;
-    QGridLayout *m_gridLayout = nullptr;
     QVBoxLayout *m_vLayout = nullptr;
+    photon::PropertyForm *m_form = nullptr;
 
 };
 

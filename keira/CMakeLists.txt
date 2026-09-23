@@ -51,8 +51,7 @@ set(PROJECT_SOURCES
         model/node.cpp
         view/nodeitem.h
         view/nodeitem.cpp
-        view/numberscrubfield.h
-        view/numberscrubfield.cpp
+
         view/portitem.h
         view/portitem.cpp
         view/scene.h
@@ -76,6 +75,7 @@ add_library(keira SHARED ${PROJECT_SOURCES}
 
 target_include_directories(keira PUBLIC ../keira)
 
+target_link_libraries(keira PUBLIC photon-ui)
 target_link_libraries(keira PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)
 target_link_libraries(keira PRIVATE Qt6::Widgets)
 target_link_libraries(keira PRIVATE Qt6::Widgets)

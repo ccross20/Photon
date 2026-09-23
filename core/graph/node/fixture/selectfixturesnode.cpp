@@ -57,15 +57,17 @@ void SelectFixturesNode::createParameters()
     addParameter(m_impl->typeParam);
 
     // Optional spatial filter: a SceneZone the fixture must sit inside. The lambda
-    // lists the project's zones (blank entry = no zone filter).
+    // lists the project's zones (blank entry = no zone filter). Stored/matched
+    // by uniqueId, not name, so renaming a zone doesn't detach this node from it
+    // (FixtureQuery::resolve() does the actual lookup).
     m_impl->zoneParam = new keira::StringOptionParameter(ZoneParam, "Zone", {}, 0);
     m_impl->zoneParam->setOptionLambda([]() {
         QVector<std::pair<QString, QString>> options;
         options.append(std::pair<QString, QString>("(none)", QString()));
         if(Project *project = photonApp->project())
         {
-            for(const QString &name : SceneZone::zoneNames(project))
-                options.append(std::pair<QString, QString>(name, name));
+            for(SceneZone *zoneObj : SceneZone::zones(project))
+                options.append(std::pair<QString, QString>(zoneObj->name(), QString::fromUtf8(zoneObj->uniqueId())));
         }
         return options;
     });

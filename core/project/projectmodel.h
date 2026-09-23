@@ -91,6 +91,13 @@ private:
     Impl *m_impl;
 };
 
+// Same-process-only pointer mime, mirroring encodeSceneObjectMime/
+// decodeSceneObjectMime (scene/scenemodel.h) but for flat, non-scene
+// resources (Colors, Gradients, Color Palettes, ...) - e.g. so one can be
+// dragged from the project panel into a node graph.
+PHOTONCORE_EXPORT QMimeData *encodeProjectResourceMime(const QVector<ProjectResource*> &resources);
+PHOTONCORE_EXPORT QVector<ProjectResource*> decodeProjectResourceMime(const QMimeData *mimeData);
+
 } // namespace photon
 
 #endif // PHOTON_PROJECTMODEL_H

@@ -45,6 +45,13 @@ private:
 class PHOTONCORE_EXPORT ProjectResource
 {
 public:
+    // Drag-and-drop mime type for a flat (non-scene) resource row in the
+    // project panel - e.g. a Color/Gradient/Palette dragged into a node
+    // graph. Scene objects (fixtures, trusses, ...) use SceneObject::
+    // SceneObjectMime instead, since they carry parent/child structure this
+    // one doesn't.
+    static const QByteArray ProjectResourceMime;
+
     ProjectResource();
     virtual ~ProjectResource();
 

@@ -2,11 +2,12 @@
 #include <QComboBox>
 #include "cuemarkereffect.h"
 #include "sequence/viewer/stackedparameterwidget.h"
-#include "view/numberscrubfield.h"
+#include "numberscrubfield.h"
 #include "sequence/channel.h"
 #include "sequence/sequence.h"
 #include "sequence/cuelayer.h"
 #include "util/utils.h"
+#include "propertywidgets.h"
 
 namespace photon {
 
@@ -27,23 +28,23 @@ CueMarkerEffectEditor::CueMarkerEffectEditor(CueMarkerEffect *t_effect):ChannelE
         }
     }
 
-    auto *onSpin = new keira::NumberScrubField;
+    auto *onSpin = new photon::NumberScrubField;
     onSpin->setMinimum(-10000);
     onSpin->setMaximum(10000);
     onSpin->setValue(m_effect->onValue());
-    connect(onSpin, &keira::NumberScrubField::valueChanged, this, &CueMarkerEffectEditor::onValueChanged);
+    connect(onSpin, &photon::NumberScrubField::valueChanged, this, &CueMarkerEffectEditor::onValueChanged);
 
-    auto *offSpin = new keira::NumberScrubField;
+    auto *offSpin = new photon::NumberScrubField;
     offSpin->setMinimum(-10000);
     offSpin->setMaximum(10000);
     offSpin->setValue(m_effect->offValue());
-    connect(offSpin, &keira::NumberScrubField::valueChanged, this, &CueMarkerEffectEditor::offValueChanged);
+    connect(offSpin, &photon::NumberScrubField::valueChanged, this, &CueMarkerEffectEditor::offValueChanged);
 
-    auto *holdSpin = new keira::NumberScrubField;
+    auto *holdSpin = new photon::NumberScrubField;
     holdSpin->setMinimum(0.0);
     holdSpin->setMaximum(9999);
     holdSpin->setValue(m_effect->holdDuration());
-    connect(holdSpin, &keira::NumberScrubField::valueChanged, this, &CueMarkerEffectEditor::holdDurationChanged);
+    connect(holdSpin, &photon::NumberScrubField::valueChanged, this, &CueMarkerEffectEditor::holdDurationChanged);
 
     // Same list-index-equals-QEasingCurve::Type-value assumption as
     // PeakHoldEffectEditor/EaseEffectEditor.
@@ -52,11 +53,11 @@ CueMarkerEffectEditor::CueMarkerEffectEditor(CueMarkerEffect *t_effect):ChannelE
     falloffCombo->setCurrentIndex(m_effect->falloffType());
     connect(falloffCombo, &QComboBox::currentIndexChanged, this, &CueMarkerEffectEditor::falloffTypeChanged);
 
-    auto *falloffSpin = new keira::NumberScrubField;
+    auto *falloffSpin = new photon::NumberScrubField;
     falloffSpin->setMinimum(0.0);
     falloffSpin->setMaximum(9999);
     falloffSpin->setValue(m_effect->falloffDuration());
-    connect(falloffSpin, &keira::NumberScrubField::valueChanged, this, &CueMarkerEffectEditor::falloffDurationChanged);
+    connect(falloffSpin, &photon::NumberScrubField::valueChanged, this, &CueMarkerEffectEditor::falloffDurationChanged);
 
     StackedParameterWidget *paramWidget = new StackedParameterWidget;
     paramWidget->addWidget(m_layerCombo, "Layer");
@@ -71,7 +72,7 @@ CueMarkerEffectEditor::CueMarkerEffectEditor(CueMarkerEffect *t_effect):ChannelE
 
 void CueMarkerEffectEditor::refreshLayerCombo()
 {
-    const QString current = m_effect->layerName();
+    CueLayer *current = m_effect->resolveLayer();
 
     m_layerCombo->blockSignals(true);
     m_layerCombo->clear();
@@ -81,17 +82,18 @@ void CueMarkerEffectEditor::refreshLayerCombo()
         if(Sequence *seq = ch->sequence())
         {
             for(auto *layer : seq->cueLayers())
-                m_layerCombo->addItem(layer->name());
+                m_layerCombo->addItem(layer->name(), QString::fromUtf8(layer->uniqueId()));
         }
     }
 
-    m_layerCombo->setCurrentIndex(m_layerCombo->findText(current));
+    if(current)
+        m_layerCombo->setCurrentIndex(m_layerCombo->findData(QString::fromUtf8(current->uniqueId())));
     m_layerCombo->blockSignals(false);
 
-    // The layer list can change (add/remove) without the selected name changing,
-    // but resolveLayer() re-looks-up by name regardless, and connectToLayer() is
-    // a no-op if it's the same pointer - so this is always safe/cheap to redo.
-    connectToLayer(m_effect->resolveLayer());
+    // The layer list can change (add/remove) without the selected one changing,
+    // but resolveLayer() re-resolves regardless, and connectToLayer() is a
+    // no-op if it's the same pointer - so this is always safe/cheap to redo.
+    connectToLayer(current);
 }
 
 void CueMarkerEffectEditor::connectToLayer(CueLayer *t_layer)
@@ -125,7 +127,7 @@ void CueMarkerEffectEditor::layerChanged(int t_index)
 {
     if(t_index < 0)
         return;
-    m_effect->setLayerName(m_layerCombo->itemText(t_index));
+    m_effect->setLayerId(m_layerCombo->itemData(t_index).toString().toUtf8());
     connectToLayer(m_effect->resolveLayer());
 }
 
@@ -169,9 +171,9 @@ CueMarkerEffect::CueMarkerEffect() : ChannelEffect()
     m_falloffCurve.setType(m_falloffType);
 }
 
-void CueMarkerEffect::setLayerName(const QString &t_value)
+void CueMarkerEffect::setLayerId(const QByteArray &t_value)
 {
-    m_layerName = t_value;
+    m_layerId = t_value;
     updated();
 }
 
@@ -215,11 +217,21 @@ CueLayer *CueMarkerEffect::resolveLayer() const
     if(!seq)
         return nullptr;
 
-    for(auto *layer : seq->cueLayers())
+    if(!m_layerId.isEmpty())
     {
-        if(layer->name() == m_layerName)
-            return layer;
+        for(auto *layer : seq->cueLayers())
+            if(layer->uniqueId() == m_layerId)
+                return layer;
     }
+
+    // Back-compat for effects saved before CueLayer had a uniqueId.
+    if(!m_legacyLayerName.isEmpty())
+    {
+        for(auto *layer : seq->cueLayers())
+            if(layer->name() == m_legacyLayerName)
+                return layer;
+    }
+
     return nullptr;
 }
 
@@ -271,10 +283,72 @@ ChannelEffectEditor *CueMarkerEffect::createEditor()
     return new CueMarkerEffectEditor(this);
 }
 
+QWidget *CueMarkerEffect::createPropertyEditor()
+{
+    auto *form = new PropertyForm;
+
+    // The layer list isn't static like the other combos here, so it can't go
+    // through PropertyWidgets::createOptions (which bakes its items in once) -
+    // built and kept live the same way CueMarkerEffectEditor::refreshLayerCombo()
+    // does, just re-hosted as a PropertyForm row instead of a curve-editor one.
+    auto *layerCombo = new QComboBox;
+    auto refreshLayerCombo = [this, layerCombo]() {
+        CueLayer *current = resolveLayer();
+        layerCombo->blockSignals(true);
+        layerCombo->clear();
+        if (Channel *ch = channel()) {
+            if (Sequence *seq = ch->sequence()) {
+                for (auto *layer : seq->cueLayers())
+                    layerCombo->addItem(layer->name(), QString::fromUtf8(layer->uniqueId()));
+            }
+        }
+        if(current)
+            layerCombo->setCurrentIndex(layerCombo->findData(QString::fromUtf8(current->uniqueId())));
+        layerCombo->blockSignals(false);
+    };
+    refreshLayerCombo();
+    QObject::connect(layerCombo, &QComboBox::currentIndexChanged, layerCombo, [this, layerCombo](int index){
+        if (index < 0)
+            return;
+        setLayerId(layerCombo->itemData(index).toString().toUtf8());
+    });
+    // Connected on layerCombo, so this - and the sequence connections below -
+    // disconnect automatically once the page is closed/replaced.
+    if (Channel *ch = channel()) {
+        if (Sequence *seq = ch->sequence()) {
+            QObject::connect(seq, &Sequence::cueLayerAdded, layerCombo, [refreshLayerCombo](CueLayer*){ refreshLayerCombo(); });
+            QObject::connect(seq, &Sequence::cueLayerRemoved, layerCombo, [refreshLayerCombo](CueLayer*){ refreshLayerCombo(); });
+        }
+    }
+    form->addRow("Layer", layerCombo);
+
+    form->addRow("On Value", PropertyWidgets::createNumber(m_onValue,
+        {{PropertyWidgets::MetaMinimum, -10000.0}, {PropertyWidgets::MetaMaximum, 10000.0}},
+        [this](double v){ setOnValue(v); }));
+    form->addRow("Off Value", PropertyWidgets::createNumber(m_offValue,
+        {{PropertyWidgets::MetaMinimum, -10000.0}, {PropertyWidgets::MetaMaximum, 10000.0}},
+        [this](double v){ setOffValue(v); }));
+    form->addRow("Hold Duration", PropertyWidgets::createNumber(m_holdDuration,
+        {{PropertyWidgets::MetaMinimum, 0.0}, {PropertyWidgets::MetaMaximum, 9999.0}},
+        [this](double v){ setHoldDuration(v); }));
+    // Same list-index-equals-QEasingCurve::Type-value assumption as
+    // CueMarkerEffectEditor's own falloff combo.
+    form->addRow("Falloff Type", PropertyWidgets::createOptions(easeStrings(), m_falloffType, {},
+        [this](int v){ setFalloffType(static_cast<QEasingCurve::Type>(v)); }));
+    form->addRow("Falloff Duration", PropertyWidgets::createNumber(m_falloffDuration,
+        {{PropertyWidgets::MetaMinimum, 0.0}, {PropertyWidgets::MetaMaximum, 9999.0}},
+        [this](double v){ setFalloffDuration(v); }));
+
+    return form;
+}
+
 void CueMarkerEffect::readFromJson(const QJsonObject &t_json)
 {
     ChannelEffect::readFromJson(t_json);
-    m_layerName = t_json.value("layerName").toString(m_layerName);
+    if(t_json.contains("layerId"))
+        m_layerId = t_json.value("layerId").toString().toUtf8();
+    else if(t_json.contains("layerName"))
+        m_legacyLayerName = t_json.value("layerName").toString();
     m_onValue = t_json.value("onValue").toDouble(m_onValue);
     m_offValue = t_json.value("offValue").toDouble(m_offValue);
     m_holdDuration = std::max(t_json.value("holdDuration").toDouble(m_holdDuration), 0.0);
@@ -286,7 +360,7 @@ void CueMarkerEffect::readFromJson(const QJsonObject &t_json)
 void CueMarkerEffect::writeToJson(QJsonObject &t_json) const
 {
     ChannelEffect::writeToJson(t_json);
-    t_json.insert("layerName", m_layerName);
+    t_json.insert("layerId", QString::fromUtf8(m_layerId));
     t_json.insert("onValue", m_onValue);
     t_json.insert("offValue", m_offValue);
     t_json.insert("holdDuration", m_holdDuration);

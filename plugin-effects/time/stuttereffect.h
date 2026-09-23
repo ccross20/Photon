@@ -2,7 +2,7 @@
 #define PHOTON_STUTTEREFFECT_H
 
 #include "sequence/channeleffect.h"
-#include "gui/gizmo/gizmogroup.h"
+#include "gizmo/gizmogroup.h"
 
 namespace photon {
 
@@ -44,6 +44,7 @@ public:
     double duration() const{return m_duration;}
     float * process(float *value, uint size, double time) const override;
     ChannelEffectEditor *createEditor() override;
+    QWidget *createPropertyEditor() override;
 
     void readFromJson(const QJsonObject &) override;
     void writeToJson(QJsonObject &) const override;

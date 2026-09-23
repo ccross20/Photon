@@ -2,7 +2,7 @@
 #include <QLabel>
 #include "colorparameter.h"
 #include "view/nodeeditor.h"
-#include "gui/color/colorwheelswatch.h"
+#include "color/colorwheelswatch.h"
 #include "util/utils.h"
 
 namespace photon {

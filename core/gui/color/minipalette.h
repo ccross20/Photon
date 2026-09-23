@@ -7,7 +7,7 @@
 #include "library/paletteitem.h"
 #include "event/ieventlistener.h"
 #include "library/coloritem.h"
-#include "gui/flowlayout.h"
+#include "flowlayout.h"
 
 namespace exo {
 

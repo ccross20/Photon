@@ -4,15 +4,17 @@
 #include "photon-global.h"
 #include "gui/panel.h"
 
-class QListWidgetItem;
+class QTreeWidgetItem;
+class QPoint;
 
 namespace photon {
 
-// Manages the app-level SongLibrary (photonApp->songLibrary()): browse/add/
-// remove catalogued songs, and for the selected song, link/create sequences
-// and choose which one is the default. Independent of any open Project - the
-// library is opened from ApplicationSettings::songDataLibraryPath(), so this
-// panel is usable (or prompts to configure a path) regardless of project state.
+// Manages the app-level SongLibrary (photonApp->songLibrary()): browse songs
+// (as a tree, expanded into child sequence rows only when a song has more
+// than one) and, via right-click, create/remove sequences and pick a song's
+// default. Independent of any open Project - the library is opened from
+// ApplicationSettings::songDataLibraryPath(), so this panel is usable (or
+// prompts to configure a path) regardless of project state.
 class SongLibraryPanel : public Panel
 {
     Q_OBJECT
@@ -21,21 +23,18 @@ public:
     ~SongLibraryPanel();
 
 private slots:
-    void addLocalClicked();
     void importVdjClicked();
     void cancelImportClicked();
     void importTick();
-    void removeSongClicked();
-    void songSelectionChanged();
 
     void setDefaultClicked();
-    void addExistingClicked();
     void newSequenceClicked();
-    void removeSequenceClicked();
-    void sequenceDoubleClicked(QListWidgetItem *);
+    void removeClicked();
+    void itemDoubleClicked(QTreeWidgetItem *);
+    void showContextMenu(const QPoint &);
 
 private:
-    void refreshSelectedSong();
+    void refreshTree();
     void openLibraryPrompt();
 
     class Impl;

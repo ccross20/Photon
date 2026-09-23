@@ -9,8 +9,8 @@
 #include <QScrollArea>
 #include <functional>
 #include "fixturestateeditor.h"
-#include "view/numberscrubfield.h"
-#include "gui/color/colorwheelswatch.h"
+#include "numberscrubfield.h"
+#include "color/colorwheelswatch.h"
 #include "graph/node/fixture/fixturestatenode.h"
 #include "state/state.h"
 #include "state/statecapability.h"
@@ -69,16 +69,16 @@ static QWidget *makeChannelEditor(StateCapability *t_cap, int t_index, const Cha
         // Same click-to-type / drag-to-scrub field the node editor uses. Typed
         // values commit on Return or focus-out, not on every keystroke; a
         // drag-scrub still updates live.
-        auto *field = new keira::NumberScrubField;
+        auto *field = new photon::NumberScrubField;
         field->setIsInteger(true);
         field->setRange(0, 255);
         field->setValue(t_cap->getChannelValue(t_index).toInt());
-        QObject::connect(field, &keira::NumberScrubField::valueChanged, field, [t_cap, t_index, t_onEdit](double v){ t_cap->setChannelValue(t_index, int(v)); t_onEdit(); });
+        QObject::connect(field, &photon::NumberScrubField::valueChanged, field, [t_cap, t_index, t_onEdit](double v){ t_cap->setChannelValue(t_index, int(v)); t_onEdit(); });
         return field;
     }
     default: // Number and anything else
     {
-        auto *field = new keira::NumberScrubField;
+        auto *field = new photon::NumberScrubField;
         field->setDecimals(3);
         // A channel with a known useful range gets a bounded slider (fill bar,
         // width mapped to the range, typed values clamped); dual-purpose ones
@@ -86,7 +86,7 @@ static QWidget *makeChannelEditor(StateCapability *t_cap, int t_index, const Cha
         if(t_info.hasRange())
             field->setRange(t_info.minimum, t_info.maximum);
         field->setValue(t_cap->getChannelValue(t_index).toDouble());
-        QObject::connect(field, &keira::NumberScrubField::valueChanged, field, [t_cap, t_index, t_onEdit](double v){ t_cap->setChannelValue(t_index, v); t_onEdit(); });
+        QObject::connect(field, &photon::NumberScrubField::valueChanged, field, [t_cap, t_index, t_onEdit](double v){ t_cap->setChannelValue(t_index, v); t_onEdit(); });
         return field;
     }
     }
@@ -225,6 +225,8 @@ void FixtureStateEditor::openAddMenu()
     struct Entry { const char *name; CapabilityType type; };
     static const Entry entries[] = {
         {"Dimmer", Capability_Dimmer},
+        {"CTO",    Capability_CTO},
+        {"UV",     Capability_UV},
         {"Color",  Capability_Color},
         {"Pan",    Capability_Pan},
         {"Tilt",   Capability_Tilt},

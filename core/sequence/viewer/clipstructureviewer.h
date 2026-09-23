@@ -3,6 +3,7 @@
 
 #include <QWidget>
 #include <QTreeView>
+#include <QPersistentModelIndex>
 #include "sequence/viewer/clipmodel.h"
 
 namespace photon {
@@ -15,6 +16,14 @@ public:
 
 protected:
     void mousePressEvent(QMouseEvent *event) override;
+
+private:
+    // Selecting the newly-created effect's row right after channel->addEffect()
+    // doesn't stick - something later in the same gesture (the "Add Effect..."
+    // click opens a modal QMenu mid-mousePressEvent) re-applies the previous
+    // selection afterward. Re-assert once more on the next event loop turn so
+    // the effect wins regardless of what raced it.
+    void reassertSelection(const QPersistentModelIndex &index);
 };
 
 
@@ -27,15 +36,11 @@ public:
     ~ClipStructureViewer();
 
     void setClip(Clip *);
-    void addMasterLayer(MasterLayer *);
-    void removeMasterLayer(MasterLayer *);
     void restoreState();
     void viewId(const QByteArray &);
 
 signals:
     void selectEffect(photon::ChannelEffect *);
-    void selectState(photon::State *);
-    void selectClipParameter(photon::Clip*);
     void selectClipGraph(photon::Clip*);
     void selectPixelLayout(photon::PixelLayout *);
     void clearSelection();

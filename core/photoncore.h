@@ -43,10 +43,14 @@ public:
 
 public slots:
     void closeProject();
-    void loadProject(const QString &path = QString{});
+    // Returns false if the user cancels the load (see Project::load()).
+    bool loadProject(const QString &path = QString{});
     void newProject();
     void loadSequence(const QString &path = QString{});
-    void newSequence();
+    // Creates a blank, "Untitled" sequence and opens its editor. No name
+    // prompt - the caller (the project panel's "Add Sequence" action) selects
+    // the returned sequence and puts its row straight into rename mode.
+    Sequence *newSequence();
     void reloadLastSession();
 
 signals:

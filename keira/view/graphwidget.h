@@ -11,7 +11,7 @@ namespace keira {
 
 class Scene;
 class Viewer;
-class NodeEditor;
+class Node;
 
 class KEIRA_EXPORT GraphWidget : public QWidget
 {
@@ -24,6 +24,10 @@ public:
     Scene *scene() const;
 
 signals:
+    // The selected node changed (null when the selection is empty or holds no
+    // node). keira has no property UI of its own any more - photon-core listens
+    // and routes this to the Properties panel.
+    void nodeSelected(keira::Node *node);
 
 private slots:
     void selectionUpdated();
@@ -41,7 +45,6 @@ private:
 
     Scene *m_scene = nullptr;
     Viewer *m_viewer = nullptr;
-    NodeEditor *m_editor = nullptr;
     QWidget *m_breadcrumbBar;
     QHBoxLayout *m_breadcrumbLayout;
     QPushButton *m_upButton;

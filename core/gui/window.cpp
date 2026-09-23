@@ -1,10 +1,14 @@
 #include <QLayout>
 #include <QCloseEvent>
 #include <QSettings>
+#include <QMessageBox>
 #include "window.h"
 #include "guimanager_p.h"
 #include "panel.h"
+#include "photoncore.h"
 #include "project/project.h"
+#include "sequence/sequence.h"
+#include "sequence/sequencecollection.h"
 #include "third-party/advanced-docking/DockManager.h"
 #include "third-party/advanced-docking/DockAreaWidget.h"
 
@@ -29,35 +33,47 @@ Window::~Window()
 
 void Window::closeEvent(QCloseEvent *event)
 {
-    Q_UNUSED(event)
-
-    //exoApp->gui()->saveLayout();
-
-/*
-    if(exoApp->project() &&exoApp->project()->isModifiedSinceSave())
+    // Neither Sequence nor Project track whether they've actually changed
+    // since the last save, so every library sequence still open in a tab and
+    // the project itself get asked unconditionally here rather than risking
+    // a silently-missed change - see the Song Library sequence-close prompt
+    // in SequenceCollection::editSequence() for the per-tab equivalent of
+    // this. A library sequence whose tab was already closed was already
+    // asked about there (Save or Discard) and stays loaded either way per
+    // SequenceCollection::panelDestroyed() - it must NOT be asked about
+    // again here just because it's still sitting in memory.
+    for(auto *sequence : photonApp->sequences()->sequences())
     {
-        core::confirm("Save Project?",{ButtonYes,ButtonNo,ButtonCancel},[this](DialogButtonType t_type){
-            if(t_type == ButtonYes)
-            {
-                  exoApp->saveProject();
-                  close();
-            }
-            else if(t_type == ButtonCancel)
-            {
-                return;
-            }
-            else if(t_type == ButtonNo)
-            {
-                exoApp->closeProject(false);
-                close();
-            }
+        if(!sequence->isLibrarySequence())
+            continue;
+        if(!photonApp->sequences()->panelFor(sequence))
+            continue;
 
-
-        });
-        event->ignore();
-        return;
+        const auto choice = QMessageBox::question(this, "Save Sequence",
+            QString("Save changes to \"%1\" before closing?").arg(sequence->name()),
+            QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel, QMessageBox::Save);
+        if(choice == QMessageBox::Cancel)
+        {
+            event->ignore();
+            return;
+        }
+        if(choice == QMessageBox::Save)
+            sequence->save(sequence->filePath());
     }
-*/
+
+    if(photonApp->project())
+    {
+        const auto choice = QMessageBox::question(this, "Save Project",
+            "Save changes to the project before closing?",
+            QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel, QMessageBox::Save);
+        if(choice == QMessageBox::Cancel)
+        {
+            event->ignore();
+            return;
+        }
+        if(choice == QMessageBox::Save)
+            photonApp->project()->save();
+    }
 
     QSettings qsettings;
     qsettings.beginGroup("window-geometry");
@@ -78,7 +94,6 @@ void Window::closeEvent(QCloseEvent *event)
             w->closeDockWidget();
         }
     }
-    //exoApp->quitApplication();
 }
 
 void Window::contextMenuEvent(QContextMenuEvent *)

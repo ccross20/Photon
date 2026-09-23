@@ -22,7 +22,7 @@ private slots:
     void nestedSceneChangesReachTheModel();
     void detachedSceneObjectsDoNotEmitRowOps();
     void renamingAResourceEmitsDataChanged();
-    void onlySceneObjectsAreDraggable();
+    void flatResourcesAreDraggableNotDroppable();
     void dropsAreRejectedOutsideTheRig();
     void dropIntoOwnSubtreeIsRejected();
 

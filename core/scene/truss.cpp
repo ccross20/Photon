@@ -1,4 +1,4 @@
-#include <QFormLayout>
+#include <QVBoxLayout>
 #include <QLineEdit>
 #include <QTextEdit>
 #include <QComboBox>
@@ -7,8 +7,9 @@
 #include <QDoubleSpinBox>
 #include <QSignalBlocker>
 #include "truss.h"
-#include "gui/vector3edit.h"
-#include "gui/tag/tageditorwidget.h"
+#include "vector3edit.h"
+#include "propertywidgets.h"
+#include "tag/tageditorwidget.h"
 #include "photoncore.h"
 #include "project/project.h"
 
@@ -21,7 +22,7 @@ class TrussEditorWidget::Impl
 public:
     Impl();
     Truss *truss = nullptr;
-    QFormLayout *formLayout;
+    PropertyForm *form;
     QLineEdit *nameEdit;
     TagEditorWidget *tagEditor;
     QSpinBox *beamSpin;
@@ -36,60 +37,65 @@ public:
 
 TrussEditorWidget::Impl::Impl()
 {
-    formLayout = new QFormLayout;
+    form = new PropertyForm;
+
+    form->addSection("General");
 
     nameEdit = new QLineEdit;
-    formLayout->addRow("Name", nameEdit);
+    form->addRow("Name", nameEdit);
 
     tagEditor = new TagEditorWidget(
         [this](){ return truss ? truss->tags() : QStringList(); },
         [this](const QStringList &tags){ if(truss) truss->setTags(tags); },
         [](){ return photonApp->project() ? photonApp->project()->allTags() : QStringList(); });
-    formLayout->addRow("Tags", tagEditor);
+    form->addRow("Tags", tagEditor);
 
     beamSpin = new QSpinBox;
     beamSpin->setMinimum(2);
     beamSpin->setMaximum(12);
-    formLayout->addRow("Beams", beamSpin);
+    form->addRow("Beams", beamSpin);
 
     segmentLengthSpin = new QDoubleSpinBox;
     segmentLengthSpin->setMinimum(.1);
     segmentLengthSpin->setMaximum(1);
-    formLayout->addRow("Segment Length", segmentLengthSpin);
+    form->addRow("Segment Length", segmentLengthSpin);
 
     radiusSpin = new QDoubleSpinBox;
     radiusSpin->setMinimum(.005);
     radiusSpin->setMaximum(.1);
-    formLayout->addRow("Radius", radiusSpin);
+    form->addRow("Radius", radiusSpin);
 
     offsetSpin = new QDoubleSpinBox;
     offsetSpin->setMinimum(.005);
     offsetSpin->setMaximum(.2);
-    formLayout->addRow("Offset", offsetSpin);
+    form->addRow("Offset", offsetSpin);
 
     lengthSpin = new QDoubleSpinBox;
     lengthSpin->setMinimum(.1);
     lengthSpin->setMaximum(20);
-    formLayout->addRow("Length", lengthSpin);
+    form->addRow("Length", lengthSpin);
 
     angleSpin = new QDoubleSpinBox;
     angleSpin->setMinimum(-180);
     angleSpin->setMaximum(180);
-    formLayout->addRow("Angle", angleSpin);
+    form->addRow("Angle", angleSpin);
 
+    form->addSection("Transform");
 
     positionEdit = new Vector3Edit;
-    formLayout->addRow("Position", positionEdit);
+    form->addRow("Position", positionEdit);
 
     rotationEdit = new Vector3Edit;
-    formLayout->addRow("Rotation", rotationEdit);
+    form->addRow("Rotation", rotationEdit);
 
 }
 
 TrussEditorWidget::TrussEditorWidget(Truss *t_truss, QWidget *parent)
     : QWidget{parent},m_impl(new Impl)
 {
-    setLayout(m_impl->formLayout);
+    QVBoxLayout *outer = new QVBoxLayout(this);
+    outer->setContentsMargins(0, 0, 0, 0);
+    outer->addWidget(m_impl->form);
 
     setSizePolicy(QSizePolicy{QSizePolicy::MinimumExpanding, QSizePolicy::Maximum});
 

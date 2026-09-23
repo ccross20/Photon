@@ -12,13 +12,10 @@ class QTimer;
 namespace photon {
 
 class CanvasOutputNode;
-class CanvasLayerGroup;
 
-// Panel that previews a canvas Output node's or CanvasLayerGroup's texture. A
-// combo box picks which target (across all canvases and layer groups) and an
-// embedded QRhi window shows it live. The "View Preview" button on an Output
-// node or a CanvasLayerGroup's editor calls previewOutput()/previewLayerGroup()
-// to open+focus it.
+// Panel that previews a canvas Output node's texture. A combo box picks which
+// target (across all canvases) and an embedded QRhi window shows it live. The
+// "View Preview" button on an Output node calls previewOutput() to open+focus it.
 class PHOTONCORE_EXPORT CanvasPreviewPanel : public Panel
 {
     Q_OBJECT
@@ -28,8 +25,6 @@ public:
 
     // Select and show the given Output node (opening/refreshing the list).
     void previewOutput(CanvasOutputNode *output);
-    // Select and show the given CanvasLayerGroup's own sink.
-    void previewLayerGroup(CanvasLayerGroup *group);
 
 private slots:
     void refreshList();

@@ -42,14 +42,15 @@ void FixtureGroupNode::createParameters()
 {
     // Dropdown of the project's fixture groups (managed in the Fixture Groups panel).
     // The lambda re-lists groups whenever the editor builds the combo, so it stays in
-    // sync with the panel. The stored value is the group name.
+    // sync with the panel. The stored value is the group's uniqueId, not its name, so
+    // renaming a group in the panel doesn't desync a node that already points at it.
     m_impl->groupParam = new keira::StringOptionParameter(GroupParam, "Group", {}, 0);
     m_impl->groupParam->setOptionLambda([]() {
         QVector<std::pair<QString, QString>> options;
         if(Project *project = photonApp->project())
         {
-            for(const QString &name : project->groups()->groupNames())
-                options.append({name, name});
+            for(FixtureGroup *group : project->groups()->groups())
+                options.append({group->name(), QString::fromUtf8(group->uniqueId())});
         }
         return options;
     });
@@ -63,10 +64,17 @@ void FixtureGroupNode::evaluate(keira::EvaluationContext *) const
 {
     QVector<FixtureParameterData> result;
 
-    const QString name = m_impl->groupParam->value().toString();
-    if(FixtureGroup *group = photonApp->project()->groups()->findGroup(name))
+    const QString stored = m_impl->groupParam->value().toString();
+    Project *project = photonApp->project();
+    // Id lookup first; falls back to treating the stored value as a name for
+    // projects saved before this node switched from name- to id-keyed storage.
+    FixtureGroup *group = project->groups()->findGroupWithId(stored.toUtf8());
+    if(!group)
+        group = project->groups()->findGroup(stored);
+
+    if(group)
     {
-        for(Fixture *fixture : group->query().resolve(photonApp->project()))
+        for(Fixture *fixture : group->query().resolve(project))
             result.append(fixture);
     }
 

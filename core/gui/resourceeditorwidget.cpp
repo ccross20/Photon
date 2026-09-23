@@ -1,10 +1,11 @@
-#include <QFormLayout>
+#include <QVBoxLayout>
 #include <QLineEdit>
 #include <QPushButton>
+#include "propertywidgets.h"
 #include "resourceeditorwidget.h"
 #include "project/project.h"
 #include "project/projectresource.h"
-#include "gui/tag/tageditorwidget.h"
+#include "tag/tageditorwidget.h"
 #include "photoncore.h"
 
 namespace photon {
@@ -13,7 +14,7 @@ class ResourceEditorWidget::Impl
 {
 public:
     ProjectResource *resource = nullptr;
-    QFormLayout *layout = nullptr;
+    PropertyForm *form = nullptr;
     QLineEdit *nameEdit = nullptr;
     TagEditorWidget *tagEditor = nullptr;
     QPushButton *openButton = nullptr;
@@ -27,17 +28,24 @@ ResourceEditorWidget::ResourceEditorWidget(ProjectResource *t_resource, QWidget 
 {
     m_impl->resource = t_resource;
 
-    m_impl->layout = new QFormLayout(this);
+    // Built on PropertyForm so a resource's Name row lines up with a node
+    // parameter's and a gizmo property's - the Properties panel shows all
+    // three, and they used to be laid out three different ways.
+    QVBoxLayout *outer = new QVBoxLayout(this);
+    outer->setContentsMargins(0, 0, 0, 0);
+    m_impl->form = new PropertyForm;
+    outer->addWidget(m_impl->form);
 
     m_impl->nameEdit = new QLineEdit;
+    m_impl->nameEdit->setMaximumHeight(30);
 
     m_impl->tagEditor = new TagEditorWidget(
         [this](){ return m_impl->resource ? m_impl->resource->resourceTags() : QStringList(); },
         [this](const QStringList &tags){ if(m_impl->resource) m_impl->resource->setResourceTags(tags); },
         [](){ return photonApp->project() ? photonApp->project()->allTags() : QStringList(); });
 
-    m_impl->layout->addRow("Name", m_impl->nameEdit);
-    m_impl->layout->addRow("Tags", m_impl->tagEditor);
+    m_impl->form->addRow("Name", m_impl->nameEdit);
+    m_impl->form->addRow("Tags", m_impl->tagEditor);
 
     connect(m_impl->nameEdit, &QLineEdit::editingFinished, this, &ResourceEditorWidget::nameEdited);
 
@@ -60,7 +68,7 @@ void ResourceEditorWidget::setOpenAction(const QString &t_label, std::function<v
     if(!m_impl->openButton)
     {
         m_impl->openButton = new QPushButton;
-        m_impl->layout->addRow(m_impl->openButton);
+        m_impl->form->addFullWidth(m_impl->openButton);
     }
 
     m_impl->openButton->setText(t_label);

@@ -53,6 +53,10 @@ private:
     // Every category, each in its own submenu - what the toolbar Add button
     // shows, since it isn't scoped to anything the user clicked.
     void populateFullAddMenu(QMenu &menu, photon::SceneObject *preferredParent = nullptr);
+    // Selects a just-created resource and puts its row straight into inline
+    // rename mode, in place of a "Name:" popup - used by the Add Routine and
+    // Add Sequence actions, which create the resource as "Untitled" first.
+    void selectAndRename(photon::ProjectResource *resource);
 
     class Impl;
     Impl *m_impl;

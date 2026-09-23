@@ -1,6 +1,6 @@
 #include <QHBoxLayout>
 #include "colorchannelparameterview.h"
-#include "gui/color/colorwheelswatch.h"
+#include "color/colorwheelswatch.h"
 #include "../colorchannelparameter.h"
 
 namespace photon {

@@ -207,6 +207,7 @@ public:
 
     void loadFixtureDefinition(const QString &path);
     void readFromOpenFixtureJson(const QJsonObject &);
+    QString definitionPath() const;
 
     void readFromJson(const QJsonObject &, const LoadContext &) override;
     void writeToJson(QJsonObject &) const override;

@@ -10,6 +10,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <algorithm>
+#include <cmath>
 
 
 
@@ -590,12 +591,18 @@ void WaveformWidget::paintEvent(QPaintEvent *event)
 }
 
 
-void WaveformWidget::frameAll()
+double WaveformWidget::totalDuration() const
 {
     if(m_sound)
-        frameTime(0, m_sound->GetLength() / m_sound->m_samplesPerSecond);
-    else if(m_referenceDuration > 0.0)
-        frameTime(0, m_referenceDuration);
+        return m_sound->GetLength() / m_sound->m_samplesPerSecond;
+    return m_referenceDuration;
+}
+
+void WaveformWidget::frameAll()
+{
+    const double duration = totalDuration();
+    if(duration > 0.0)
+        frameTime(0, duration);
 }
 
 void WaveformWidget::frameTime(double start, double end)
@@ -750,13 +757,20 @@ void WaveformWidget::wheelEvent(QWheelEvent *t_event)
     if(t_event->modifiers() & Qt::ControlModifier)
     {
         // Ctrl: zoom around the cursor (wheel up zooms in, matching the other views).
+        //
+        // Scaled by how far this one event actually scrolled rather than applied
+        // as a flat step - a high-resolution device (Magic Mouse, trackpad) fires
+        // many small events per gesture, and a flat per-event step compounds
+        // across all of them into a runaway zoom. ZOOM_PER_NOTCH is deliberately
+        // gentle (was 1.3, an aggressive 30% per notch) - see TimelineViewer's
+        // matching fix, since the two views stay zoom-synced and would otherwise
+        // feel inconsistent.
         const double underCursor = t_event->position().x() * m_hZoomRatio;
-        const double ZOOM_INCREMENT = 1.3;
-        const int a = angle.y() != 0 ? angle.y() : angle.x();
-        if(a > 0)
-            m_hZoomRatio /= ZOOM_INCREMENT;
-        else
-            m_hZoomRatio *= ZOOM_INCREMENT;
+        constexpr double ZOOM_PER_NOTCH = 1.04;
+        const double notches = !pixels.isNull()
+            ? (pixels.y() != 0 ? pixels.y() : pixels.x()) / 40.0
+            : (angle.y() != 0 ? angle.y() : angle.x()) / 120.0;
+        m_hZoomRatio *= std::pow(ZOOM_PER_NOTCH, -notches);
 
         const double nowUnderCursor = t_event->position().x() * m_hZoomRatio;
         m_hOffset -= (nowUnderCursor - underCursor);

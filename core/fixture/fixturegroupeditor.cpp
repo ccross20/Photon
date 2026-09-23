@@ -8,7 +8,7 @@
 #include "fixturegroup.h"
 #include "fixture/fixture.h"
 #include "gui/resourceeditorwidget.h"
-#include "gui/tag/tageditorwidget.h"
+#include "tag/tageditorwidget.h"
 #include "photoncore.h"
 #include "project/project.h"
 #include "scene/scenezone.h"
@@ -57,10 +57,12 @@ FixtureGroupEditor::FixtureGroupEditor(FixtureGroup *t_group, QWidget *parent)
         },
         [](){ return photonApp->project() ? photonApp->project()->allTags() : QStringList(); });
 
+    // Stored/matched by uniqueId, not name (see FixtureQuery::zone), so
+    // renaming a zone doesn't detach a saved group's filter from it.
     m_impl->zoneCombo = new QComboBox;
     m_impl->zoneCombo->addItem("(none)", "");
-    for(const QString &zone : SceneZone::zoneNames(photonApp->project()))
-        m_impl->zoneCombo->addItem(zone, zone);
+    for(SceneZone *zoneObj : SceneZone::zones(photonApp->project()))
+        m_impl->zoneCombo->addItem(zoneObj->name(), QString::fromUtf8(zoneObj->uniqueId()));
 
     const FixtureQuery &query = t_group->query();
     m_impl->typeEdit->setText(query.type);

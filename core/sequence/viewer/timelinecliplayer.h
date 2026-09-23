@@ -37,7 +37,6 @@ protected:
 
 private:
     friend class TimelineScene;
-    friend class TimelineLayerGroup;
     class Impl;
     Impl *m_impl;
 };

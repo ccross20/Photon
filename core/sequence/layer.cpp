@@ -1,6 +1,5 @@
 #include "layer_p.h"
 #include "sequence.h"
-#include "layergroup.h"
 
 namespace photon {
 
@@ -27,11 +26,6 @@ Layer::Layer(const QString &t_name, const QByteArray &layerType, QObject *parent
 Layer::~Layer()
 {
     delete m_impl;
-}
-
-LayerGroup *Layer::parentGroup() const
-{
-    return dynamic_cast<LayerGroup*>(parent());
 }
 
 QWidget *Layer::createEditor()
@@ -73,6 +67,19 @@ QByteArray Layer::layerType() const
     return m_impl->type;
 }
 
+bool Layer::isMuted() const
+{
+    return m_impl->muted;
+}
+
+void Layer::setMuted(bool t_muted)
+{
+    if(m_impl->muted == t_muted)
+        return;
+    m_impl->muted = t_muted;
+    emit metadataChanged();
+}
+
 Sequence *Layer::sequence() const
 {
     return m_impl->sequence;
@@ -102,6 +109,7 @@ void Layer::readFromJson(const QJsonObject &t_json, const LoadContext &t_context
 {
     m_impl->name = t_json.value("name").toString();
     m_impl->guid = QUuid::fromString(t_json.value("guid").toString());
+    m_impl->muted = t_json.value("muted").toBool();
 }
 
 void Layer::writeToJson(QJsonObject &t_json) const
@@ -109,6 +117,7 @@ void Layer::writeToJson(QJsonObject &t_json) const
     t_json.insert("name", m_impl->name);
     t_json.insert("guid", m_impl->guid.toString());
     t_json.insert("type", QString(m_impl->type));
+    t_json.insert("muted", m_impl->muted);
 
 }
 

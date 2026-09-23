@@ -1,9 +1,7 @@
 #include <QHBoxLayout>
 #include <QVBoxLayout>
-#include <QSplitter>
 #include "graphwidget.h"
 #include "viewer.h"
-#include "nodeeditor.h"
 #include "nodeitem.h"
 #include "scene.h"
 #include "model/node.h"
@@ -14,7 +12,6 @@ GraphWidget::GraphWidget(NodeLibrary *t_library, QWidget *parent)
     : QWidget{parent}
 {
     m_viewer = new keira::Viewer(t_library);
-    m_editor = new keira::NodeEditor;
 
     QVBoxLayout *vLayout = new QVBoxLayout;
 
@@ -41,36 +38,29 @@ GraphWidget::GraphWidget(NodeLibrary *t_library, QWidget *parent)
     vLayout->addLayout(navLayout);
     vLayout->addWidget(m_viewer);
 
-    QWidget *viewerContainer = new QWidget;
-    viewerContainer->setLayout(vLayout);
-
     connect(m_viewer, &keira::Viewer::subGraphClicked, this, &GraphWidget::subGraphOpened);
 
-    QSplitter *splitter = new QSplitter;
-    splitter->addWidget(viewerContainer);
-    splitter->addWidget(m_editor);
-
-    QHBoxLayout *hLayout = new QHBoxLayout;
-    hLayout->addWidget(splitter);
-    setLayout(hLayout);
+    // The node's parameters used to live in a splitter pane here; they are now
+    // shown in the app's Properties panel, so the graph gets the full width.
+    setLayout(vLayout);
 }
 
 GraphWidget::~GraphWidget()
 {
-    // QWidget's destructor tears down our widget children (m_viewer, m_editor,
+    // QWidget's destructor tears down our widget children (m_viewer,
     // m_breadcrumbBar, ...) before ~QObject() gets to plain-QObject children
     // like a Scene parented to us - so if m_scene outlives them even briefly,
     // its own destructor removing/deselecting items fires selectionChanged(),
-    // which is still connected to selectionUpdated() and would dereference the
-    // already-freed m_editor. Cut the connection first so nothing can fire
-    // during teardown, regardless of which child gets destroyed first.
+    // which is still connected to selectionUpdated() and would emit
+    // nodeSelected() out of a half-destroyed widget. Cut the connection first
+    // so nothing can fire during teardown, whichever child goes first.
     if(m_scene)
         m_scene->disconnect(this);
 }
 
 void GraphWidget::subGraphOpened(Graph *t_graph)
 {
-    m_editor->setNode(nullptr);
+    emit nodeSelected(nullptr);
     m_scene->setGraph(t_graph);
 }
 
@@ -104,7 +94,7 @@ void GraphWidget::navigateToGraph(Graph *t_graph)
     if(!t_graph || !m_scene || t_graph == m_scene->graph())
         return;
 
-    m_editor->setNode(nullptr);
+    emit nodeSelected(nullptr);
     m_scene->setGraph(t_graph);
 }
 
@@ -174,20 +164,22 @@ void GraphWidget::selectionUpdated()
     auto items = m_scene->selectedItems();
     if(items.isEmpty())
     {
-        m_editor->setNode(nullptr);
+        emit nodeSelected(nullptr);
+        return;
     }
-    else
+
+    for(auto item : items)
     {
-        for(auto item : items)
+        NodeItem *nodeItem = dynamic_cast<NodeItem*>(item);
+        if(nodeItem)
         {
-            NodeItem *nodeItem = dynamic_cast<NodeItem*>(item);
-            if(nodeItem)
-            {
-                m_editor->setNode(nodeItem->node());
-                return;
-            }
+            emit nodeSelected(nodeItem->node());
+            return;
         }
     }
+
+    // A selection that holds only wires or comments edits nothing.
+    emit nodeSelected(nullptr);
 }
 
 } // namespace keira

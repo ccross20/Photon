@@ -11,8 +11,9 @@ class QJsonObject;
 
 namespace photon {
 
-// A named, saved fixture selection (a FixtureQuery with a name). Referenced by name
-// from shows so a selection can be defined once and reused / updated in one place.
+// A named, saved fixture selection (a FixtureQuery with a name). Referenced by
+// uniqueId from shows so a selection can be defined once and reused / updated
+// in one place, and renaming it doesn't desync anything pointing at it.
 class PHOTONCORE_EXPORT FixtureGroup : public QObject, public ProjectResource
 {
     Q_OBJECT

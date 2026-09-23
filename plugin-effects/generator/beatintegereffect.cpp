@@ -2,49 +2,50 @@
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QComboBox>
-#include "view/numberscrubfield.h"
+#include "numberscrubfield.h"
 #include "sequence/viewer/stackedparameterwidget.h"
 #include "beatintegereffect.h"
 #include "sequence/channel.h"
 #include "sequence/sequence.h"
 #include "audio/songdata.h"
+#include "propertywidgets.h"
 
 namespace photon {
 
 BeatIntegerEffectEditor::BeatIntegerEffectEditor(BeatIntegerEffect *t_effect):ChannelEffectEditor(t_effect),m_effect(t_effect)
 {
-    auto *minSpin = new keira::NumberScrubField;
+    auto *minSpin = new photon::NumberScrubField;
     minSpin->setIsInteger(true);
     minSpin->setMinimum(-100000);
     minSpin->setMaximum(100000);
     minSpin->setValue(m_effect->minRange());
-    connect(minSpin, &keira::NumberScrubField::valueChanged, this, [this](double v){ minRangeChanged(int(v)); });
+    connect(minSpin, &photon::NumberScrubField::valueChanged, this, [this](double v){ minRangeChanged(int(v)); });
 
-    auto *maxSpin = new keira::NumberScrubField;
+    auto *maxSpin = new photon::NumberScrubField;
     maxSpin->setIsInteger(true);
     maxSpin->setMinimum(-100000);
     maxSpin->setMaximum(100000);
     maxSpin->setValue(m_effect->maxRange());
-    connect(maxSpin, &keira::NumberScrubField::valueChanged, this, [this](double v){ maxRangeChanged(int(v)); });
+    connect(maxSpin, &photon::NumberScrubField::valueChanged, this, [this](double v){ maxRangeChanged(int(v)); });
 
     QComboBox *modeCombo = new QComboBox;
     modeCombo->addItems(QStringList{"Increment","Decrement","Random"});
     modeCombo->setCurrentIndex(static_cast<int>(m_effect->mode()));
     connect(modeCombo, &QComboBox::currentIndexChanged, this, &BeatIntegerEffectEditor::modeChanged);
 
-    auto *incrementEverySpin = new keira::NumberScrubField;
+    auto *incrementEverySpin = new photon::NumberScrubField;
     incrementEverySpin->setIsInteger(true);
     incrementEverySpin->setMinimum(1);
     incrementEverySpin->setMaximum(1000);
     incrementEverySpin->setValue(m_effect->incrementEvery());
-    connect(incrementEverySpin, &keira::NumberScrubField::valueChanged, this, [this](double v){ incrementEveryChanged(int(v)); });
+    connect(incrementEverySpin, &photon::NumberScrubField::valueChanged, this, [this](double v){ incrementEveryChanged(int(v)); });
 
-    auto *startBeatSpin = new keira::NumberScrubField;
+    auto *startBeatSpin = new photon::NumberScrubField;
     startBeatSpin->setIsInteger(true);
     startBeatSpin->setMinimum(1);
     startBeatSpin->setMaximum(100000);
     startBeatSpin->setValue(m_effect->startBeat());
-    connect(startBeatSpin, &keira::NumberScrubField::valueChanged, this, [this](double v){ startBeatChanged(int(v)); });
+    connect(startBeatSpin, &photon::NumberScrubField::valueChanged, this, [this](double v){ startBeatChanged(int(v)); });
 
     StackedParameterWidget *paramWidget = new StackedParameterWidget;
     paramWidget->addWidget(minSpin, "Minimum");
@@ -268,6 +269,26 @@ void BeatIntegerEffect::rebuildCells()
 ChannelEffectEditor *BeatIntegerEffect::createEditor()
 {
     return new BeatIntegerEffectEditor(this);
+}
+
+QWidget *BeatIntegerEffect::createPropertyEditor()
+{
+    auto *form = new PropertyForm;
+    form->addRow("Minimum", PropertyWidgets::createInteger(m_min,
+        {{PropertyWidgets::MetaMinimum, -100000.0}, {PropertyWidgets::MetaMaximum, 100000.0}},
+        [this](int v){ setMinRange(v); }));
+    form->addRow("Maximum", PropertyWidgets::createInteger(m_max,
+        {{PropertyWidgets::MetaMinimum, -100000.0}, {PropertyWidgets::MetaMaximum, 100000.0}},
+        [this](int v){ setMaxRange(v); }));
+    form->addRow("Mode", PropertyWidgets::createOptions({"Increment","Decrement","Random"}, m_mode, {},
+        [this](int v){ setMode(static_cast<BeatIntegerMode>(v)); }));
+    form->addRow("Increment Every (n) Beats", PropertyWidgets::createInteger(m_incrementEvery,
+        {{PropertyWidgets::MetaMinimum, 1.0}, {PropertyWidgets::MetaMaximum, 1000.0}},
+        [this](int v){ setIncrementEvery(v); }));
+    form->addRow("Start On Beat", PropertyWidgets::createInteger(m_startBeat,
+        {{PropertyWidgets::MetaMinimum, 1.0}, {PropertyWidgets::MetaMaximum, 100000.0}},
+        [this](int v){ setStartBeat(v); }));
+    return form;
 }
 
 void BeatIntegerEffect::readFromJson(const QJsonObject &t_json)

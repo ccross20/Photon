@@ -1,18 +1,19 @@
 #include <QHBoxLayout>
 #include <QLabel>
-#include "view/numberscrubfield.h"
+#include "numberscrubfield.h"
 #include <QCheckBox>
 #include "loopeffect.h"
 #include "sequence/viewer/stackedparameterwidget.h"
+#include "propertywidgets.h"
 
 namespace photon {
 
 LoopEffectEditor::LoopEffectEditor(LoopEffect *t_effect):ChannelEffectEditor(t_effect),m_effect(t_effect)
 {
-    keira::NumberScrubField *durationSpin = new keira::NumberScrubField;
+    photon::NumberScrubField *durationSpin = new photon::NumberScrubField;
     durationSpin->setMinimum(.001);   // a zero loop duration divides by zero
     durationSpin->setValue(m_effect->duration());
-    connect(durationSpin, &keira::NumberScrubField::valueChanged, this, &LoopEffectEditor::durationChanged);
+    connect(durationSpin, &photon::NumberScrubField::valueChanged, this, &LoopEffectEditor::durationChanged);
 
 
     QCheckBox *mirrorCheck = new QCheckBox;
@@ -96,6 +97,16 @@ float * LoopEffect::process(float *value, uint size, double time) const
 ChannelEffectEditor *LoopEffect::createEditor()
 {
     return new LoopEffectEditor(this);
+}
+
+QWidget *LoopEffect::createPropertyEditor()
+{
+    auto *form = new PropertyForm;
+    // A zero loop duration divides by zero, same floor as the editor's field.
+    form->addRow("Duration", PropertyWidgets::createNumber(m_duration,
+        {{PropertyWidgets::MetaMinimum, .001}}, [this](double v){ setDuration(v); }));
+    form->addRow("Mirror", PropertyWidgets::createBoolean(m_mirror, {}, [this](bool v){ setMirror(v); }));
+    return form;
 }
 
 void LoopEffect::readFromJson(const QJsonObject &t_json)

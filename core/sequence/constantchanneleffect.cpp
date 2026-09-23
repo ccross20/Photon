@@ -1,8 +1,8 @@
 #include <QPen>
-#include "view/numberscrubfield.h"
+#include "numberscrubfield.h"
 #include "constantchanneleffect.h"
 #include "sequence/viewer/stackedparameterwidget.h"
-#include "gui/gizmo/gizmohandle.h"
+#include "gizmo/gizmohandle.h"
 
 namespace photon {
 
@@ -11,17 +11,17 @@ ConstantEffectEditor::ConstantEffectEditor(ConstantChannelEffect *t_effect):Chan
     //setMaximumHeight(40);
 
 
-    keira::NumberScrubField *constantSpin = new keira::NumberScrubField;
+    photon::NumberScrubField *constantSpin = new photon::NumberScrubField;
     constantSpin->setMinimum(-10000);
     constantSpin->setMaximum(10000);
     constantSpin->setValue(m_effect->value());
-    connect(constantSpin, &keira::NumberScrubField::valueChanged, this, &ConstantEffectEditor::valueChanged);
+    connect(constantSpin, &photon::NumberScrubField::valueChanged, this, &ConstantEffectEditor::valueChanged);
 
-    keira::NumberScrubField *rateSpin = new keira::NumberScrubField;
+    photon::NumberScrubField *rateSpin = new photon::NumberScrubField;
     rateSpin->setMinimum(-10000);
     rateSpin->setMaximum(10000);
     rateSpin->setValue(m_effect->rate()*100);
-    connect(rateSpin, &keira::NumberScrubField::valueChanged, this, &ConstantEffectEditor::rateChanged);
+    connect(rateSpin, &photon::NumberScrubField::valueChanged, this, &ConstantEffectEditor::rateChanged);
 
     StackedParameterWidget *paramWidget = new StackedParameterWidget;
     paramWidget->addWidget(constantSpin, "Value");

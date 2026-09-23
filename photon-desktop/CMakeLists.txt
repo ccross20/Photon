@@ -27,16 +27,17 @@ if (WIN32)
     set_target_properties(photon-desktop PROPERTIES WIN32_EXECUTABLE TRUE)
 endif()
 
+target_link_libraries(photon-desktop PRIVATE photon-ui)
 target_link_libraries(photon-desktop PRIVATE keira)
 target_link_libraries(photon-desktop PRIVATE photon-core)
 
-# keira/photon-core are SHARED libs; photon-desktop loads them from its own
+# photon-ui/keira/photon-core are SHARED libs; photon-desktop loads them from its own
 # directory at runtime, not from their build directories, so a stale copy
 # here silently shadows a freshly-built DLL until this re-copies it.
 #
 # This can't be a POST_BUILD step on photon-desktop itself: MSVC/ninja treat
 # the exe as up to date whenever its import .lib is unchanged, which happens
-# whenever a photon-core/keira change doesn't alter exported symbols (e.g. an
+# whenever a photon-core/keira/photon-ui change doesn't alter exported symbols (e.g. an
 # edit to a private, non-exported class) - so the exe wouldn't relink and a
 # POST_BUILD step attached to it would silently never run, leaving a stale
 # DLL next to the exe. A separate custom target keyed on the DLLs'
@@ -45,12 +46,13 @@ target_link_libraries(photon-desktop PRIVATE photon-core)
 add_custom_command(
     OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/deploy-runtime-dlls.stamp
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        $<TARGET_FILE:photon-ui>
         $<TARGET_FILE:keira>
         $<TARGET_FILE:photon-core>
         ${CMAKE_CURRENT_BINARY_DIR}
     COMMAND ${CMAKE_COMMAND} -E touch ${CMAKE_CURRENT_BINARY_DIR}/deploy-runtime-dlls.stamp
-    DEPENDS $<TARGET_FILE:keira> $<TARGET_FILE:photon-core>
-    COMMENT "Copying keira/photon-core DLLs next to photon-desktop.exe"
+    DEPENDS $<TARGET_FILE:photon-ui> $<TARGET_FILE:keira> $<TARGET_FILE:photon-core>
+    COMMENT "Copying photon-ui/keira/photon-core DLLs next to photon-desktop.exe"
 )
 add_custom_target(photon-desktop-deploy-dlls ALL
     DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/deploy-runtime-dlls.stamp

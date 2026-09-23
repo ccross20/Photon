@@ -1,3 +1,4 @@
+#include <QUuid>
 #include "cuelayer.h"
 
 namespace photon {
@@ -7,6 +8,7 @@ class CueLayer::Impl
 public:
     QList<float> markers;
     QString name;
+    QByteArray uniqueId;
     bool isSnappable = true;
     bool isVisible = true;
     bool isEditable = true;
@@ -16,11 +18,16 @@ public:
 CueLayer::CueLayer(QObject *parent)
     : QObject{parent},m_impl(new Impl)
 {
-
+    m_impl->uniqueId = QUuid::createUuid().toByteArray();
 }
 CueLayer::~CueLayer()
 {
     delete m_impl;
+}
+
+QByteArray CueLayer::uniqueId() const
+{
+    return m_impl->uniqueId;
 }
 
 void CueLayer::setName(const QString &t_name)
@@ -153,6 +160,8 @@ void CueLayer::sort()
 void CueLayer::readFromJson(const QJsonObject &t_json, const LoadContext &)
 {
     m_impl->name = t_json.value("name").toString();
+    if(t_json.contains("uniqueId"))
+        m_impl->uniqueId = t_json.value("uniqueId").toString().toLatin1();
     m_impl->isSnappable = t_json.value("isSnappable").toBool(m_impl->isSnappable);
     m_impl->isVisible = t_json.value("isVisible").toBool(m_impl->isVisible);
     m_impl->isEditable = t_json.value("isEditable").toBool(m_impl->isEditable);
@@ -170,6 +179,7 @@ void CueLayer::readFromJson(const QJsonObject &t_json, const LoadContext &)
 void CueLayer::writeToJson(QJsonObject &t_json) const
 {
     t_json.insert("name", m_impl->name);
+    t_json.insert("uniqueId", QString{m_impl->uniqueId});
     t_json.insert("isSnappable", m_impl->isSnappable);
     t_json.insert("isVisible", m_impl->isVisible);
     t_json.insert("isEditable", m_impl->isEditable);

@@ -14,7 +14,6 @@
 #include "routine/routine.h"
 #include "gui/menufactory.h"
 #include "sequence/fixtureclip.h"
-#include "sequence/canvasclip.h"
 
 namespace photon {
 
@@ -179,15 +178,6 @@ void TimelineClipLayer::contextMenuEvent(QGraphicsSceneContextMenuEvent *event)
         static_cast<ClipLayer*>(layer())->addClip(clip);
     });
 
-
-    menu.addAction("Create Canvas Clip",this,[time, this](){
-
-        auto clip = new CanvasClip;
-        clip->setName("Clip");
-        clip->setStartTime(time);
-        clip->setDuration(5);
-        static_cast<ClipLayer*>(layer())->addClip(clip);
-    });
 
     // Routine clips reference a shared routine from the project's collection.
     const auto routines = photonApp->project()->routines()->routines();

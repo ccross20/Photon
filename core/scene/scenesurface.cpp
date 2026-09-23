@@ -1,12 +1,13 @@
-#include <QFormLayout>
+#include <QVBoxLayout>
 #include <QLineEdit>
 #include <QDoubleSpinBox>
 #include <QPushButton>
 #include <QColorDialog>
 #include <QSignalBlocker>
 #include "scenesurface.h"
-#include "gui/vector3edit.h"
-#include "gui/tag/tageditorwidget.h"
+#include "vector3edit.h"
+#include "propertywidgets.h"
+#include "tag/tageditorwidget.h"
 #include "photoncore.h"
 #include "project/project.h"
 
@@ -17,7 +18,7 @@ class SceneSurfaceEditorWidget::Impl
 public:
     Impl();
     SceneSurface *surface = nullptr;
-    QFormLayout *formLayout;
+    PropertyForm *form;
     QLineEdit *nameEdit;
     TagEditorWidget *tagEditor;
     QDoubleSpinBox *widthSpin;
@@ -29,41 +30,49 @@ public:
 
 SceneSurfaceEditorWidget::Impl::Impl()
 {
-    formLayout = new QFormLayout;
+    form = new PropertyForm;
+
+    form->addSection("General");
 
     nameEdit = new QLineEdit;
-    formLayout->addRow("Name", nameEdit);
+    form->addRow("Name", nameEdit);
 
     tagEditor = new TagEditorWidget(
         [this](){ return surface ? surface->tags() : QStringList(); },
         [this](const QStringList &tags){ if(surface) surface->setTags(tags); },
         [](){ return photonApp->project() ? photonApp->project()->allTags() : QStringList(); });
-    formLayout->addRow("Tags", tagEditor);
+    form->addRow("Tags", tagEditor);
 
     widthSpin = new QDoubleSpinBox;
     widthSpin->setMinimum(0.1);
     widthSpin->setMaximum(200.0);
-    formLayout->addRow("Width", widthSpin);
+    form->addRow("Width", widthSpin);
 
     heightSpin = new QDoubleSpinBox;
     heightSpin->setMinimum(0.1);
     heightSpin->setMaximum(200.0);
-    formLayout->addRow("Height", heightSpin);
+    form->addRow("Height", heightSpin);
+
+    form->addSection("Style");
 
     colorButton = new QPushButton;
-    formLayout->addRow("Color", colorButton);
+    form->addRow("Color", colorButton);
+
+    form->addSection("Transform");
 
     positionEdit = new Vector3Edit;
-    formLayout->addRow("Position", positionEdit);
+    form->addRow("Position", positionEdit);
 
     rotationEdit = new Vector3Edit;
-    formLayout->addRow("Rotation", rotationEdit);
+    form->addRow("Rotation", rotationEdit);
 }
 
 SceneSurfaceEditorWidget::SceneSurfaceEditorWidget(SceneSurface *t_surface, QWidget *parent)
     : QWidget{parent}, m_impl(new Impl)
 {
-    setLayout(m_impl->formLayout);
+    QVBoxLayout *outer = new QVBoxLayout(this);
+    outer->setContentsMargins(0, 0, 0, 0);
+    outer->addWidget(m_impl->form);
     setSizePolicy(QSizePolicy{QSizePolicy::MinimumExpanding, QSizePolicy::Maximum});
 
     m_impl->surface = t_surface;

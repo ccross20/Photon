@@ -1,8 +1,10 @@
 #include <QJsonDocument>
 #include <QFile>
 #include <QFileDialog>
+#include <QFileInfo>
 #include <QSettings>
 #include <QWidget>
+#include <QDataStream>
 #include "project.h"
 #include "fixture/fixturecollection.h"
 #include "fixture/fixture.h"
@@ -14,6 +16,7 @@
 #include "pixel/pixellayoutcollection.h"
 #include "pixel/pixellayout.h"
 #include "sequence/sequence.h"
+#include "audio/songdata.h"
 #include "graph/bus/busgraph.h"
 #include "graph/bus/dmxgeneratematrixnode.h"
 #include "graph/bus/sequencenode.h"
@@ -21,12 +24,38 @@
 #include "graph/bus/dmxwriternode.h"
 #include "graph/bus/dmxsubgraphnode.h"
 #include "graph/bus/identifyfixturenode.h"
+#include "graph/bus/colorcalibrationnode.h"
 #include "scene/sceneobject.h"
 #include "scene/scenemanager.h"
 #include "surface/surfacecollection.h"
 #include "surface/surface.h"
 #include "fixture/fixturegroup.h"
 #include "scene/sceneiterator.h"
+#include "color/colorcollection.h"
+#include "color/colorresource.h"
+#include "color/gradientcollection.h"
+#include "color/gradientresource.h"
+#include "color/colorpalettecollection.h"
+#include "color/colorpaletteresource.h"
+
+namespace {
+
+constexpr int kMaxRecentProjects = 10;
+
+void rememberRecentProject(const QString &t_path)
+{
+    QSettings qsettings;
+    qsettings.beginGroup("recentProjects");
+    QStringList recents = qsettings.value("files").toStringList();
+    recents.removeAll(t_path);
+    recents.prepend(t_path);
+    while(recents.size() > kMaxRecentProjects)
+        recents.removeLast();
+    qsettings.setValue("files", recents);
+    qsettings.endGroup();
+}
+
+} // namespace
 
 namespace photon {
 
@@ -45,11 +74,24 @@ public:
     PixelLayoutCollection pixelLayouts;
     FixtureCollection fixtures;
     RoutineCollection routines;
+    // Sequences embedded in this project's own file - see Project::sequences().
+    // Only used for its list/enumerate/signal API; its panel-tracking methods
+    // (editSequence, activeSequencePanel) belong exclusively to PhotonCore's
+    // app-wide SequenceCollection and are never called on this instance.
+    // ownsSequences=false: every Sequence here is also tracked by that
+    // app-wide collection, which is the one that actually deletes them
+    // (PhotonCore::closeProject()'s clear()) - this is a membership list,
+    // not a second owner, or closing a project would double-delete them.
+    SequenceCollection sequences{false};
     SurfaceCollection surfaces;
     FixtureGroupCollection groups;
+    ColorCollection colors;
+    GradientCollection gradients;
+    ColorPaletteCollection colorPalettes;
     BusGraph *bus;
     SceneManager *sceneManager;
     QList<ProjectResource*> selectedResources;
+    QJsonObject uiState;
     // The SceneObject-only slice of selectedResources, kept in step by
     // setSelectedResources().
     QList<SceneObject*> selectedSceneObjects;
@@ -86,6 +128,14 @@ Project::Impl::Impl()
     identifyNode->createParameters();
     identifyNode->setPosition(QPointF(750,0));
 
+    // Right after Identify — overrides one fixture's color capabilities with
+    // raw per-channel percentages while the Color Calibration dialog is open,
+    // so it can preview exactly what a slider drag would produce live.
+    ColorCalibrationNode *colorCalibrationNode = new ColorCalibrationNode;
+    colorCalibrationNode->setName("Color Calibration");
+    colorCalibrationNode->createParameters();
+    colorCalibrationNode->setPosition(QPointF(825,0));
+
     DMXWriterNode *writerNode = new DMXWriterNode;
     writerNode->setName("output");
     writerNode->createParameters();
@@ -97,12 +147,14 @@ Project::Impl::Impl()
     bus->addNode(initialValuesNode);
     bus->addNode(sequenceNode);
     bus->addNode(identifyNode);
+    bus->addNode(colorCalibrationNode);
     bus->addNode(writerNode);
 
     bus->connectParameters(generateNode->findParameter(DMXGenerateMatrixNode::OutputDMX), initialValuesNode->findParameter(DMXSubGraphNode::InputDMX));
     bus->connectParameters(initialValuesNode->findParameter(DMXSubGraphNode::OutputDMX), sequenceNode->findParameter(SurfaceNode::InputDMX));
     bus->connectParameters(sequenceNode->findParameter(SurfaceNode::OutputDMX), identifyNode->findParameter(IdentifyFixtureNode::InputDMX));
-    bus->connectParameters(identifyNode->findParameter(IdentifyFixtureNode::OutputDMX), writerNode->findParameter(DMXWriterNode::InputDMX));
+    bus->connectParameters(identifyNode->findParameter(IdentifyFixtureNode::OutputDMX), colorCalibrationNode->findParameter(ColorCalibrationNode::InputDMX));
+    bus->connectParameters(colorCalibrationNode->findParameter(ColorCalibrationNode::OutputDMX), writerNode->findParameter(DMXWriterNode::InputDMX));
 
     bus->drainCommandQueue();
 
@@ -255,6 +307,11 @@ RoutineCollection *Project::routines() const
     return &m_impl->routines;
 }
 
+SequenceCollection *Project::sequences() const
+{
+    return &m_impl->sequences;
+}
+
 FixtureCollection *Project::fixtures() const
 {
     return &m_impl->fixtures;
@@ -284,6 +341,18 @@ QStringList Project::allTags() const
         for(const auto &tag : layout->resourceTags())
             tags.insert(tag);
 
+    for(auto *color : m_impl->colors.colors())
+        for(const auto &tag : color->resourceTags())
+            tags.insert(tag);
+
+    for(auto *gradient : m_impl->gradients.gradients())
+        for(const auto &tag : gradient->resourceTags())
+            tags.insert(tag);
+
+    for(auto *palette : m_impl->colorPalettes.palettes())
+        for(const auto &tag : palette->resourceTags())
+            tags.insert(tag);
+
     // Sequences are owned by PhotonCore, not the project - guarded the same
     // way ProjectModel guards it, since a bare Project (as in tests) has no
     // running application.
@@ -310,6 +379,21 @@ SurfaceCollection *Project::surfaces() const
 PixelLayoutCollection *Project::pixelLayouts() const
 {
     return &m_impl->pixelLayouts;
+}
+
+ColorCollection *Project::colors() const
+{
+    return &m_impl->colors;
+}
+
+GradientCollection *Project::gradients() const
+{
+    return &m_impl->gradients;
+}
+
+ColorPaletteCollection *Project::colorPalettes() const
+{
+    return &m_impl->colorPalettes;
 }
 
 void Project::save(const QString &path) const
@@ -355,9 +439,22 @@ void Project::save(const QString &path) const
     qsettings.setValue("lastproject", savePath);
     qsettings.endGroup();
 
+    rememberRecentProject(savePath);
 }
 
-void Project::load(const QString &path)
+QStringList Project::recentProjects()
+{
+    QSettings qsettings;
+    qsettings.beginGroup("recentProjects");
+    QStringList recents = qsettings.value("files").toStringList();
+    qsettings.endGroup();
+
+    // Drop entries whose file no longer exists (moved/deleted since).
+    recents.removeIf([](const QString &t_path){ return !QFileInfo::exists(t_path); });
+    return recents;
+}
+
+bool Project::load(const QString &path)
 {
     QString loadPath = path;
     if(loadPath.isNull())
@@ -372,7 +469,7 @@ void Project::load(const QString &path)
                                             "*.proj");
 
         if(loadPath.isNull())
-            return;
+            return false;
 
     }
 
@@ -381,7 +478,7 @@ void Project::load(const QString &path)
 
     if (!loadFile.open(QIODevice::ReadOnly)) {
              qWarning("Couldn't open load file.");
-             return;
+             return false;
          }
 
     QByteArray saveData = loadFile.readAll();
@@ -392,6 +489,9 @@ void Project::load(const QString &path)
     restore(*this);
 
     qDebug() << "Load from: " << loadFile.fileName();
+
+    rememberRecentProject(loadPath);
+    return true;
 }
 
 void Project::restore(Project &t_project)
@@ -406,6 +506,8 @@ void Project::readFromJson(const QJsonObject &json)
 {
     LoadContext context;
     context.project = this;
+
+    m_impl->uiState = json.value("uiState").toObject();
 
     // The constructor seeds a default surface so a brand-new project is
     // usable. Loading into that same instance would leave it orphaned
@@ -447,6 +549,64 @@ void Project::readFromJson(const QJsonObject &json)
             Routine *routine = new Routine;
             routine->readFromJson(routineObj, photonApp->plugins()->nodeLibrary());
             m_impl->routines.addRoutine(routine);
+        }
+    }
+
+    if(json.contains("sequences"))
+    {
+        QJsonArray sequenceArray = json.value("sequences").toArray();
+        for(const auto &seq : sequenceArray)
+        {
+            const QJsonObject &seqObj = seq.toObject();
+
+            Sequence *sequence = new Sequence;
+            sequence->readFromJson(seqObj.value("sequence").toObject(), context);
+            sequence->restore(*this);
+
+            // SongData is embedded here rather than inside Sequence::
+            // writeToJson/readFromJson, so the .seq/Song-Library format
+            // (which persists it separately, see Sequence::save()) is
+            // untouched - only a project-embedded sequence carries it
+            // alongside its own data like this.
+            if(seqObj.contains("songData"))
+            {
+                const QByteArray blob = QByteArray::fromBase64(seqObj.value("songData").toString().toLatin1());
+                QDataStream stream(blob);
+                sequence->songData()->read(stream);
+            }
+
+            m_impl->sequences.addSequence(sequence);
+            photonApp->sequences()->addSequence(sequence);
+        }
+    }
+
+    if(json.contains("colors"))
+    {
+        for(const auto &value : json.value("colors").toArray())
+        {
+            auto *color = new ColorResource;
+            color->readFromJson(value.toObject());
+            m_impl->colors.addColor(color);
+        }
+    }
+
+    if(json.contains("gradients"))
+    {
+        for(const auto &value : json.value("gradients").toArray())
+        {
+            auto *gradient = new GradientResource;
+            gradient->readFromJson(value.toObject());
+            m_impl->gradients.addGradient(gradient);
+        }
+    }
+
+    if(json.contains("colorPalettes"))
+    {
+        for(const auto &value : json.value("colorPalettes").toArray())
+        {
+            auto *palette = new ColorPaletteResource;
+            palette->readFromJson(value.toObject());
+            m_impl->colorPalettes.addPalette(palette);
         }
     }
 
@@ -500,10 +660,49 @@ void Project::readFromJson(const QJsonObject &json)
             }
         }
     }
+
+    // Same idea, for projects saved before the Color Calibration node existed
+    // - splice one in between Identify and the output node.
+    if(!m_impl->bus->findNode("Color Calibration"))
+    {
+        auto *identifyNode = m_impl->bus->findNode("Identify");
+        auto *outputNode = m_impl->bus->findNode("output");
+        if(identifyNode && outputNode)
+        {
+            auto *identifyOut = identifyNode->findParameter(IdentifyFixtureNode::OutputDMX);
+            auto *writerIn = outputNode->findParameter(DMXWriterNode::InputDMX);
+            if(identifyOut && writerIn)
+            {
+                auto *colorCalibrationNode = new ColorCalibrationNode;
+                colorCalibrationNode->setName("Color Calibration");
+                colorCalibrationNode->createParameters();
+                colorCalibrationNode->setPosition(identifyNode->position() + QPointF(75, 100));
+
+                m_impl->bus->addNode(colorCalibrationNode);
+                m_impl->bus->disconnectParameters(identifyOut, writerIn);
+                m_impl->bus->connectParameters(identifyOut, colorCalibrationNode->findParameter(ColorCalibrationNode::InputDMX));
+                m_impl->bus->connectParameters(colorCalibrationNode->findParameter(ColorCalibrationNode::OutputDMX), writerIn);
+                m_impl->bus->drainCommandQueue();
+            }
+        }
+    }
+}
+
+QJsonObject Project::uiState(const QByteArray &t_key) const
+{
+    return m_impl->uiState.value(QString::fromUtf8(t_key)).toObject();
+}
+
+void Project::setUiState(const QByteArray &t_key, const QJsonObject &t_state)
+{
+    m_impl->uiState.insert(QString::fromUtf8(t_key), t_state);
 }
 
 void Project::writeToJson(QJsonObject &json) const
 {
+    if(!m_impl->uiState.isEmpty())
+        json.insert("uiState", m_impl->uiState);
+
     QJsonObject busObj;
     m_impl->bus->writeToJson(busObj);
     json.insert("bus", busObj);
@@ -516,6 +715,54 @@ void Project::writeToJson(QJsonObject &json) const
         routineArray.append(routineObj);
     }
     json.insert("routines", routineArray);
+
+    QJsonArray sequenceArray;
+    for(auto sequence : m_impl->sequences.sequences())
+    {
+        QJsonObject seqObj;
+
+        QJsonObject sequenceObj;
+        sequence->writeToJson(sequenceObj);
+        seqObj.insert("sequence", sequenceObj);
+
+        if(!sequence->songData()->isEmpty())
+        {
+            QByteArray blob;
+            QDataStream stream(&blob, QIODevice::WriteOnly);
+            sequence->songData()->write(stream);
+            seqObj.insert("songData", QString::fromLatin1(blob.toBase64()));
+        }
+
+        sequenceArray.append(seqObj);
+    }
+    json.insert("sequences", sequenceArray);
+
+    QJsonArray colorArray;
+    for(auto color : m_impl->colors.colors())
+    {
+        QJsonObject colorObj;
+        color->writeToJson(colorObj);
+        colorArray.append(colorObj);
+    }
+    json.insert("colors", colorArray);
+
+    QJsonArray gradientArray;
+    for(auto gradient : m_impl->gradients.gradients())
+    {
+        QJsonObject gradientObj;
+        gradient->writeToJson(gradientObj);
+        gradientArray.append(gradientObj);
+    }
+    json.insert("gradients", gradientArray);
+
+    QJsonArray colorPaletteArray;
+    for(auto palette : m_impl->colorPalettes.palettes())
+    {
+        QJsonObject paletteObj;
+        palette->writeToJson(paletteObj);
+        colorPaletteArray.append(paletteObj);
+    }
+    json.insert("colorPalettes", colorPaletteArray);
 
     QJsonObject groupsObj;
     m_impl->groups.writeToJson(groupsObj);

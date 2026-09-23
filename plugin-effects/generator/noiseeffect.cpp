@@ -3,11 +3,12 @@
 #include <QComboBox>
 #include <QStyleOptionGraphicsItem>
 #include <QPainter>
-#include "view/numberscrubfield.h"
+#include "numberscrubfield.h"
 #include "noiseeffect.h"
 #include "sequence/channel.h"
 #include "sequence/viewer/stackedparameterwidget.h"
-#include "gui/gizmo/gizmohandle.h"
+#include "gizmo/gizmohandle.h"
+#include "propertywidgets.h"
 
 namespace photon {
 
@@ -18,25 +19,25 @@ NoiseEffectEditor::NoiseEffectEditor(NoiseEffect *t_effect):ChannelEffectEditor(
 {
     //setMaximumHeight(40);
 
-    auto *freqSpin = new keira::NumberScrubField;
+    auto *freqSpin = new photon::NumberScrubField;
     freqSpin->setMinimum(.001);
     freqSpin->setMaximum(9999);
     freqSpin->setValue(m_effect->frequency());
-    connect(freqSpin, &keira::NumberScrubField::valueChanged, this, &NoiseEffectEditor::frequencyChanged);
+    connect(freqSpin, &photon::NumberScrubField::valueChanged, this, &NoiseEffectEditor::frequencyChanged);
 
 
-    auto *ampSpin = new keira::NumberScrubField;
+    auto *ampSpin = new photon::NumberScrubField;
     ampSpin->setMinimum(-255);
     ampSpin->setMaximum(255);
     ampSpin->setValue(m_effect->amplitude());
-    connect(ampSpin, &keira::NumberScrubField::valueChanged, this, &NoiseEffectEditor::amplitudeChanged);
+    connect(ampSpin, &photon::NumberScrubField::valueChanged, this, &NoiseEffectEditor::amplitudeChanged);
 
-    auto *seedSpin = new keira::NumberScrubField;
+    auto *seedSpin = new photon::NumberScrubField;
     seedSpin->setIsInteger(true);
     seedSpin->setMinimum(0);
     seedSpin->setMaximum(9999);
     seedSpin->setValue(m_effect->seed());
-    connect(seedSpin, &keira::NumberScrubField::valueChanged, this, [this](double v){ seedChanged(int(v)); });
+    connect(seedSpin, &photon::NumberScrubField::valueChanged, this, [this](double v){ seedChanged(int(v)); });
 
     QComboBox *typeCombo = new QComboBox;
     typeCombo->addItems({"Value","Value Fractal","Perlin","Perlin Fractal","Simplex","Simplex Fractal","Cellular","White Noise","Cubic","Cubic Fractal"});
@@ -178,6 +179,25 @@ float * NoiseEffect::process(float *value, uint size, double time) const
 ChannelEffectEditor *NoiseEffect::createEditor()
 {
     return new NoiseEffectEditor(this);
+}
+
+QWidget *NoiseEffect::createPropertyEditor()
+{
+    auto *form = new PropertyForm;
+    form->addRow("Frequency", PropertyWidgets::createNumber(m_frequency,
+        {{PropertyWidgets::MetaMinimum, .001}, {PropertyWidgets::MetaMaximum, 9999.0}},
+        [this](double v){ setFrequency(v); }));
+    form->addRow("Amplitude", PropertyWidgets::createNumber(m_amplitude,
+        {{PropertyWidgets::MetaMinimum, -255.0}, {PropertyWidgets::MetaMaximum, 255.0}},
+        [this](double v){ setAmplitude(v); }));
+    form->addRow("Seed", PropertyWidgets::createInteger(m_seed,
+        {{PropertyWidgets::MetaMinimum, 0.0}, {PropertyWidgets::MetaMaximum, 9999.0}},
+        [this](int v){ setSeed(v); }));
+    form->addRow("Type", PropertyWidgets::createOptions(
+        {"Value","Value Fractal","Perlin","Perlin Fractal","Simplex","Simplex Fractal",
+         "Cellular","White Noise","Cubic","Cubic Fractal"}, m_noiseType, {},
+        [this](int v){ setType(v); }));
+    return form;
 }
 
 void NoiseEffect::readFromJson(const QJsonObject &t_json)

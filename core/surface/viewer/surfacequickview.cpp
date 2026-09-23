@@ -1,6 +1,7 @@
 #include <QQmlContext>
 #include <QQmlEngine>
 #include "surfacequickview.h"
+#include "gui/properties/propertycontroller.h"
 #include "surface/surface.h"
 #include "surface/surfacegizmo.h"
 #include "surface/containergizmo.h"
@@ -71,6 +72,16 @@ void SurfaceQuickView::removeGizmo(QObject *t_gizmo)
 
     if(auto *container = m_surface->rootContainer()->parentContainerOf(gizmo))
         container->removeChild(gizmo);
+}
+
+void SurfaceQuickView::gizmoSelected(QObject *t_gizmo)
+{
+    // Only the edit view drives the Properties panel; the perform view's
+    // interactions are performances, not edits.
+    if(!m_editMode)
+        return;
+
+    PropertyController::instance()->selectGizmo(m_surface, qobject_cast<SurfaceGizmo*>(t_gizmo));
 }
 
 void SurfaceQuickView::reparentGizmo(QObject *t_gizmo, QObject *t_target, int t_index)

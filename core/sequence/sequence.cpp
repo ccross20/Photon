@@ -1,12 +1,9 @@
 #include <QJsonDocument>
 #include <QFile>
-#include <QFileDialog>
-#include <QSettings>
 #include "sequence_p.h"
 #include "layer_p.h"
 #include "cliplayer.h"
-#include "masterlayer.h"
-#include "canvaslayergroup.h"
+#include "clip.h"
 #include "project/project.h"
 #include "photoncore.h"
 #include "fixture/fixturecollection.h"
@@ -69,35 +66,27 @@ void Sequence::init()
 
 void Sequence::save(const QString &t_path) const
 {
-    QSettings qsettings;
-
-    qsettings.beginGroup("app");
-    QString startPath = qsettings.value("sequencepath", QDir::homePath()).toString();
-    qsettings.endGroup();
-
-    QString savePath = t_path;
-    if(savePath.isEmpty())
+    // No file-dialog fallback: every real caller is Song-Library-driven and
+    // already knows its own .seq path (auto-derived, never hand-picked for a
+    // new sequence) - a project-embedded sequence never calls save() at all
+    // (see Project::writeToJson).
+    if(t_path.isEmpty())
     {
-        savePath = QFileDialog::getSaveFileName(nullptr,"Save Sequence", startPath, "Photon Sequence (*.seq)");
-    }
-
-    if(savePath.isEmpty())
-    {
-        qWarning("There was no path to save to.");
+        qWarning("Sequence::save() called with no path.");
         return;
     }
 
-    QFile saveFile(savePath);
+    // The actual path being written to always wins - filePath() must reflect
+    // reality (e.g. PhotonCore::loadSequence()'s duplicate-tab check compares
+    // against it) rather than whatever was last embedded in the JSON below.
+    m_impl->filePath = t_path;
+
+    QFile saveFile(t_path);
 
     if (!saveFile.open(QIODevice::WriteOnly)) {
         qWarning("Couldn't open save file.");
         return;
     }
-
-    qsettings.beginGroup("app");
-    qsettings.setValue("sequencepath", QFileInfo(savePath).path());
-    qsettings.setValue("lastsequence", savePath);
-    qsettings.endGroup();
 
     QJsonObject jsonObj;
     writeToJson(jsonObj);
@@ -112,7 +101,7 @@ void Sequence::save(const QString &t_path) const
     // duplicate. Only sequences with no library link still use the sidecar.
     SongLibrary *library = photonApp->songLibrary();
     SongLibraryEntry *linkedSong = (library && library->isOpen())
-        ? library->findSongBySequencePath(savePath) : nullptr;
+        ? library->findSongBySequencePath(t_path) : nullptr;
 
     if(linkedSong)
     {
@@ -123,7 +112,7 @@ void Sequence::save(const QString &t_path) const
         // Write the song-analysis sidecar alongside (binary). Skip when there's
         // nothing to store so we don't leave empty .song files next to plain
         // sequences.
-        const QString sidecar = songDataSidecarPath(savePath);
+        const QString sidecar = songDataSidecarPath(t_path);
         if(!sidecar.isEmpty())
         {
             if(!m_impl->songData.isEmpty())
@@ -136,29 +125,16 @@ void Sequence::save(const QString &t_path) const
 
 void Sequence::load(const QString &t_path)
 {
-    QString loadPath = t_path;
-    if(loadPath.isNull())
+    // No file-dialog fallback: every real caller already knows its own .seq
+    // path - a project-embedded sequence never calls load() at all (see
+    // Project::readFromJson).
+    if(t_path.isEmpty())
     {
-        QSettings qsettings;
-        qsettings.beginGroup("app");
-        QString startPath = qsettings.value("sequencepath", QDir::homePath()).toString();
-        qsettings.endGroup();
-
-        loadPath = QFileDialog::getOpenFileName(nullptr, "Photon Sequence",
-                                                startPath,
-                                                "*.seq");
-
-        if(loadPath.isNull())
-            return;
-        qsettings.beginGroup("app");
-        qsettings.setValue("sequencepath", QFileInfo(loadPath).path());
-        qsettings.setValue("lastsequence", loadPath);
-        qsettings.endGroup();
-
+        qWarning("Sequence::load() called with no path.");
+        return;
     }
 
-
-    QFile loadFile(loadPath);
+    QFile loadFile(t_path);
 
     if (!loadFile.open(QIODevice::ReadOnly)) {
         qWarning("Couldn't open load file.");
@@ -173,6 +149,14 @@ void Sequence::load(const QString &t_path)
     context.project = photonApp->project();
 
     readFromJson(loadDoc.object(), context);
+
+    // The path actually opened always wins over whatever "filePath" was
+    // embedded in the JSON (which readFromJson just set m_impl->filePath to) -
+    // that embedded value can be stale/empty (e.g. the file was renamed since
+    // its last save) and PhotonCore::loadSequence()'s duplicate-tab check
+    // relies on filePath() matching the real path.
+    m_impl->filePath = t_path;
+
     restore(*photonApp->project());
 
     // See the matching comment in save(): a library-linked sequence's SongData
@@ -181,7 +165,7 @@ void Sequence::load(const QString &t_path)
     m_impl->songData = SongData();
     SongLibrary *library = photonApp->songLibrary();
     SongLibraryEntry *linkedSong = (library && library->isOpen())
-        ? library->findSongBySequencePath(loadPath) : nullptr;
+        ? library->findSongBySequencePath(t_path) : nullptr;
 
     if(linkedSong)
     {
@@ -189,7 +173,7 @@ void Sequence::load(const QString &t_path)
     }
     else
     {
-        const QString sidecar = songDataSidecarPath(loadPath);
+        const QString sidecar = songDataSidecarPath(t_path);
         if(!sidecar.isEmpty() && QFile::exists(sidecar))
             m_impl->songData.load(sidecar);
     }
@@ -210,58 +194,20 @@ void Sequence::removeCueLayer(CueLayer *t_layer)
     emit cueLayerRemoved(t_layer);
 }
 
-bool Sequence::findClosestBeatToTime(float t_time, float *t_result) const
+bool Sequence::snapTime(float t_time, float *t_outTime, float t_tolerance, const QVector<Clip*> &t_excludeClips) const
 {
-    *t_result = 0.0f;
-    if(m_impl->cueLayers.isEmpty())
-        return false;
-
-    auto layer = m_impl->cueLayers.front();
-    auto markers = layer->markers();
-
-    auto it = std::lower_bound(markers.begin(), markers.end(), t_time);
-
-    if (it == markers.begin()) {
-            *t_result = markers.front();
-    }
-
-    double a = *(it - 1);
-    double b = *(it);
-
-    if (fabs(t_time - a) < fabs(t_time - b)) {
-        *t_result = *(it - 1);
-    }
-    else
-        *t_result = *it;
-
-
-    return true;
-}
-
-bool Sequence::snapToBeat(float time, float *outTime, float tolerance) const
-{
-    *outTime = time;
+    *t_outTime = t_time;
     bool hasSnap = false;
     float winner = 100000000.f;
-
-    // The analysed beat grid is always a snap source once a file has been loaded
-    // and analysed - it's derived data, not a user-toggleable layer like custom
-    // cues below.
-    double gridBeat = 0.0;
-    if(m_impl->songData.beats().nearestBeat(time, &gridBeat, tolerance))
-    {
-        winner = static_cast<float>(gridBeat);
-        hasSnap = true;
-    }
 
     for(auto cueLayer : m_impl->cueLayers)
     {
         if(cueLayer->isSnappable())
         {
             float snapTime = 0;
-            if(cueLayer->snapToMarker(time, &snapTime, tolerance))
+            if(cueLayer->snapToMarker(t_time, &snapTime, t_tolerance))
             {
-                if(abs(snapTime - time) < abs(winner - time) || !hasSnap)
+                if(abs(snapTime - t_time) < abs(winner - t_time) || !hasSnap)
                 {
                     winner = snapTime;
                     hasSnap = true;
@@ -270,9 +216,34 @@ bool Sequence::snapToBeat(float time, float *outTime, float tolerance) const
         }
     }
 
+    for(auto layer : m_impl->layers)
+    {
+        auto clipLayer = dynamic_cast<ClipLayer*>(layer);
+        if(!clipLayer)
+            continue;
+
+        for(auto clip : clipLayer->clips())
+        {
+            if(t_excludeClips.contains(clip))
+                continue;
+
+            for(float candidate : {static_cast<float>(clip->startTime()), static_cast<float>(clip->endTime())})
+            {
+                if(abs(candidate - t_time) > t_tolerance)
+                    continue;
+
+                if(abs(candidate - t_time) < abs(winner - t_time) || !hasSnap)
+                {
+                    winner = candidate;
+                    hasSnap = true;
+                }
+            }
+        }
+    }
+
     if(hasSnap)
     {
-        *outTime = winner;
+        *t_outTime = winner;
     }
     return hasSnap;
 }
@@ -371,6 +342,16 @@ QString Sequence::filePath() const
     return m_impl->filePath;
 }
 
+bool Sequence::isLibrarySequence() const
+{
+    return m_impl->isLibrarySequence;
+}
+
+void Sequence::setIsLibrarySequence(bool t_value)
+{
+    m_impl->isLibrarySequence = t_value;
+}
+
 void Sequence::setAudioPath(const QString &t_path)
 {
     if(m_impl->filePath == t_path)
@@ -405,7 +386,10 @@ void Sequence::processChannels(ProcessContext &t_context, double lastTime)
 
 
     for(auto layer : m_impl->layers)
-        layer->processChannels(t_context);
+    {
+        if(!layer->isMuted())
+            layer->processChannels(t_context);
+    }
 
     //qDebug() << t_context.dmxMatrix.value(0,3);
 }
@@ -433,18 +417,6 @@ void Sequence::readFromJson(const QJsonObject &t_json, const LoadContext &t_cont
         if(layerObj.value("type").toString() == "ClipLayer")
         {
             auto layer = new ClipLayer("", this);
-            m_impl->addLayer(layer);
-            layer->readFromJson(layerObj, t_context);
-        }
-        if(layerObj.value("type").toString() == "MasterLayer")
-        {
-            auto layer = new MasterLayer(this);
-            m_impl->addLayer(layer);
-            layer->readFromJson(layerObj, t_context);
-        }
-        if(layerObj.value("type").toString() == "CanvasGroup")
-        {
-            auto layer = new CanvasLayerGroup(this);
             m_impl->addLayer(layer);
             layer->readFromJson(layerObj, t_context);
         }

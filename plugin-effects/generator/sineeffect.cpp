@@ -5,8 +5,9 @@
 #include "sineeffect.h"
 #include "sequence/channel.h"
 #include "sequence/viewer/stackedparameterwidget.h"
-#include "gui/gizmo/gizmohandle.h"
-#include "view/numberscrubfield.h"
+#include "gizmo/gizmohandle.h"
+#include "numberscrubfield.h"
+#include "propertywidgets.h"
 
 namespace photon {
 
@@ -17,16 +18,16 @@ SineEffectEditor::SineEffectEditor(SineEffect *t_effect):ChannelEffectEditor(t_e
 {
     //setMaximumHeight(40);
 
-    auto *freqSpin = new keira::NumberScrubField;
+    auto *freqSpin = new photon::NumberScrubField;
     freqSpin->setRange(.001, 9999);
     freqSpin->setValue(m_effect->frequency());
-    connect(freqSpin, &keira::NumberScrubField::valueChanged, this, &SineEffectEditor::frequencyChanged);
+    connect(freqSpin, &photon::NumberScrubField::valueChanged, this, &SineEffectEditor::frequencyChanged);
 
 
-    auto *ampSpin = new keira::NumberScrubField;
+    auto *ampSpin = new photon::NumberScrubField;
     ampSpin->setRange(-255, 255);
     ampSpin->setValue(m_effect->amplitude());
-    connect(ampSpin, &keira::NumberScrubField::valueChanged, this, &SineEffectEditor::amplitudeChanged);
+    connect(ampSpin, &photon::NumberScrubField::valueChanged, this, &SineEffectEditor::amplitudeChanged);
 
     StackedParameterWidget *paramWidget = new StackedParameterWidget;
     paramWidget->addWidget(freqSpin, "Frequency");
@@ -142,6 +143,18 @@ float *SineEffect::process(float *t_value, uint t_size, double t_time) const
 ChannelEffectEditor *SineEffect::createEditor()
 {
     return new SineEffectEditor(this);
+}
+
+QWidget *SineEffect::createPropertyEditor()
+{
+    auto *form = new PropertyForm;
+    form->addRow("Frequency", PropertyWidgets::createNumber(m_frequency,
+        {{PropertyWidgets::MetaMinimum, .001}, {PropertyWidgets::MetaMaximum, 9999.0}},
+        [this](double v){ setFrequency(v); }));
+    form->addRow("Amplitude", PropertyWidgets::createNumber(m_amplitude,
+        {{PropertyWidgets::MetaMinimum, -255.0}, {PropertyWidgets::MetaMaximum, 255.0}},
+        [this](double v){ setAmplitude(v); }));
+    return form;
 }
 
 void SineEffect::readFromJson(const QJsonObject &t_json)

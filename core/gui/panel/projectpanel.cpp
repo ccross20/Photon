@@ -12,8 +12,8 @@
 #include <QVector>
 #include "projectpanel_p.h"
 #include "gui/dialog/fixturelibrarydialog.h"
-#include "gui/tag/tagchip.h"
-#include "gui/tag/tagmime.h"
+#include "tag/tagchip.h"
+#include "tag/tagmime.h"
 #include "photoncore.h"
 #include "project/project.h"
 #include "fixture/fixture.h"
@@ -27,6 +27,12 @@
 #include "fixture/fixturegroup.h"
 #include "pixel/pixellayout.h"
 #include "pixel/pixellayoutcollection.h"
+#include "color/colorresource.h"
+#include "color/colorcollection.h"
+#include "color/gradientresource.h"
+#include "color/gradientcollection.h"
+#include "color/colorpaletteresource.h"
+#include "color/colorpalettecollection.h"
 #include "pixel/pixelstrip.h"
 #include "routine/routine.h"
 #include "routine/routinecollection.h"
@@ -56,6 +62,9 @@ const QVector<QPair<QString, QByteArray>> &projectCategories()
         {"Sequences",      "sequence"},
         {"Surfaces",       "surface"},
         {"Pixel Layouts",  "pixel-layout"},
+        {"Colors",         "color"},
+        {"Gradients",      "gradient"},
+        {"Color Palettes", "color-palette"},
     };
     return categories;
 }
@@ -792,16 +801,15 @@ void ProjectPanel::populateAddActions(QMenu &t_menu, const QByteArray &t_content
     else if(t_contentType == "routine")
     {
         t_menu.addAction("Add Routine", [this](){
-            bool ok = false;
-            const QString name = QInputDialog::getText(this, "Routine", "Name", QLineEdit::Normal, "Untitled", &ok);
-            if(ok && !name.isEmpty())
-                photonApp->project()->routines()->addRoutine(new Routine(name));
+            Routine *routine = new Routine("Untitled");
+            photonApp->project()->routines()->addRoutine(routine);
+            selectAndRename(routine);
         });
     }
     else if(t_contentType == "sequence")
     {
-        t_menu.addAction("Add Sequence", [](){
-            photonApp->newSequence();
+        t_menu.addAction("Add Sequence", [this](){
+            selectAndRename(photonApp->newSequence());
         });
     }
     else if(t_contentType == "surface")
@@ -821,6 +829,51 @@ void ProjectPanel::populateAddActions(QMenu &t_menu, const QByteArray &t_content
             auto *layout = new PixelLayout;
             layout->setName("Pixel Layout");
             photonApp->project()->pixelLayouts()->addLayout(layout);
+        });
+    }
+    else if(t_contentType == "color")
+    {
+        t_menu.addAction("Add Color", [this](){
+            auto *colors = photonApp->project()->colors();
+            QString name;
+            for(int n = colors->colorCount() + 1; name.isEmpty(); ++n)
+                if(!colors->findColorWithName(QString("Color %1").arg(n)))
+                    name = QString("Color %1").arg(n);
+
+            auto *color = new ColorResource;
+            color->setName(name);
+            colors->addColor(color);
+            selectAndRename(color);
+        });
+    }
+    else if(t_contentType == "gradient")
+    {
+        t_menu.addAction("Add Gradient", [this](){
+            auto *gradients = photonApp->project()->gradients();
+            QString name;
+            for(int n = gradients->gradientCount() + 1; name.isEmpty(); ++n)
+                if(!gradients->findGradientWithName(QString("Gradient %1").arg(n)))
+                    name = QString("Gradient %1").arg(n);
+
+            auto *gradient = new GradientResource;
+            gradient->setName(name);
+            gradients->addGradient(gradient);
+            selectAndRename(gradient);
+        });
+    }
+    else if(t_contentType == "color-palette")
+    {
+        t_menu.addAction("Add Color Palette", [this](){
+            auto *palettes = photonApp->project()->colorPalettes();
+            QString name;
+            for(int n = palettes->paletteCount() + 1; name.isEmpty(); ++n)
+                if(!palettes->findPaletteWithName(QString("Palette %1").arg(n)))
+                    name = QString("Palette %1").arg(n);
+
+            auto *palette = new ColorPaletteResource;
+            palette->setName(name);
+            palettes->addPalette(palette);
+            selectAndRename(palette);
         });
     }
 }
@@ -862,11 +915,24 @@ void ProjectPanel::removeClicked()
         else if(auto *routine = dynamic_cast<Routine*>(resource))
             project->routines()->removeRoutine(routine);
         else if(auto *sequence = dynamic_cast<Sequence*>(resource))
+        {
+            // An internal (project-embedded) sequence must also come out of
+            // the project's own list, or it would still be written back out
+            // on the next save despite looking "deleted" here.
+            if(!sequence->isLibrarySequence())
+                project->sequences()->removeSequence(sequence);
             photonApp->sequences()->removeSequence(sequence);
+        }
         else if(auto *surface = dynamic_cast<Surface*>(resource))
             project->surfaces()->removeSurface(surface);
         else if(auto *layout = dynamic_cast<PixelLayout*>(resource))
             project->pixelLayouts()->removeLayout(layout);
+        else if(auto *color = dynamic_cast<ColorResource*>(resource))
+            project->colors()->removeColor(color);
+        else if(auto *gradient = dynamic_cast<GradientResource*>(resource))
+            project->gradients()->removeGradient(gradient);
+        else if(auto *palette = dynamic_cast<ColorPaletteResource*>(resource))
+            project->colorPalettes()->removePalette(palette);
     }
 }
 
@@ -972,6 +1038,22 @@ void ProjectPanel::contextMenuRequested(const QPoint &t_pos)
         return;
 
     menu.exec(m_impl->treeView->viewport()->mapToGlobal(t_pos));
+}
+
+void ProjectPanel::selectAndRename(ProjectResource *t_resource)
+{
+    if(!t_resource || !m_impl->model || !m_impl->proxy)
+        return;
+
+    // Selecting through the project (rather than the tree view directly)
+    // reaches syncSelectionFromProject synchronously - same path any other
+    // selection source uses - which expands the resource's ancestors and
+    // scrolls it into view before this returns.
+    photonApp->project()->setSelectedResource(t_resource);
+
+    const QModelIndex index = m_impl->proxy->mapFromSource(m_impl->model->indexForResource(t_resource));
+    if(index.isValid())
+        m_impl->treeView->edit(index.sibling(index.row(), ProjectModel::NameColumn));
 }
 
 } // namespace photon

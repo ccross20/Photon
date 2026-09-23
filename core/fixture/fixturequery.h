@@ -17,7 +17,9 @@ class PHOTONCORE_EXPORT FixtureQuery
 public:
     QStringList tags;   // a fixture must carry ALL of these (case-insensitive)
     QString     type;   // case-insensitive substring of modelType or any category
-    QString     zone;   // name of a SceneZone the fixture must sit inside
+    QString     zone;   // uniqueId of a SceneZone the fixture must sit inside
+                        // (resolve() also accepts a name, for queries saved
+                        // before zones were referenced by id)
 
     bool matches(Fixture *fixture) const;   // tag + type only (zone needs the project)
     QVector<Fixture *> resolve(Project *project) const;

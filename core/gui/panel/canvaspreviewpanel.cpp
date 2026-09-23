@@ -6,7 +6,6 @@
 #include "graph/node/canvas/canvassubgraphnode.h"
 #include "graph/node/canvas/canvasoutputnode.h"
 #include "graph/node/canvas/canvasrendermanager.h"
-#include "sequence/canvaslayergroup.h"
 
 namespace photon {
 
@@ -51,13 +50,9 @@ void CanvasPreviewPanel::refreshList()
     if (manager) {
         for (auto *canvas : manager->canvases()) {
             for (auto *output : canvas->outputNodes()) {
-                targets << CanvasPreviewTarget{output, nullptr};
+                targets << CanvasPreviewTarget{output};
                 labels << canvas->name() + " · " + output->name();
             }
-        }
-        for (auto *group : manager->layerGroups()) {
-            targets << CanvasPreviewTarget{nullptr, group};
-            labels << group->name();
         }
     }
 
@@ -92,21 +87,11 @@ void CanvasPreviewPanel::selectionChanged(int index)
 void CanvasPreviewPanel::previewOutput(CanvasOutputNode *output)
 {
     refreshList();
-    const int idx = m_items.indexOf(CanvasPreviewTarget{output, nullptr});
+    const int idx = m_items.indexOf(CanvasPreviewTarget{output});
     if (idx >= 0)
         m_combo->setCurrentIndex(idx);   // triggers selectionChanged -> setTarget
     else if (m_window)
-        m_window->setTarget(CanvasPreviewTarget{output, nullptr}); // not listed yet; show it anyway
-}
-
-void CanvasPreviewPanel::previewLayerGroup(CanvasLayerGroup *group)
-{
-    refreshList();
-    const int idx = m_items.indexOf(CanvasPreviewTarget{nullptr, group});
-    if (idx >= 0)
-        m_combo->setCurrentIndex(idx);   // triggers selectionChanged -> setTarget
-    else if (m_window)
-        m_window->setTarget(CanvasPreviewTarget{nullptr, group}); // not listed yet; show it anyway
+        m_window->setTarget(CanvasPreviewTarget{output}); // not listed yet; show it anyway
 }
 
 } // namespace photon

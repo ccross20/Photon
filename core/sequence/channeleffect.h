@@ -55,6 +55,12 @@ public:
     // standalone shape. Off by default.
     virtual bool providesIsolatedContribution() const { return false; }
     virtual ChannelEffectEditor *createEditor() {return new ChannelEffectEditor(this);}
+    // A PropertyForm-based page of this effect's plain parameter fields
+    // (Frequency, Amplitude, ...), for the app's Properties panel - separate
+    // from createEditor(), which stays interactive (draggable handles on the
+    // curve) and lives inline in the sequence timeline. Returns nullptr by
+    // default (nothing to show); most effects override it.
+    virtual QWidget *createPropertyEditor() { return nullptr; }
     void updated();
 
     ChannelEffectViewState viewState() const;

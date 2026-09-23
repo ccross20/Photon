@@ -3,7 +3,7 @@
 #include "decimalparameter.h"
 #include "booleanparameter.h"
 #include "view/nodeeditor.h"
-#include "view/numberscrubfield.h"
+#include "numberscrubfield.h"
 
 namespace keira {
 
@@ -24,6 +24,11 @@ class IntegerParameter::Impl
 public:
     int minimum = std::numeric_limits<int>::lowest();
     int maximum = std::numeric_limits<int>::max();
+    // See DecimalParameter::Impl's matching fields for the mirror-until-set
+    // contract this implements.
+    int softMinimum = std::numeric_limits<int>::lowest();
+    int softMaximum = std::numeric_limits<int>::max();
+    bool hasSoftRangeSet = false;
 };
 
 IntegerParameter::IntegerParameter() : Parameter(),m_impl(new Impl)
@@ -52,6 +57,50 @@ void IntegerParameter::setMaximum(int t_max)
     m_impl->maximum = t_max;
 }
 
+int IntegerParameter::minimum() const
+{
+    return m_impl->minimum;
+}
+
+int IntegerParameter::maximum() const
+{
+    return m_impl->maximum;
+}
+
+void IntegerParameter::setSoftMinimum(int t_min)
+{
+    m_impl->softMinimum = t_min;
+    m_impl->hasSoftRangeSet = true;
+}
+
+void IntegerParameter::setSoftMaximum(int t_max)
+{
+    m_impl->softMaximum = t_max;
+    m_impl->hasSoftRangeSet = true;
+}
+
+void IntegerParameter::setSoftRange(int t_min, int t_max)
+{
+    m_impl->softMinimum = t_min;
+    m_impl->softMaximum = t_max;
+    m_impl->hasSoftRangeSet = true;
+}
+
+int IntegerParameter::softMinimum() const
+{
+    return m_impl->hasSoftRangeSet ? m_impl->softMinimum : m_impl->minimum;
+}
+
+int IntegerParameter::softMaximum() const
+{
+    return m_impl->hasSoftRangeSet ? m_impl->softMaximum : m_impl->maximum;
+}
+
+bool IntegerParameter::hasSoftRange() const
+{
+    return m_impl->hasSoftRangeSet;
+}
+
 QWidget *IntegerParameter::createWidget(NodeEditor *item) const
 {
     if(isReadOnly())
@@ -62,17 +111,19 @@ QWidget *IntegerParameter::createWidget(NodeEditor *item) const
         label->setSizePolicy(QSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::Minimum));
         return label;
     }
-    NumberScrubField *field = new NumberScrubField();
+    photon::NumberScrubField *field = new photon::NumberScrubField();
     field->setMaximumHeight(30);
     field->setMinimumWidth(50);
     field->setIsInteger(true);
     field->setRange(m_impl->minimum, m_impl->maximum);
+    if(m_impl->hasSoftRangeSet)
+        field->setSoftRange(m_impl->softMinimum, m_impl->softMaximum);
     field->setValue(value().toInt());
     field->setReadOnly(isReadOnly());
 
     const IntegerParameter *param = this;
-    NumberScrubField::connect(field, &NumberScrubField::editingFinished, field,[item, field, param](){item->widgetUpdated(field, param);});
-    NumberScrubField::connect(field, &NumberScrubField::valueChanged, field,[item, field, param](double){item->widgetUpdated(field, param);});
+    photon::NumberScrubField::connect(field, &photon::NumberScrubField::editingFinished, field,[item, field, param](){item->widgetUpdated(field, param);});
+    photon::NumberScrubField::connect(field, &photon::NumberScrubField::valueChanged, field,[item, field, param](double){item->widgetUpdated(field, param);});
     return field;
 }
 
@@ -85,7 +136,7 @@ void IntegerParameter::updateWidget(QWidget *t_widget) const
     }
     else
     {
-        NumberScrubField *field = static_cast<NumberScrubField*>(t_widget);
+        photon::NumberScrubField *field = static_cast<photon::NumberScrubField*>(t_widget);
         field->setValue(value().toInt());
     }
 
@@ -95,7 +146,7 @@ QVariant IntegerParameter::updateValue(QWidget *t_widget) const
 {
     if(isReadOnly())
         return static_cast<QLabel*>(t_widget)->text();
-    return static_cast<int>(static_cast<NumberScrubField*>(t_widget)->value());
+    return static_cast<int>(static_cast<photon::NumberScrubField*>(t_widget)->value());
 }
 
 void IntegerParameter::readFromJson(const QJsonObject &t_json)
@@ -104,6 +155,13 @@ void IntegerParameter::readFromJson(const QJsonObject &t_json)
 
     m_impl->minimum = t_json.value("minimum").toInt();
     m_impl->maximum = t_json.value("maximum").toInt();
+
+    if(t_json.contains("softMinimum") || t_json.contains("softMaximum"))
+    {
+        m_impl->softMinimum = t_json.value("softMinimum").toInt(m_impl->minimum);
+        m_impl->softMaximum = t_json.value("softMaximum").toInt(m_impl->maximum);
+        m_impl->hasSoftRangeSet = true;
+    }
 }
 
 void IntegerParameter::writeToJson(QJsonObject &t_json) const
@@ -112,6 +170,12 @@ void IntegerParameter::writeToJson(QJsonObject &t_json) const
 
     t_json.insert("minimum", m_impl->minimum);
     t_json.insert("maximum", m_impl->maximum);
+
+    if(m_impl->hasSoftRangeSet)
+    {
+        t_json.insert("softMinimum", m_impl->softMinimum);
+        t_json.insert("softMaximum", m_impl->softMaximum);
+    }
 }
 
 } // namespace keira

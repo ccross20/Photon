@@ -2,31 +2,31 @@
 #include <QFormLayout>
 #include <QVBoxLayout>
 #include "pixelarrangedialog.h"
-#include "view/numberscrubfield.h"
+#include "numberscrubfield.h"
 
 namespace photon {
 
 class LinearArrangeDialog::Impl
 {
 public:
-    keira::NumberScrubField *length;
-    keira::NumberScrubField *center;
-    keira::NumberScrubField *angle;
+    photon::NumberScrubField *length;
+    photon::NumberScrubField *center;
+    photon::NumberScrubField *angle;
 };
 
 LinearArrangeDialog::LinearArrangeDialog(QWidget *t_parent) : QDialog(t_parent), m_impl(new Impl)
 {
     setWindowTitle("Arrange as Linear");
 
-    m_impl->length = new keira::NumberScrubField;
+    m_impl->length = new photon::NumberScrubField;
     m_impl->length->setRange(0, 10000);
     m_impl->length->setValue(.9);
 
-    m_impl->center = new keira::NumberScrubField;
+    m_impl->center = new photon::NumberScrubField;
     m_impl->center->setRange(0, 1);
     m_impl->center->setValue(.5);
 
-    m_impl->angle = new keira::NumberScrubField;
+    m_impl->angle = new photon::NumberScrubField;
     m_impl->angle->setRange(-360, 360);
     m_impl->angle->setValue(0);
 
@@ -58,31 +58,31 @@ double LinearArrangeDialog::angle() const { return m_impl->angle->value(); }
 class GridArrangeDialog::Impl
 {
 public:
-    keira::NumberScrubField *rows;
-    keira::NumberScrubField *columns;
-    keira::NumberScrubField *width;
-    keira::NumberScrubField *height;
+    photon::NumberScrubField *rows;
+    photon::NumberScrubField *columns;
+    photon::NumberScrubField *width;
+    photon::NumberScrubField *height;
 };
 
 GridArrangeDialog::GridArrangeDialog(QWidget *t_parent) : QDialog(t_parent), m_impl(new Impl)
 {
     setWindowTitle("Arrange as Grid");
 
-    m_impl->rows = new keira::NumberScrubField;
+    m_impl->rows = new photon::NumberScrubField;
     m_impl->rows->setIsInteger(true);
     m_impl->rows->setRange(1, 1000);
     m_impl->rows->setValue(1);
 
-    m_impl->columns = new keira::NumberScrubField;
+    m_impl->columns = new photon::NumberScrubField;
     m_impl->columns->setIsInteger(true);
     m_impl->columns->setRange(1, 1000);
     m_impl->columns->setValue(1);
 
-    m_impl->width = new keira::NumberScrubField;
+    m_impl->width = new photon::NumberScrubField;
     m_impl->width->setRange(0, 10000);
     m_impl->width->setValue(.9);
 
-    m_impl->height = new keira::NumberScrubField;
+    m_impl->height = new photon::NumberScrubField;
     m_impl->height->setRange(0, 10000);
     m_impl->height->setValue(.9);
 
@@ -116,14 +116,14 @@ double GridArrangeDialog::height() const { return m_impl->height->value(); }
 class RadialArrangeDialog::Impl
 {
 public:
-    keira::NumberScrubField *radius;
+    photon::NumberScrubField *radius;
 };
 
 RadialArrangeDialog::RadialArrangeDialog(QWidget *t_parent) : QDialog(t_parent), m_impl(new Impl)
 {
     setWindowTitle("Arrange as Radial");
 
-    m_impl->radius = new keira::NumberScrubField;
+    m_impl->radius = new photon::NumberScrubField;
     m_impl->radius->setRange(0, 10000);
     m_impl->radius->setValue(.45);
 
@@ -151,24 +151,24 @@ double RadialArrangeDialog::radius() const { return m_impl->radius->value(); }
 class ArcArrangeDialog::Impl
 {
 public:
-    keira::NumberScrubField *radius;
-    keira::NumberScrubField *startAngle;
-    keira::NumberScrubField *sweepAngle;
+    photon::NumberScrubField *radius;
+    photon::NumberScrubField *startAngle;
+    photon::NumberScrubField *sweepAngle;
 };
 
 ArcArrangeDialog::ArcArrangeDialog(QWidget *t_parent) : QDialog(t_parent), m_impl(new Impl)
 {
     setWindowTitle("Arrange as Arc");
 
-    m_impl->radius = new keira::NumberScrubField;
+    m_impl->radius = new photon::NumberScrubField;
     m_impl->radius->setRange(0, 10000);
     m_impl->radius->setValue(.45);
 
-    m_impl->startAngle = new keira::NumberScrubField;
+    m_impl->startAngle = new photon::NumberScrubField;
     m_impl->startAngle->setRange(-360, 360);
     m_impl->startAngle->setValue(0);
 
-    m_impl->sweepAngle = new keira::NumberScrubField;
+    m_impl->sweepAngle = new photon::NumberScrubField;
     m_impl->sweepAngle->setRange(-360, 360);
     m_impl->sweepAngle->setValue(180);
 
@@ -200,26 +200,26 @@ double ArcArrangeDialog::sweepAngle() const { return m_impl->sweepAngle->value()
 class HoneycombArrangeDialog::Impl
 {
 public:
-    keira::NumberScrubField *rows;
-    keira::NumberScrubField *columns;
-    keira::NumberScrubField *spacing;
+    photon::NumberScrubField *rows;
+    photon::NumberScrubField *columns;
+    photon::NumberScrubField *spacing;
 };
 
 HoneycombArrangeDialog::HoneycombArrangeDialog(QWidget *t_parent) : QDialog(t_parent), m_impl(new Impl)
 {
     setWindowTitle("Arrange as Honeycomb");
 
-    m_impl->rows = new keira::NumberScrubField;
+    m_impl->rows = new photon::NumberScrubField;
     m_impl->rows->setIsInteger(true);
     m_impl->rows->setRange(1, 1000);
     m_impl->rows->setValue(1);
 
-    m_impl->columns = new keira::NumberScrubField;
+    m_impl->columns = new photon::NumberScrubField;
     m_impl->columns->setIsInteger(true);
     m_impl->columns->setRange(1, 1000);
     m_impl->columns->setValue(1);
 
-    m_impl->spacing = new keira::NumberScrubField;
+    m_impl->spacing = new photon::NumberScrubField;
     m_impl->spacing->setRange(0, 10000);
     m_impl->spacing->setValue(.2);
 
@@ -251,14 +251,14 @@ double HoneycombArrangeDialog::spacing() const { return m_impl->spacing->value()
 class BeeEyeArrangeDialog::Impl
 {
 public:
-    keira::NumberScrubField *spacing;
+    photon::NumberScrubField *spacing;
 };
 
 BeeEyeArrangeDialog::BeeEyeArrangeDialog(QWidget *t_parent) : QDialog(t_parent), m_impl(new Impl)
 {
     setWindowTitle("Arrange as Bee Eye");
 
-    m_impl->spacing = new keira::NumberScrubField;
+    m_impl->spacing = new photon::NumberScrubField;
     m_impl->spacing->setRange(0, 10000);
     m_impl->spacing->setValue(.2);
 
@@ -286,19 +286,19 @@ double BeeEyeArrangeDialog::spacing() const { return m_impl->spacing->value(); }
 class MoveArrangeDialog::Impl
 {
 public:
-    keira::NumberScrubField *dx;
-    keira::NumberScrubField *dy;
+    photon::NumberScrubField *dx;
+    photon::NumberScrubField *dy;
 };
 
 MoveArrangeDialog::MoveArrangeDialog(QWidget *t_parent) : QDialog(t_parent), m_impl(new Impl)
 {
     setWindowTitle("Move");
 
-    m_impl->dx = new keira::NumberScrubField;
+    m_impl->dx = new photon::NumberScrubField;
     m_impl->dx->setRange(-10000, 10000);
     m_impl->dx->setValue(0);
 
-    m_impl->dy = new keira::NumberScrubField;
+    m_impl->dy = new photon::NumberScrubField;
     m_impl->dy->setRange(-10000, 10000);
     m_impl->dy->setValue(0);
 
@@ -328,19 +328,19 @@ double MoveArrangeDialog::dy() const { return m_impl->dy->value(); }
 class ScaleArrangeDialog::Impl
 {
 public:
-    keira::NumberScrubField *scaleX;
-    keira::NumberScrubField *scaleY;
+    photon::NumberScrubField *scaleX;
+    photon::NumberScrubField *scaleY;
 };
 
 ScaleArrangeDialog::ScaleArrangeDialog(QWidget *t_parent) : QDialog(t_parent), m_impl(new Impl)
 {
     setWindowTitle("Scale");
 
-    m_impl->scaleX = new keira::NumberScrubField;
+    m_impl->scaleX = new photon::NumberScrubField;
     m_impl->scaleX->setRange(-1000, 1000);
     m_impl->scaleX->setValue(1);
 
-    m_impl->scaleY = new keira::NumberScrubField;
+    m_impl->scaleY = new photon::NumberScrubField;
     m_impl->scaleY->setRange(-1000, 1000);
     m_impl->scaleY->setValue(1);
 
@@ -370,14 +370,14 @@ double ScaleArrangeDialog::scaleY() const { return m_impl->scaleY->value(); }
 class RotateArrangeDialog::Impl
 {
 public:
-    keira::NumberScrubField *angle;
+    photon::NumberScrubField *angle;
 };
 
 RotateArrangeDialog::RotateArrangeDialog(QWidget *t_parent) : QDialog(t_parent), m_impl(new Impl)
 {
     setWindowTitle("Rotate");
 
-    m_impl->angle = new keira::NumberScrubField;
+    m_impl->angle = new photon::NumberScrubField;
     m_impl->angle->setRange(-360, 360);
     m_impl->angle->setValue(0);
 

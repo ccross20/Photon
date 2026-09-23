@@ -5,7 +5,6 @@
 #include <QSettings>
 #include <QKeyEvent>
 #include <QMainWindow>
-#include <QToolBar>
 #include <QQuickWidget>
 #include "guimanager_p.h"
 #include "project/project.h"
@@ -62,6 +61,10 @@ void GuiManager::Impl::createAppWindow()
     window->setMenuBar(menubar);
 
     QMenu *fileMenu = new QMenu("File");
+    fileMenu->addAction("Load...", QKeySequence::Open, [](){photonApp->loadProject();});
+    fileMenu->addAction("Save", QKeySequence::Save, [](){photonApp->project()->save();});
+    fileMenu->addAction("New", QKeySequence::New, [](){photonApp->newProject();});
+    fileMenu->addSeparator();
     fileMenu->addAction("Settings...", [](){ SettingsDialog dialog; dialog.exec(); });
     fileMenu->addSeparator();
     fileMenu->addAction("Quit", QKeySequence::Quit, [](){ photonApp->closeAllWindows(); });
@@ -70,9 +73,13 @@ void GuiManager::Impl::createAppWindow()
     QMenu *windowMenu = new QMenu("Window");
     windowMenu->addAction("Project", [](){photonApp->gui()->createFloatingPanel("photon.project");});
     windowMenu->addAction("DMX Patch", [](){photonApp->gui()->createFloatingPanel("photon.dmx-patch");});
+    windowMenu->addAction("DMX Viewer", [](){photonApp->gui()->createFloatingPanel("photon.dmx-viewer");});
     windowMenu->addAction("Properties", [](){photonApp->gui()->createFloatingPanel("photon.properties");});
     windowMenu->addAction("Canvas Preview", [](){photonApp->gui()->createFloatingPanel("photon.canvas-preview");});
+    windowMenu->addAction("Visualizer", [](){photonApp->gui()->createFloatingPanel("visualizer");});
     windowMenu->addAction("Song Library", [](){photonApp->gui()->createFloatingPanel("photon.song-library");});
+    windowMenu->addSeparator();
+    windowMenu->addAction("Save Layout", [this](){m_ext->saveLayout();});
     menubar->addMenu(windowMenu);
 
     Panel *panel1 = createPanel("photon.bus");
@@ -82,30 +89,6 @@ void GuiManager::Impl::createAppWindow()
     DockWidget->setObjectName("photon.bus");
     DockWidget->setWidget(panel1);
     DockWidget->setFeature(ads::CDockWidget::DockWidgetClosable, false);
-
-
-
-
-    QToolBar *toolBar = new QToolBar("root");
-    toolBar->setObjectName("deco.core.toolbars.root");
-    toolBar->setOrientation(Qt::Horizontal);
-    //menus->populateToolBar(toolBar, toolBar->id());
-
-    toolBar->addAction("Open DMX Viewer",[](){photonApp->gui()->createFloatingPanel("photon.dmx-viewer");});
-    toolBar->addAction("Open Visualizer",[](){photonApp->gui()->createFloatingPanel("visualizer");});
-    toolBar->addAction("Save",[](){photonApp->project()->save();});
-    toolBar->addAction("Load",[](){photonApp->loadProject();});
-    toolBar->addAction("New",[](){photonApp->newProject();});
-    toolBar->addAction("Save Layout",[this](){m_ext->saveLayout();});
-    toolBar->addAction("New Sequence",[](){photonApp->newSequence();});
-    toolBar->addAction("Load Sequence",[](){photonApp->loadSequence();});
-    toolBar->addAction("Save Sequence",[](){photonApp->sequences()->activeSequence()->save();});
-    toolBar->addAction("Reload Session",[](){photonApp->reloadLastSession();});
-
-
-
-    window->addToolBar(Qt::ToolBarArea::TopToolBarArea, toolBar);
-    //window->addToolBar(Qt::ToolBarArea::TopToolBarArea, contextToolbar);
 
     centralArea = m_dockManager->setCentralWidget(DockWidget);
 

@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <cmath>
 #include <QScrollBar>
 #include <QMouseEvent>
 #include <QWheelEvent>
@@ -258,7 +259,10 @@ void TimelineViewer::mouseMoveEvent(QMouseEvent *event)
             auto scenePos = mapToScene(event->pos());
             auto timelineScene = static_cast<TimelineScene*>(scene());
             float time = scenePos.x();
-            timelineScene->sequence()->snapToBeat(scenePos.x(),&time,2);
+            QVector<Clip*> excludeClips;
+            for(const auto &data : m_impl->moveDatas)
+                excludeClips.append(data.clip);
+            timelineScene->sequence()->snapTime(scenePos.x(),&time,2,excludeClips);
             scenePos.setX(time);
 
             QPointF delta = scenePos - mapToScene(m_impl->startPoint.toPoint());
@@ -376,7 +380,19 @@ void TimelineViewer::wheelEvent(QWheelEvent *event)
         const double cursorX = event->position().x();
         const double cursorTime = (cursorX + m_impl->xOffset) / m_impl->scale;
 
-        const double factor = event->angleDelta().y() > 0 ? 1.1 : (1.0 / 1.1);
+        // Scaled by how far this one event actually scrolled rather than a flat
+        // per-event step - a high-resolution device (Magic Mouse, trackpad)
+        // fires many small events per gesture, and a flat step compounds across
+        // all of them into a runaway zoom. ZOOM_PER_NOTCH is deliberately
+        // gentle (was 1.1, a flat 10% every event); see WaveformWidget's
+        // matching fix, since the two views stay zoom-synced.
+        constexpr double kZoomPerNotch = 1.04;
+        const QPoint pixels = event->pixelDelta();
+        const QPoint angle = event->angleDelta();
+        const double notches = !pixels.isNull()
+            ? (pixels.y() != 0 ? pixels.y() : pixels.x()) / 40.0
+            : (angle.y() != 0 ? angle.y() : angle.x()) / 120.0;
+        const double factor = std::pow(kZoomPerNotch, notches);
         setScale(m_impl->scale * factor);
         setOffset(cursorTime * m_impl->scale - cursorX);
         event->accept();

@@ -1,8 +1,8 @@
 #include <QComboBox>
 #include <QColorDialog>
-#include <QFormLayout>
 #include <QPushButton>
 #include "scenehelperobject.h"
+#include "propertywidgets.h"
 
 namespace photon {
 
@@ -55,8 +55,10 @@ void SceneHelperObject::writeToJson(QJsonObject &t_json) const
     t_json.insert("visibility", m_impl->visibilityMode == SelectedOnly ? "selected" : "always");
 }
 
-void addHelperPropertyRows(QFormLayout *t_form, SceneHelperObject *t_object, QWidget *t_editorParent)
+void addHelperPropertyRows(PropertyForm *t_form, SceneHelperObject *t_object, QWidget *t_editorParent)
 {
+    t_form->addSection("Style");
+
     auto *colorButton = new QPushButton;
     auto updateSwatch = [colorButton](const QColor &c){
         colorButton->setStyleSheet(QString("background-color: %1;").arg(c.name()));

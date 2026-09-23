@@ -1,23 +1,24 @@
 #include <QHBoxLayout>
 #include <QLabel>
-#include "view/numberscrubfield.h"
+#include "numberscrubfield.h"
 #include "stepeffect.h"
 #include "sequence/viewer/stackedparameterwidget.h"
+#include "propertywidgets.h"
 
 namespace photon {
 
 StepEffectEditor::StepEffectEditor(StepEffect *t_effect):ChannelEffectEditor(t_effect),m_effect(t_effect)
 {
 
-    keira::NumberScrubField *freqSpin = new keira::NumberScrubField;
+    photon::NumberScrubField *freqSpin = new photon::NumberScrubField;
     freqSpin->setMinimum(.001);   // frequency of 0 divides by zero → NaN
     freqSpin->setValue(m_effect->frequency());
-    connect(freqSpin, &keira::NumberScrubField::valueChanged, this, &StepEffectEditor::frequencyChanged);
+    connect(freqSpin, &photon::NumberScrubField::valueChanged, this, &StepEffectEditor::frequencyChanged);
 
 
-    keira::NumberScrubField *ampSpin = new keira::NumberScrubField;
+    photon::NumberScrubField *ampSpin = new photon::NumberScrubField;
     ampSpin->setValue(m_effect->amplitude());
-    connect(ampSpin, &keira::NumberScrubField::valueChanged, this, &StepEffectEditor::amplitudeChanged);
+    connect(ampSpin, &photon::NumberScrubField::valueChanged, this, &StepEffectEditor::amplitudeChanged);
 
     StackedParameterWidget *paramWidget = new StackedParameterWidget;
     paramWidget->addWidget(freqSpin, "Frequency");
@@ -98,6 +99,17 @@ float *StepEffect::process(float *t_value, uint t_size, double t_time) const
 ChannelEffectEditor *StepEffect::createEditor()
 {
     return new StepEffectEditor(this);
+}
+
+QWidget *StepEffect::createPropertyEditor()
+{
+    auto *form = new PropertyForm;
+    // Frequency 0 divides by zero (see process()), same floor as the editor's field.
+    form->addRow("Frequency", PropertyWidgets::createNumber(m_frequency,
+        {{PropertyWidgets::MetaMinimum, .001}}, [this](double v){ setFrequency(v); }));
+    form->addRow("Amplitude", PropertyWidgets::createNumber(m_amplitude, {},
+        [this](double v){ setAmplitude(v); }));
+    return form;
 }
 
 void StepEffect::readFromJson(const QJsonObject &t_json)

@@ -6,6 +6,7 @@
 #include <map>
 #include "photoncore.h"
 #include "gui/guimanager.h"
+#include "gui/dialog/startupdialog.h"
 
 
 int main(int argc, char *argv[])
@@ -48,6 +49,13 @@ int main(int argc, char *argv[])
     w.init();
 
     w.gui()->launchInterface();
+
+    // Modal, shown once the main window is already up so it appears on top
+    // of a real interface rather than a blank screen. Every action inside it
+    // (new/load/a recent project) closes it; there's nothing else to do here
+    // afterward either way - the app already starts with a blank project.
+    photon::StartupDialog startupDialog;
+    startupDialog.exec();
 
     return w.exec();
 }

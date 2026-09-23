@@ -3,7 +3,7 @@
 #include "integerparameter.h"
 #include "booleanparameter.h"
 #include "view/nodeeditor.h"
-#include "view/numberscrubfield.h"
+#include "numberscrubfield.h"
 
 namespace keira {
 
@@ -24,6 +24,14 @@ class DecimalParameter::Impl
 public:
     double minimum = std::numeric_limits<double>::lowest();
     double maximum = std::numeric_limits<double>::max();
+    // Mirror the hard bounds until setSoftMinimum/setSoftMaximum/setSoftRange
+    // narrows them - hasSoftRangeSet tracks whether that's happened, so
+    // createWidget() knows whether to push an explicit soft range onto the
+    // field or just let it mirror the hard one (NumberScrubField's own
+    // default behaviour).
+    double softMinimum = std::numeric_limits<double>::lowest();
+    double softMaximum = std::numeric_limits<double>::max();
+    bool hasSoftRangeSet = false;
     uint precision = 4;
 };
 
@@ -53,6 +61,50 @@ void DecimalParameter::setMaximum(double t_max)
     m_impl->maximum = t_max;
 }
 
+double DecimalParameter::minimum() const
+{
+    return m_impl->minimum;
+}
+
+double DecimalParameter::maximum() const
+{
+    return m_impl->maximum;
+}
+
+void DecimalParameter::setSoftMinimum(double t_min)
+{
+    m_impl->softMinimum = t_min;
+    m_impl->hasSoftRangeSet = true;
+}
+
+void DecimalParameter::setSoftMaximum(double t_max)
+{
+    m_impl->softMaximum = t_max;
+    m_impl->hasSoftRangeSet = true;
+}
+
+void DecimalParameter::setSoftRange(double t_min, double t_max)
+{
+    m_impl->softMinimum = t_min;
+    m_impl->softMaximum = t_max;
+    m_impl->hasSoftRangeSet = true;
+}
+
+double DecimalParameter::softMinimum() const
+{
+    return m_impl->hasSoftRangeSet ? m_impl->softMinimum : m_impl->minimum;
+}
+
+double DecimalParameter::softMaximum() const
+{
+    return m_impl->hasSoftRangeSet ? m_impl->softMaximum : m_impl->maximum;
+}
+
+bool DecimalParameter::hasSoftRange() const
+{
+    return m_impl->hasSoftRangeSet;
+}
+
 void DecimalParameter::setPrecision(uint t_precision)
 {
     m_impl->precision = t_precision;
@@ -75,18 +127,20 @@ QWidget *DecimalParameter::createWidget(NodeEditor *item) const
         label->setSizePolicy(QSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::Minimum));
         return label;
     }
-    NumberScrubField *field = new NumberScrubField();
+    photon::NumberScrubField *field = new photon::NumberScrubField();
     field->setMaximumHeight(30);
     field->setMinimumWidth(50);
     field->setIsInteger(false);
     field->setDecimals(m_impl->precision);
     field->setRange(m_impl->minimum, m_impl->maximum);
+    if(m_impl->hasSoftRangeSet)
+        field->setSoftRange(m_impl->softMinimum, m_impl->softMaximum);
     field->setValue(value().toDouble());
     field->setReadOnly(isReadOnly());
 
     const DecimalParameter *param = this;
-    NumberScrubField::connect(field, &NumberScrubField::editingFinished, field,[item, field, param](){item->widgetUpdated(field, param);});
-    NumberScrubField::connect(field, &NumberScrubField::valueChanged, field,[item, field, param](double){item->widgetUpdated(field, param);});
+    photon::NumberScrubField::connect(field, &photon::NumberScrubField::editingFinished, field,[item, field, param](){item->widgetUpdated(field, param);});
+    photon::NumberScrubField::connect(field, &photon::NumberScrubField::valueChanged, field,[item, field, param](double){item->widgetUpdated(field, param);});
     return field;
 }
 
@@ -99,7 +153,7 @@ void DecimalParameter::updateWidget(QWidget *t_widget) const
     }
     else
     {
-        NumberScrubField *field = static_cast<NumberScrubField*>(t_widget);
+        photon::NumberScrubField *field = static_cast<photon::NumberScrubField*>(t_widget);
         field->setValue(value().toDouble());
     }
 
@@ -109,7 +163,7 @@ QVariant DecimalParameter::updateValue(QWidget *t_widget) const
 {
     if(isReadOnly())
         return static_cast<QLabel*>(t_widget)->text();
-    return static_cast<NumberScrubField*>(t_widget)->value();
+    return static_cast<photon::NumberScrubField*>(t_widget)->value();
 }
 
 void DecimalParameter::readFromJson(const QJsonObject &t_json)
@@ -119,6 +173,13 @@ void DecimalParameter::readFromJson(const QJsonObject &t_json)
     m_impl->minimum = t_json.value("minimum").toDouble();
     m_impl->maximum = t_json.value("maximum").toDouble();
     m_impl->precision = t_json.value("precision").toInt();
+
+    if(t_json.contains("softMinimum") || t_json.contains("softMaximum"))
+    {
+        m_impl->softMinimum = t_json.value("softMinimum").toDouble(m_impl->minimum);
+        m_impl->softMaximum = t_json.value("softMaximum").toDouble(m_impl->maximum);
+        m_impl->hasSoftRangeSet = true;
+    }
 }
 
 void DecimalParameter::writeToJson(QJsonObject &t_json) const
@@ -128,6 +189,12 @@ void DecimalParameter::writeToJson(QJsonObject &t_json) const
     t_json.insert("minimum", m_impl->minimum);
     t_json.insert("maximum", m_impl->maximum);
     t_json.insert("precision", static_cast<int>(m_impl->precision));
+
+    if(m_impl->hasSoftRangeSet)
+    {
+        t_json.insert("softMinimum", m_impl->softMinimum);
+        t_json.insert("softMaximum", m_impl->softMaximum);
+    }
 }
 
 } // namespace keira

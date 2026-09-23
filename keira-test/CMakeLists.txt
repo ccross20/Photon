@@ -18,6 +18,8 @@ set(PROJECT_SOURCES
     keira-test.cpp
     evaluationtest.h
     evaluationtest.cpp
+    parameterrangetest.h
+    parameterrangetest.cpp
 )
 
 enable_testing(true)

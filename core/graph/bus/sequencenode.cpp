@@ -8,6 +8,27 @@
 
 namespace photon {
 
+namespace {
+// Id lookup first; falls back to treating the stored value as a name for
+// projects saved before this node switched from name- to id-keyed storage.
+Sequence *resolveSequence(SequenceCollection *t_sequences, const QString &t_stored)
+{
+    if(!t_sequences)
+        return nullptr;
+
+    const QByteArray id = t_stored.toUtf8();
+    for(Sequence *seq : t_sequences->sequences())
+        if(seq->uniqueId() == id)
+            return seq;
+
+    for(Sequence *seq : t_sequences->sequences())
+        if(seq->name() == t_stored)
+            return seq;
+
+    return nullptr;
+}
+}
+
 const QByteArray SequenceNode::InputDMX = "dmxInput";
 const QByteArray SequenceNode::OutputDMX = "dmxOutput";
 const QByteArray SequenceNode::SequenceParam = "sequence";
@@ -47,16 +68,17 @@ void SequenceNode::createParameters()
 
     // Dropdown of the project's sequences. The lambda re-lists them whenever the
     // editor builds the combo, so it stays in sync with the sequence collection
-    // (same pattern as FixtureGroupNode). Stored/matched by name - sequences have
-    // no stable id beyond that today, so renaming a sequence will detach this node
-    // from it.
+    // (same pattern as FixtureGroupNode). Sequence is a ProjectResource with its
+    // own uniqueId(), so - unlike the stale comment this replaced claimed -
+    // stored/matched by that id, not name, so renaming a sequence doesn't
+    // detach this node from it.
     m_impl->sequenceParam = new keira::StringOptionParameter(SequenceParam, "Sequence", {}, 0);
     m_impl->sequenceParam->setOptionLambda([]() {
         QVector<std::pair<QString, QString>> options;
         if(SequenceCollection *sequences = photonApp->sequences())
         {
             for(Sequence *seq : sequences->sequences())
-                options.append({seq->name(), seq->name()});
+                options.append({seq->name(), QString::fromUtf8(seq->uniqueId())});
         }
         return options;
     });
@@ -79,24 +101,16 @@ void SequenceNode::evaluate(keira::EvaluationContext *) const
     // reached into whichever SequencePanel happened to be open in the editor and
     // called into its QWidget-based preview path from here, which is not
     // thread-safe and could corrupt memory in ways unrelated to this node.)
-    const QString name = m_impl->sequenceParam->value().toString();
-    if(SequenceCollection *sequences = photonApp->sequences())
+    if(Sequence *seq = resolveSequence(photonApp->sequences(), m_impl->sequenceParam->value().toString()))
     {
-        for(Sequence *seq : sequences->sequences())
-        {
-            if(seq->name() == name)
-            {
-                ProcessContext context{matrix};
-                context.project = photonApp->project();
-                // Preview at wherever the sequence's own editor playhead currently is
-                // (Sequence::previewTime(), kept up to date by SequenceWidget) so this
-                // node reflects live scrubbing/playback instead of always evaluating
-                // at time 0.
-                context.globalTime = seq->previewTime();
-                seq->processChannels(context, 0);
-                break;
-            }
-        }
+        ProcessContext context{matrix};
+        context.project = photonApp->project();
+        // Preview at wherever the sequence's own editor playhead currently is
+        // (Sequence::previewTime(), kept up to date by SequenceWidget) so this
+        // node reflects live scrubbing/playback instead of always evaluating
+        // at time 0.
+        context.globalTime = seq->previewTime();
+        seq->processChannels(context, 0);
     }
 
     m_impl->dmxOutParam->setValue(matrix);
@@ -104,18 +118,9 @@ void SequenceNode::evaluate(keira::EvaluationContext *) const
 
 void SequenceNode::buttonClicked(const keira::Parameter *)
 {
-    const QString name = m_impl->sequenceParam->value().toString();
-    if(SequenceCollection *sequences = photonApp->sequences())
-    {
-        for(Sequence *seq : sequences->sequences())
-        {
-            if(seq->name() == name)
-            {
-                sequences->editSequence(seq);
-                break;
-            }
-        }
-    }
+    SequenceCollection *sequences = photonApp->sequences();
+    if(Sequence *seq = resolveSequence(sequences, m_impl->sequenceParam->value().toString()))
+        sequences->editSequence(seq);
 }
 
 } // namespace photon

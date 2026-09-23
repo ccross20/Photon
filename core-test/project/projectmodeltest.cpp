@@ -9,7 +9,7 @@
 #include "fixture/fixturegroup.h"
 #include "routine/routine.h"
 #include "routine/routinecollection.h"
-#include "gui/tag/tagmime.h"
+#include "tag/tagmime.h"
 
 namespace photon {
 
@@ -47,11 +47,12 @@ void ProjectModelTest::topLevelRowsAreTheFolders()
     Project project;
     ProjectModel model(&project);
 
-    QCOMPARE(model.rowCount(QModelIndex()), 6);
+    QCOMPARE(model.rowCount(QModelIndex()), 9);
     QCOMPARE(model.columnCount(QModelIndex()), int(ProjectModel::ColumnCount));
 
     const QStringList expected{"Rig", "Fixture Groups", "Routines", "Sequences",
-                               "Surfaces", "Pixel Layouts"};
+                               "Surfaces", "Pixel Layouts", "Colors", "Gradients",
+                               "Color Palettes"};
     for(int row = 0; row < expected.size(); ++row)
     {
         const QModelIndex index = model.index(row, ProjectModel::NameColumn);
@@ -230,7 +231,7 @@ void ProjectModelTest::renamingAResourceEmitsDataChanged()
              QStringLiteral("act1"));
 }
 
-void ProjectModelTest::onlySceneObjectsAreDraggable()
+void ProjectModelTest::flatResourcesAreDraggableNotDroppable()
 {
     Project project;
     const Branch branch = buildBranch(project);
@@ -239,8 +240,12 @@ void ProjectModelTest::onlySceneObjectsAreDraggable()
     ProjectModel model(&project);
 
     QVERIFY(model.flags(model.indexForResource(branch.parent)) & Qt::ItemIsDragEnabled);
-    // Flat resources have no hierarchy to rearrange.
-    QVERIFY(!(model.flags(model.indexForResource(group)) & Qt::ItemIsDragEnabled));
+    QVERIFY(model.flags(model.indexForResource(branch.parent)) & Qt::ItemIsDropEnabled);
+
+    // Flat resources can still be dragged out (e.g. onto a node graph), but
+    // have no hierarchy of their own to rearrange via an in-tree drop.
+    QVERIFY(model.flags(model.indexForResource(group)) & Qt::ItemIsDragEnabled);
+    QVERIFY(!(model.flags(model.indexForResource(group)) & Qt::ItemIsDropEnabled));
 }
 
 void ProjectModelTest::dropsAreRejectedOutsideTheRig()

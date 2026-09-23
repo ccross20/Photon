@@ -138,14 +138,17 @@ void SequenceWaveformEditor::editableCueLayerChanged(photon::CueLayer* t_layer)
 
 void SequenceWaveformEditor::markersUpdated(photon::CueLayer*)
 {
-
     update();
+    // update() alone is a no-op while this widget is hidden behind a channel
+    // effect's curve editor (see EffectEditorViewer::setBackgroundWaveform) -
+    // this is what tells that view to repaint from the fresh content instead.
+    emit contentChanged();
 }
 
 void SequenceWaveformEditor::markersMetadataUpdated(photon::CueLayer*)
 {
-
     update();
+    emit contentChanged();
 }
 
 void SequenceWaveformEditor::drawFeatureOverlay(QPainter &t_painter)
@@ -206,20 +209,39 @@ void SequenceWaveformEditor::paintEvent(QPaintEvent *t_event)
 
     QPainter painter{this};
 
-    // The analysed beat grid, as an alternating background tint rather than a row
-    // of ticks: every other beat-to-beat interval gets a subtle highlight, the
-    // ones in between stay the plain background, so the rhythm reads as a pulse
-    // behind the waveform instead of competing with it for the view's height.
-    // Drawn before the feature overlay (whose bands are largely semi-transparent)
-    // so it shows through rather than getting hidden underneath.
-    if(SongData *songData = m_impl->sequence->songData())
+    // The cue grid, as an alternating background tint rather than a row of
+    // ticks: every other cue-to-cue interval (across every visible cue
+    // layer, merged and sorted) gets a subtle highlight, the ones in between
+    // stay the plain background, so cue-defined sections read as a pulse
+    // behind the waveform instead of competing with it for the view's
+    // height. Drawn before the feature overlay (whose bands are largely
+    // semi-transparent) so it shows through rather than getting hidden
+    // underneath. Note this reads live off each CueLayer's own markers, so a
+    // marker being dragged right now already moves this tint with it.
     {
-        const QVector<double> &beats = songData->beats().beats();
-        static const QColor kBeatTint(255, 255, 255, 18);
-        for(int i = 0; i + 1 < beats.size(); i += 2)
+        QVector<double> cueTimes;
+        for(auto cueLayer : m_impl->sequence->cueLayers())
         {
-            const double startTime = beats[i];
-            const double endTime = beats[i + 1];
+            if(!cueLayer->isVisible())
+                continue;
+            for(float marker : cueLayer->markers())
+                cueTimes.append(marker);
+        }
+        std::sort(cueTimes.begin(), cueTimes.end());
+
+        // An odd cue count would otherwise leave the last one with no partner
+        // to close its interval, so it and everything after it just never
+        // got tinted - extend it to the edge of what's visible instead, so
+        // the alternation carries through the last cue rather than quietly
+        // stopping there.
+        if(cueTimes.size() % 2 != 0)
+            cueTimes.append(visibleRange().end);
+
+        static const QColor kCueTint(255, 255, 255, 18);
+        for(int i = 0; i + 1 < cueTimes.size(); i += 2)
+        {
+            const double startTime = cueTimes[i];
+            const double endTime = cueTimes[i + 1];
             if(endTime < visibleRange().start || startTime > visibleRange().end)
                 continue;
 
@@ -231,7 +253,7 @@ void SequenceWaveformEditor::paintEvent(QPaintEvent *t_event)
             // Clamp before converting to int - see the note on drawTick() below.
             const int x1 = static_cast<int>(std::clamp(xd1, -1.0e6, 1.0e6));
             const int x2 = static_cast<int>(std::clamp(xd2, -1.0e6, 1.0e6));
-            painter.fillRect(x1, 0, x2 - x1, height(), kBeatTint);
+            painter.fillRect(x1, 0, x2 - x1, height(), kCueTint);
         }
     }
 
@@ -282,8 +304,15 @@ void SequenceWaveformEditor::paintEvent(QPaintEvent *t_event)
         drawTick(marker, m_impl->editableLayer ? m_impl->editableLayer->color() : Qt::red);
     }
 
-    for(auto marker : m_impl->selectedMarkers)
-        drawTick(marker, Qt::cyan);
+    // Selected markers are always a subset of the editable layer's own
+    // markers (see mousePressEvent/mouseMoveEvent) - same visibility rule as
+    // otherMarkers above, or hiding a layer mid-selection left its selected
+    // ticks stuck on screen.
+    if(!m_impl->editableLayer || m_impl->editableLayer->isVisible())
+    {
+        for(auto marker : m_impl->selectedMarkers)
+            drawTick(marker, Qt::cyan);
+    }
 }
 
 void SequenceWaveformEditor::keyPressEvent(QKeyEvent *t_key)

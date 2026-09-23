@@ -14,7 +14,6 @@ namespace photon {
 
 class RhiContext;
 class CanvasSubGraphNode;
-class CanvasLayerGroup;
 
 // Drives canvas GPU rendering on the MAIN thread.
 //
@@ -26,8 +25,7 @@ class CanvasLayerGroup;
 // and calls renderMainThread() for the dirty ones, on the main thread.
 //
 // Any CanvasRenderable can register - CanvasSubGraphNode (a bus/surface node)
-// and CanvasLayerGroup (a sequence layer, unrelated class hierarchy) both do -
-// this manager doesn't need to know which.
+// does - this manager doesn't need to know which.
 //
 // A single static instance is exposed so callers can find it without depending
 // on PhotonCore (keeps headless tests, e.g. rhi-spike, working: with no
@@ -50,13 +48,9 @@ public:
 
     // Snapshot of the currently registered CanvasSubGraphNodes (for the canvas
     // preview picker, which lists their Output nodes - a CanvasSubGraphNode-
-    // specific concept). Other CanvasRenderable kinds (e.g. CanvasLayerGroup)
-    // are filtered out, not just anything registered.
+    // specific concept). Other CanvasRenderable kinds are filtered out, not
+    // just anything registered.
     QVector<CanvasSubGraphNode *> canvases() const;
-    // Snapshot of the currently registered CanvasLayerGroups (for the canvas
-    // preview picker, which also lists each group's own sink alongside Output
-    // node textures).
-    QVector<CanvasLayerGroup *> layerGroups() const;
     // Whether an instance is still live/registered — validate a held pointer before use.
     bool isRegistered(CanvasRenderable *) const;
 

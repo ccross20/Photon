@@ -21,6 +21,13 @@ public:
     QByteArray uniqueId() const;
     QString filePath() const;
 
+    // Whether this sequence is owned by the Song Library (its own .seq file
+    // on disk) rather than embedded directly in the current project's JSON.
+    // Set once by whoever creates/loads it - see Project::readFromJson vs.
+    // PhotonCore::loadSequence()/SongLibraryPanel.
+    bool isLibrarySequence() const;
+    void setIsLibrarySequence(bool);
+
     // ProjectResource
     QByteArray resourceId() const override{return uniqueId();}
     QByteArray resourceTypeId() const override{return "sequence";}
@@ -36,8 +43,11 @@ public:
     CueLayer *editableCueLayer() const;
     void setEditableCueLayer(CueLayer *);
     const QVector<CueLayer*> &cueLayers() const;
-    bool findClosestBeatToTime(float, float *) const;
-    bool snapToBeat(float time, float *outTime, float tolerance = .1) const;
+    // Nearest snap point for a clip being dragged/resized to `time`: any
+    // snap-enabled cue layer's markers, or the start/end of any other clip
+    // in the sequence. excludeClips keeps the clip(s) currently being
+    // dragged from snapping to themselves.
+    bool snapTime(float time, float *outTime, float tolerance = .1, const QVector<Clip*> &excludeClips = {}) const;
 
     Layer *findLayerByGuid(const QUuid &guid);
     const QVector<Layer*> &layers() const;

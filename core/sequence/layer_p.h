@@ -14,6 +14,7 @@ public:
     QString name;
     QByteArray type;
     QUuid guid;
+    bool muted = false;
     Sequence *sequence = nullptr;
     Layer *facade;
 };

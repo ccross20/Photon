@@ -1,4 +1,7 @@
 #include <QMimeData>
+#include <QDataStream>
+#include <QCoreApplication>
+#include <QColor>
 #include <QSize>
 #include "projectmodel.h"
 #include "project/project.h"
@@ -15,7 +18,14 @@
 #include "surface/surfacecollection.h"
 #include "pixel/pixellayout.h"
 #include "pixel/pixellayoutcollection.h"
-#include "gui/tag/tagmime.h"
+#include "color/colorresource.h"
+#include "color/colorcollection.h"
+#include "color/gradientresource.h"
+#include "color/gradientcollection.h"
+#include "color/colorpaletteresource.h"
+#include "color/colorpalettecollection.h"
+#include "tag/tagmime.h"
+#include "projecticons.h"
 
 namespace photon {
 
@@ -179,6 +189,9 @@ ProjectModel::ProjectModel(Project *t_project, QObject *parent)
     auto *sequenceFolder = m_impl->addFolder("Sequences", "sequence");
     auto *surfaceFolder  = m_impl->addFolder("Surfaces", "surface");
     auto *layoutFolder   = m_impl->addFolder("Pixel Layouts", "pixel-layout");
+    auto *colorFolder    = m_impl->addFolder("Colors", "color");
+    auto *gradientFolder = m_impl->addFolder("Gradients", "gradient");
+    auto *paletteFolder  = m_impl->addFolder("Color Palettes", "color-palette");
 
     // ---- Flat folders ------------------------------------------------------
     // Each collection exposes its own signal shapes, so rather than a generic
@@ -239,12 +252,11 @@ ProjectModel::ProjectModel(Project *t_project, QObject *parent)
         });
     }
 
-    // Sequences - owned by PhotonCore, not the project, since they are separate
-    // documents. Listed here all the same. Guarded because the collection hangs
-    // off the application object, which need not exist (tests construct a bare
-    // Project); everything else here comes from the project itself.
-    if(auto *collection = photonApp ? photonApp->sequences() : nullptr)
+    // Sequences embedded in this project (see Project::sequences()) - not
+    // PhotonCore's app-wide collection, which also holds Song Library
+    // sequences that happen to be open right now and don't belong here.
     {
+        auto *collection = t_project->sequences();
         auto read = [collection](){
             QList<ProjectResource*> list;
             for(auto *sequence : collection->sequences())
@@ -319,6 +331,87 @@ ProjectModel::ProjectModel(Project *t_project, QObject *parent)
         });
         connect(collection, &PixelLayoutCollection::layoutWasRemoved, this, [this, layoutFolder, read](PixelLayout *, int){
             m_impl->refreshFlat(layoutFolder, read);
+            endRemoveRows();
+        });
+    }
+
+    // Colors.
+    {
+        auto *collection = t_project->colors();
+        auto read = [collection](){
+            QList<ProjectResource*> list;
+            for(auto *color : collection->colors())
+                list.append(color);
+            return list;
+        };
+        m_impl->refreshFlat(colorFolder, read);
+
+        connect(collection, &ColorCollection::colorWillBeAdded, this, [this, colorFolder](ColorResource *, int row){
+            beginInsertRows(indexForResource(colorFolder), row, row);
+        });
+        connect(collection, &ColorCollection::colorWasAdded, this, [this, colorFolder, read](ColorResource *, int){
+            m_impl->refreshFlat(colorFolder, read);
+            endInsertRows();
+        });
+        connect(collection, &ColorCollection::colorWillBeRemoved, this, [this, colorFolder](ColorResource *, int row){
+            beginRemoveRows(indexForResource(colorFolder), row, row);
+        });
+        connect(collection, &ColorCollection::colorWasRemoved, this, [this, colorFolder, read](ColorResource *, int){
+            m_impl->refreshFlat(colorFolder, read);
+            endRemoveRows();
+        });
+    }
+
+    // Gradients.
+    {
+        auto *collection = t_project->gradients();
+        auto read = [collection](){
+            QList<ProjectResource*> list;
+            for(auto *gradient : collection->gradients())
+                list.append(gradient);
+            return list;
+        };
+        m_impl->refreshFlat(gradientFolder, read);
+
+        connect(collection, &GradientCollection::gradientWillBeAdded, this, [this, gradientFolder](GradientResource *, int row){
+            beginInsertRows(indexForResource(gradientFolder), row, row);
+        });
+        connect(collection, &GradientCollection::gradientWasAdded, this, [this, gradientFolder, read](GradientResource *, int){
+            m_impl->refreshFlat(gradientFolder, read);
+            endInsertRows();
+        });
+        connect(collection, &GradientCollection::gradientWillBeRemoved, this, [this, gradientFolder](GradientResource *, int row){
+            beginRemoveRows(indexForResource(gradientFolder), row, row);
+        });
+        connect(collection, &GradientCollection::gradientWasRemoved, this, [this, gradientFolder, read](GradientResource *, int){
+            m_impl->refreshFlat(gradientFolder, read);
+            endRemoveRows();
+        });
+    }
+
+    // Color palettes.
+    {
+        auto *collection = t_project->colorPalettes();
+        auto read = [collection](){
+            QList<ProjectResource*> list;
+            for(auto *palette : collection->palettes())
+                list.append(palette);
+            return list;
+        };
+        m_impl->refreshFlat(paletteFolder, read);
+
+        connect(collection, &ColorPaletteCollection::paletteWillBeAdded, this, [this, paletteFolder](ColorPaletteResource *, int row){
+            beginInsertRows(indexForResource(paletteFolder), row, row);
+        });
+        connect(collection, &ColorPaletteCollection::paletteWasAdded, this, [this, paletteFolder, read](ColorPaletteResource *, int){
+            m_impl->refreshFlat(paletteFolder, read);
+            endInsertRows();
+        });
+        connect(collection, &ColorPaletteCollection::paletteWillBeRemoved, this, [this, paletteFolder](ColorPaletteResource *, int row){
+            beginRemoveRows(indexForResource(paletteFolder), row, row);
+        });
+        connect(collection, &ColorPaletteCollection::paletteWasRemoved, this, [this, paletteFolder, read](ColorPaletteResource *, int){
+            m_impl->refreshFlat(paletteFolder, read);
             endRemoveRows();
         });
     }
@@ -611,6 +704,16 @@ QVariant ProjectModel::data(const QModelIndex &t_index, int t_role) const
                     return QVariant();
             }
 
+        case Qt::DecorationRole:
+            if(t_index.column() == NameColumn)
+                return projectResourceIcon(resource);
+            return QVariant();
+
+        case Qt::ForegroundRole:
+            if(folder)
+                return QColor(160, 160, 160);
+            return QVariant();
+
         case Qt::ToolTipRole:
             return resource->resourceName();
 
@@ -621,7 +724,7 @@ QVariant ProjectModel::data(const QModelIndex &t_index, int t_role) const
             return QVariant();
 
         case Qt::SizeHintRole:
-            return QSize{32, 32};
+            return QSize{22, 22};
 
         case TagsRole:
             return resource->resourceTags().join(' ');
@@ -706,11 +809,16 @@ Qt::ItemFlags ProjectModel::flags(const QModelIndex &t_index) const
     if(t_index.column() == NameColumn)
         itemFlags |= Qt::ItemIsEditable;
 
+    // Every real (non-folder) resource can be dragged out of the panel - e.g.
+    // a Color/Gradient/Palette dropped onto a node graph, or a scene object
+    // reparented within Rig.
+    itemFlags |= Qt::ItemIsDragEnabled;
+
     if(sceneObject)
     {
-        // Only the Rig subtree takes part in drag/drop - the flat folders have
-        // no hierarchy to rearrange.
-        itemFlags |= Qt::ItemIsDragEnabled | Qt::ItemIsDropEnabled;
+        // Only the Rig subtree takes part in in-tree drop/reparenting - the
+        // flat folders have no hierarchy to rearrange.
+        itemFlags |= Qt::ItemIsDropEnabled;
         if(t_index.column() == VisibleColumn)
             itemFlags |= Qt::ItemIsUserCheckable;
     }
@@ -732,24 +840,90 @@ Qt::DropActions ProjectModel::supportedDragActions() const
 
 QStringList ProjectModel::mimeTypes() const
 {
-    return QStringList() << SceneObject::SceneObjectMime << TagMimeType;
+    return QStringList() << SceneObject::SceneObjectMime << ProjectResource::ProjectResourceMime << TagMimeType;
 }
 
 QMimeData *ProjectModel::mimeData(const QModelIndexList &t_indexes) const
 {
-    QVector<SceneObject*> objects;
+    QVector<SceneObject*> sceneObjects;
+    QVector<ProjectResource*> resources;
 
     for(const QModelIndex &index : t_indexes)
     {
-        if(auto *sceneObject = dynamic_cast<SceneObject*>(resourceForIndex(index)))
-            if(!objects.contains(sceneObject))
-                objects.append(sceneObject);
+        ProjectResource *resource = resourceForIndex(index);
+        if(!resource || dynamic_cast<ProjectFolder*>(resource))
+            continue;
+
+        if(auto *sceneObject = dynamic_cast<SceneObject*>(resource))
+        {
+            if(!sceneObjects.contains(sceneObject))
+                sceneObjects.append(sceneObject);
+        }
+        else if(!resources.contains(resource))
+        {
+            resources.append(resource);
+        }
     }
 
-    if(objects.isEmpty())
+    if(sceneObjects.isEmpty() && resources.isEmpty())
         return nullptr;
 
-    return encodeSceneObjectMime(objects);
+    // Scene objects keep the lead role (existing reparent-by-drag behavior);
+    // flat resources (Colors, Gradients, Color Palettes, ...) ride along as a
+    // second format on the same QMimeData so a node graph can pick them up.
+    QMimeData *mimeData = !sceneObjects.isEmpty() ? encodeSceneObjectMime(sceneObjects) : new QMimeData;
+
+    if(!resources.isEmpty())
+    {
+        QMimeData *resourceMime = encodeProjectResourceMime(resources);
+        mimeData->setData(ProjectResource::ProjectResourceMime, resourceMime->data(ProjectResource::ProjectResourceMime));
+        delete resourceMime;
+    }
+
+    return mimeData;
+}
+
+QMimeData *encodeProjectResourceMime(const QVector<ProjectResource*> &t_resources)
+{
+    QMimeData *mimeData = new QMimeData;
+    QByteArray data;
+    QDataStream stream(&data, QIODevice::WriteOnly);
+
+    stream << QCoreApplication::applicationPid();
+    stream << static_cast<qint32>(t_resources.count());
+    for(ProjectResource *resource : t_resources)
+        stream << reinterpret_cast<qlonglong>(resource);
+
+    mimeData->setData(ProjectResource::ProjectResourceMime, data);
+    return mimeData;
+}
+
+QVector<ProjectResource*> decodeProjectResourceMime(const QMimeData *t_mimeData)
+{
+    QVector<ProjectResource*> resources;
+
+    if(!t_mimeData || !t_mimeData->hasFormat(ProjectResource::ProjectResourceMime))
+        return resources;
+
+    QByteArray data = t_mimeData->data(ProjectResource::ProjectResourceMime);
+    QDataStream stream(&data, QIODevice::ReadOnly);
+
+    qint64 senderPid;
+    stream >> senderPid;
+    if(senderPid != QCoreApplication::applicationPid())
+        return resources;
+
+    qint32 count = 0;
+    stream >> count;
+    resources.reserve(count);
+    for(qint32 i = 0; i < count; ++i)
+    {
+        qlonglong resourcePtr = 0;
+        stream >> resourcePtr;
+        resources.append(reinterpret_cast<ProjectResource*>(resourcePtr));
+    }
+
+    return resources;
 }
 
 bool ProjectModel::canDropMimeData(const QMimeData *t_data, Qt::DropAction, int, int, const QModelIndex &t_parent) const

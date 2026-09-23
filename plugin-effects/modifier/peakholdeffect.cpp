@@ -4,27 +4,29 @@
 #include <limits>
 #include "peakholdeffect.h"
 #include "sequence/viewer/stackedparameterwidget.h"
-#include "view/numberscrubfield.h"
+#include "numberscrubfield.h"
+#include "propertywidgets.h"
+#include "util/utils.h"
 
 namespace photon {
 
 PeakHoldEffectEditor::PeakHoldEffectEditor(PeakHoldEffect *t_effect):ChannelEffectEditor(t_effect),m_effect(t_effect)
 {
-    auto *thresholdSpin = new keira::NumberScrubField;
+    auto *thresholdSpin = new photon::NumberScrubField;
     thresholdSpin->setValue(m_effect->threshold());
-    connect(thresholdSpin, &keira::NumberScrubField::valueChanged, this, &PeakHoldEffectEditor::thresholdChanged);
+    connect(thresholdSpin, &photon::NumberScrubField::valueChanged, this, &PeakHoldEffectEditor::thresholdChanged);
 
-    auto *holdSpin = new keira::NumberScrubField;
+    auto *holdSpin = new photon::NumberScrubField;
     holdSpin->setMinimum(0.0);
     holdSpin->setMaximum(9999);
     holdSpin->setValue(m_effect->holdTime());
-    connect(holdSpin, &keira::NumberScrubField::valueChanged, this, &PeakHoldEffectEditor::holdTimeChanged);
+    connect(holdSpin, &photon::NumberScrubField::valueChanged, this, &PeakHoldEffectEditor::holdTimeChanged);
 
-    auto *decaySpin = new keira::NumberScrubField;
+    auto *decaySpin = new photon::NumberScrubField;
     decaySpin->setMinimum(0.0);
     decaySpin->setMaximum(9999);
     decaySpin->setValue(m_effect->decayTime());
-    connect(decaySpin, &keira::NumberScrubField::valueChanged, this, &PeakHoldEffectEditor::decayTimeChanged);
+    connect(decaySpin, &photon::NumberScrubField::valueChanged, this, &PeakHoldEffectEditor::decayTimeChanged);
 
     // Same full QEasingCurve::Type list (and list-index-equals-enum-value
     // assumption) as EaseEffectEditor, so setCurrentIndex/the enum cast below
@@ -173,6 +175,24 @@ float *PeakHoldEffect::process(float *value, uint size, double time) const
 ChannelEffectEditor *PeakHoldEffect::createEditor()
 {
     return new PeakHoldEffectEditor(this);
+}
+
+QWidget *PeakHoldEffect::createPropertyEditor()
+{
+    auto *form = new PropertyForm;
+    form->addRow("Threshold", PropertyWidgets::createNumber(m_threshold, {},
+        [this](double v){ setThreshold(v); }));
+    form->addRow("Hold Time", PropertyWidgets::createNumber(m_holdTime,
+        {{PropertyWidgets::MetaMinimum, 0.0}, {PropertyWidgets::MetaMaximum, 9999.0}},
+        [this](double v){ setHoldTime(v); }));
+    form->addRow("Decay Time", PropertyWidgets::createNumber(m_decayTime,
+        {{PropertyWidgets::MetaMinimum, 0.0}, {PropertyWidgets::MetaMaximum, 9999.0}},
+        [this](double v){ setDecayTime(v); }));
+    // Same full QEasingCurve::Type list (and list-index-equals-enum-value
+    // assumption) as PeakHoldEffectEditor's own curve combo.
+    form->addRow("Decay Curve", PropertyWidgets::createOptions(easeStrings(), m_decayCurveType, {},
+        [this](int v){ setDecayCurveType(static_cast<QEasingCurve::Type>(v)); }));
+    return form;
 }
 
 void PeakHoldEffect::readFromJson(const QJsonObject &t_json)

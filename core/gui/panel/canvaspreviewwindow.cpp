@@ -8,7 +8,6 @@
 #include "graph/node/canvas/canvassubgraphnode.h"
 #include "graph/node/canvas/canvasoutputnode.h"
 #include "graph/node/canvas/canvasrendermanager.h"
-#include "sequence/canvaslayergroup.h"
 
 namespace photon {
 
@@ -200,10 +199,6 @@ void CanvasPreviewWindow::renderFrame()
                 break;
             }
         }
-    } else if (m_manager && m_target.layerGroup && m_manager->isRegistered(m_target.layerGroup)) {
-        canvasTex = m_target.layerGroup->outputTexture();
-        canvasSize = m_target.layerGroup->canvasSize();
-        backdrop = m_target.layerGroup->background();
     }
 
     // (Re)import the canvas sink texture by its shared GL id when it changes.

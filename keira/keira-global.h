@@ -6,6 +6,9 @@
 #include <QVariant>
 #include <QJsonObject>
 #include <QJsonArray>
+#include <functional>
+
+class QMimeData;
 
 namespace keira
 {
@@ -56,6 +59,20 @@ class Scene;
 
 using NodeVector = QVector<Node*>;
 
+// One node to create in response to an external drag-and-drop landing on a
+// Scene - e.g. an item dragged in from the host application's own asset
+// browser, which keira has no knowledge of. The host supplies an
+// ExternalDropInterpreter (see Scene::setExternalDropInterpreter) that
+// decodes its own QMimeData into a list of these; keira just creates the
+// named node (by NodeLibrary id) and, if paramName isn't empty, sets that
+// one parameter to paramValue.
+struct ExternalDropNodeSpec
+{
+    QByteArray nodeId;
+    QByteArray paramName;
+    QVariant paramValue;
+};
+using ExternalDropInterpreter = std::function<QVector<ExternalDropNodeSpec>(const QMimeData*)>;
 
 }
 

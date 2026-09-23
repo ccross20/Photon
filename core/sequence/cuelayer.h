@@ -14,6 +14,8 @@ public:
     explicit CueLayer(QObject *parent = nullptr);
     ~CueLayer();
 
+    QByteArray uniqueId() const;
+
     void setName(const QString &);
     QString name() const;
     void addMarkers(const QList<float> &);

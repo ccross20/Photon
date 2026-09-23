@@ -1,5 +1,5 @@
 #include "gradientwidget.h"
-#include "colorselectordialog.h"
+#include "color/colorselectordialog.h"
 
 #include <QPainter>
 #include <QPainterPath>

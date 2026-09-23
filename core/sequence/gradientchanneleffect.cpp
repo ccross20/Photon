@@ -3,14 +3,15 @@
 #include <QGraphicsSceneMouseEvent>
 #include "gradientchanneleffect.h"
 #include "channel.h"
-#include "gui/color/colorselectorwidget.h"
-#include "sequence/viewer/stackedparameterwidget.h"
+#include "color/colorselectordialog.h"
+#include "channel/parameter/colorchannelparameter.h"
 #include "util/utils.h"
 
 namespace photon {
 
+static const qreal kMarkerY = 4;
 
-GradientMarkerItem::GradientMarkerItem(const QColor &, GradientEffectEditor *t_editor):m_editor(t_editor)
+GradientMarkerItem::GradientMarkerItem(const QColor &t_color, GradientEffectEditor *t_editor):m_editor(t_editor),m_color(t_color)
 {
     m_path.moveTo(0,0);
     m_path.lineTo(10,10);
@@ -30,14 +31,14 @@ void GradientMarkerItem::setColor(const QColor &t_color)
     m_color = t_color;
 }
 
-int GradientMarkerItem::index() const
+double GradientMarkerItem::time() const
 {
-    return m_index;
+    return m_time;
 }
 
-void GradientMarkerItem::setIndex(int t_index)
+void GradientMarkerItem::setTime(double t_time)
 {
-    m_index = t_index;
+    m_time = t_time;
 }
 
 QRectF GradientMarkerItem::boundingRect() const
@@ -54,11 +55,22 @@ void GradientMarkerItem::paint(QPainter *painter, const QStyleOptionGraphicsItem
            QWidget *widget)
 {
     painter->fillPath(m_path, m_color);
+    // An outline so a stop's handle stays visible even when its colour is
+    // close to the preview band behind it (e.g. a black or very dark stop).
+    painter->setPen(QPen(Qt::white, 1));
+    painter->drawPath(m_path);
 }
 
 void GradientMarkerItem::mousePressEvent(QGraphicsSceneMouseEvent *event)
 {
-    m_editor->editColor(this);
+    if(event->button() == Qt::RightButton)
+    {
+        m_editor->removeColor(this);
+        return;
+    }
+    // Left button: accept so the drag is delivered to mouseMoveEvent(); colour
+    // editing is a double-click (see mouseDoubleClickEvent), matching
+    // GradientWidget's convention elsewhere in the app.
 }
 
 void GradientMarkerItem::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
@@ -66,145 +78,130 @@ void GradientMarkerItem::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
     m_editor->moveColor(this, event->scenePos());
 }
 
-void GradientMarkerItem::mouseReleaseEvent(QGraphicsSceneMouseEvent *event)
+void GradientMarkerItem::mouseDoubleClickEvent(QGraphicsSceneMouseEvent *event)
 {
-    m_editor->endMoveColor(this);
+    m_editor->editColor(this);
 }
-
-
-
-
-
 
 
 GradientEffectEditor::GradientEffectEditor(GradientChannelEffect *t_effect):ChannelEffectEditor(t_effect),m_effect(t_effect)
 {
-
-    auto t = transform();
-
-
     for(auto color : m_effect->colors())
     {
-        auto marker = new GradientMarkerItem(color.color,this);
-        marker->setIndex(m_markers.length());
-
-        marker->setPos(t.map(QPointF(color.time + m_effect->channel()->startTime(),0)));
+        auto marker = new GradientMarkerItem(color.color, this);
+        marker->setTime(color.time);
+        marker->setPos(markerScenePos(color.time));
         addItem(marker);
         m_markers.append(marker);
     }
 }
 
-void GradientEffectEditor::relayout(const QRectF &t_sceneRect)
+QPointF GradientEffectEditor::markerScenePos(double t_time) const
 {
     auto t = transform();
-    int index = 0;
     double startTime = m_effect->channel()->startTime();
-    for(auto marker : m_markers)
-    {
-        if(marker->opacity() <= 0.0)
-            continue;
-        marker->setPos(t.map(QPointF(m_effect->colors()[index++].time + startTime,0)));
-    }
+    double x = t.map(QPointF(t_time + startTime, 0)).x();
+    return QPointF(x, kMarkerY);
 }
 
-void GradientEffectEditor::mousePressEvent(QMouseEvent *t_event)
+void GradientEffectEditor::relayout(const QRectF &)
 {
-    ChannelEffectEditor::mousePressEvent(t_event);
+    // Reads each marker's own time rather than cross-referencing
+    // m_effect->colors() by index - this runs reentrantly from inside
+    // commitColors() below (setColors() -> updated() -> effectModified() ->
+    // effectUpdated() -> remakeTransform() -> this), while m_markers and the
+    // effect's colour list can briefly disagree on size/order mid-edit.
+    for(auto marker : m_markers)
+        marker->setPos(markerScenePos(marker->time()));
+}
 
-    if(t_event->buttons() != Qt::LeftButton)
+void GradientEffectEditor::resortMarkers()
+{
+    std::sort(m_markers.begin(), m_markers.end(),[](const GradientMarkerItem *a, const GradientMarkerItem *b){
+        return a->time() < b->time();
+    });
+}
+
+void GradientEffectEditor::commitColors()
+{
+    QVector<GradientData> colors;
+    colors.reserve(m_markers.size());
+    for(auto marker : m_markers)
+        colors.append(GradientData{marker->color(), marker->time()});
+
+    m_effect->setColors(colors);
+}
+
+void GradientEffectEditor::mouseDoubleClickEvent(QMouseEvent *t_event)
+{
+    if(t_event->button() != Qt::LeftButton)
         return;
 
     auto t = transform();
     double time = t.inverted().map(t_event->pos()).x() - m_effect->channel()->startTime();
+    time = qBound(0.0, time, m_effect->channel()->duration());
 
-    if(m_effect->addColor(Qt::red, time))
-    {
-        auto marker = new GradientMarkerItem(Qt::red,this);
-        marker->setIndex(m_markers.length());
+    // Seed the new stop with whatever colour is already showing at this time,
+    // matching GradientWidget's own add-stop behaviour, rather than a fixed
+    // colour that always needs to be changed right after adding.
+    float values[4];
+    ColorChannelParameter::colorToChannels(m_effect->channel()->info().defaultValue.value<QColor>(), values);
+    QColor seedColor = ColorChannelParameter::channelsToColor(m_effect->process(values, 4, time));
 
-        marker->setPos(t.map(QPointF(time + m_effect->channel()->startTime(),0)));
-        addItem(marker);
-        m_markers.append(marker);
+    auto marker = new GradientMarkerItem(seedColor, this);
+    marker->setTime(time);
+    marker->setPos(markerScenePos(time));
+    addItem(marker);
+    m_markers.append(marker);
+    resortMarkers();
 
-        std::sort(m_markers.begin(), m_markers.end(),[](const GradientMarkerItem *a, const GradientMarkerItem *b){
-            return a->pos().x() < b->pos().x();
-        });
-
-        int index = 0;
-        for(auto marker : m_markers)
-            marker->setIndex(index++);
-    }
-
+    commitColors();
 }
 
 void GradientEffectEditor::editColor(photon::GradientMarkerItem *t_item)
 {
-    m_editIndex = t_item->index();
-    m_moveCache = m_effect->colors();
+    auto *dialog = new ColorSelectorDialog(t_item->color(), window());
+    dialog->setAttribute(Qt::WA_DeleteOnClose);
+    dialog->show();
+    dialog->raise();
+    dialog->activateWindow();
 
-    if(m_colorWidget)
-    {
-        m_colorWidget->setColor(m_effect->colors()[m_editIndex].color);
-        return;
-    }
-    m_colorWidget = new ColorSelectorWidget(m_effect->colors()[m_editIndex].color);
-    m_colorWidget->setMinimumWidth(250);
-
-    connect(m_colorWidget,SIGNAL(selectionChanged(QColor)),this,SLOT(setColor(QColor)));
-
-    addWidget(m_colorWidget, "Color");
+    connect(dialog, &ColorSelectorDialog::selectionChanged, this, [this, t_item](QColor color){
+        if(!m_markers.contains(t_item))
+            return;
+        t_item->setColor(color);
+        t_item->update();
+        commitColors();
+    });
 }
 
 void GradientEffectEditor::moveColor(photon::GradientMarkerItem *t_item, const QPointF &t_position)
 {
     auto t = transform();
     double time = t.inverted().map(t_position).x() - m_effect->channel()->startTime();
+    time = qBound(0.0, time, m_effect->channel()->duration());
 
+    t_item->setTime(time);
+    t_item->setPos(markerScenePos(time));
 
-    t_item->setPos(t.map(QPointF(time + m_effect->channel()->startTime(),0)));
-
-    m_moveCache[m_editIndex].time = time;
-
-    auto tempCache = m_moveCache;
-
-    if(t_position.y() > 250)
-    {
-        t_item->setOpacity(0);
-        tempCache.remove(m_editIndex);
-    }
-    else
-        t_item->setOpacity(1.0);
-
-
-    std::sort(tempCache.begin(), tempCache.end(),[](const GradientData &a, const GradientData &b){
-        return a.time < b.time;
-    });
-
-
-    m_effect->setColors(tempCache);
+    // Reorder BEFORE committing - resortMarkers() only touches m_markers
+    // (never m_effect), so it's always safe to run ahead of the reentrant
+    // relayout() that commitColors() triggers.
+    resortMarkers();
+    commitColors();
 }
 
-void GradientEffectEditor::endMoveColor(photon::GradientMarkerItem *t_item)
+void GradientEffectEditor::removeColor(photon::GradientMarkerItem *t_item)
 {
-    if(t_item->opacity() <= 0.0)
-    {
-        m_markers.removeOne(t_item);
-        delete t_item;
+    // Keep at least two stops so the gradient stays meaningful, matching
+    // GradientWidget's own floor.
+    if(m_markers.size() <= 2)
+        return;
 
-        std::sort(m_markers.begin(), m_markers.end(),[](const GradientMarkerItem *a, const GradientMarkerItem *b){
-            return a->pos().x() < b->pos().x();
-        });
+    m_markers.removeOne(t_item);
+    delete t_item;
 
-        int index = 0;
-        for(auto marker : m_markers)
-            marker->setIndex(index++);
-    }
-}
-
-
-void GradientEffectEditor::setColor(const QColor &t_color)
-{
-    m_effect->replaceColor(m_editIndex, t_color);
+    commitColors();
 }
 
 GradientChannelEffect::GradientChannelEffect()
@@ -275,15 +272,15 @@ bool GradientChannelEffect::addColor(const QColor &t_color, double t_time)
             if(t_time < (*it).time)
             {
                 m_colors.insert(it, GradientData{t_color, t_time});
+                updated();
                 return true;
             }
         }
         m_colors.push_back(GradientData{t_color, t_time});
-
+        updated();
 
         return true;
     }
-    updated();
     return false;
 }
 

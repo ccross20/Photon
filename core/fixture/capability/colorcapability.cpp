@@ -12,6 +12,7 @@ public:
     bool hasAmber = false;
     bool hasLime = false;
     bool isCMY = false;
+    FixtureColorCalibration calibration;
 };
 
 
@@ -56,6 +57,35 @@ ColorCapability::ColorCapability(const QVector<ColorIntensityCapability*> &t_cha
 ColorCapability::~ColorCapability()
 {
     delete m_impl;
+}
+
+bool ColorCapability::hasWhite() const { return m_impl->hasWhite; }
+bool ColorCapability::hasAmber() const { return m_impl->hasAmber; }
+bool ColorCapability::hasLime() const { return m_impl->hasLime; }
+bool ColorCapability::isCMY() const { return m_impl->isCMY; }
+
+QVector<CapabilityType> ColorCapability::channelTypes() const
+{
+    QVector<CapabilityType> types;
+    for(auto channel : m_impl->channels)
+        types.append(channel->type());
+    return types;
+}
+
+void ColorCapability::setChannelPercents(const QMap<CapabilityType, double> &t_percents, DMXMatrix &t_matrix, double t_blend, DMXTimeMachine *t_timeMachine) const
+{
+    for(auto channel : m_impl->channels)
+        channel->setPercent(t_percents.value(channel->type(), 0.0), t_matrix, t_blend, t_timeMachine);
+}
+
+void ColorCapability::setCalibration(const FixtureColorCalibration &t_calibration)
+{
+    m_impl->calibration = t_calibration;
+}
+
+bool ColorCapability::hasCalibration() const
+{
+    return m_impl->calibration.isValid();
 }
 
 
@@ -233,6 +263,12 @@ void ColorCapability::setColor(const QColor &t_color, DMXMatrix &t_matrix, doubl
         return;
     }
 
+
+    if(m_impl->calibration.isValid())
+    {
+        setChannelPercents(resolveCalibratedPercents(m_impl->calibration, t_color), t_matrix, t_blend, t_timeMachine);
+        return;
+    }
 
     QColor c = t_color.toRgb();
     R_G_B rgb;

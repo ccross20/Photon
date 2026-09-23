@@ -1,10 +1,11 @@
-#include <QFormLayout>
+#include <QVBoxLayout>
 #include <QLineEdit>
 #include <QDoubleSpinBox>
 #include <QSignalBlocker>
 #include "sceneboundaryrectangle.h"
-#include "gui/vector3edit.h"
-#include "gui/tag/tageditorwidget.h"
+#include "vector3edit.h"
+#include "propertywidgets.h"
+#include "tag/tageditorwidget.h"
 #include "photoncore.h"
 #include "project/project.h"
 
@@ -15,7 +16,7 @@ class SceneBoundaryRectangleEditorWidget::Impl
 public:
     Impl();
     SceneBoundaryRectangle *rect = nullptr;
-    QFormLayout *formLayout;
+    PropertyForm *form;
     QLineEdit *nameEdit;
     TagEditorWidget *tagEditor;
     QDoubleSpinBox *widthSpin;
@@ -26,32 +27,36 @@ public:
 
 SceneBoundaryRectangleEditorWidget::Impl::Impl()
 {
-    formLayout = new QFormLayout;
+    form = new PropertyForm;
+
+    form->addSection("General");
 
     nameEdit = new QLineEdit;
-    formLayout->addRow("Name", nameEdit);
+    form->addRow("Name", nameEdit);
 
     tagEditor = new TagEditorWidget(
         [this](){ return rect ? rect->tags() : QStringList(); },
         [this](const QStringList &tags){ if(rect) rect->setTags(tags); },
         [](){ return photonApp->project() ? photonApp->project()->allTags() : QStringList(); });
-    formLayout->addRow("Tags", tagEditor);
+    form->addRow("Tags", tagEditor);
 
     widthSpin = new QDoubleSpinBox;
     widthSpin->setMinimum(0.1);
     widthSpin->setMaximum(200.0);
-    formLayout->addRow("Width", widthSpin);
+    form->addRow("Width", widthSpin);
 
     heightSpin = new QDoubleSpinBox;
     heightSpin->setMinimum(0.1);
     heightSpin->setMaximum(200.0);
-    formLayout->addRow("Height", heightSpin);
+    form->addRow("Height", heightSpin);
 }
 
 SceneBoundaryRectangleEditorWidget::SceneBoundaryRectangleEditorWidget(SceneBoundaryRectangle *t_rect, QWidget *parent)
     : QWidget{parent}, m_impl(new Impl)
 {
-    setLayout(m_impl->formLayout);
+    QVBoxLayout *outer = new QVBoxLayout(this);
+    outer->setContentsMargins(0, 0, 0, 0);
+    outer->addWidget(m_impl->form);
     setSizePolicy(QSizePolicy{QSizePolicy::MinimumExpanding, QSizePolicy::Maximum});
 
     m_impl->rect = t_rect;
@@ -67,12 +72,14 @@ SceneBoundaryRectangleEditorWidget::SceneBoundaryRectangleEditorWidget(SceneBoun
     m_impl->widthSpin->setValue(t_rect->width());
     m_impl->heightSpin->setValue(t_rect->height());
 
-    addHelperPropertyRows(m_impl->formLayout, t_rect, this);
+    addHelperPropertyRows(m_impl->form, t_rect, this);
+
+    m_impl->form->addSection("Transform");
 
     m_impl->positionEdit = new Vector3Edit;
-    m_impl->formLayout->addRow("Position", m_impl->positionEdit);
+    m_impl->form->addRow("Position", m_impl->positionEdit);
     m_impl->rotationEdit = new Vector3Edit;
-    m_impl->formLayout->addRow("Rotation", m_impl->rotationEdit);
+    m_impl->form->addRow("Rotation", m_impl->rotationEdit);
 
     connect(m_impl->positionEdit, &Vector3Edit::valueChanged, this, &SceneBoundaryRectangleEditorWidget::setPosition);
     connect(m_impl->rotationEdit, &Vector3Edit::valueChanged, this, &SceneBoundaryRectangleEditorWidget::setRotation);

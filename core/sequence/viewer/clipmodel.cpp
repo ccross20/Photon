@@ -1,46 +1,21 @@
 #include "clipmodel.h"
 #include "sequence/clip.h"
-#include "sequence/masterlayer.h"
 #include "sequence/channel.h"
 #include "sequence/channeleffect.h"
 #include "sequence/routineclip.h"
-#include "sequence/fixtureclip.h"
-#include "sequence/canvasclip.h"
-#include "sequence/canvaslayergroup.h"
 #include "pixel/pixellayout.h"
 
 namespace photon {
 
 
-MasterLayerData::MasterLayerData(MasterLayer *t_layer) : AbstractTreeData(t_layer->name(), t_layer->uniqueId()),m_layer(t_layer)
-{
-    m_channelFolder = new FolderData("Channels", DataChannel, false);
-    addChild(m_channelFolder);
-
-    auto channelData = new ChannelData(t_layer->channel());
-    m_channelFolder->addChild(channelData);
-
-}
-
-
-
 ClipData::ClipData(Clip *t_clip) : AbstractTreeData(t_clip->name(), t_clip->uniqueId()),m_clip(t_clip)
 {
-
-    m_parameterData = new ClipParameterData(m_clip);
-
-    addChild(m_parameterData);
 
     if(t_clip->contentGraph())
     {
         m_graphData = new ClipGraphData(m_clip);
         addChild(m_graphData);
     }
-
-    auto fixtureClip = dynamic_cast<FixtureClip*>(t_clip);
-
-    if(fixtureClip)
-        addChild(new ClipStateData(fixtureClip));
 
     if(t_clip)
     {
@@ -54,14 +29,6 @@ ClipData::ClipData(Clip *t_clip) : AbstractTreeData(t_clip->name(), t_clip->uniq
             m_channelFolder->addChild(channelData);
         }
     }
-
-    /*
-    if(canvasClip)
-    {
-        m_pixelLayoutData = new PixelLayoutFolderData(canvasClip);
-        addChild(m_pixelLayoutData);
-    }
-*/
 
 
 }
@@ -94,69 +61,9 @@ void ClipData::channelMoved(photon::Channel *)
 
 
 
-ClipParameterData::ClipParameterData(Clip *t_clip): AbstractTreeData("Parameters","parameters"),m_clip(t_clip)
-{
-
-}
-
 ClipGraphData::ClipGraphData(Clip *t_clip): AbstractTreeData("Graph","graph"),m_clip(t_clip)
 {
 
-}
-
-PixelLayoutData::PixelLayoutData(PixelLayout *t_layout):AbstractTreeData(t_layout->name(), t_layout->uniqueId())
-{
-
-}
-
-PixelLayoutFolderData::PixelLayoutFolderData(CanvasLayerGroup *t_clip):AbstractTreeData("Pixel Layout", "pixel-layout"),m_layer(t_clip)
-{
-    connect(m_layer, &CanvasLayerGroup::pixelLayoutAdded, this, &PixelLayoutFolderData::pixelLayoutAdded);
-    connect(m_layer, &CanvasLayerGroup::pixelLayoutRemoved, this, &PixelLayoutFolderData::pixelLayoutRemoved);
-
-    for(int i = 0; i < t_clip->pixelLayoutCount(); ++i)
-    {
-        auto effectData = new PixelLayoutData(m_layer->pixelLayoutAtIndex(i));
-        addChild(effectData);
-    }
-    addChild(new CreateData("Add Pixel Layout..."));
-}
-
-PixelLayoutData *PixelLayoutFolderData::findPixelLayoutData(PixelLayout *t_layout)
-{
-    for(auto child : children())
-    {
-        PixelLayoutData *childData = dynamic_cast<PixelLayoutData*>(child);
-        if(childData && childData->pixelLayout() == t_layout)
-        {
-            return childData;
-        }
-    }
-    return nullptr;
-}
-
-void PixelLayoutFolderData::pixelLayoutAdded(photon::PixelLayout *t_layout)
-{
-    auto effectData = new PixelLayoutData(t_layout);
-    insertChild(effectData, childCount() - 1);
-}
-
-void PixelLayoutFolderData::pixelLayoutRemoved(photon::PixelLayout *t_layout)
-{
-    auto effect = findPixelLayoutData(t_layout);
-
-    if(effect)
-        removeChild(effect);
-}
-
-ClipStateData::ClipStateData(FixtureClip *t_clip):AbstractTreeData("State", t_clip->state()->uniqueId()),m_clip(t_clip)
-{
-
-}
-
-State *ClipStateData::state() const
-{
-    return m_clip->state();
 }
 
 ClipModel::ClipModel()
@@ -205,24 +112,6 @@ QVector<Clip*> ClipModel::clips() const
         }
     }
     return results;
-}
-
-void ClipModel::addMasterLayer(MasterLayer *t_layer)
-{
-    m_root->addChild(new MasterLayerData(t_layer));
-}
-
-void ClipModel::removeMasterLayer(MasterLayer *t_layer)
-{
-    for(int i = 0; i < m_root->childCount(); ++i)
-    {
-        MasterLayerData *layerData = dynamic_cast<MasterLayerData*>(m_root->childAtIndex(i));
-        if(layerData->layer() == t_layer)
-        {
-            m_root->removeChild(layerData);
-            return;
-        }
-    }
 }
 
 void ClipModel::childWillBeAdded(photon::AbstractTreeData* t_data, int t_index)

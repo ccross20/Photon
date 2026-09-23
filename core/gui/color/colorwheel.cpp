@@ -8,7 +8,7 @@
 
 #include "colorwheel_p.h"
 
-namespace exo {
+namespace photon {
 
 ColorWheel::ColorWheel(QWidget *parent) : QWidget(parent)
 {
@@ -276,4 +276,4 @@ void ColorWheel::mouseReleaseEvent(QMouseEvent *event)
     emit endEditing();
 }
 
-} // namespace exo
+} // namespace photon

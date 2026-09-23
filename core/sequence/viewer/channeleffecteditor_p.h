@@ -9,6 +9,8 @@
 #include "sequence/channeleffect.h"
 #include "channeleffecteditor.h"
 
+class WaveformWidget;
+
 namespace photon {
 
 class EffectEditorScene : public QGraphicsScene
@@ -75,6 +77,12 @@ public:
     QPointF viewOffset() const;
     void fitY();
 
+    // The sequence's waveform, painted tinted-down as this view's background
+    // (see drawBackgroundColor/drawBackgroundNumber) so a curve reads against
+    // the audio it's automating rather than a flat panel - not owned here,
+    // just borrowed from SequenceWidget for the duration of this editor.
+    void setBackgroundWaveform(WaveformWidget *);
+
 signals:
     void relayout();
     void scaleChanged(QPointF);
@@ -126,6 +134,7 @@ private:
     double m_startYPos;
     bool m_pathsDirty = true;
     bool m_colorsDirty = true;
+    WaveformWidget *m_backgroundWaveform = nullptr;
 };
 
 

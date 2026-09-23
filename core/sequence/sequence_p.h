@@ -21,6 +21,12 @@ public:
     QByteArray uniqueId;
     QString filePath;
     SongData songData;
+    // Runtime-only: whether this sequence is owned by the Song Library (its
+    // own .seq file, managed there) rather than embedded in the current
+    // project's JSON. Never itself serialized - whoever creates/loads a
+    // Sequence sets it once (Project leaves it false; the library flows set
+    // it true).
+    bool isLibrarySequence = false;
     Sequence *facade;
 
     // The editor's current playhead position, kept here (not on the QWidget-based

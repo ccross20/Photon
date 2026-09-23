@@ -48,10 +48,18 @@ public:
     // True if the given WORLD point lies inside the (possibly rotated) box.
     bool containsPoint(const QVector3D &worldPoint) const;
 
-    // Finds a zone by name anywhere in the project's scene (null if none).
+    // Finds a zone by name anywhere in the project's scene (null if none). Kept
+    // for resolving queries saved before zones were referenced by id (see
+    // findByUniqueId()) - prefer that for anything new.
     static SceneZone *findByName(Project *project, const QString &name);
     // All zone names in the project's scene (for selection dropdowns).
     static QStringList zoneNames(Project *project);
+    // Finds a zone by uniqueId anywhere in the project's scene (null if none).
+    // The stable way to reference a zone - unlike name, survives a rename.
+    static SceneZone *findByUniqueId(Project *project, const QByteArray &id);
+    // Every zone in the project's scene, for selection dropdowns that need
+    // both the display name and the id to store.
+    static QVector<SceneZone*> zones(Project *project);
 
     QWidget *createEditor() override;
 

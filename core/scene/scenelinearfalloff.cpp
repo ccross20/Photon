@@ -1,10 +1,11 @@
-#include <QFormLayout>
+#include <QVBoxLayout>
 #include <QLineEdit>
 #include <QDoubleSpinBox>
 #include <QSignalBlocker>
 #include "scenelinearfalloff.h"
-#include "gui/vector3edit.h"
-#include "gui/tag/tageditorwidget.h"
+#include "vector3edit.h"
+#include "propertywidgets.h"
+#include "tag/tageditorwidget.h"
 #include "photoncore.h"
 #include "project/project.h"
 
@@ -15,7 +16,7 @@ class SceneLinearFalloffEditorWidget::Impl
 public:
     Impl();
     SceneLinearFalloff *falloff = nullptr;
-    QFormLayout *formLayout;
+    PropertyForm *form;
     QLineEdit *nameEdit;
     TagEditorWidget *tagEditor;
     QDoubleSpinBox *lengthSpin;
@@ -25,27 +26,31 @@ public:
 
 SceneLinearFalloffEditorWidget::Impl::Impl()
 {
-    formLayout = new QFormLayout;
+    form = new PropertyForm;
+
+    form->addSection("General");
 
     nameEdit = new QLineEdit;
-    formLayout->addRow("Name", nameEdit);
+    form->addRow("Name", nameEdit);
 
     tagEditor = new TagEditorWidget(
         [this](){ return falloff ? falloff->tags() : QStringList(); },
         [this](const QStringList &tags){ if(falloff) falloff->setTags(tags); },
         [](){ return photonApp->project() ? photonApp->project()->allTags() : QStringList(); });
-    formLayout->addRow("Tags", tagEditor);
+    form->addRow("Tags", tagEditor);
 
     lengthSpin = new QDoubleSpinBox;
     lengthSpin->setMinimum(.1);
     lengthSpin->setMaximum(200);
-    formLayout->addRow("Length", lengthSpin);
+    form->addRow("Length", lengthSpin);
 }
 
 SceneLinearFalloffEditorWidget::SceneLinearFalloffEditorWidget(SceneLinearFalloff *t_falloff, QWidget *parent)
     : QWidget{parent}, m_impl(new Impl)
 {
-    setLayout(m_impl->formLayout);
+    QVBoxLayout *outer = new QVBoxLayout(this);
+    outer->setContentsMargins(0, 0, 0, 0);
+    outer->addWidget(m_impl->form);
     setSizePolicy(QSizePolicy{QSizePolicy::MinimumExpanding, QSizePolicy::Maximum});
 
     m_impl->falloff = t_falloff;
@@ -59,12 +64,14 @@ SceneLinearFalloffEditorWidget::SceneLinearFalloffEditorWidget(SceneLinearFallof
     m_impl->tagEditor->refresh();
     m_impl->lengthSpin->setValue(t_falloff->length());
 
-    addHelperPropertyRows(m_impl->formLayout, t_falloff, this);
+    addHelperPropertyRows(m_impl->form, t_falloff, this);
+
+    m_impl->form->addSection("Transform");
 
     m_impl->positionEdit = new Vector3Edit;
-    m_impl->formLayout->addRow("Position", m_impl->positionEdit);
+    m_impl->form->addRow("Position", m_impl->positionEdit);
     m_impl->rotationEdit = new Vector3Edit;
-    m_impl->formLayout->addRow("Rotation", m_impl->rotationEdit);
+    m_impl->form->addRow("Rotation", m_impl->rotationEdit);
 
     connect(m_impl->positionEdit, &Vector3Edit::valueChanged, this, &SceneLinearFalloffEditorWidget::setPosition);
     connect(m_impl->rotationEdit, &Vector3Edit::valueChanged, this, &SceneLinearFalloffEditorWidget::setRotation);

@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.5)
 
 project(photon LANGUAGES CXX)
 
+add_subdirectory(photon-ui)
 add_subdirectory(core)
 add_subdirectory(core-test)
 add_subdirectory(plugin-effects)

@@ -1,12 +1,14 @@
 #include <QVBoxLayout>
 #include <QLabel>
 #include <QComboBox>
-#include "view/numberscrubfield.h"
+#include "numberscrubfield.h"
 #include <QStyleOptionGraphicsItem>
 #include <QPainter>
 #include "easeeffect.h"
 #include "sequence/channel.h"
 #include "sequence/viewer/stackedparameterwidget.h"
+#include "propertywidgets.h"
+#include "util/utils.h"
 
 namespace photon {
 
@@ -16,17 +18,17 @@ EaseEffectEditor::EaseEffectEditor(EaseEffect *t_effect):ChannelEffectEditor(t_e
     //setMaximumHeight(40);
 
 
-    keira::NumberScrubField *easeInDurationSpin = new keira::NumberScrubField;
+    photon::NumberScrubField *easeInDurationSpin = new photon::NumberScrubField;
     easeInDurationSpin->setMinimum(.001);
     easeInDurationSpin->setMaximum(9999);
     easeInDurationSpin->setValue(m_effect->easeInDuration());
-    connect(easeInDurationSpin, &keira::NumberScrubField::valueChanged, this, &EaseEffectEditor::easeInDurationChanged);
+    connect(easeInDurationSpin, &photon::NumberScrubField::valueChanged, this, &EaseEffectEditor::easeInDurationChanged);
 
-    keira::NumberScrubField *easeOutDurationSpin = new keira::NumberScrubField;
+    photon::NumberScrubField *easeOutDurationSpin = new photon::NumberScrubField;
     easeOutDurationSpin->setMinimum(.001);
     easeOutDurationSpin->setMaximum(9999);
     easeOutDurationSpin->setValue(m_effect->easeOutDuration());
-    connect(easeOutDurationSpin, &keira::NumberScrubField::valueChanged, this, &EaseEffectEditor::easeOutDurationChanged);
+    connect(easeOutDurationSpin, &photon::NumberScrubField::valueChanged, this, &EaseEffectEditor::easeOutDurationChanged);
 
     QStringList easeStrings;
     easeStrings << "Linear";
@@ -193,6 +195,22 @@ float * EaseEffect::process(float *value, uint size, double time) const
 ChannelEffectEditor *EaseEffect::createEditor()
 {
     return new EaseEffectEditor(this);
+}
+
+QWidget *EaseEffect::createPropertyEditor()
+{
+    auto *form = new PropertyForm;
+    form->addRow("Ease In Duration", PropertyWidgets::createNumber(m_easeInDuration,
+        {{PropertyWidgets::MetaMinimum, .001}, {PropertyWidgets::MetaMaximum, 9999.0}},
+        [this](double v){ setEaseInDuration(v); }));
+    form->addRow("Ease In", PropertyWidgets::createOptions(easeStrings(), m_easeInType, {},
+        [this](int v){ setEaseInType(static_cast<QEasingCurve::Type>(v)); }));
+    form->addRow("Ease Out Duration", PropertyWidgets::createNumber(m_easeOutDuration,
+        {{PropertyWidgets::MetaMinimum, .001}, {PropertyWidgets::MetaMaximum, 9999.0}},
+        [this](double v){ setEaseOutDuration(v); }));
+    form->addRow("Ease Out", PropertyWidgets::createOptions(easeStrings(), m_easeOutType, {},
+        [this](int v){ setEaseOutType(static_cast<QEasingCurve::Type>(v)); }));
+    return form;
 }
 
 void EaseEffect::readFromJson(const QJsonObject &t_json)

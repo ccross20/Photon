@@ -2,6 +2,7 @@
 #include <QTimer>
 #include <QMenu>
 #include <QGraphicsSceneContextMenuEvent>
+#include <QGraphicsSceneDragDropEvent>
 #include "scene.h"
 #include "model/graph.h"
 #include "view/nodeitem.h"
@@ -22,6 +23,7 @@ public:
     Graph *graph = nullptr;
     GraphEvaluator *evaluator;
     QGraphicsLineItem *wireParentItem;
+    ExternalDropInterpreter externalDropInterpreter;
 };
 
 
@@ -54,6 +56,11 @@ bool Scene::isAutoEvaluate() const
 void Scene::setNodeLibrary(NodeLibrary *t_library)
 {
     m_impl->library = t_library;
+}
+
+void Scene::setExternalDropInterpreter(ExternalDropInterpreter t_interpreter)
+{
+    m_impl->externalDropInterpreter = t_interpreter;
 }
 
 void Scene::setGraph(Graph *t_graph)
@@ -299,5 +306,49 @@ void Scene::contextMenuEvent(QGraphicsSceneContextMenuEvent *contextMenuEvent)
     }
 }
 
+void Scene::dragEnterEvent(QGraphicsSceneDragDropEvent *event)
+{
+    if(m_impl->externalDropInterpreter && !m_impl->externalDropInterpreter(event->mimeData()).isEmpty())
+        event->acceptProposedAction();
+    else
+        QGraphicsScene::dragEnterEvent(event);
+}
+
+void Scene::dragMoveEvent(QGraphicsSceneDragDropEvent *event)
+{
+    if(m_impl->externalDropInterpreter && !m_impl->externalDropInterpreter(event->mimeData()).isEmpty())
+        event->acceptProposedAction();
+    else
+        QGraphicsScene::dragMoveEvent(event);
+}
+
+void Scene::dropEvent(QGraphicsSceneDragDropEvent *event)
+{
+    const QVector<ExternalDropNodeSpec> specs = m_impl->externalDropInterpreter ? m_impl->externalDropInterpreter(event->mimeData()) : QVector<ExternalDropNodeSpec>();
+
+    if(specs.isEmpty() || !m_impl->library || !m_impl->graph)
+    {
+        QGraphicsScene::dropEvent(event);
+        return;
+    }
+
+    QPointF position = event->scenePos();
+    for(const auto &spec : specs)
+    {
+        Node *node = m_impl->library->createNode(spec.nodeId);
+        if(!node)
+            continue;
+
+        node->setPosition(position);
+        position += QPointF(24, 24);   // stagger multiple dropped nodes so they don't stack exactly on top of each other
+        m_impl->graph->addNode(node);
+
+        if(!spec.paramName.isEmpty())
+            if(auto *param = node->findParameter(spec.paramName))
+                param->setValue(spec.paramValue);
+    }
+
+    event->acceptProposedAction();
+}
 
 } // namespace keira

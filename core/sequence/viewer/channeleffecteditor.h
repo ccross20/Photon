@@ -7,6 +7,7 @@
 class QGraphicsItem;
 class QGraphicsScene;
 class QGraphicsView;
+class WaveformWidget;
 
 namespace photon {
 class ChannelEffect;
@@ -31,6 +32,9 @@ public:
     void addItem(QGraphicsItem *);
     void addWidget(QWidget *, const QString &name);
     void removeWidget(QWidget *);
+
+    // See EffectEditorViewer::setBackgroundWaveform.
+    void setBackgroundWaveform(WaveformWidget *);
 
 signals:
     void scaleChanged(QPointF);

@@ -36,6 +36,7 @@ private slots:
     void setPanInvert(bool);
     void setTiltInvert(bool);
     void refreshTransform();
+    void openColorCalibration();
 
 
 private:

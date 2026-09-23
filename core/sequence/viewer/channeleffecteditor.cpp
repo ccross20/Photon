@@ -15,6 +15,7 @@
 #include "channel/parameter/colorchannelparameter.h"
 #include "project/project.h"
 #include "photoncore.h"
+#include "gui/waveformwidget.h"
 
 namespace photon {
 
@@ -108,9 +109,36 @@ void EffectEditorViewer::drawBackground(QPainter *painter, const QRectF &rect)
 
 }
 
+void EffectEditorViewer::setBackgroundWaveform(WaveformWidget *t_waveform)
+{
+    m_backgroundWaveform = t_waveform;
+
+    // Repaint whenever the (hidden) waveform's own content changes - its
+    // own update() is a no-op while it's hidden, so nothing else would
+    // otherwise tell this view its background needs refreshing.
+    if(m_backgroundWaveform)
+        connect(m_backgroundWaveform, &WaveformWidget::contentChanged, this, [this](){ viewport()->update(); });
+}
+
 void EffectEditorViewer::drawBackgroundColor(QPainter *painter, const QRectF &rect)
 {
-    painter->fillRect(rect, QColor(50,50,50));
+    if(m_backgroundWaveform)
+    {
+        // Sized to this exact viewport so its min/max cache lines up pixel
+        // for pixel with the columns drawn below - its own scale/pan already
+        // track the timeline the same way this view's does (both are driven
+        // by SequenceWidget), so no extra offset math is needed here.
+        m_backgroundWaveform->resize(viewport()->size());
+        painter->save();
+        painter->resetTransform();
+        painter->setOpacity(0.4);
+        m_backgroundWaveform->render(painter, QPoint(0, 0));
+        painter->restore();
+    }
+    else
+    {
+        painter->fillRect(rect, QColor(50,50,50));
+    }
 
     /*
     if(m_pathsDirty)
@@ -130,6 +158,7 @@ void EffectEditorViewer::drawBackgroundColor(QPainter *painter, const QRectF &re
     QColor initialValue = m_effect->channel()->info().defaultValue.value<QColor>();
 
     float *values = new float[4];
+    const int previewHeight = viewport()->height();
 
     for(int x = startX; x < endX; ++x)
     {
@@ -138,7 +167,7 @@ void EffectEditorViewer::drawBackgroundColor(QPainter *painter, const QRectF &re
 
         auto c = ColorChannelParameter::channelsToColor(values);
 
-        painter->fillRect(x,0,1,50, c);
+        painter->fillRect(x,0,1,previewHeight, c);
     }
 
 
@@ -157,7 +186,20 @@ void EffectEditorViewer::drawBackgroundColor(QPainter *painter, const QRectF &re
 
 void EffectEditorViewer::drawBackgroundNumber(QPainter *painter, const QRectF &rect)
 {
-    painter->fillRect(rect, QColor(50,50,50));
+    if(m_backgroundWaveform)
+    {
+        m_backgroundWaveform->resize(viewport()->size());
+        painter->save();
+        painter->resetTransform();
+        painter->setOpacity(0.4);
+        m_backgroundWaveform->render(painter, QPoint(0, 0));
+        painter->restore();
+    }
+    else
+    {
+        painter->fillRect(rect, QColor(50,50,50));
+    }
+
     if(m_pathsDirty)
         rebuildPaths();
 
@@ -485,18 +527,25 @@ void EffectEditorViewer::wheelEvent(QWheelEvent *event)
     const int wheelDelta = event->angleDelta().y() != 0 ? event->angleDelta().y()
                                                         : event->angleDelta().x();
 
+    // Scaled by how far this one event actually scrolled rather than a flat
+    // per-event step (was a flat 1.24x every event) - a high-resolution device
+    // (Magic Mouse, trackpad) fires many small events per gesture, and a flat
+    // step compounds into a runaway zoom. Matches TimelineViewer/WaveformWidget's
+    // kZoomPerNotch fix.
+    constexpr double kZoomPerNotch = 1.04;
+    const QPoint pixels = event->pixelDelta();
+    const double notches = !pixels.isNull()
+        ? (pixels.y() != 0 ? pixels.y() : pixels.x()) / 40.0
+        : wheelDelta / 120.0;
+    const double zoomFactor = std::pow(kZoomPerNotch, notches);
+
     // Ctrl zooms TIME (x), matching the other views. Alt zooms the VALUE range (y),
     // which is unique to this editor.
     if(event->modifiers() & Qt::ControlModifier)
     {
 
         double newScaleY = m_yScale;
-        double newScaleX = m_xScale;
-
-        if(wheelDelta > 0)
-            newScaleX *= 1.24;
-        else
-            newScaleX /= 1.24;
+        double newScaleX = m_xScale * zoomFactor;
 
         setScale(QPointF(newScaleX, newScaleY));
 
@@ -514,13 +563,8 @@ void EffectEditorViewer::wheelEvent(QWheelEvent *event)
     if(event->modifiers() & Qt::AltModifier)
     {
 
-        double newScaleY = m_yScale;
+        double newScaleY = m_yScale * zoomFactor;
         double newScaleX = m_xScale;
-
-        if(wheelDelta > 0)
-            newScaleY *= 1.24;
-        else
-            newScaleY /= 1.24;
 
         setScale(QPointF(newScaleX, newScaleY));
 
@@ -539,7 +583,6 @@ void EffectEditorViewer::wheelEvent(QWheelEvent *event)
     {
         // Plain wheel: horizontal pan through setOffset, matching the layer and
         // waveform views and keeping all three in sync.
-        const QPoint pixels = event->pixelDelta();
         double delta;
         if(!pixels.isNull())
             delta = pixels.y() != 0 ? pixels.y() : pixels.x();
@@ -799,7 +842,11 @@ ChannelEffectEditor::ChannelEffectEditor(ChannelEffect *t_effect, QWidget *paren
     m_impl->viewer->setScene(m_impl->scene);
 
 
-    m_impl->toolbar->addAction("Y Fit",[this](){fitY();});
+    // The Y axis only means anything for a numeric curve - a color channel's
+    // preview ignores y-scale entirely (see drawBackgroundColor), so fitting it
+    // has nothing to do.
+    if(t_effect->channel()->type() != ChannelInfo::ChannelTypeColor)
+        m_impl->toolbar->addAction("Y Fit",[this](){fitY();});
 
     setMinimumHeight(100);
 
@@ -965,6 +1012,11 @@ void ChannelEffectEditor::setScale(QPointF t_value)
 {
     m_impl->scale = t_value;
     m_impl->viewer->setScale(t_value);
+}
+
+void ChannelEffectEditor::setBackgroundWaveform(WaveformWidget *t_waveform)
+{
+    m_impl->viewer->setBackgroundWaveform(t_waveform);
 }
 
 void ChannelEffectEditor::channelUpdated(Channel *)

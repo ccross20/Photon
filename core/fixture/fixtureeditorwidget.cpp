@@ -1,4 +1,4 @@
-#include <QFormLayout>
+#include <QVBoxLayout>
 #include <QLineEdit>
 #include <QTextEdit>
 #include <QComboBox>
@@ -6,38 +6,28 @@
 #include <QSpinBox>
 #include <QDoubleSpinBox>
 #include <QCheckBox>
+#include <QPushButton>
 #include <QSignalBlocker>
 #include "fixtureeditorwidget.h"
 #include "fixture.h"
+#include "colorcalibrationdialog.h"
+#include "capability/colorcapability.h"
 #include "scene/sceneobject.h"
-#include "gui/vector3edit.h"
-#include "gui/propertycombobox.h"
-#include "gui/tag/tageditorwidget.h"
+#include "vector3edit.h"
+#include "propertycombobox.h"
+#include "propertywidgets.h"
+#include "tag/tageditorwidget.h"
 #include "photoncore.h"
 #include "project/project.h"
 
 namespace photon {
-
-// A bold, slightly-inset label spanning both form columns, used to break the
-// property list into named groups (see styles.css for the look — this just
-// marks which QLabels are headers via object name). Forced to expand: a
-// QFormLayout spanning row otherwise sizes the widget to its text, which
-// left the underline in styles.css only running under the word itself
-// instead of the full row width.
-static QLabel *makeSectionHeader(const QString &text)
-{
-    QLabel *label = new QLabel(text.toUpper());
-    label->setObjectName("propertySectionHeader");
-    label->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-    return label;
-}
 
 class FixtureEditorWidget::Impl
 {
 public:
     Impl();
     QVector<Fixture*> fixtures;
-    QFormLayout *formLayout;
+    PropertyForm *form;
     QLineEdit *nameEdit;
     QTextEdit *commentEdit;
     QLineEdit *identifierEdit;
@@ -57,73 +47,74 @@ public:
     QCheckBox *tiltInvertCheck;
     PropertyComboBox *modelCombo;
     PropertyComboBox *beamCombo;
+    QPushButton *calibrateColorsButton;
 };
 
 FixtureEditorWidget::Impl::Impl()
 {
-    formLayout = new QFormLayout;
-    // Default QFormLayout spacing reads as cramped once rows are grouped
-    // under headers - give fields room to breathe and let the header rows
-    // (below) supply the separation between groups instead.
-    formLayout->setVerticalSpacing(8);
-    formLayout->setHorizontalSpacing(12);
-    formLayout->setLabelAlignment(Qt::AlignRight | Qt::AlignVCenter);
-    // Default policy (FieldsStayAtSizeHint) leaves every field its own
-    // natural width - a spin box row noticeably narrower than a combo box
-    // row, narrower still than a line edit. Growing them all to fill the
-    // column lines every field up to the same right edge.
-    formLayout->setFieldGrowthPolicy(QFormLayout::AllNonFixedFieldsGrow);
+    form = new PropertyForm;
 
-    formLayout->addRow(makeSectionHeader("General"));
+    form->addSection("General");
 
     nameEdit = new QLineEdit;
-    formLayout->addRow("Name", nameEdit);
+    form->addRow("Name", nameEdit);
 
     identifierEdit = new QLineEdit;
-    formLayout->addRow("Identifier", identifierEdit);
+    form->addRow("Identifier", identifierEdit);
 
     commentEdit = new QTextEdit;
     commentEdit->setMaximumHeight(60);
     commentEdit->setAcceptRichText(false);
-    formLayout->addRow("Comment", commentEdit);
+    form->addRow("Comment", commentEdit);
 
     manufacturerLabel = new QLabel;
     manufacturerLabel->setProperty("readOnlyField", true);
-    formLayout->addRow("Manufacturer", manufacturerLabel);
+    form->addRow("Manufacturer", manufacturerLabel);
 
     descriptionLabel = new QLabel;
     descriptionLabel->setProperty("readOnlyField", true);
-    formLayout->addRow("Description", descriptionLabel);
+    form->addRow("Description", descriptionLabel);
 
-    formLayout->addRow(makeSectionHeader("Patch"));
+    form->addSection("Patch");
 
     universeSpin = new QSpinBox;
     universeSpin->setMinimum(1);
     universeSpin->setMaximum(9999);
-    formLayout->addRow("Universe", universeSpin);
+    form->addRow("Universe", universeSpin);
 
     offsetSpin = new QSpinBox;
     offsetSpin->setMinimum(1);
     offsetSpin->setMaximum(511);
-    formLayout->addRow("Starting Channel", offsetSpin);
+    form->addRow("Starting Channel", offsetSpin);
 
     modeCombo = new PropertyComboBox;
-    formLayout->addRow("DMX Mode", modeCombo);
+    form->addRow("DMX Mode", modeCombo);
 
-    formLayout->addRow(makeSectionHeader("Appearance"));
+    form->addSection("Appearance");
 
     modelCombo = new PropertyComboBox;
     // Index 0 = Auto (empty override); the rest are visualiser model types.
     modelCombo->addItems(QStringList() << "Auto" << "mover" << "par" << "uplight"
                                        << "strobe" << "blinder" << "bar" << "wash" << "beeeye");
-    formLayout->addRow("Model", modelCombo);
+    form->addRow("Model", modelCombo);
 
     beamCombo = new PropertyComboBox;
     // Index 0 = Auto (follow the visualiser's global beam toggle); 1 = basic
     // cone, 2 = volumetric, 3 = no beam at all. Tokens stored on the fixture
     // are "", "cones", "volumetric", "none".
     beamCombo->addItems(QStringList() << "Auto" << "Cones" << "Volumetric" << "None");
-    formLayout->addRow("Beam Style", beamCombo);
+    form->addRow("Beam Style", beamCombo);
+
+    form->addSection("Color");
+
+    calibrateColorsButton = new QPushButton("Calibrate Colors...");
+    calibrateColorsButton->setToolTip(
+        "Tunes how this fixture's color LEDs (Red, Green, Blue, Amber, Lime,\n"
+        "White, ...) mix to reproduce a set of named reference hues, driving\n"
+        "a real patched fixture live so the result can be judged by eye.\n"
+        "Only available with a single fixture selected that has a color\n"
+        "capability.");
+    form->addRow("", calibrateColorsButton);
 
     // Shows the union of the current selection's tags. Adding a chip applies
     // it to every selected fixture; removing one removes it from whichever
@@ -166,15 +157,15 @@ FixtureEditorWidget::Impl::Impl()
             }
         },
         [](){ return photonApp->project() ? photonApp->project()->allTags() : QStringList(); });
-    formLayout->addRow("Tags", tagEditor);
+    form->addRow("Tags", tagEditor);
 
-    formLayout->addRow(makeSectionHeader("Transform"));
+    form->addSection("Transform");
 
     positionEdit = new Vector3Edit;
-    formLayout->addRow("Position", positionEdit);
+    form->addRow("Position", positionEdit);
 
     rotationEdit = new Vector3Edit;
-    formLayout->addRow("Rotation", rotationEdit);
+    form->addRow("Rotation", rotationEdit);
 
     panOffsetSpin = new QDoubleSpinBox;
     panOffsetSpin->setRange(-180.0, 180.0);
@@ -186,7 +177,7 @@ FixtureEditorWidget::Impl::Impl()
         "were mounted normally: Pan centered (0%) points wherever it actually\n"
         "needs to - shown live by the front-facing arrow drawn on the fixture\n"
         "in the visualiser while it's selected.");
-    formLayout->addRow("Pan Offset", panOffsetSpin);
+    form->addRow("Pan Offset", panOffsetSpin);
 
     panFlipCheck = new QCheckBox;
     panFlipCheck->setToolTip(
@@ -194,13 +185,13 @@ FixtureEditorWidget::Impl::Impl()
         "to DMX, for a fixture mounted flipped so \"more\" pan currently moves\n"
         "it the wrong way. Applied before Pan Offset, so the offset always\n"
         "reads in whichever direction the fixture now actually responds to.");
-    formLayout->addRow("Pan Flip", panFlipCheck);
+    form->addRow("Pan Flip", panFlipCheck);
 
     panInvertCheck = new QCheckBox;
     panInvertCheck->setToolTip(
         "Flips only the visualiser's preview of the pan direction, without\n"
         "touching DMX - for eyeballing a flip before committing to Pan Flip.");
-    formLayout->addRow("Pan Invert (preview only)", panInvertCheck);
+    form->addRow("Pan Invert (preview only)", panInvertCheck);
 
     tiltOffsetSpin = new QDoubleSpinBox;
     tiltOffsetSpin->setRange(-180.0, 180.0);
@@ -210,23 +201,25 @@ FixtureEditorWidget::Impl::Impl()
         "Degrees added to the tilt channel before it's written to DMX - the\n"
         "same idea as Pan Offset, for a fixture hung or mounted at an odd\n"
         "tilt angle.");
-    formLayout->addRow("Tilt Offset", tiltOffsetSpin);
+    form->addRow("Tilt Offset", tiltOffsetSpin);
 
     tiltFlipCheck = new QCheckBox;
     tiltFlipCheck->setToolTip("Same idea as Pan Flip, for the tilt channel - changes real DMX.");
-    formLayout->addRow("Tilt Flip", tiltFlipCheck);
+    form->addRow("Tilt Flip", tiltFlipCheck);
 
     tiltInvertCheck = new QCheckBox;
     tiltInvertCheck->setToolTip(
         "Same idea as Pan Invert, for the tilt channel - visualiser-only,\n"
         "does not change the real DMX value.");
-    formLayout->addRow("Tilt Invert (preview only)", tiltInvertCheck);
+    form->addRow("Tilt Invert (preview only)", tiltInvertCheck);
 }
 
 FixtureEditorWidget::FixtureEditorWidget(QWidget *parent)
     : QWidget{parent},m_impl(new Impl)
 {
-    setLayout(m_impl->formLayout);
+    QVBoxLayout *outer = new QVBoxLayout(this);
+    outer->setContentsMargins(0, 0, 0, 0);
+    outer->addWidget(m_impl->form);
 
     setSizePolicy(QSizePolicy{QSizePolicy::MinimumExpanding, QSizePolicy::Maximum});
 
@@ -246,6 +239,7 @@ FixtureEditorWidget::FixtureEditorWidget(QWidget *parent)
     connect(m_impl->tiltFlipCheck, &QCheckBox::toggled, this, &FixtureEditorWidget::setTiltFlip);
     connect(m_impl->panInvertCheck, &QCheckBox::toggled, this, &FixtureEditorWidget::setPanInvert);
     connect(m_impl->tiltInvertCheck, &QCheckBox::toggled, this, &FixtureEditorWidget::setTiltInvert);
+    connect(m_impl->calibrateColorsButton, &QPushButton::clicked, this, &FixtureEditorWidget::openColorCalibration);
 }
 
 FixtureEditorWidget::~FixtureEditorWidget()
@@ -301,6 +295,7 @@ void FixtureEditorWidget::setFixtures(QVector<Fixture*> t_fixtures)
         m_impl->panInvertCheck->setEnabled(false);
         m_impl->tiltInvertCheck->setChecked(false);
         m_impl->tiltInvertCheck->setEnabled(false);
+        m_impl->calibrateColorsButton->setEnabled(false);
         m_impl->tagEditor->setEnabled(false);
         m_impl->tagEditor->refresh();
         return;
@@ -327,6 +322,9 @@ void FixtureEditorWidget::setFixtures(QVector<Fixture*> t_fixtures)
 
     auto it = m_impl->fixtures.cbegin();
     Fixture *firstFixture = *it;
+
+    m_impl->calibrateColorsButton->setEnabled(
+        m_impl->fixtures.length() == 1 && !firstFixture->findCapability(Capability_Color).isEmpty());
 
     QString name = firstFixture->name();
     bool multiName = false;
@@ -676,6 +674,15 @@ void FixtureEditorWidget::refreshTransform()
     QSignalBlocker rb(m_impl->rotationEdit);
     m_impl->positionEdit->setValue(m_impl->fixtures.first()->position());
     m_impl->rotationEdit->setValue(m_impl->fixtures.first()->rotation());
+}
+
+void FixtureEditorWidget::openColorCalibration()
+{
+    if(m_impl->fixtures.length() != 1)
+        return;
+
+    ColorCalibrationDialog dialog(m_impl->fixtures.first(), this);
+    dialog.exec();
 }
 
 } // namespace photon

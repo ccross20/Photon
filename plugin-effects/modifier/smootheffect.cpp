@@ -3,9 +3,10 @@
 #include <qmath.h>
 #include <vector>
 #include <algorithm>
-#include "view/numberscrubfield.h"
+#include "numberscrubfield.h"
 #include "smootheffect.h"
 #include "sequence/viewer/stackedparameterwidget.h"
+#include "propertywidgets.h"
 
 
 namespace photon {
@@ -13,17 +14,17 @@ namespace photon {
 SmoothEffectEditor::SmoothEffectEditor(SmoothEffect *t_effect):ChannelEffectEditor(t_effect),m_effect(t_effect)
 {
 
-    auto *samplesSpin = new keira::NumberScrubField;
+    auto *samplesSpin = new photon::NumberScrubField;
     samplesSpin->setIsInteger(true);
     samplesSpin->setMinimum(3);
     samplesSpin->setValue(m_effect->samples());
-    connect(samplesSpin, &keira::NumberScrubField::valueChanged, this, [this](double v){ samplesChanged(int(v)); });
+    connect(samplesSpin, &photon::NumberScrubField::valueChanged, this, [this](double v){ samplesChanged(int(v)); });
 
 
-    auto *spreadSpin = new keira::NumberScrubField;
+    auto *spreadSpin = new photon::NumberScrubField;
     spreadSpin->setMinimum(.0001);
     spreadSpin->setValue(m_effect->spread());
-    connect(spreadSpin, &keira::NumberScrubField::valueChanged, this, &SmoothEffectEditor::spreadChanged);
+    connect(spreadSpin, &photon::NumberScrubField::valueChanged, this, &SmoothEffectEditor::spreadChanged);
 
     StackedParameterWidget *paramWidget = new StackedParameterWidget;
     paramWidget->addWidget(samplesSpin, "Samples");
@@ -127,6 +128,16 @@ float * SmoothEffect::process(float *value, uint size, double time) const
 ChannelEffectEditor *SmoothEffect::createEditor()
 {
     return new SmoothEffectEditor(this);
+}
+
+QWidget *SmoothEffect::createPropertyEditor()
+{
+    auto *form = new PropertyForm;
+    form->addRow("Samples", PropertyWidgets::createInteger(m_samples,
+        {{PropertyWidgets::MetaMinimum, 3.0}}, [this](int v){ setSamples(v); }));
+    form->addRow("Spread", PropertyWidgets::createNumber(m_spread,
+        {{PropertyWidgets::MetaMinimum, .0001}}, [this](double v){ setSpread(v); }));
+    return form;
 }
 
 void SmoothEffect::readFromJson(const QJsonObject &t_json)

@@ -1,6 +1,6 @@
 #include <QTest>
 #include "tagtest.h"
-#include "gui/tag/tagcolor.h"
+#include "tag/tagcolor.h"
 #include "project/project.h"
 #include "scene/sceneobject.h"
 #include "fixture/fixturegroup.h"

@@ -7,6 +7,34 @@
 #include "streamingacn.h"
 #include "sacnsender.h"
 
+namespace {
+
+// Up, non-loopback, IPv4-capable NICs - the same criteria the network-select
+// dropdown filters to, so a fallback pick is always something the user could
+// have chosen manually.
+QVector<QNetworkInterface> usableNetworkInterfaces()
+{
+    QVector<QNetworkInterface> result;
+    for(const auto &ni : QNetworkInterface::allInterfaces())
+    {
+        if(!ni.flags().testFlag(QNetworkInterface::IsUp)) continue;
+        if(ni.flags().testFlag(QNetworkInterface::IsLoopBack)) continue;
+        bool hasV4 = false;
+        for(const auto &entry : ni.addressEntries())
+            if(entry.ip().protocol() == QAbstractSocket::IPv4Protocol) { hasV4 = true; break; }
+        if(!hasV4) continue;
+        result.append(ni);
+    }
+    return result;
+}
+
+// How many evaluate() ticks to keep retrying the saved interface name before
+// concluding it's really gone and falling back - a project opened right at
+// launch can tick a few times before the OS has finished enumerating NICs.
+constexpr int kMaxInitAttempts = 5;
+
+} // namespace
+
 namespace photon {
 
 
@@ -23,6 +51,7 @@ public:
     QVector<sACNManager::tSender> senders;
     bool isInitialized = false;
     QString initializedInterfaceName;
+    int failedAttempts = 0;
 };
 
 void SACNTransmitNode::Impl::initialize()
@@ -33,12 +62,37 @@ void SACNTransmitNode::Impl::initialize()
     // adapter (e.g. WiFi) than the label showed, and sACN went out the wrong link.
     const QString ifaceName = networkParam->value().toString();
     QNetworkInterface iface = QNetworkInterface::interfaceFromName(ifaceName);
+
     if(!iface.isValid())
     {
-        qWarning() << "sACN Transmit: network interface not found:" << ifaceName
-                   << "- leaving uninitialized (will retry).";
-        return;   // stay uninitialized so a later evaluate retries once the NIC exists
+        ++failedAttempts;
+
+        if(failedAttempts <= kMaxInitAttempts)
+        {
+            qWarning() << "sACN Transmit: network interface not found:" << ifaceName
+                       << "- leaving uninitialized (will retry).";
+            return;   // stay uninitialized so a later evaluate retries once the NIC exists
+        }
+
+        // The saved interface (e.g. from a project made on another machine, or
+        // a USB adapter that's since been unplugged) isn't coming back - fall
+        // back to whatever's actually available instead of retrying forever.
+        const QVector<QNetworkInterface> fallbacks = usableNetworkInterfaces();
+        if(fallbacks.isEmpty())
+        {
+            if(failedAttempts == kMaxInitAttempts + 1)
+                qWarning() << "sACN Transmit: network interface not found:" << ifaceName
+                           << "and no other network interface is available - will keep retrying.";
+            return;
+        }
+
+        iface = fallbacks.first();
+        qWarning() << "sACN Transmit: network interface" << ifaceName << "not found after"
+                   << kMaxInitAttempts << "attempts - defaulting to" << iface.humanReadableName();
+        networkParam->setValue(iface.name());
     }
+
+    failedAttempts = 0;
 
     int counter = 1;
     for(auto it = senders.begin(); it!= senders.end(); ++it)
@@ -52,13 +106,14 @@ void SACNTransmitNode::Impl::initialize()
         sender->startSending();
     }
 
-    initializedInterfaceName = ifaceName;
+    initializedInterfaceName = networkParam->value().toString();
     isInitialized = true;
 }
 
 void SACNTransmitNode::Impl::teardown()
 {
     isInitialized = false;
+    failedAttempts = 0;
     for(auto it = senders.begin(); it!= senders.end(); ++it)
         (*it)->stopSending();
 }
@@ -100,16 +155,8 @@ void SACNTransmitNode::createParameters()
     m_impl->networkParam = new keira::StringOptionParameter(Network,"Network", {}, 0);
     m_impl->networkParam->setOptionLambda([](){
         QVector<std::pair<QString,QString>> opts;
-        for(const auto &ni : QNetworkInterface::allInterfaces())
-        {
-            if(!ni.flags().testFlag(QNetworkInterface::IsUp)) continue;
-            if(ni.flags().testFlag(QNetworkInterface::IsLoopBack)) continue;
-            bool hasV4 = false;
-            for(const auto &entry : ni.addressEntries())
-                if(entry.ip().protocol() == QAbstractSocket::IPv4Protocol) { hasV4 = true; break; }
-            if(!hasV4) continue;
+        for(const auto &ni : usableNetworkInterfaces())
             opts.append(std::pair<QString,QString>(ni.humanReadableName(), ni.name()));
-        }
         return opts;
     });
     addParameter(m_impl->networkParam);

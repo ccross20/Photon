@@ -1,6 +1,6 @@
 #include "tagsparameter.h"
 #include "view/nodeeditor.h"
-#include "gui/tag/tageditorwidget.h"
+#include "tag/tageditorwidget.h"
 #include "photoncore.h"
 #include "project/project.h"
 

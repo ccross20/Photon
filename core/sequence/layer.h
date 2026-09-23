@@ -19,10 +19,14 @@ public:
     void setName(const QString &name);
     QUuid guid() const;
     QByteArray layerType() const;
-    LayerGroup *parentGroup() const;
+
+    // Muted layers are skipped entirely by Sequence::processChannels - their
+    // clips keep their data (nothing is deleted), they just stop contributing
+    // to output until unmuted.
+    bool isMuted() const;
+    void setMuted(bool muted);
 
     virtual QWidget *createEditor();
-    virtual bool isGroup() const{return false;}
     virtual Layer *findLayerByGuid(const QUuid &guid);
     virtual void processChannels(ProcessContext &);
     virtual void restore(Project &);
@@ -37,7 +41,6 @@ protected:
 
 private:
     friend class Sequence;
-    friend class LayerGroup;
 
     class Impl;
     Impl *m_impl;

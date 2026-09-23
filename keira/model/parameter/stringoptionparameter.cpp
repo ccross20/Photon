@@ -2,6 +2,7 @@
 #include <QLabel>
 #include "stringoptionparameter.h"
 #include "view/nodeeditor.h"
+#include "propertycombobox.h"
 
 namespace keira {
 
@@ -74,7 +75,10 @@ QWidget *StringOptionParameter::createWidget(NodeEditor *item) const
         label->setSizePolicy(QSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::Minimum));
         return label;
     }
-    QComboBox *combo = new QComboBox();
+    // PropertyComboBox rather than a plain QComboBox for its popup handling -
+    // the app stylesheet otherwise gives node parameters a menu-style popup
+    // that clips its own last rows (see photon-ui/propertycombobox.h).
+    QComboBox *combo = new photon::PropertyComboBox();
 
     if(m_impl->optionLambda)
     {

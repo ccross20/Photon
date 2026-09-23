@@ -4,7 +4,7 @@
 #include <QGraphicsItem>
 #include <QEasingCurve>
 #include "sequence/channeleffect.h"
-#include "gui/gizmo/gizmogroup.h"
+#include "gizmo/gizmogroup.h"
 
 namespace photon {
 
@@ -66,6 +66,7 @@ public:
     QEasingCurve::Type easeOutType() const{return m_easeOutType;}
     float * process(float *value, uint size, double time) const override;
     ChannelEffectEditor *createEditor() override;
+    QWidget *createPropertyEditor() override;
 
     void readFromJson(const QJsonObject &) override;
     void writeToJson(QJsonObject &) const override;

@@ -1,7 +1,6 @@
 #include <QStandardPaths>
 #include <QFileDialog>
 #include <QSettings>
-#include <QInputDialog>
 #include <QQuickWindow>
 #include "photoncore.h"
 #include "gui/guimanager.h"
@@ -24,6 +23,9 @@
 #include "library/songlibrary.h"
 #include "settings/applicationsettings.h"
 #include "fixture/fixturelibrary.h"
+#include "color/colorcollection.h"
+#include "color/colorresource.h"
+#include "color/colorselectorwidget.h"
 
 inline void initPluginResource() { Q_INIT_RESOURCE(resources); }
 
@@ -175,6 +177,19 @@ void PhotonCore::init()
     // safe this early.
     m_impl->fixtureLibrary->scan();
 
+    // photon-ui sits below core and can't reach Project directly (see the
+    // project's layering rule) - this is the one seam that lets every
+    // ColorSelectorWidget with FeaturePalette set show the current project's
+    // saved colours, queried live so it always reflects whichever project is
+    // open (New/Load swap it out from under this lambda).
+    ColorSelectorWidget::setSavedColorsProvider([](){
+        QVector<QColor> saved;
+        if(Project *project = photonApp->project())
+            for(auto *color : project->colors()->colors())
+                saved.append(color->color());
+        return saved;
+    });
+
     m_impl->resources->addResource(":/resources/styles.css", photon::Resource::ResourceStyle);
 
     setStyleSheet(m_impl->settings->globalStylesheet());
@@ -228,25 +243,40 @@ RhiContext *PhotonCore::rhiContext() const
 
 void PhotonCore::loadSequence(const QString &t_path)
 {
+    // If this file is already open (e.g. double-clicking the same Song
+    // Library sequence twice), reuse it instead of loading a second copy
+    // into a duplicate tab.
+    for(auto *existing : m_impl->sequences->sequences())
+    {
+        if(existing->filePath() == t_path)
+        {
+            m_impl->sequences->editSequence(existing);
+            return;
+        }
+    }
+
+    // Always file-backed - a Song Library sequence (the only caller of this
+    // today) or an old standalone .seq being opened directly.
     Sequence *sequence = new Sequence;
+    sequence->setIsLibrarySequence(true);
     sequence->load(t_path);
     m_impl->sequences->addSequence(sequence);
     m_impl->sequences->editSequence(sequence);
 }
 
-void PhotonCore::newSequence()
+Sequence *PhotonCore::newSequence()
 {
-    bool ok;
-    QString text = QInputDialog::getText(nullptr, "New Sequence",
-                                         "Name:", QLineEdit::Normal,
-                                         "Untitled", &ok);
-    if (ok && !text.isEmpty())
-    {
-        Sequence *sequence = new Sequence;
-        sequence->setName(text);
-        m_impl->sequences->addSequence(sequence);
-        m_impl->sequences->editSequence(sequence);
-    }
+    // Created from the Project panel's "Add Sequence" - embedded directly in
+    // the current project's own file (see Project::writeToJson), never a
+    // separate .seq file the user has to manage.
+    Sequence *sequence = new Sequence;
+    sequence->setName("Untitled");
+    sequence->init();
+    m_impl->sequences->addSequence(sequence);
+    if(m_impl->project)
+        m_impl->project->sequences()->addSequence(sequence);
+    m_impl->sequences->editSequence(sequence);
+    return sequence;
 }
 
 void PhotonCore::reloadLastSession()
@@ -255,12 +285,13 @@ void PhotonCore::reloadLastSession()
 
     qsettings.beginGroup("app");
     QString lastProject = qsettings.value("lastproject").toString();
-    QString lastSequence = qsettings.value("lastsequence").toString();
     qsettings.endGroup();
 
-
+    // A project's own (internal) sequences load automatically as part of
+    // loadProject() below - there's no separate "last sequence" to restore
+    // any more (that QSettings key predates project-embedded sequences and
+    // was never actually scoped to which project it belonged to).
     loadProject(lastProject);
-    loadSequence(lastSequence);
 }
 
 void PhotonCore::newProject()
@@ -270,12 +301,13 @@ void PhotonCore::newProject()
     setProject(project);
 }
 
-void PhotonCore::loadProject(const QString &path)
+bool PhotonCore::loadProject(const QString &path)
 {
     Project *project = new Project();
-    project->load(path);
+    bool loaded = project->load(path);
 
     setProject(project);
+    return loaded;
 }
 
 void PhotonCore::closeProject()

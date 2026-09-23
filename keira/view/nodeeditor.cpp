@@ -1,21 +1,26 @@
 #include <QLabel>
 #include <QLineEdit>
+#include <QVBoxLayout>
 #include "nodeeditor.h"
 #include "model/node.h"
 #include "model/parameter/parameter.h"
+#include "propertywidgets.h"
 
 namespace keira {
 
 NodeEditor::NodeEditor(QWidget *parent)
     : QWidget{parent}
 {
-    m_gridLayout = new QGridLayout;
     m_vLayout = new QVBoxLayout;
-
+    m_vLayout->setContentsMargins(0, 0, 0, 0);
     setLayout(m_vLayout);
-    setMinimumWidth(330);
-}
 
+    // Built on PropertyForm so a node's parameters are laid out identically to
+    // a gizmo's properties and a resource's fields - all three now appear in
+    // the same Properties panel, where any difference reads as a bug.
+    m_form = new photon::PropertyForm;
+    m_vLayout->addWidget(m_form);
+}
 
 void NodeEditor::setNode(Node *t_node)
 {
@@ -32,61 +37,37 @@ Node *NodeEditor::node() const
 
 void NodeEditor::rebuildParameters()
 {
-    removeAllFromLayout(m_vLayout);
+    m_form->clear();
 
-    if(m_node)
+    if(!m_node)
     {
-        m_gridLayout->addWidget(new QLabel("Name"),0,0);
-
-        QLineEdit *nameEdit = new QLineEdit();
-        nameEdit->setText(m_node->name());
-        connect(nameEdit, &QLineEdit::textEdited,this, [this](const QString &name){
-            m_node->setName(name);
-        });
-
-        m_gridLayout->addWidget(nameEdit,0,1);
-
-
-
-        int row = 1;
-        for(Parameter *param : m_node->parameters())
-        {
-            QWidget *w = param->createWidget(this);
-
-            m_gridLayout->addWidget(new QLabel(param->name()),row,0);
-            m_gridLayout->addWidget(w,row,1);
-
-            row++;
-        }
+        m_form->addStretch();
+        return;
     }
 
+    QLineEdit *nameEdit = new QLineEdit;
+    nameEdit->setMaximumHeight(30);
+    nameEdit->setText(m_node->name());
+    connect(nameEdit, &QLineEdit::textEdited, this, [this](const QString &name){
+        m_node->setName(name);
+    });
+    m_form->addRow("Name", nameEdit);
 
-    m_vLayout->addLayout(m_gridLayout);
+    for(Parameter *param : m_node->parameters())
+        m_form->addRow(param->name(), param->createWidget(this));
 
-    // Optional custom editor UI, below the parameter grid. When present it takes
+    // Optional custom editor UI, below the parameter rows. When present it takes
     // the remaining height (so e.g. FixtureStateNode's scrolling capability list
-    // fills the panel); otherwise a stretch keeps the grid pinned to the top.
-    QWidget *custom = m_node ? m_node->createCustomWidget(this) : nullptr;
-    if(custom)
-        m_vLayout->addWidget(custom, 1);
+    // fills the panel); otherwise a stretch keeps the rows pinned to the top.
+    if(QWidget *custom = m_node->createCustomWidget(this))
+        m_form->addFullWidth(custom, 1);
     else
-        m_vLayout->addStretch();
-
+        m_form->addStretch();
 }
 
 void NodeEditor::widgetUpdated(QWidget *t_widget, const keira::Parameter *t_param)
 {
     m_node->setValue(t_param->id(), t_param->updateValue(t_widget));
-}
-
-void NodeEditor::removeAllFromLayout(QLayout *layout)
-{
-    while (layout->count()>0) {
-        auto item = layout->takeAt(0);
-        delete item->widget();
-        if(item->layout())
-            removeAllFromLayout(item->layout());
-    }
 }
 
 } // namespace keira

@@ -4,7 +4,8 @@
 #include "sequence/sequence.h"
 #include "sequence/viewer/stackedparameterwidget.h"
 #include "audio/songdata.h"
-#include "view/numberscrubfield.h"
+#include "numberscrubfield.h"
+#include "propertywidgets.h"
 
 namespace photon {
 
@@ -15,13 +16,13 @@ SongFeatureEffectEditor::SongFeatureEffectEditor(SongFeatureEffect *t_effect):Ch
     featureCombo->setCurrentIndex(static_cast<int>(m_effect->feature()));
     connect(featureCombo, &QComboBox::currentIndexChanged, this, &SongFeatureEffectEditor::featureChanged);
 
-    auto *scaleSpin = new keira::NumberScrubField;
+    auto *scaleSpin = new photon::NumberScrubField;
     scaleSpin->setValue(m_effect->scale());
-    connect(scaleSpin, &keira::NumberScrubField::valueChanged, this, &SongFeatureEffectEditor::scaleChanged);
+    connect(scaleSpin, &photon::NumberScrubField::valueChanged, this, &SongFeatureEffectEditor::scaleChanged);
 
-    auto *offsetSpin = new keira::NumberScrubField;
+    auto *offsetSpin = new photon::NumberScrubField;
     offsetSpin->setValue(m_effect->offset());
-    connect(offsetSpin, &keira::NumberScrubField::valueChanged, this, &SongFeatureEffectEditor::offsetChanged);
+    connect(offsetSpin, &photon::NumberScrubField::valueChanged, this, &SongFeatureEffectEditor::offsetChanged);
 
     StackedParameterWidget *paramWidget = new StackedParameterWidget;
     paramWidget->addWidget(featureCombo, "Feature");
@@ -122,6 +123,17 @@ float *SongFeatureEffect::process(float *value, uint size, double time) const
 ChannelEffectEditor *SongFeatureEffect::createEditor()
 {
     return new SongFeatureEffectEditor(this);
+}
+
+QWidget *SongFeatureEffect::createPropertyEditor()
+{
+    auto *form = new PropertyForm;
+    form->addRow("Feature", PropertyWidgets::createOptions(
+        {"Level", "Low", "Mid", "High", "Vocal", "Instru", "Bass", "Kick", "HiHat"}, m_feature, {},
+        [this](int v){ setFeature(static_cast<Feature>(v)); }));
+    form->addRow("Scale", PropertyWidgets::createNumber(m_scale, {}, [this](double v){ setScale(v); }));
+    form->addRow("Offset", PropertyWidgets::createNumber(m_offset, {}, [this](double v){ setOffset(v); }));
+    return form;
 }
 
 void SongFeatureEffect::readFromJson(const QJsonObject &t_json)

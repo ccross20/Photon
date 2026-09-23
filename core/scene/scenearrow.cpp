@@ -1,4 +1,4 @@
-#include <QFormLayout>
+#include <QVBoxLayout>
 #include <QLineEdit>
 #include <QTextEdit>
 #include <QComboBox>
@@ -7,8 +7,9 @@
 #include <QDoubleSpinBox>
 #include <QSignalBlocker>
 #include "scenearrow.h"
-#include "gui/vector3edit.h"
-#include "gui/tag/tageditorwidget.h"
+#include "vector3edit.h"
+#include "propertywidgets.h"
+#include "tag/tageditorwidget.h"
 #include "photoncore.h"
 #include "project/project.h"
 
@@ -23,7 +24,7 @@ public:
     SceneArrow *arrow = nullptr;
     QLineEdit *nameEdit;
     TagEditorWidget *tagEditor;
-    QFormLayout *formLayout;
+    PropertyForm *form;
     QDoubleSpinBox *sizeSpin;
     Vector3Edit *positionEdit;
     Vector3Edit *rotationEdit;
@@ -31,27 +32,31 @@ public:
 
 SceneArrowEditorWidget::Impl::Impl()
 {
-    formLayout = new QFormLayout;
+    form = new PropertyForm;
+
+    form->addSection("General");
 
     nameEdit = new QLineEdit;
-    formLayout->addRow("Name", nameEdit);
+    form->addRow("Name", nameEdit);
 
     tagEditor = new TagEditorWidget(
         [this](){ return arrow ? arrow->tags() : QStringList(); },
         [this](const QStringList &tags){ if(arrow) arrow->setTags(tags); },
         [](){ return photonApp->project() ? photonApp->project()->allTags() : QStringList(); });
-    formLayout->addRow("Tags", tagEditor);
+    form->addRow("Tags", tagEditor);
 
     sizeSpin = new QDoubleSpinBox;
     sizeSpin->setMinimum(.1);
     sizeSpin->setMaximum(20);
-    formLayout->addRow("Size", sizeSpin);
+    form->addRow("Size", sizeSpin);
 }
 
 SceneArrowEditorWidget::SceneArrowEditorWidget(SceneArrow *t_arrow, QWidget *parent)
     : QWidget{parent},m_impl(new Impl)
 {
-    setLayout(m_impl->formLayout);
+    QVBoxLayout *outer = new QVBoxLayout(this);
+    outer->setContentsMargins(0, 0, 0, 0);
+    outer->addWidget(m_impl->form);
 
     setSizePolicy(QSizePolicy{QSizePolicy::MinimumExpanding, QSizePolicy::Maximum});
 
@@ -67,12 +72,14 @@ SceneArrowEditorWidget::SceneArrowEditorWidget(SceneArrow *t_arrow, QWidget *par
     m_impl->tagEditor->refresh();
     m_impl->sizeSpin->setValue(t_arrow->size());
 
-    addHelperPropertyRows(m_impl->formLayout, t_arrow, this);
+    addHelperPropertyRows(m_impl->form, t_arrow, this);
+
+    m_impl->form->addSection("Transform");
 
     m_impl->positionEdit = new Vector3Edit;
-    m_impl->formLayout->addRow("Position", m_impl->positionEdit);
+    m_impl->form->addRow("Position", m_impl->positionEdit);
     m_impl->rotationEdit = new Vector3Edit;
-    m_impl->formLayout->addRow("Rotation", m_impl->rotationEdit);
+    m_impl->form->addRow("Rotation", m_impl->rotationEdit);
 
     connect(m_impl->positionEdit, &Vector3Edit::valueChanged, this, &SceneArrowEditorWidget::setPosition);
     connect(m_impl->rotationEdit, &Vector3Edit::valueChanged, this, &SceneArrowEditorWidget::setRotation);

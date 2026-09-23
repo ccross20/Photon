@@ -24,11 +24,14 @@ public:
 public slots:
     void togglePlay(bool);
     void rewind();
+    // Frames the whole song (SongData duration or decoded audio length) in the
+    // current viewport width. With no song data at all, there's nothing to
+    // fit, so this just pans back to time 0 at the current zoom instead.
+    void zoomToFitSong();
     void setScale(double);
     void setScalePoint(QPointF);
     void setOffset(double);
     void gotoTime(double);
-    void pickFile();
 
 private slots:
     void tick();
@@ -40,10 +43,9 @@ private slots:
     void positionChanged(qint64);
     void editLayer(photon::Layer *);
     void selectEffect(photon::ChannelEffect *);
-    void selectClipParameter(photon::Clip *);
     void selectClipGraph(photon::Clip *);
-    void selectState(photon::State *);
     void clearEditor();
+    void showDefaultEditor();
     void toggleVdjSync(bool);
 
 signals:
@@ -53,6 +55,7 @@ signals:
 protected:
     void showEvent(QShowEvent*) override;
     void resizeEvent(QResizeEvent*) override;
+    bool eventFilter(QObject *, QEvent *) override;
 
 private:
     class Impl;

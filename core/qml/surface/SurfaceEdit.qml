@@ -32,10 +32,18 @@ Rectangle {
         root.dragActive = false;
     }
 
-    function selectGizmo(g) { root.selectedGizmo = g; }
+    function selectGizmo(g) {
+        root.selectedGizmo = g;
+        // The property sidebar used to live here as an Inspector; gizmo
+        // properties are now edited in the app's Properties panel, so publish
+        // the selection to C++ instead of binding a local inspector to it.
+        surfaceView.gizmoSelected(g);
+    }
     function removeGizmo(g) {
-        if (root.selectedGizmo === g)
+        if (root.selectedGizmo === g) {
             root.selectedGizmo = null;
+            surfaceView.gizmoSelected(null);
+        }
         surfaceView.removeGizmo(g);
     }
 
@@ -80,16 +88,9 @@ Rectangle {
         }
     }
 
-    Inspector {
-        id: inspector
-        anchors { top: toolbar.bottom; right: parent.right; bottom: parent.bottom }
-        width: 236
-        gizmo: root.selectedGizmo
-    }
-
     Item {
         id: canvasArea
-        anchors { top: toolbar.bottom; left: parent.left; right: inspector.left; bottom: parent.bottom }
+        anchors { top: toolbar.bottom; left: parent.left; right: parent.right; bottom: parent.bottom }
         clip: true
 
         Canvas {
@@ -115,7 +116,7 @@ Rectangle {
         // Click empty canvas selects the root container itself — the same rule
         // GizmoFrame applies for nested containers (empty space selects the
         // container, not nothing), so the root's own layout/stretch/padding are
-        // reachable in the Inspector.
+        // reachable in the Properties panel.
         MouseArea {
             anchors.fill: parent
             onClicked: root.selectGizmo(surfaceView.root)

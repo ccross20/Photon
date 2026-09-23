@@ -3,7 +3,7 @@
 
 #include <QWidget>
 
-namespace exo {
+namespace photon {
 
 class ColorWheel : public QWidget
 {
@@ -58,6 +58,6 @@ private:
     double m_triHeight = 0.0;
 };
 
-} // namespace exo
+} // namespace photon
 
 #endif // COLORWHEEL_P_H

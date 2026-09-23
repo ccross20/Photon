@@ -25,7 +25,6 @@ private slots:
     void layerAdded(photon::Layer*);
     void layerRemoved(photon::Layer*);
     void createLayer();
-    void createCanvasLayerGroup();
 
 protected:
     void contextMenuEvent(QGraphicsSceneContextMenuEvent *contextMenuEvent) override;

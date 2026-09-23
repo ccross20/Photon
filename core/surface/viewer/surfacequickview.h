@@ -34,6 +34,11 @@ public:
     // within its current container when target is already its parent.
     Q_INVOKABLE void reparentGizmo(QObject *gizmo, QObject *target, int index);
 
+    // Called from QML when the designer selection changes. Routes the gizmo to
+    // the app's Properties panel - the surface used to carry its own inspector
+    // sidebar, and no longer does. Null clears the selection.
+    Q_INVOKABLE void gizmoSelected(QObject *gizmo);
+
 signals:
     void rootChanged();
 

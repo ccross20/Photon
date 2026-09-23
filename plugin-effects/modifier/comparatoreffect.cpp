@@ -1,22 +1,23 @@
 #include "comparatoreffect.h"
 #include "sequence/viewer/stackedparameterwidget.h"
-#include "view/numberscrubfield.h"
+#include "numberscrubfield.h"
+#include "propertywidgets.h"
 
 namespace photon {
 
 ComparatorEffectEditor::ComparatorEffectEditor(ComparatorEffect *t_effect):ChannelEffectEditor(t_effect),m_effect(t_effect)
 {
-    auto *thresholdSpin = new keira::NumberScrubField;
+    auto *thresholdSpin = new photon::NumberScrubField;
     thresholdSpin->setValue(m_effect->threshold());
-    connect(thresholdSpin, &keira::NumberScrubField::valueChanged, this, &ComparatorEffectEditor::thresholdChanged);
+    connect(thresholdSpin, &photon::NumberScrubField::valueChanged, this, &ComparatorEffectEditor::thresholdChanged);
 
-    auto *belowSpin = new keira::NumberScrubField;
+    auto *belowSpin = new photon::NumberScrubField;
     belowSpin->setValue(m_effect->belowValue());
-    connect(belowSpin, &keira::NumberScrubField::valueChanged, this, &ComparatorEffectEditor::belowValueChanged);
+    connect(belowSpin, &photon::NumberScrubField::valueChanged, this, &ComparatorEffectEditor::belowValueChanged);
 
-    auto *aboveSpin = new keira::NumberScrubField;
+    auto *aboveSpin = new photon::NumberScrubField;
     aboveSpin->setValue(m_effect->aboveValue());
-    connect(aboveSpin, &keira::NumberScrubField::valueChanged, this, &ComparatorEffectEditor::aboveValueChanged);
+    connect(aboveSpin, &photon::NumberScrubField::valueChanged, this, &ComparatorEffectEditor::aboveValueChanged);
 
     StackedParameterWidget *paramWidget = new StackedParameterWidget;
     paramWidget->addWidget(thresholdSpin, "Threshold");
@@ -87,6 +88,18 @@ float *ComparatorEffect::process(float *value, uint size, double time) const
 ChannelEffectEditor *ComparatorEffect::createEditor()
 {
     return new ComparatorEffectEditor(this);
+}
+
+QWidget *ComparatorEffect::createPropertyEditor()
+{
+    auto *form = new PropertyForm;
+    form->addRow("Threshold", PropertyWidgets::createNumber(m_threshold, {},
+        [this](double v){ setThreshold(v); }));
+    form->addRow("Below Value", PropertyWidgets::createNumber(m_belowValue, {},
+        [this](double v){ setBelowValue(v); }));
+    form->addRow("Above Value", PropertyWidgets::createNumber(m_aboveValue, {},
+        [this](double v){ setAboveValue(v); }));
+    return form;
 }
 
 void ComparatorEffect::readFromJson(const QJsonObject &t_json)

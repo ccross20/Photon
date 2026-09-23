@@ -1,7 +1,6 @@
 #include <QTimer>
 #include "canvasrendermanager.h"
 #include "canvassubgraphnode.h"
-#include "sequence/canvaslayergroup.h"
 
 namespace photon {
 
@@ -57,16 +56,6 @@ QVector<CanvasSubGraphNode *> CanvasRenderManager::canvases() const
     for (CanvasRenderable *r : m_canvases)
         if (auto *node = dynamic_cast<CanvasSubGraphNode *>(r))
             result.append(node);
-    return result;
-}
-
-QVector<CanvasLayerGroup *> CanvasRenderManager::layerGroups() const
-{
-    QMutexLocker lock(&m_mutex);
-    QVector<CanvasLayerGroup *> result;
-    for (CanvasRenderable *r : m_canvases)
-        if (auto *group = dynamic_cast<CanvasLayerGroup *>(r))
-            result.append(group);
     return result;
 }
 

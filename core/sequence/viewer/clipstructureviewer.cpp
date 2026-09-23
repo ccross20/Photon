@@ -1,6 +1,7 @@
 #include <QVBoxLayout>
 #include <QMouseEvent>
 #include <QMenu>
+#include <QTimer>
 #include "clipstructureviewer.h"
 #include "sequence/channeleffect.h"
 #include "sequence/channel.h"
@@ -12,8 +13,6 @@
 #include "project/project.h"
 #include "pixel/pixellayoutcollection.h"
 #include "pixel/pixellayout.h"
-#include "sequence/canvasclip.h"
-#include "sequence/canvaslayergroup.h"
 
 namespace photon {
 
@@ -57,21 +56,14 @@ void ClipTreeView::mousePressEvent(QMouseEvent *event)
                     auto effectIndex = static_cast<ClipModel*>(model())->indexForData(effectData);
 
                     if(effectIndex.isValid())
+                    {
                         selectionModel()->select(effectIndex, QItemSelectionModel::ClearAndSelect);
+                        setCurrentIndex(effectIndex);
+                        reassertSelection(QPersistentModelIndex(effectIndex));
+                    }
                 }
             }
 
-        }
-        else if(dynamic_cast<PixelLayoutFolderData*>(parentData))
-        {
-            CanvasLayerGroup *layer = dynamic_cast<PixelLayoutFolderData*>(parentData)->layer();
-            QMenu menu;
-            auto pixelLayouts = photonApp->project()->pixelLayouts()->layouts();
-            for(auto layout : pixelLayouts)
-            {
-                menu.addAction(layout->name(),[layer, layout](){layer->addPixelLayout(layout);});
-            }
-            menu.exec(event->globalPosition().toPoint());
         }
 
     }
@@ -95,22 +87,20 @@ void ClipTreeView::mousePressEvent(QMouseEvent *event)
                 itemMenu.exec(event->globalPosition().toPoint());
             }
 
-            if(dynamic_cast<PixelLayoutData*>(itemData))
-            {
-                auto layoutItem = dynamic_cast<PixelLayoutData*>(itemData);
-                auto parentItem = dynamic_cast<PixelLayoutFolderData*>(itemData->parent());
-
-                QMenu itemMenu;
-                itemMenu.addAction("Remove",[layoutItem, parentItem](){
-                    parentItem->layer()->removePixelLayout(layoutItem->pixelLayout());
-                });
-
-                itemMenu.exec(event->globalPosition().toPoint());
-            }
-
         }
         QTreeView::mousePressEvent(event);
     }
+}
+
+void ClipTreeView::reassertSelection(const QPersistentModelIndex &index)
+{
+    QTimer::singleShot(0, this, [this, index](){
+        if(index.isValid())
+        {
+            selectionModel()->select(QModelIndex(index), QItemSelectionModel::ClearAndSelect);
+            setCurrentIndex(QModelIndex(index));
+        }
+    });
 }
 
 ClipStructureViewer::ClipStructureViewer(QWidget *parent)
@@ -148,16 +138,6 @@ void ClipStructureViewer::selectionChanged(const QItemSelection &selected, const
     {
         m_states.insert(m_clip->uniqueId(),effectData->effect()->uniqueId());
         emit selectEffect(effectData->effect());
-    }
-    else if(dynamic_cast<ClipStateData*>(itemData))
-    {
-        m_states.insert(m_clip->uniqueId(),dynamic_cast<ClipStateData*>(itemData)->state()->uniqueId());
-        emit selectState(dynamic_cast<ClipStateData*>(itemData)->state());
-    }
-    else if(dynamic_cast<ClipParameterData*>(itemData))
-    {
-        m_states.insert(m_clip->uniqueId(),dynamic_cast<ClipParameterData*>(itemData)->clip()->uniqueId());
-        emit selectClipParameter(dynamic_cast<ClipParameterData*>(itemData)->clip());
     }
     else if(dynamic_cast<ClipGraphData*>(itemData))
     {
@@ -215,17 +195,5 @@ void ClipStructureViewer::setClip(Clip *t_clip)
 
 }
 
-
-void ClipStructureViewer::addMasterLayer(MasterLayer *t_layer)
-{
-    m_model->addMasterLayer(t_layer);
-    m_treeView->expandAll();
-}
-
-void ClipStructureViewer::removeMasterLayer(MasterLayer *t_layer)
-{
-    m_model->removeMasterLayer(t_layer);
-    emit clearSelection();
-}
 
 } // namespace photon

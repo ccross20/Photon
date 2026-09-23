@@ -1,12 +1,13 @@
 #include <QHBoxLayout>
 #include <QLabel>
 #include <qmath.h>
-#include "view/numberscrubfield.h"
+#include "numberscrubfield.h"
 #include "stuttereffect.h"
 #include "sequence/channel.h"
 #include "sequence/clip.h"
 #include "sequence/viewer/stackedparameterwidget.h"
-#include "gui/gizmo/gizmohandle.h"
+#include "gizmo/gizmohandle.h"
+#include "propertywidgets.h"
 
 
 namespace photon {
@@ -14,16 +15,16 @@ namespace photon {
 StutterEffectEditor::StutterEffectEditor(StutterEffect *t_effect):ChannelEffectEditor(t_effect),m_effect(t_effect)
 {
 
-    keira::NumberScrubField *durationSpin = new keira::NumberScrubField;
+    photon::NumberScrubField *durationSpin = new photon::NumberScrubField;
     durationSpin->setMinimum(.001);   // a zero stutter duration divides by zero
     durationSpin->setValue(m_effect->duration());
-    connect(durationSpin, &keira::NumberScrubField::valueChanged, this, &StutterEffectEditor::durationChanged);
+    connect(durationSpin, &photon::NumberScrubField::valueChanged, this, &StutterEffectEditor::durationChanged);
 
 
-    keira::NumberScrubField *gapSpin = new keira::NumberScrubField;
+    photon::NumberScrubField *gapSpin = new photon::NumberScrubField;
     gapSpin->setMinimum(0);
     gapSpin->setValue(m_effect->gap());
-    connect(gapSpin, &keira::NumberScrubField::valueChanged, this, &StutterEffectEditor::gapChanged);
+    connect(gapSpin, &photon::NumberScrubField::valueChanged, this, &StutterEffectEditor::gapChanged);
 
     StackedParameterWidget *paramWidget = new StackedParameterWidget;
     paramWidget->addWidget(durationSpin, "Duration");
@@ -145,6 +146,17 @@ float * StutterEffect::process(float *value, uint size, double time) const
 ChannelEffectEditor *StutterEffect::createEditor()
 {
     return new StutterEffectEditor(this);
+}
+
+QWidget *StutterEffect::createPropertyEditor()
+{
+    auto *form = new PropertyForm;
+    // A zero stutter duration divides by zero, same floor as the editor's field.
+    form->addRow("Duration", PropertyWidgets::createNumber(m_duration,
+        {{PropertyWidgets::MetaMinimum, .001}}, [this](double v){ setDuration(v); }));
+    form->addRow("Gap", PropertyWidgets::createNumber(m_gap,
+        {{PropertyWidgets::MetaMinimum, 0.0}}, [this](double v){ setGap(v); }));
+    return form;
 }
 
 void StutterEffect::readFromJson(const QJsonObject &t_json)

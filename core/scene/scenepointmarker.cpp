@@ -1,11 +1,12 @@
 #include <QComboBox>
-#include <QFormLayout>
+#include <QVBoxLayout>
 #include <QLineEdit>
 #include <QDoubleSpinBox>
 #include <QSignalBlocker>
 #include "scenepointmarker.h"
-#include "gui/vector3edit.h"
-#include "gui/tag/tageditorwidget.h"
+#include "vector3edit.h"
+#include "propertywidgets.h"
+#include "tag/tageditorwidget.h"
 #include "photoncore.h"
 #include "project/project.h"
 
@@ -21,7 +22,7 @@ class ScenePointMarkerEditorWidget::Impl
 public:
     Impl();
     ScenePointMarker *marker = nullptr;
-    QFormLayout *formLayout;
+    PropertyForm *form;
     QLineEdit *nameEdit;
     TagEditorWidget *tagEditor;
     QComboBox *shapeCombo;
@@ -32,31 +33,35 @@ public:
 
 ScenePointMarkerEditorWidget::Impl::Impl()
 {
-    formLayout = new QFormLayout;
+    form = new PropertyForm;
+
+    form->addSection("General");
 
     nameEdit = new QLineEdit;
-    formLayout->addRow("Name", nameEdit);
+    form->addRow("Name", nameEdit);
 
     tagEditor = new TagEditorWidget(
         [this](){ return marker ? marker->tags() : QStringList(); },
         [this](const QStringList &tags){ if(marker) marker->setTags(tags); },
         [](){ return photonApp->project() ? photonApp->project()->allTags() : QStringList(); });
-    formLayout->addRow("Tags", tagEditor);
+    form->addRow("Tags", tagEditor);
 
     shapeCombo = new QComboBox;
     shapeCombo->addItems(QStringList() << "Star" << "Cross" << "Circle" << "Square" << "Diamond");
-    formLayout->addRow("Shape", shapeCombo);
+    form->addRow("Shape", shapeCombo);
 
     sizeSpin = new QDoubleSpinBox;
     sizeSpin->setMinimum(.05);
     sizeSpin->setMaximum(20);
-    formLayout->addRow("Size", sizeSpin);
+    form->addRow("Size", sizeSpin);
 }
 
 ScenePointMarkerEditorWidget::ScenePointMarkerEditorWidget(ScenePointMarker *t_marker, QWidget *parent)
     : QWidget{parent}, m_impl(new Impl)
 {
-    setLayout(m_impl->formLayout);
+    QVBoxLayout *outer = new QVBoxLayout(this);
+    outer->setContentsMargins(0, 0, 0, 0);
+    outer->addWidget(m_impl->form);
     setSizePolicy(QSizePolicy{QSizePolicy::MinimumExpanding, QSizePolicy::Maximum});
 
     m_impl->marker = t_marker;
@@ -72,12 +77,14 @@ ScenePointMarkerEditorWidget::ScenePointMarkerEditorWidget(ScenePointMarker *t_m
     m_impl->shapeCombo->setCurrentIndex(int(t_marker->shape()));
     m_impl->sizeSpin->setValue(t_marker->size());
 
-    addHelperPropertyRows(m_impl->formLayout, t_marker, this);
+    addHelperPropertyRows(m_impl->form, t_marker, this);
+
+    m_impl->form->addSection("Transform");
 
     m_impl->positionEdit = new Vector3Edit;
-    m_impl->formLayout->addRow("Position", m_impl->positionEdit);
+    m_impl->form->addRow("Position", m_impl->positionEdit);
     m_impl->rotationEdit = new Vector3Edit;
-    m_impl->formLayout->addRow("Rotation", m_impl->rotationEdit);
+    m_impl->form->addRow("Rotation", m_impl->rotationEdit);
 
     connect(m_impl->positionEdit, &Vector3Edit::valueChanged, this, &ScenePointMarkerEditorWidget::setPosition);
     connect(m_impl->rotationEdit, &Vector3Edit::valueChanged, this, &ScenePointMarkerEditorWidget::setRotation);

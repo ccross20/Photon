@@ -1,12 +1,13 @@
-#include <QFormLayout>
+#include <QVBoxLayout>
 #include <QLineEdit>
 #include <QSignalBlocker>
 #include <QJsonObject>
 #include <QMatrix4x4>
 #include <cmath>
 #include "scenezone.h"
-#include "gui/vector3edit.h"
-#include "gui/tag/tageditorwidget.h"
+#include "vector3edit.h"
+#include "propertywidgets.h"
+#include "tag/tageditorwidget.h"
 #include "photoncore.h"
 #include "project/project.h"
 
@@ -17,7 +18,7 @@ class SceneZoneEditorWidget::Impl
 public:
     Impl();
     SceneZone *zone = nullptr;
-    QFormLayout *formLayout;
+    PropertyForm *form;
     QLineEdit *nameEdit;
     TagEditorWidget *tagEditor;
     Vector3Edit *sizeEdit;
@@ -27,25 +28,29 @@ public:
 
 SceneZoneEditorWidget::Impl::Impl()
 {
-    formLayout = new QFormLayout;
+    form = new PropertyForm;
+
+    form->addSection("General");
 
     nameEdit = new QLineEdit;
-    formLayout->addRow("Name", nameEdit);
+    form->addRow("Name", nameEdit);
 
     tagEditor = new TagEditorWidget(
         [this](){ return zone ? zone->tags() : QStringList(); },
         [this](const QStringList &tags){ if(zone) zone->setTags(tags); },
         [](){ return photonApp->project() ? photonApp->project()->allTags() : QStringList(); });
-    formLayout->addRow("Tags", tagEditor);
+    form->addRow("Tags", tagEditor);
 
     sizeEdit = new Vector3Edit;
-    formLayout->addRow("Size", sizeEdit);
+    form->addRow("Size", sizeEdit);
 }
 
 SceneZoneEditorWidget::SceneZoneEditorWidget(SceneZone *t_zone, QWidget *parent)
     : QWidget{parent}, m_impl(new Impl)
 {
-    setLayout(m_impl->formLayout);
+    QVBoxLayout *outer = new QVBoxLayout(this);
+    outer->setContentsMargins(0, 0, 0, 0);
+    outer->addWidget(m_impl->form);
     setSizePolicy(QSizePolicy{QSizePolicy::MinimumExpanding, QSizePolicy::Maximum});
 
     m_impl->zone = t_zone;
@@ -65,12 +70,14 @@ SceneZoneEditorWidget::SceneZoneEditorWidget(SceneZone *t_zone, QWidget *parent)
     m_impl->tagEditor->refresh();
     m_impl->sizeEdit->setValue(t_zone->size());
 
-    addHelperPropertyRows(m_impl->formLayout, t_zone, this);
+    addHelperPropertyRows(m_impl->form, t_zone, this);
+
+    m_impl->form->addSection("Transform");
 
     m_impl->positionEdit = new Vector3Edit;
-    m_impl->formLayout->addRow("Position", m_impl->positionEdit);
+    m_impl->form->addRow("Position", m_impl->positionEdit);
     m_impl->rotationEdit = new Vector3Edit;
-    m_impl->formLayout->addRow("Rotation", m_impl->rotationEdit);
+    m_impl->form->addRow("Rotation", m_impl->rotationEdit);
 
     connect(m_impl->positionEdit, &Vector3Edit::valueChanged, this, &SceneZoneEditorWidget::setPosition);
     connect(m_impl->rotationEdit, &Vector3Edit::valueChanged, this, &SceneZoneEditorWidget::setRotation);
@@ -200,6 +207,47 @@ QStringList SceneZone::zoneNames(Project *project)
     if (project)
         collectZoneNames(project->sceneRoot(), names);
     return names;
+}
+
+static SceneZone *findZoneByIdRecursive(SceneObject *obj, const QByteArray &id)
+{
+    if (!obj)
+        return nullptr;
+    for (SceneObject *child : obj->sceneChildren())
+    {
+        if (child->typeId() == "zone" && child->uniqueId() == id)
+            return static_cast<SceneZone *>(child);
+        if (SceneZone *found = findZoneByIdRecursive(child, id))
+            return found;
+    }
+    return nullptr;
+}
+
+SceneZone *SceneZone::findByUniqueId(Project *project, const QByteArray &id)
+{
+    if (!project || id.isEmpty())
+        return nullptr;
+    return findZoneByIdRecursive(project->sceneRoot(), id);
+}
+
+static void collectZones(SceneObject *obj, QVector<SceneZone*> &out)
+{
+    if (!obj)
+        return;
+    for (SceneObject *child : obj->sceneChildren())
+    {
+        if (child->typeId() == "zone")
+            out << static_cast<SceneZone*>(child);
+        collectZones(child, out);
+    }
+}
+
+QVector<SceneZone*> SceneZone::zones(Project *project)
+{
+    QVector<SceneZone*> result;
+    if (project)
+        collectZones(project->sceneRoot(), result);
+    return result;
 }
 
 void SceneZone::readFromJson(const QJsonObject &t_json, const LoadContext &t_context)

@@ -1,11 +1,14 @@
 #include <QVBoxLayout>
 #include "buspanel.h"
+#include "gui/properties/propertycontroller.h"
+#include "model/node.h"
 #include "view/graphwidget.h"
 #include "view/scene.h"
 #include "project/project.h"
 #include "graph/bus/busgraph.h"
 #include "photoncore.h"
 #include "plugin/pluginfactory.h"
+#include "graph/node/library/savedresourcedrop.h"
 
 namespace photon {
 
@@ -20,6 +23,12 @@ BusPanel::BusPanel() : Panel("photon.bus"),m_impl(new Impl)
 {
 
     m_impl->viewer = new keira::GraphWidget(photonApp->plugins()->nodeLibrary());
+    // Node selection now drives the app's Properties panel rather than a
+    // sidebar inside the graph widget.
+    connect(m_impl->viewer, &keira::GraphWidget::nodeSelected, photonApp, [](keira::Node *node){
+        PropertyController::instance()->selectNode(node);
+    });
+
     setPanelWidget(m_impl->viewer);
     setName("Bus");
 
@@ -46,7 +55,7 @@ void BusPanel::projectDidOpen(photon::Project* project)
     m_impl->scene->setIsAutoEvaluate(false);
     m_impl->scene->setGraph(project->bus());
     m_impl->scene->setNodeLibrary(photonApp->plugins()->nodeLibrary());
-
+    m_impl->scene->setExternalDropInterpreter(&projectResourceDropInterpreter);
 
     m_impl->viewer->setScene(m_impl->scene);
 }

@@ -5,10 +5,15 @@
 #include <QComboBox>
 #include <QPainter>
 #include <QPaintEvent>
+#include <QContextMenuEvent>
+#include <QMouseEvent>
 #include <QScrollBar>
 #include <QPushButton>
+#include <QToolButton>
+#include <QMenu>
+#include <QInputDialog>
+#include <QLineEdit>
 #include "sequence/layer.h"
-#include "sequence/layergroup.h"
 #include "sequence/sequence.h"
 #include "timelineheader.h"
 #include "photoncore.h"
@@ -21,6 +26,7 @@ class LayerHeader::Impl
 {
 public:
     QLabel *label;
+    QToolButton *muteButton;
     Layer *layer;
 };
 
@@ -32,6 +38,18 @@ LayerHeader::LayerHeader(Layer *t_layer):m_impl(new Impl)
     if(layerName.isEmpty())
         layerName = "[Unnamed]";
     m_impl->label = new QLabel(layerName);
+
+    // A speaker glyph, consistent with the emoji-glyph toggles used for the
+    // cue layer tree's snappable/visible/editable flags (see waveformheader.cpp) -
+    // checked (highlighted by the default QToolButton style) means muted.
+    m_impl->muteButton = new QToolButton;
+    m_impl->muteButton->setText(QStringLiteral(u"\U0001F507"));   // U+1F507 muted speaker
+    m_impl->muteButton->setCheckable(true);
+    m_impl->muteButton->setChecked(t_layer->isMuted());
+    m_impl->muteButton->setToolTip("Mute Layer");
+    m_impl->muteButton->setFixedSize(20, 18);
+    m_impl->muteButton->setAutoRaise(true);
+    connect(m_impl->muteButton, &QToolButton::toggled, this, &LayerHeader::muteToggled);
 
     setStyleSheet("background-color:rgb(80,80,80);");
     setMinimumHeight(m_impl->layer->height());
@@ -50,10 +68,14 @@ QLabel *LayerHeader::label() const
 
 void LayerHeader::buildLayout()
 {
+    QHBoxLayout *topLayout = new QHBoxLayout;
+    topLayout->setContentsMargins(0,0,0,0);
+    topLayout->addWidget(m_impl->label, 1);
+    topLayout->addWidget(m_impl->muteButton);
 
     QVBoxLayout *vLayout = new QVBoxLayout;
     vLayout->setContentsMargins(0,0,0,0);
-    vLayout->addWidget(m_impl->label);
+    vLayout->addLayout(topLayout);
     vLayout->addStretch();
     setLayout(vLayout);
 
@@ -65,6 +87,35 @@ void LayerHeader::paintEvent(QPaintEvent *event)
     painter.fillRect(event->rect(), QColor(80,80,80));
 }
 
+void LayerHeader::contextMenuEvent(QContextMenuEvent *event)
+{
+    QMenu menu(this);
+    menu.addAction("Rename Layer...", this, &LayerHeader::renameClicked);
+    menu.exec(event->globalPos());
+}
+
+void LayerHeader::mouseDoubleClickEvent(QMouseEvent *)
+{
+    renameClicked();
+}
+
+void LayerHeader::renameClicked()
+{
+    bool ok = false;
+    const QString name = QInputDialog::getText(this, "Rename Layer", "Name:",
+        QLineEdit::Normal, m_impl->layer->name(), &ok);
+    if(!ok || name.isEmpty())
+        return;
+
+    m_impl->layer->setName(name);
+    m_impl->label->setText(name);
+}
+
+void LayerHeader::muteToggled(bool t_muted)
+{
+    m_impl->layer->setMuted(t_muted);
+}
+
 QSize LayerHeader::sizeHint() const
 {
     return QSize{20, m_impl->layer->height()};
@@ -74,95 +125,6 @@ Layer *LayerHeader::layer() const
 {
     return m_impl->layer;
 }
-
-
-class LayerGroupHeader::Impl
-{
-public:
-    QPushButton *editButton;
-    QVBoxLayout *subLayerLayout;
-};
-
-
-
-LayerGroupHeader::LayerGroupHeader(LayerGroup *t_group) : LayerHeader(t_group),m_impl(new Impl)
-{
-    m_impl->subLayerLayout = new QVBoxLayout;
-    m_impl->subLayerLayout->setContentsMargins(20,0,0,0);
-
-    connect(t_group, &LayerGroup::layerAdded,this,&LayerGroupHeader::layerAdded);
-    connect(t_group, &LayerGroup::layerRemoved,this,&LayerGroupHeader::layerRemoved);
-    connect(t_group, &LayerGroup::layerUpdated,this,&LayerGroupHeader::layerUpdated);
-}
-
-LayerGroupHeader::~LayerGroupHeader()
-{
-    delete m_impl;
-}
-
-void LayerGroupHeader::layerUpdated(photon::Layer *)
-{
-
-}
-
-void LayerGroupHeader::layerAdded(photon::Layer *t_layer)
-{
-    auto header = new LayerHeader(t_layer);
-    header->buildLayout();
-    m_impl->subLayerLayout->addWidget(header);
-
-    setMaximumHeight(layer()->height());
-}
-
-void LayerGroupHeader::layerRemoved(photon::Layer *)
-{
-
-}
-
-LayerGroup *LayerGroupHeader::group() const
-{
-    return static_cast<LayerGroup*>(layer());
-}
-
-void LayerGroupHeader::editLayerSlot()
-{
-    emit editLayer(layer());
-}
-
-void LayerGroupHeader::buildLayout()
-{
-
-    QVBoxLayout *masterLayout = new QVBoxLayout;
-    masterLayout->setContentsMargins(0,0,0,0);
-
-    QHBoxLayout *hLayout = new QHBoxLayout;
-    hLayout->setContentsMargins(0,0,0,0);
-    hLayout->addWidget(label());
-
-    m_impl->editButton = new QPushButton("Edit");
-
-    connect(m_impl->editButton, &QPushButton::clicked, this, &LayerGroupHeader::editLayerSlot);
-
-    hLayout->addWidget(m_impl->editButton);
-
-    masterLayout->addLayout(hLayout);
-
-
-    for(auto layer : group()->layers())
-    {
-        auto header = new LayerHeader(layer);
-        header->buildLayout();
-        m_impl->subLayerLayout->addWidget(header);
-    }
-
-    masterLayout->addLayout(m_impl->subLayerLayout);
-
-
-    //m_impl->subLayerLayout->addStretch();
-    setLayout(masterLayout);
-}
-
-
 
 
 
@@ -270,20 +232,7 @@ void TimelineHeader::layerUpdated(photon::Layer *)
 
 void TimelineHeader::layerAdded(photon::Layer *t_layer)
 {
-    LayerHeader *header = nullptr;
-    if(t_layer->isGroup())
-    {
-        header = new LayerGroupHeader(static_cast<LayerGroup*>(t_layer));
-
-        connect(header, SIGNAL(editLayer(photon::Layer *)), this, SIGNAL(editLayer(photon::Layer *)));
-    }
-    else
-    {
-        header = new LayerHeader(t_layer);
-    }
-
-    if(!header)
-        return;
+    LayerHeader *header = new LayerHeader(t_layer);
 
     header->buildLayout();
     m_impl->vLayout->addWidget(header);

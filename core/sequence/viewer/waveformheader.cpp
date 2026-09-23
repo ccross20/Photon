@@ -300,24 +300,16 @@ WaveformHeader::~WaveformHeader()
 
 void WaveformHeader::addClicked()
 {
+    const QVector<QColor> &palette = layerColorPalette();
 
-    QMenu itemMenu;
-    itemMenu.addAction("Add Layer",[this](){
-        const QVector<QColor> &palette = layerColorPalette();
-
-        CueLayer *layer = new CueLayer;
-        layer->setName("New Layer");
-        // Cycle through the palette by how many layers already exist, rather than
-        // a separately-tracked counter, so this stays stable across the header
-        // being recreated (e.g. closing/reopening the panel).
-        layer->setColor(palette[m_impl->sequence->cueLayers().count() % palette.size()]);
-        m_impl->sequence->addCueLayer(layer);
-        m_impl->sequence->setEditableCueLayer(layer);
-    });
-
-
-    itemMenu.exec(m_impl->addButton->mapToGlobal(QPoint{}));
-
+    CueLayer *layer = new CueLayer;
+    layer->setName("New Layer");
+    // Cycle through the palette by how many layers already exist, rather than
+    // a separately-tracked counter, so this stays stable across the header
+    // being recreated (e.g. closing/reopening the panel).
+    layer->setColor(palette[m_impl->sequence->cueLayers().count() % palette.size()]);
+    m_impl->sequence->addCueLayer(layer);
+    m_impl->sequence->setEditableCueLayer(layer);
 }
 
 void WaveformHeader::deleteSelectedLayerClicked()

@@ -1,16 +1,22 @@
 #ifndef PHOTON_GRADIENTCHANNELEFFECT_H
 #define PHOTON_GRADIENTCHANNELEFFECT_H
 
+#include <QGraphicsItem>
+#include <QPainterPath>
 #include "sequence/channeleffect.h"
-#include "gui/gizmo/rectanglegizmo.h"
 
 namespace photon {
 
 class GradientChannelEffect;
 class GradientEffectEditor;
 
-
-
+// A handle for one gradient stop, drawn directly on the curve view's own
+// colour-over-time preview band so there's a single gradient on screen
+// (rather than a second, separately-scaled strip below it). Its scene x
+// tracks the stop's real time through the same transform the preview band
+// uses; its y is pinned to a fixed row - the preview fills the whole view's
+// height and panning/zooming the (meaningless, for a colour channel) y axis
+// shouldn't detach the handles from it.
 class PHOTONCORE_EXPORT GradientMarkerItem : public QGraphicsItem
 {
 public:
@@ -18,8 +24,8 @@ public:
 
     QColor color() const;
     void setColor(const QColor &);
-    int index() const;
-    void setIndex(int);
+    double time() const;
+    void setTime(double);
 
     QRectF boundingRect() const override;
     QPainterPath shape() const override;
@@ -29,13 +35,13 @@ public:
 protected:
     void mousePressEvent(QGraphicsSceneMouseEvent *event) override;
     void mouseMoveEvent(QGraphicsSceneMouseEvent *event) override;
-    void mouseReleaseEvent(QGraphicsSceneMouseEvent *event) override;
+    void mouseDoubleClickEvent(QGraphicsSceneMouseEvent *event) override;
 
 private:
     GradientEffectEditor *m_editor;
     QPainterPath m_path;
     QColor m_color;
-    int m_index;
+    double m_time = 0.0;
 };
 
 struct GradientData
@@ -45,8 +51,11 @@ struct GradientData
     double time;
 };
 
-class ColorSelectorWidget;
-
+// double-click the band to add a stop (seeded with whatever colour is already
+// showing there); double-click a stop to edit its colour; drag a stop to move
+// it; right-click a stop to remove it - the same interaction vocabulary as
+// GradientWidget elsewhere in the app, just applied to real clip time instead
+// of a normalised 0..1 strip.
 class GradientEffectEditor : public ChannelEffectEditor
 {
     Q_OBJECT
@@ -56,21 +65,26 @@ public:
 public slots:
     void editColor(photon::GradientMarkerItem *);
     void moveColor(photon::GradientMarkerItem *, const QPointF &);
-    void endMoveColor(photon::GradientMarkerItem *);
-    void setColor(const QColor &color);
+    void removeColor(photon::GradientMarkerItem *);
 
 protected:
     void relayout(const QRectF &) override;
-    void mousePressEvent(QMouseEvent *) override;
+    void mouseDoubleClickEvent(QMouseEvent *) override;
 
 private:
-    ColorSelectorWidget *m_colorWidget = nullptr;
-    QVector<GradientData> m_moveCache;
-    GradientMarkerItem *m_activeMarker = nullptr;
-    GradientChannelEffect *m_effect;
-    QVector<GradientMarkerItem*> m_markers;
-    int m_editIndex = -1;
+    QPointF markerScenePos(double time) const;
+    // Keeps m_markers ordered by time (each marker is the single source of
+    // truth for its own stop - there's no separate index to fall out of sync).
+    void resortMarkers();
+    // Pushes m_markers' current state to the effect. Called only once
+    // m_markers itself is already fully consistent, since this triggers
+    // ChannelEffect::updated() -> Channel::effectModified() ->
+    // ChannelEffectEditor::effectUpdated() -> relayout(), synchronously and
+    // reentrantly, before this call returns.
+    void commitColors();
 
+    QVector<GradientMarkerItem*> m_markers;
+    GradientChannelEffect *m_effect;
 };
 
 

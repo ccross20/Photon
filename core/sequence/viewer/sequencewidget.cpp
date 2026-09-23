@@ -6,38 +6,80 @@
 #include <QShowEvent>
 #include <QResizeEvent>
 #include <QToolBar>
-#include <QFileDialog>
+#include <QStyle>
+#include <QPainter>
+#include <QPixmap>
+#include <QSignalBlocker>
 #include <QStackedWidget>
+#include <QTabWidget>
 #include <QMediaPlayer>
 #include <QMediaMetaData>
 #include <QAudioDevice>
 #include <QAudioOutput>
 #include "sequencewidget.h"
+#include "gui/properties/propertycontroller.h"
+#include "model/node.h"
 #include "timelineviewer.h"
 #include "timelinescene.h"
 #include "sequenceclip.h"
 #include "waveformheader.h"
-#include "timelinemasterlayer.h"
 #include "sequence/sequence.h"
 #include "photoncore.h"
 #include "timekeeper.h"
+#include "graph/node/library/savedresourcedrop.h"
 #include "timelineheader.h"
 #include "clipstructureviewer.h"
 #include "sequence/channeleffect.h"
 #include "sequence/clip.h"
-#include "state/state.h"
-#include "sequence/masterlayer.h"
+#include "sequence/layer.h"
 #include "timebar.h"
 #include "graph/bus/busevaluator.h"
 #include "gui/waveformwidget.h"
-#include "sequence/viewer/stateeditor.h"
-#include "sequence/fixtureclip.h"
 #include "sequencewaveformeditor.h"
 #include "plugin/pluginfactory.h"
 #include "routine/routine.h"
 #include "view/graphwidget.h"
 #include "view/scene.h"
 #include "virtualdj/virtualdjconnector.h"
+
+namespace {
+
+// "Zoom to Fit" has no matching QStyle::StandardPixmap, unlike the other
+// transport actions - drawn by hand as four corner brackets (the common
+// "fit to view" glyph) rather than reaching for a real icon set that doesn't
+// exist in this app yet (see projecticons.cpp for the same tradeoff).
+QIcon zoomToFitIcon()
+{
+    const int size = 20;
+    QPixmap pixmap(size, size);
+    pixmap.fill(Qt::transparent);
+
+    QPainter painter(&pixmap);
+    painter.setRenderHint(QPainter::Antialiasing);
+    QPen pen(QColor(220, 220, 220));
+    pen.setWidth(2);
+    pen.setCapStyle(Qt::RoundCap);
+    painter.setPen(pen);
+
+    const int inset = 3;
+    const int arm = 5;
+
+    painter.drawLine(inset, inset + arm, inset, inset);
+    painter.drawLine(inset, inset, inset + arm, inset);
+
+    painter.drawLine(size - inset - arm, inset, size - inset, inset);
+    painter.drawLine(size - inset, inset, size - inset, inset + arm);
+
+    painter.drawLine(inset, size - inset - arm, inset, size - inset);
+    painter.drawLine(inset, size - inset, inset + arm, size - inset);
+
+    painter.drawLine(size - inset - arm, size - inset, size - inset, size - inset);
+    painter.drawLine(size - inset, size - inset - arm, size - inset, size - inset);
+
+    return QIcon(pixmap);
+}
+
+} // namespace
 
 namespace photon {
 
@@ -56,7 +98,9 @@ public:
     WaveformHeader *waveformHeader;
     TimeBar *timebar;
     QToolBar *timeToolBar;
+    QAction *playAction = nullptr;
     ClipStructureViewer *curvePropertyEditor;
+    QTabWidget *detailsTabWidget;
     QWidget *effectEditorContainer;
     QWidget *effectEditor = nullptr;
     SequenceWaveformEditor *waveform = nullptr;
@@ -65,7 +109,6 @@ public:
     TimelineScene *scene;
     QElapsedTimer timer;
     QVector<SequenceClip*> selectedClips;
-    QVector<TimelineMasterLayer*> selectedLayers;
     qint64 startTimeMS;
     double lastCurrentTime = 0;
     double currentTime = 0;
@@ -89,6 +132,11 @@ double SequenceWidget::Impl::visibleEndTime() const
 SequenceWidget::SequenceWidget(QWidget *parent)
     : QWidget{parent},m_impl(new Impl)
 {
+    // Scopes the QTabWidget/QTabBar dark-theme rule in styles.css - a plain
+    // QTabWidget is otherwise unstyled (native look) everywhere else in the
+    // app, since this is the first place one's used.
+    setObjectName("sequenceWidget");
+
     m_impl->horizontalSplitter = new QSplitter;
     m_impl->verticalSplitter = new QSplitter(Qt::Vertical);
     m_impl->detailsSplitter = new QSplitter(Qt::Vertical);
@@ -110,6 +158,22 @@ SequenceWidget::SequenceWidget(QWidget *parent)
 
     m_impl->effectEditorContainer = new QWidget;
 
+    // The waveform normally lives in a real layout inside this container
+    // (see showDefaultEditor(), called at the end of this constructor) and
+    // is fully interactive there. The one exception is while a channel
+    // effect is selected, where it's taken out of the layout, hidden, and
+    // painted tinted-down as the curve editor's own background instead (see
+    // EffectEditorViewer::drawBackgroundColor/Number) - this event filter
+    // keeps it geometry-synced to effectEditorContainer's size for that
+    // hidden/unlayouted state, since visibleEndTime()/setOffset()'s pan
+    // clamp/zoomToFitSong() all read its width regardless of which state
+    // it's currently in.
+    m_impl->effectEditorContainer->installEventFilter(this);
+
+    m_impl->detailsTabWidget = new QTabWidget;
+    m_impl->detailsTabWidget->addTab(m_impl->curvePropertyEditor, "Channels");
+    m_impl->detailsTabWidget->addTab(m_impl->waveformHeader, "Cues");
+
     m_impl->timeSplitter->addWidget(m_impl->timeToolBar);
     m_impl->timeSplitter->addWidget(m_impl->timebar);
 
@@ -120,16 +184,31 @@ SequenceWidget::SequenceWidget(QWidget *parent)
     m_impl->player->setAudioOutput(m_impl->audioOutput);
 
 
-    connect(m_impl->timeToolBar->addAction("Rewind"), &QAction::triggered, this, &SequenceWidget::rewind);
-    auto playAction = m_impl->timeToolBar->addAction("Play");
-    playAction->setShortcut(Qt::Key_Space);
-    playAction->setCheckable(true);
-    connect(playAction, &QAction::toggled, this, &SequenceWidget::togglePlay);
-    connect(m_impl->timeToolBar->addAction("Load"), &QAction::triggered, this, &SequenceWidget::pickFile);
+    // Icon-only actions throughout - tooltips carry the label instead. The
+    // playback pair (Rewind, Play) is grouped together first, separated from
+    // the view and sync controls that follow.
+    auto rewindAction = m_impl->timeToolBar->addAction(style()->standardIcon(QStyle::SP_MediaSkipBackward), QString());
+    rewindAction->setToolTip("Rewind");
+    connect(rewindAction, &QAction::triggered, this, &SequenceWidget::rewind);
+
+    m_impl->playAction = m_impl->timeToolBar->addAction(style()->standardIcon(QStyle::SP_MediaPlay), QString());
+    m_impl->playAction->setToolTip("Play");
+    m_impl->playAction->setShortcut(Qt::Key_Space);
+    m_impl->playAction->setCheckable(true);
+    connect(m_impl->playAction, &QAction::toggled, this, &SequenceWidget::togglePlay);
+
+    m_impl->timeToolBar->addSeparator();
+
+    auto zoomToFitAction = m_impl->timeToolBar->addAction(zoomToFitIcon(), QString());
+    zoomToFitAction->setToolTip("Zoom to Fit");
+    connect(zoomToFitAction, &QAction::triggered, this, &SequenceWidget::zoomToFitSong);
+
+    m_impl->timeToolBar->addSeparator();
 
     // VDJ Sync: while checked, Photon's transport (scrub, play/pause, rewind) is
     // mirrored to VirtualDJ - independent of Capture, useful any time during editing.
-    auto vdjSyncAction = m_impl->timeToolBar->addAction("VDJ Sync");
+    auto vdjSyncAction = m_impl->timeToolBar->addAction(style()->standardIcon(QStyle::SP_BrowserReload), QString());
+    vdjSyncAction->setToolTip("VDJ Sync");
     vdjSyncAction->setCheckable(true);
     connect(vdjSyncAction, &QAction::toggled, this, &SequenceWidget::toggleVdjSync);
 
@@ -144,14 +223,12 @@ SequenceWidget::SequenceWidget(QWidget *parent)
     //m_impl->scene->setSceneRect(0,0,300,100);
 
     m_impl->verticalSplitter->addWidget(m_impl->viewer);
-    m_impl->verticalSplitter->addWidget(m_impl->waveform);
     m_impl->verticalSplitter->addWidget(m_impl->effectEditorContainer);
 
     //m_impl->viewer->centerOn(0,0);
 
     m_impl->detailsSplitter->addWidget(m_impl->details);
-    m_impl->detailsSplitter->addWidget(m_impl->waveformHeader);
-    m_impl->detailsSplitter->addWidget(m_impl->curvePropertyEditor);
+    m_impl->detailsSplitter->addWidget(m_impl->detailsTabWidget);
 
     m_impl->horizontalSplitter->addWidget(m_impl->detailsSplitter);
     m_impl->horizontalSplitter->addWidget(m_impl->verticalSplitter);
@@ -164,11 +241,9 @@ SequenceWidget::SequenceWidget(QWidget *parent)
     connect(m_impl->verticalSplitter, &QSplitter::splitterMoved, this, &SequenceWidget::editorSplitterMoved);
     connect(m_impl->detailsSplitter, &QSplitter::splitterMoved, this, &SequenceWidget::detailsSplitterMoved);
     connect(m_impl->horizontalSplitter, &QSplitter::splitterMoved, this, &SequenceWidget::horizontalSplitterMoved);
-    connect(m_impl->curvePropertyEditor, &ClipStructureViewer::selectState, this, &SequenceWidget::selectState);
     connect(m_impl->curvePropertyEditor, &ClipStructureViewer::selectEffect, this, &SequenceWidget::selectEffect);
-    connect(m_impl->curvePropertyEditor, &ClipStructureViewer::selectClipParameter, this, &SequenceWidget::selectClipParameter);
     connect(m_impl->curvePropertyEditor, &ClipStructureViewer::selectClipGraph, this, &SequenceWidget::selectClipGraph);
-    connect(m_impl->curvePropertyEditor, &ClipStructureViewer::clearSelection, this, &SequenceWidget::clearEditor);
+    connect(m_impl->curvePropertyEditor, &ClipStructureViewer::clearSelection, this, &SequenceWidget::showDefaultEditor);
     connect(m_impl->timebar, &TimeBar::changeTime, this, &SequenceWidget::gotoTime);
     connect(m_impl->viewer, &TimelineViewer::offsetChanged, this, &SequenceWidget::setOffset);
     connect(m_impl->details, &TimelineHeader::editLayer, this, &SequenceWidget::editLayer);
@@ -176,6 +251,9 @@ SequenceWidget::SequenceWidget(QWidget *parent)
     connect(m_impl->player, &QMediaPlayer::positionChanged, this, &SequenceWidget::positionChanged);
     connect(m_impl->waveform, &WaveformWidget::visibleRangeChanged, this, &SequenceWidget::waveformRangeChanged);
 
+    // Nothing is selected yet - show the waveform itself rather than an
+    // empty panel, same as whenever the selection is cleared later.
+    showDefaultEditor();
 }
 
 SequenceWidget::~SequenceWidget()
@@ -207,6 +285,11 @@ void SequenceWidget::editLayer(photon::Layer *t_layer)
 {
     clearEditor();
 
+    // A layer's own editor is an arbitrary widget, not one this class can
+    // paint the waveform tinted behind the way it does for a channel effect
+    // - hide it here rather than leave it sitting unlaid-out underneath.
+    m_impl->waveform->hide();
+
     QHBoxLayout *layout = new QHBoxLayout;
     layout->setContentsMargins(0,0,0,0);
     m_impl->effectEditor = t_layer->createEditor();
@@ -227,7 +310,11 @@ void SequenceWidget::setScale(double t_scale)
     ChannelEffectEditor *channelEditor = dynamic_cast<ChannelEffectEditor*>(m_impl->effectEditor);
     if(channelEditor)
         channelEditor->setXScale(t_scale);
-    m_impl->waveform->frameTime(m_impl->visibleStartTime(), m_impl->visibleEndTime());
+    // Re-clamps the current offset against the new scale and repaints every
+    // view from it - the pan-near-song clamp in setOffset() depends on scale
+    // (the allowed range is in pixels but scales with px/sec), so a position
+    // that was valid before this zoom may not be any more.
+    setOffset(m_impl->offset);
 }
 
 
@@ -241,11 +328,29 @@ void SequenceWidget::setScalePoint(QPointF t_scale)
     ChannelEffectEditor *channelEditor = dynamic_cast<ChannelEffectEditor*>(m_impl->effectEditor);
     if(channelEditor)
         channelEditor->setScale(t_scale);
-    m_impl->waveform->frameTime(m_impl->visibleStartTime(), m_impl->visibleEndTime());
+    // See setScale()'s matching comment - the offset's valid range depends on
+    // scale, so it needs re-clamping here too.
+    setOffset(m_impl->offset);
 }
 
 void SequenceWidget::setOffset(double t_offset)
 {
+    // The coordinator owns this clamp too (see setScale's matching comment):
+    // once there's a song to stay near, never let the visible window drift
+    // more than half a screen past either end of it - otherwise a fast or
+    // high-resolution scroll (Magic Mouse momentum, a trackpad swipe) can
+    // wander arbitrarily far from the song in a couple of seconds. With no
+    // song data at all there's nothing to stay near, so panning is
+    // unbounded, as it always was.
+    const double duration = m_impl->waveform->totalDuration();
+    const double width = m_impl->waveform->width();
+    if(duration > 0.0 && width > 0.0)
+    {
+        const double minOffset = -0.5 * width;
+        const double maxOffset = duration * m_impl->scale - 0.5 * width;
+        t_offset = std::clamp(t_offset, minOffset, maxOffset);
+    }
+
     m_impl->offset = t_offset;
     m_impl->timebar->setOffset(t_offset);
     m_impl->viewer->setOffset(t_offset);
@@ -261,9 +366,16 @@ void SequenceWidget::selectEffect(photon::ChannelEffect *t_effect)
 
     clearEditor();
 
+    // The curve editor paints this itself, tinted, as its own background
+    // (see setBackgroundWaveform below) - shown standalone here it would
+    // just be redundant, and would steal the mouse events the curve/gizmo
+    // handles need.
+    m_impl->waveform->hide();
+
     auto editor = t_effect->createEditor();
     editor->setOffset(m_impl->offset);
     editor->setScale(QPointF(m_impl->scale,editor->scale().y()));
+    editor->setBackgroundWaveform(m_impl->waveform);
     connect(editor, &ChannelEffectEditor::offsetChanged, this, &SequenceWidget::setOffset);
     //connect(editor, &ChannelEffectEditor::scaleChanged, m_impl->viewer, &TimelineViewer::setScale);
     connect(editor, &ChannelEffectEditor::scaleChanged, this, &SequenceWidget::setScalePoint);
@@ -275,24 +387,13 @@ void SequenceWidget::selectEffect(photon::ChannelEffect *t_effect)
     m_impl->effectEditor = editor;
     m_impl->effectEditorContainer->setLayout(layout);
 
+    // The curve/gizmo editor above stays inline (it needs this widget's live
+    // pan/zoom to line handles up with the timeline); the effect's plain
+    // parameter fields go to the Properties panel, same as every other
+    // selectable thing in the app.
+    PropertyController::instance()->selectChannelEffect(t_effect);
 
     //editor->selectEffect(t_effect);
-}
-
-void SequenceWidget::selectClipParameter(photon::Clip *t_clip)
-{
-    clearEditor();
-    QHBoxLayout *layout = new QHBoxLayout;
-    layout->setContentsMargins(0,0,0,0);
-
-    auto editor = t_clip->widget();
-
-    if(editor)
-    {
-        layout->addWidget(editor);
-        m_impl->effectEditor = editor;
-        m_impl->effectEditorContainer->setLayout(layout);
-    }
 }
 
 void SequenceWidget::selectClipGraph(photon::Clip *t_clip)
@@ -304,12 +405,23 @@ void SequenceWidget::selectClipGraph(photon::Clip *t_clip)
     keira::Graph *graph = t_clip->contentGraph();
     if(graph)
     {
+        // The one state that hides the waveform outright - a node graph has
+        // nothing to do with the timeline's audio.
+        m_impl->waveform->hide();
+
         auto *library = photonApp->plugins()->nodeLibrary();
         auto *graphWidget = new keira::GraphWidget(library);
+    // Node selection now drives the app's Properties panel rather than a
+    // sidebar inside the graph widget.
+    connect(graphWidget, &keira::GraphWidget::nodeSelected, photonApp, [](keira::Node *node){
+        PropertyController::instance()->selectNode(node);
+    });
+
         // Parented to the graphWidget so clearEditor()'s delete of the editor
         // widget tears the scene down with it - GraphWidget itself doesn't own it.
         auto *scene = new keira::Scene(graphWidget);
         scene->setNodeLibrary(library);
+        scene->setExternalDropInterpreter(&projectResourceDropInterpreter);
         scene->setGraph(graph);
         // A clip's content graph is already evaluated for real by the clip's own
         // processChannels() (via the sequence's eval thread) whenever it's active -
@@ -330,28 +442,6 @@ void SequenceWidget::selectClipGraph(photon::Clip *t_clip)
     }
 }
 
-void SequenceWidget::selectState(photon::State *t_state)
-{
-    clearEditor();
-    QHBoxLayout *layout = new QHBoxLayout;
-    layout->setContentsMargins(0,0,0,0);
-
-    auto editor = new StateEditor;
-
-    if(m_impl->selectedClips.length() > 0)
-    {
-        auto clip = dynamic_cast<FixtureClip *>(m_impl->selectedClips[0]->clip());
-        if(clip)
-            editor->setClip(clip);
-    }
-
-    layout->addWidget(editor);
-    m_impl->effectEditor = editor;
-
-    m_impl->effectEditorContainer->setLayout(layout);
-
-}
-
 void SequenceWidget::clearEditor()
 {
     if(m_impl->effectEditorContainer->layout())
@@ -362,13 +452,27 @@ void SequenceWidget::clearEditor()
     m_impl->effectEditor = nullptr;
 }
 
+void SequenceWidget::showDefaultEditor()
+{
+    clearEditor();
+
+    // With nothing selected to edit, the waveform becomes this panel's own
+    // visible content instead of an empty pane - a real, laid-out, visible
+    // widget rather than the hidden background layer it is while a channel
+    // effect is selected, so it's fully interactive here (cue points can be
+    // selected/dragged directly on it).
+    QHBoxLayout *layout = new QHBoxLayout;
+    layout->setContentsMargins(0,0,0,0);
+    layout->addWidget(m_impl->waveform);
+    m_impl->effectEditorContainer->setLayout(layout);
+    m_impl->waveform->show();
+}
+
 void SequenceWidget::selectionChanged()
 {
     auto newSelection = m_impl->scene->selectedItems();
     QVector<SequenceClip*> removed;
     QVector<SequenceClip*> added;
-    QVector<TimelineMasterLayer*> removedLayers;
-    QVector<TimelineMasterLayer*> addedLayers;
 
     for(auto item : m_impl->selectedClips)
     {
@@ -378,16 +482,6 @@ void SequenceWidget::selectionChanged()
             removed.append(item);
             if(clip)
                 m_impl->curvePropertyEditor->setClip(nullptr);
-        }
-    }
-    for(auto item : m_impl->selectedLayers)
-    {
-        if(!newSelection.contains(item))
-        {
-            auto layer = dynamic_cast<TimelineMasterLayer*>(item);
-            removedLayers.append(item);
-            if(layer)
-                m_impl->curvePropertyEditor->removeMasterLayer(static_cast<MasterLayer*>(layer->layer()));
         }
     }
 
@@ -402,25 +496,12 @@ void SequenceWidget::selectionChanged()
                 m_impl->curvePropertyEditor->setClip(clip->clip());
             }
         }
-
-        auto layer = dynamic_cast<TimelineMasterLayer*>(item);
-        if(layer)
-        {
-            if(!m_impl->selectedLayers.contains(layer))
-            {
-                addedLayers.append(layer);
-                m_impl->curvePropertyEditor->addMasterLayer(static_cast<MasterLayer*>(layer->layer()));
-            }
-        }
     }
 
     for(auto clip : removed)
         m_impl->selectedClips.removeOne(clip);
-    for(auto layer : removedLayers)
-        m_impl->selectedLayers.removeOne(layer);
 
     m_impl->selectedClips.append(added);
-    m_impl->selectedLayers.append(addedLayers);
 
     m_impl->curvePropertyEditor->restoreState();
 }
@@ -544,6 +625,20 @@ void SequenceWidget::togglePlay(bool t_value)
     m_impl->timer.restart();
     m_impl->isPlaying = t_value;
 
+    // Keep the toolbar button in sync (icon + checked state) regardless of
+    // whether this was reached via the action itself or another path (e.g.
+    // SequencePanel's own Space-bar handler calling this directly).
+    if(m_impl->playAction)
+    {
+        m_impl->playAction->setIcon(style()->standardIcon(t_value ? QStyle::SP_MediaPause : QStyle::SP_MediaPlay));
+        m_impl->playAction->setToolTip(t_value ? "Pause" : "Play");
+        if(m_impl->playAction->isChecked() != t_value)
+        {
+            const QSignalBlocker blocker(m_impl->playAction);
+            m_impl->playAction->setChecked(t_value);
+        }
+    }
+
     m_impl->lastCurrentTime = m_impl->currentTime;
     m_impl->startTimeMS = QDateTime::currentMSecsSinceEpoch();
 
@@ -582,43 +677,42 @@ void SequenceWidget::rewind()
         photonApp->djConnector()->sendRestart();
 }
 
+void SequenceWidget::zoomToFitSong()
+{
+    const double duration = m_impl->waveform->totalDuration();
+    if(duration > 0.0)
+    {
+        const double width = m_impl->waveform->width();
+        if(width <= 0.0)
+            return;
+        // setScale clamps to a minimum zoom (currently 2.0 px/sec), so a song
+        // long enough to need less than that to fit ends up framed from the
+        // start rather than fully - the same floor every other zoom path
+        // already respects, not something this button should bypass.
+        setScale(width / duration);
+        setOffset(0.0);
+    }
+    else
+    {
+        // Nothing to fit - just return to the start, same as Rewind but for
+        // the view instead of the playhead.
+        setOffset(0.0);
+    }
+}
+
 void SequenceWidget::toggleVdjSync(bool t_value)
 {
     m_impl->vdjSyncEnabled = t_value;
-}
-
-void SequenceWidget::pickFile()
-{
-    QString fileName = QFileDialog::getOpenFileName(this, tr("Open File"),
-                                                    m_impl->scene->sequence()->filePath(),
-                                                    "Audio Files (*.mp3 *.wav)");
-
-    if(!fileName.isEmpty())
-    {
-        m_impl->scene->sequence()->setAudioPath(fileName);
-        m_impl->player->setSource(fileName);
-        m_impl->waveform->loadAudio(fileName);
-
-        // Automatically derive beats and the level/frequency envelopes for the
-        // newly assigned track, so the waveform view has something to show without
-        // the user having to run each audio process manually from its menu. This
-        // is a deliberate "new file" action, so re-running (and replacing any
-        // previous analysis) is exactly what's wanted here.
-        m_impl->waveformHeader->addAudioProcessor(photonApp->plugins()->createAudioProcessor("photon.audio-process.beat"));
-        m_impl->waveformHeader->addAudioProcessor(photonApp->plugins()->createAudioProcessor("photon.audio-process.levels"));
-    }
-
 }
 
 void SequenceWidget::showEvent(QShowEvent*t_event)
 {
     QWidget::showEvent(t_event);
 
-    int waveHeight = 100;
-    int halfHeight = (height() - waveHeight) / 2;
+    int halfHeight = height() / 2;
     m_impl->horizontalSplitter->setSizes({static_cast<int>(width()*.2),static_cast<int>(width()*.8)});
-    m_impl->verticalSplitter->setSizes({halfHeight,waveHeight,halfHeight});
-    m_impl->detailsSplitter->setSizes({halfHeight,waveHeight,halfHeight});
+    m_impl->verticalSplitter->setSizes({halfHeight,halfHeight});
+    m_impl->detailsSplitter->setSizes({halfHeight,halfHeight});
     m_impl->timeSplitter->setSizes(m_impl->horizontalSplitter->sizes());
     m_impl->waveform->frameTime(m_impl->visibleStartTime(), m_impl->visibleEndTime());
 }
@@ -627,6 +721,18 @@ void SequenceWidget::resizeEvent(QResizeEvent* t_event)
 {
     QWidget::resizeEvent(t_event);
     m_impl->waveform->frameTime(m_impl->visibleStartTime(), m_impl->visibleEndTime());
+}
+
+bool SequenceWidget::eventFilter(QObject *t_watched, QEvent *t_event)
+{
+    // Keeps the (now hidden, unlayouted) waveform sized to match whatever's
+    // showing it - dragging a splitter handle resizes effectEditorContainer
+    // without this widget's own resizeEvent firing, so that alone isn't
+    // enough to catch it.
+    if(t_watched == m_impl->effectEditorContainer && t_event->type() == QEvent::Resize)
+        m_impl->waveform->resize(m_impl->effectEditorContainer->size());
+
+    return QWidget::eventFilter(t_watched, t_event);
 }
 
 } // namespace photon

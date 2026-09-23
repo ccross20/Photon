@@ -38,6 +38,7 @@ public:
 
     float * process(float *value, uint size, double time) const override;
     ChannelEffectEditor *createEditor() override;
+    QWidget *createPropertyEditor() override;
     double easeInDuration() const{return m_easeInDuration;}
     double easeOutDuration() const{return m_easeOutDuration;}
     QEasingCurve::Type easeInType() const{return m_easeInType;}

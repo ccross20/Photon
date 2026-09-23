@@ -60,6 +60,7 @@ public:
     float *process(float *value, uint size, double time) const override;
     bool providesIsolatedContribution() const override { return true; }
     ChannelEffectEditor *createEditor() override;
+    QWidget *createPropertyEditor() override;
 
     void readFromJson(const QJsonObject &) override;
     void writeToJson(QJsonObject &) const override;

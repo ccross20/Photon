@@ -1,4 +1,4 @@
-#include <QFormLayout>
+#include <QVBoxLayout>
 #include <QLineEdit>
 #include <QTextEdit>
 #include <QComboBox>
@@ -7,8 +7,9 @@
 #include <QDoubleSpinBox>
 #include <QSignalBlocker>
 #include "pixelstrip.h"
-#include "gui/vector3edit.h"
-#include "gui/tag/tageditorwidget.h"
+#include "vector3edit.h"
+#include "propertywidgets.h"
+#include "tag/tageditorwidget.h"
 #include "photoncore.h"
 #include "project/project.h"
 
@@ -19,7 +20,7 @@ class PixelStripEditorWidget::Impl
 public:
     Impl();
     PixelStrip *pixelStrip = nullptr;
-    QFormLayout *formLayout;
+    PropertyForm *form;
     QLineEdit *nameEdit;
     TagEditorWidget *tagEditor;
     QSpinBox *pixelCountSpin;
@@ -35,64 +36,69 @@ public:
 
 PixelStripEditorWidget::Impl::Impl(){
 
-    formLayout = new QFormLayout;
+    form = new PropertyForm;
+
+    form->addSection("General");
 
     nameEdit = new QLineEdit;
-    formLayout->addRow("Name", nameEdit);
+    form->addRow("Name", nameEdit);
 
     tagEditor = new TagEditorWidget(
         [this](){ return pixelStrip ? pixelStrip->tags() : QStringList(); },
         [this](const QStringList &tags){ if(pixelStrip) pixelStrip->setTags(tags); },
         [](){ return photonApp->project() ? photonApp->project()->allTags() : QStringList(); });
-    formLayout->addRow("Tags", tagEditor);
+    form->addRow("Tags", tagEditor);
 
     pixelCountSpin = new QSpinBox;
     pixelCountSpin->setMinimum(1);
     pixelCountSpin->setMaximum(512);
-    formLayout->addRow("Pixel Count", pixelCountSpin);
+    form->addRow("Pixel Count", pixelCountSpin);
 
     universeSpin = new QSpinBox;
     universeSpin->setMinimum(1);
     universeSpin->setMaximum(512);
-    formLayout->addRow("Universe", universeSpin);
+    form->addRow("Universe", universeSpin);
 
     offsetSpin = new QSpinBox;
     offsetSpin->setMinimum(0);
     offsetSpin->setMaximum(511);
-    formLayout->addRow("DMX Offset", offsetSpin);
+    form->addRow("DMX Offset", offsetSpin);
 
     centerSpin = new QDoubleSpinBox;
     centerSpin->setMinimum(0);
     centerSpin->setMaximum(1);
-    formLayout->addRow("Center", centerSpin);
+    form->addRow("Center", centerSpin);
 
     rotationSpin = new QDoubleSpinBox;
     rotationSpin->setMinimum(-360.0);
     rotationSpin->setMaximum(360.0);
-    formLayout->addRow("Rotation", rotationSpin);
+    form->addRow("Rotation", rotationSpin);
 
     bendSpin = new QDoubleSpinBox;
     bendSpin->setMinimum(-180);
     bendSpin->setMaximum(180);
-    formLayout->addRow("Bend", bendSpin);
+    form->addRow("Bend", bendSpin);
 
     lengthSpin = new QDoubleSpinBox;
     lengthSpin->setMinimum(.1);
     lengthSpin->setMaximum(20);
-    formLayout->addRow("Length", lengthSpin);
+    form->addRow("Length", lengthSpin);
 
+    form->addSection("Transform");
 
     positionEdit = new Vector3Edit;
-    formLayout->addRow("Position", positionEdit);
+    form->addRow("Position", positionEdit);
 
     rotationEdit = new Vector3Edit;
-    formLayout->addRow("Rotation", rotationEdit);
+    form->addRow("Rotation", rotationEdit);
 }
 
 
 PixelStripEditorWidget::PixelStripEditorWidget(PixelStrip *t_strip, QWidget *parent): QWidget{parent},m_impl(new Impl)
 {
-    setLayout(m_impl->formLayout);
+    QVBoxLayout *outer = new QVBoxLayout(this);
+    outer->setContentsMargins(0, 0, 0, 0);
+    outer->addWidget(m_impl->form);
 
     setSizePolicy(QSizePolicy{QSizePolicy::MinimumExpanding, QSizePolicy::Maximum});
 

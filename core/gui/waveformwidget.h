@@ -39,11 +39,20 @@ public:
     void clearSelection();
 
     Range visibleRange(){return m_visibleRange;}
+    // The full span frameAll() frames: decoded audio length if loaded, else
+    // whatever setDuration() was given, else 0 (no song data at all).
+    double totalDuration() const;
 
 signals:
     // Emitted when the user pans/zooms the waveform directly, so a host can keep
     // other time-aligned views in sync. Carries the new visible time range.
     void visibleRangeChanged(double start, double end);
+    // Emitted when this widget's drawn content changes for a reason other than
+    // pan/zoom (visibleRangeChanged already covers that) - e.g. a subclass's
+    // own overlay data changed. Lets a host repaint whatever it's showing this
+    // widget's render() output through elsewhere, which won't otherwise notice
+    // since a hidden widget's own update() is a no-op.
+    void contentChanged();
 
 public slots:
     void loadAudio(const QString &);

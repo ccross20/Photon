@@ -2,28 +2,29 @@
 #include <QComboBox>
 #include "channelremapeffect.h"
 #include "sequence/viewer/stackedparameterwidget.h"
-#include "view/numberscrubfield.h"
+#include "numberscrubfield.h"
 #include "util/utils.h"
+#include "propertywidgets.h"
 
 namespace photon {
 
 ChannelRemapEffectEditor::ChannelRemapEffectEditor(ChannelRemapEffect *t_effect):ChannelEffectEditor(t_effect),m_effect(t_effect)
 {
-    auto *minInSpin = new keira::NumberScrubField;
+    auto *minInSpin = new photon::NumberScrubField;
     minInSpin->setValue(m_effect->minInput());
-    connect(minInSpin, &keira::NumberScrubField::valueChanged, this, &ChannelRemapEffectEditor::minInputChanged);
+    connect(minInSpin, &photon::NumberScrubField::valueChanged, this, &ChannelRemapEffectEditor::minInputChanged);
 
-    auto *maxInSpin = new keira::NumberScrubField;
+    auto *maxInSpin = new photon::NumberScrubField;
     maxInSpin->setValue(m_effect->maxInput());
-    connect(maxInSpin, &keira::NumberScrubField::valueChanged, this, &ChannelRemapEffectEditor::maxInputChanged);
+    connect(maxInSpin, &photon::NumberScrubField::valueChanged, this, &ChannelRemapEffectEditor::maxInputChanged);
 
-    auto *minOutSpin = new keira::NumberScrubField;
+    auto *minOutSpin = new photon::NumberScrubField;
     minOutSpin->setValue(m_effect->minOutput());
-    connect(minOutSpin, &keira::NumberScrubField::valueChanged, this, &ChannelRemapEffectEditor::minOutputChanged);
+    connect(minOutSpin, &photon::NumberScrubField::valueChanged, this, &ChannelRemapEffectEditor::minOutputChanged);
 
-    auto *maxOutSpin = new keira::NumberScrubField;
+    auto *maxOutSpin = new photon::NumberScrubField;
     maxOutSpin->setValue(m_effect->maxOutput());
-    connect(maxOutSpin, &keira::NumberScrubField::valueChanged, this, &ChannelRemapEffectEditor::maxOutputChanged);
+    connect(maxOutSpin, &photon::NumberScrubField::valueChanged, this, &ChannelRemapEffectEditor::maxOutputChanged);
 
     QComboBox *easeCombo = new QComboBox;
     easeCombo->addItems(easeStrings());
@@ -181,6 +182,24 @@ float *ChannelRemapEffect::process(float *value, uint size, double time) const
 ChannelEffectEditor *ChannelRemapEffect::createEditor()
 {
     return new ChannelRemapEffectEditor(this);
+}
+
+QWidget *ChannelRemapEffect::createPropertyEditor()
+{
+    auto *form = new PropertyForm;
+    form->addRow("Min Input", PropertyWidgets::createNumber(m_minInput, {},
+        [this](double v){ setMinInput(v); }));
+    form->addRow("Max Input", PropertyWidgets::createNumber(m_maxInput, {},
+        [this](double v){ setMaxInput(v); }));
+    form->addRow("Ease Type", PropertyWidgets::createOptions(easeStrings(), m_easeType, {},
+        [this](int v){ setEaseType(static_cast<QEasingCurve::Type>(v)); }));
+    form->addRow("Min Output", PropertyWidgets::createNumber(m_minOutput, {},
+        [this](double v){ setMinOutput(v); }));
+    form->addRow("Max Output", PropertyWidgets::createNumber(m_maxOutput, {},
+        [this](double v){ setMaxOutput(v); }));
+    form->addRow("Bounds Mode", PropertyWidgets::createOptions({"Limit","Loop","Ping Pong"}, m_boundsMode, {},
+        [this](int v){ setBoundsMode(static_cast<BoundsMode>(v)); }));
+    return form;
 }
 
 void ChannelRemapEffect::readFromJson(const QJsonObject &t_json)

@@ -51,14 +51,18 @@ QVector<Fixture *> FixtureQuery::resolve(Project *project) const
     if(!project || isEmpty())
         return result;   // no predicates = no selection (not "everything")
 
-    // Spatial predicate: resolve the named zone once, then test fixture positions.
+    // Spatial predicate: resolve the zone once, then test fixture positions.
+    // zone is stored as a uniqueId (see SelectFixturesNode/FixtureGroupEditor);
+    // the name lookup is a fallback for queries saved before that switch.
     SceneZone *zoneObj = nullptr;
-    const QString zoneName = zone.trimmed();
-    if(!zoneName.isEmpty())
+    const QString zoneRef = zone.trimmed();
+    if(!zoneRef.isEmpty())
     {
-        zoneObj = SceneZone::findByName(project, zoneName);
+        zoneObj = SceneZone::findByUniqueId(project, zoneRef.toUtf8());
         if(!zoneObj)
-            return result;   // a named-but-missing zone matches nothing
+            zoneObj = SceneZone::findByName(project, zoneRef);
+        if(!zoneObj)
+            return result;   // a referenced-but-missing zone matches nothing
     }
 
     for(Fixture *fixture : project->fixtures()->fixtures())

@@ -101,6 +101,8 @@ set(PROJECT_SOURCES
         scene/scenezone.cpp
         fixture/fixtureeditorwidget.h
         fixture/fixtureeditorwidget.cpp
+        fixture/colorcalibrationdialog.h
+        fixture/colorcalibrationdialog.cpp
         fixture/fixturemask.h
         fixture/fixturemask.cpp
         fixture/fixturevirtualchannel.h
@@ -113,8 +115,14 @@ set(PROJECT_SOURCES
         fixture/capability/colorcapability.cpp
         fixture/capability/colorintensitycapability.h
         fixture/capability/colorintensitycapability.cpp
+        fixture/capability/fixturecolorcalibration.h
+        fixture/capability/fixturecolorcalibration.cpp
         fixture/capability/dimmercapability.h
         fixture/capability/dimmercapability.cpp
+        fixture/capability/ctocapability.h
+        fixture/capability/ctocapability.cpp
+        fixture/capability/uvcapability.h
+        fixture/capability/uvcapability.cpp
         fixture/capability/fixturecapability.h
         fixture/capability/fixturecapability.cpp
         fixture/capability/nofunctioncapability.h
@@ -135,6 +143,8 @@ set(PROJECT_SOURCES
         graph/bus/dmxsubgraphnode.cpp
         graph/bus/identifyfixturenode.h
         graph/bus/identifyfixturenode.cpp
+        graph/bus/colorcalibrationnode.h
+        graph/bus/colorcalibrationnode.cpp
         graph/bus/sequencenode.h
         graph/bus/sequencenode.cpp
         graph/node/math/arithmeticnode.h
@@ -181,18 +191,6 @@ set(PROJECT_SOURCES
         graph/parameter/vector3dparameter.cpp
         graph/parameter/matrixparameter.h
         graph/parameter/matrixparameter.cpp
-        gui/color/colorslider.h
-        gui/color/colorslider.cpp
-        gui/color/colorwheelswatch.h
-        gui/color/colorwheelswatch.cpp
-        gui/color/colorselectorwidget.h
-        gui/color/colorselectorwidget.cpp
-        gui/color/colorselectordialog.h
-        gui/color/colorselectordialog.cpp
-        gui/color/huebox.h
-        gui/color/huebox.cpp
-        gui/color/simpleswatch.h
-        gui/color/simpleswatch.cpp
         gui/dialog/settingsdialog.h
         gui/dialog/settingsdialog.cpp
         gui/dialog/appsettingspage.h
@@ -201,21 +199,21 @@ set(PROJECT_SOURCES
         gui/dialog/generalsettingspage.cpp
         gui/dialog/fixturelibrarydialog.h
         gui/dialog/fixturelibrarydialog.cpp
+        gui/dialog/startupdialog.h
+        gui/dialog/startupdialog.cpp
         gui/dmxviewer/dmxviewer.h
         gui/dmxviewer/dmxviewer.cpp
         gui/dmxviewer/dmxviewercells.h
         gui/dmxviewer/dmxviewercells.cpp
         gui/dmxpatch/dmxpatchgrid.h
         gui/dmxpatch/dmxpatchgrid.cpp
-        gui/gizmo/rectanglegizmo.h
-        gui/gizmo/rectanglegizmo.cpp
-        gui/gizmo/gizmohandle.h
-        gui/gizmo/gizmohandle.cpp
-        gui/gizmo/gizmogroup.h
-        gui/gizmo/gizmogroup.cpp
         gui/guimanager.h
         gui/guimanager_p.h
         gui/guimanager.cpp
+        gui/waveformwidget.h
+        gui/waveformwidget.cpp
+        gui/color/colorpalettewidget.h
+        gui/color/colorpalettewidget.cpp
         gui/menufactory.h
         gui/menufactory.cpp
         gui/panel.h
@@ -231,6 +229,18 @@ set(PROJECT_SOURCES
         gui/panel/dmxpatchpanel.h
         gui/panel/dmxpatchpanel_p.h
         gui/panel/dmxpatchpanel.cpp
+        gui/properties/propertyaddress.h
+        gui/properties/propertyaddress.cpp
+        gui/properties/propertysubject.h
+        gui/properties/propertysubject.cpp
+        gui/properties/propertycontroller.h
+        gui/properties/propertycontroller.cpp
+        gui/properties/propertyaddressbar.h
+        gui/properties/propertyaddressbar.cpp
+        gui/properties/propertytabbar.h
+        gui/properties/propertytabbar.cpp
+        gui/properties/gizmopropertyeditor.h
+        gui/properties/gizmopropertyeditor.cpp
         gui/panel/propertiespanel.h
         gui/panel/propertiespanel_p.h
         gui/panel/propertiespanel.cpp
@@ -248,16 +258,6 @@ set(PROJECT_SOURCES
         gui/pixellayouteditor.cpp
         gui/pixelarrangedialog.h
         gui/pixelarrangedialog.cpp
-        gui/pointedit.h
-        gui/pointedit.cpp
-        gui/xypad.h
-        gui/xypad.cpp
-        gui/vector3edit.h
-        gui/vector3edit.cpp
-        gui/propertycombobox.h
-        gui/propertycombobox.cpp
-        gui/waveformwidget.h
-        gui/waveformwidget.cpp
         gui/window.h
         gui/window.cpp
         photoncore.h
@@ -268,6 +268,20 @@ set(PROJECT_SOURCES
         project/projectresource.cpp
         project/projectmodel.h
         project/projectmodel.cpp
+        project/projecticons.h
+        project/projecticons.cpp
+        color/colorresource.h
+        color/colorresource.cpp
+        color/colorcollection.h
+        color/colorcollection.cpp
+        color/gradientresource.h
+        color/gradientresource.cpp
+        color/gradientcollection.h
+        color/gradientcollection.cpp
+        color/colorpaletteresource.h
+        color/colorpaletteresource.cpp
+        color/colorpalettecollection.h
+        color/colorpalettecollection.cpp
         routine/node/fixturewriternode.h
         routine/node/fixturewriternode.cpp
         routine/node/globalsnode.h
@@ -326,10 +340,6 @@ set(PROJECT_SOURCES
         scene/scenesurface.cpp
         sequence/cuelayer.h
         sequence/cuelayer.cpp
-        sequence/canvasclip.h
-        sequence/canvasclip.cpp
-        sequence/canvaslayergroup.h
-        sequence/canvaslayergroup.cpp
         sequence/channel.h
         sequence/channel_p.h
         sequence/channel.cpp
@@ -351,13 +361,6 @@ set(PROJECT_SOURCES
         sequence/layer.h
         sequence/layer_p.h
         sequence/layer.cpp
-        sequence/layergroup.h
-        sequence/layergroup_p.h
-        sequence/layergroup.cpp
-        sequence/masterlayerchanneleffect.h
-        sequence/masterlayerchanneleffect.cpp
-        sequence/masterlayer.h
-        sequence/masterlayer.cpp
         sequence/routineclip.h
         sequence/routineclip.cpp
         sequence/sequence.h
@@ -388,10 +391,6 @@ set(PROJECT_SOURCES
         sequence/viewer/timelineheader.cpp
         sequence/viewer/timelinecliplayer.h
         sequence/viewer/timelinecliplayer.cpp
-        sequence/viewer/timelinelayergroup.h
-        sequence/viewer/timelinelayergroup.cpp
-        sequence/viewer/timelinemasterlayer.h
-        sequence/viewer/timelinemasterlayer.cpp
         sequence/viewer/timelinescene.h
         sequence/viewer/timelinescene.cpp
         sequence/viewer/timelineviewer.h
@@ -400,8 +399,6 @@ set(PROJECT_SOURCES
         sequence/viewer/sequencewaveformeditor.cpp
         sequence/viewer/sequencewidget.h
         sequence/viewer/sequencewidget.cpp
-        sequence/viewer/stateeditor.h
-        sequence/viewer/stateeditor.cpp
         sequence/viewer/waveformheader.h
         sequence/viewer/waveformheader_p.h
         sequence/viewer/waveformheader.cpp
@@ -419,6 +416,10 @@ set(PROJECT_SOURCES
         state/colorwheelstate.cpp
         state/dimmerstate.h
         state/dimmerstate.cpp
+        state/ctostate.h
+        state/ctostate.cpp
+        state/uvstate.h
+        state/uvstate.cpp
         state/focusstate.h
         state/focusstate.cpp
         state/panstate.h
@@ -477,11 +478,6 @@ set(PROJECT_SOURCES
 qt_add_resources(PROJECT_SOURCES third-party/advanced-docking/ads.qrc)
 
 add_library(photon-core SHARED ${PROJECT_SOURCES}
-    gui/flowlayout.h gui/flowlayout.cpp
-    gui/tag/tagcolor.h gui/tag/tagcolor.cpp
-    gui/tag/tagmime.h gui/tag/tagmime.cpp
-    gui/tag/tagchip.h gui/tag/tagchip.cpp
-    gui/tag/tageditorwidget.h gui/tag/tageditorwidget.cpp
     gui/resourceeditorwidget.h gui/resourceeditorwidget.cpp
     scene/scenearrow.h scene/scenearrow.cpp
     scene/scenehelperobject.h scene/scenehelperobject.cpp
@@ -540,11 +536,14 @@ add_library(photon-core SHARED ${PROJECT_SOURCES}
     graph/node/fixture/allfixturesnode.h graph/node/fixture/allfixturesnode.cpp
     graph/node/fixture/selectfixturesnode.h graph/node/fixture/selectfixturesnode.cpp
     graph/node/fixture/fixturegroupnode.h graph/node/fixture/fixturegroupnode.cpp
+    graph/node/library/savedcolornode.h graph/node/library/savedcolornode.cpp
+    graph/node/library/savedgradientnode.h graph/node/library/savedgradientnode.cpp
+    graph/node/library/savedpalettenode.h graph/node/library/savedpalettenode.cpp
+    graph/node/library/savedresourcedrop.h graph/node/library/savedresourcedrop.cpp
     graph/node/scene/sceneobjectinfonode.h graph/node/scene/sceneobjectinfonode.cpp
     graph/node/scene/matrixdecomposenode.h graph/node/scene/matrixdecomposenode.cpp
     data/commonmodel.h data/commonmodel.cpp
     surface/gizmofactory.h surface/gizmofactory.cpp
-    gui/color/colorpalettewidget.h gui/color/colorpalettewidget.cpp
     surface/palettegizmo.h surface/palettegizmo.cpp
     resources/fixtures/betopper-bee-eye.json resources/fixtures/betopper-lb150.json resources/fixtures/betopper-LPC1818.json resources/fixtures/both-lighting-ir-4.json resources/fixtures/Chauvet-Pyxis.json resources/fixtures/proteus-hybrid.json resources/fixtures/shehds-jws-web.json resources/fixtures/shehds-led-18x18.json
     graph/node/gizmo/buttongizmonode.h graph/node/gizmo/buttongizmonode.cpp
@@ -620,6 +619,7 @@ target_include_directories(photon-core PUBLIC ../core)
 target_include_directories(photon-core PUBLIC ../keira)
 target_include_directories(photon-core PUBLIC third-party/advanced-docking)
 
+target_link_libraries(photon-core PUBLIC photon-ui)
 target_link_libraries(photon-core PRIVATE keira)
 target_link_libraries(photon-core PRIVATE Qt6::Concurrent)
 target_link_libraries(photon-core PRIVATE Qt6::Sql)

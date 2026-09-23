@@ -3,7 +3,7 @@
 #include <QHBoxLayout>
 #include "point2dparameter.h"
 #include "view/nodeeditor.h"
-#include "gui/pointedit.h"
+#include "pointedit.h"
 #include "util/utils.h"
 
 

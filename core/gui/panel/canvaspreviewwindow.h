@@ -17,26 +17,22 @@ class QOffscreenSurface;
 namespace photon {
 
 class CanvasOutputNode;
-class CanvasLayerGroup;
 class CanvasRenderManager;
 
-// What the preview window currently shows: either a canvas graph's Output node
-// (outputNode set) or a CanvasLayerGroup's own sink (layerGroup set). At most
-// one should be set at a time.
+// What the preview window currently shows: a canvas graph's Output node.
 struct CanvasPreviewTarget
 {
     CanvasOutputNode *outputNode = nullptr;
-    CanvasLayerGroup *layerGroup = nullptr;
 
     bool operator==(const CanvasPreviewTarget &o) const
     {
-        return outputNode == o.outputNode && layerGroup == o.layerGroup;
+        return outputNode == o.outputNode;
     }
     bool operator!=(const CanvasPreviewTarget &o) const { return !(*this == o); }
-    bool isNull() const { return !outputNode && !layerGroup; }
+    bool isNull() const { return !outputNode; }
 };
 
-// A QWindow that displays a canvas Output node's or CanvasLayerGroup's texture.
+// A QWindow that displays a canvas Output node's texture.
 // It owns its own QRhi (OpenGL, in the global share group like the visualizer's
 // RhiWindow), so it can import the texture by its shared GL id — no CPU
 // roundtrip — and draw it fullscreen. Embedded in CanvasPreviewPanel via

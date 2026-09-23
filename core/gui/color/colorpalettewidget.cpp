@@ -2,7 +2,7 @@
 #include <QPushButton>
 #include "colorpalettewidget.h"
 #include "util/utils.h"
-#include "colorselectordialog.h"
+#include "color/colorselectordialog.h"
 
 namespace photon {
 

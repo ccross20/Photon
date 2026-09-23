@@ -2,7 +2,7 @@
 #define PHOTON_CONSTANTCHANNELEFFECT_H
 
 #include "sequence/channeleffect.h"
-#include "gui/gizmo/gizmogroup.h"
+#include "gizmo/gizmogroup.h"
 
 namespace photon {
 

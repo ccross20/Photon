@@ -1,10 +1,11 @@
-#include <QFormLayout>
+#include <QVBoxLayout>
 #include <QLineEdit>
 #include <QDoubleSpinBox>
 #include <QSignalBlocker>
 #include "scenedirection.h"
-#include "gui/vector3edit.h"
-#include "gui/tag/tageditorwidget.h"
+#include "vector3edit.h"
+#include "propertywidgets.h"
+#include "tag/tageditorwidget.h"
 #include "photoncore.h"
 #include "project/project.h"
 
@@ -15,7 +16,7 @@ class SceneDirectionEditorWidget::Impl
 public:
     Impl();
     SceneDirection *direction = nullptr;
-    QFormLayout *formLayout;
+    PropertyForm *form;
     QLineEdit *nameEdit;
     TagEditorWidget *tagEditor;
     QDoubleSpinBox *sizeSpin;
@@ -25,27 +26,31 @@ public:
 
 SceneDirectionEditorWidget::Impl::Impl()
 {
-    formLayout = new QFormLayout;
+    form = new PropertyForm;
+
+    form->addSection("General");
 
     nameEdit = new QLineEdit;
-    formLayout->addRow("Name", nameEdit);
+    form->addRow("Name", nameEdit);
 
     tagEditor = new TagEditorWidget(
         [this](){ return direction ? direction->tags() : QStringList(); },
         [this](const QStringList &tags){ if(direction) direction->setTags(tags); },
         [](){ return photonApp->project() ? photonApp->project()->allTags() : QStringList(); });
-    formLayout->addRow("Tags", tagEditor);
+    form->addRow("Tags", tagEditor);
 
     sizeSpin = new QDoubleSpinBox;
     sizeSpin->setMinimum(.1);
     sizeSpin->setMaximum(20);
-    formLayout->addRow("Size", sizeSpin);
+    form->addRow("Size", sizeSpin);
 }
 
 SceneDirectionEditorWidget::SceneDirectionEditorWidget(SceneDirection *t_direction, QWidget *parent)
     : QWidget{parent}, m_impl(new Impl)
 {
-    setLayout(m_impl->formLayout);
+    QVBoxLayout *outer = new QVBoxLayout(this);
+    outer->setContentsMargins(0, 0, 0, 0);
+    outer->addWidget(m_impl->form);
     setSizePolicy(QSizePolicy{QSizePolicy::MinimumExpanding, QSizePolicy::Maximum});
 
     m_impl->direction = t_direction;
@@ -59,12 +64,14 @@ SceneDirectionEditorWidget::SceneDirectionEditorWidget(SceneDirection *t_directi
     m_impl->tagEditor->refresh();
     m_impl->sizeSpin->setValue(t_direction->size());
 
-    addHelperPropertyRows(m_impl->formLayout, t_direction, this);
+    addHelperPropertyRows(m_impl->form, t_direction, this);
+
+    m_impl->form->addSection("Transform");
 
     m_impl->positionEdit = new Vector3Edit;
-    m_impl->formLayout->addRow("Position", m_impl->positionEdit);
+    m_impl->form->addRow("Position", m_impl->positionEdit);
     m_impl->rotationEdit = new Vector3Edit;
-    m_impl->formLayout->addRow("Rotation", m_impl->rotationEdit);
+    m_impl->form->addRow("Rotation", m_impl->rotationEdit);
 
     connect(m_impl->positionEdit, &Vector3Edit::valueChanged, this, &SceneDirectionEditorWidget::setPosition);
     connect(m_impl->rotationEdit, &Vector3Edit::valueChanged, this, &SceneDirectionEditorWidget::setRotation);

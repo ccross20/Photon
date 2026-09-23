@@ -20,6 +20,8 @@ set(PROJECT_SOURCES
     bus/bustest.cpp
     fixture/fixturecapabilitytest.h
     fixture/fixturecapabilitytest.cpp
+    fixture/colorcalibrationtest.h
+    fixture/colorcalibrationtest.cpp
     fixture/fixturecollectiontest.h
     fixture/fixturecollectiontest.cpp
     sequence/sequencetest.h
@@ -34,6 +36,8 @@ set(PROJECT_SOURCES
     project/projectmodeltest.cpp
     project/tagtest.h
     project/tagtest.cpp
+    gui/propertyaddresstest.h
+    gui/propertyaddresstest.cpp
 )
 
 enable_testing(true)

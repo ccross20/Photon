@@ -29,12 +29,10 @@ QWidget#propertiesPanel QComboBox {
     selection-color: #ffffff;
 }
 
-/* The popup's height sizing is left to Qt's own defaults - every attempt at
-   overriding it (forcing the classic popup mode, custom row/padding
-   geometry, resizing the frame after the fact, pre-sizing the view before
-   it) made the clipping/oversizing worse or just moved it around rather
-   than fixing it. Color only, nothing that touches row geometry, so Qt's
-   own (correct) size calculation is left alone. */
+/* Color only, deliberately nothing that touches row geometry: the popup's
+   size and position are owned by PropertyComboBox::showPopup(), which
+   measures these rows to height the popup. Padding/margins added here would
+   be counted twice - once by the row's own sizeHint, once by the style. */
 QWidget#propertiesPanel QComboBox QAbstractItemView {
     background: #262626;
     selection-background-color: #3fa66c;
@@ -150,4 +148,34 @@ QWidget#propertiesPanel QPushButton:hover {
 
 QWidget#propertiesPanel QPushButton:pressed {
     background: #3a3a3a;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Sequence editor                                                         */
+/*                                                                          */
+/* The Channels/Cues tab widget (see SequenceWidget::SequenceWidget()) is  */
+/* the first plain QTabWidget in the app, so it needs its own dark-theme   */
+/* styling rather than falling back to the native tab look.                */
+/* ---------------------------------------------------------------------- */
+QWidget#sequenceWidget QTabWidget::pane {
+    background: #262626;
+    border: 1px solid #1a1a1a;
+}
+
+QWidget#sequenceWidget QTabBar::tab {
+    background: #2c2c2c;
+    color: #c8c8c8;
+    border: 1px solid #1a1a1a;
+    border-bottom: none;
+    padding: 4px 10px;
+}
+
+QWidget#sequenceWidget QTabBar::tab:selected {
+    background: #262626;
+    color: #ffffff;
+    border-bottom: 2px solid #3fa66c;
+}
+
+QWidget#sequenceWidget QTabBar::tab:hover:!selected {
+    background: #383838;
 }

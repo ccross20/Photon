@@ -8,7 +8,11 @@ const QByteArray HueGizmo::GizmoId = "Hue";
 HueGizmo::HueGizmo():SurfaceGizmo("Hue")
 {
     addProperty("text", "Label", GizmoProperty::Text,   QString("Hue"));
-    addProperty("hue",  "Hue",   GizmoProperty::Number, 0.0);
+    // Soft range 0-1: that's hue's normal domain, so it's what the Properties
+    // panel's slider/fill uses - left hard-unbounded so a wired-in or typed
+    // value can still drive it past 1 (e.g. a continuously rotating hue).
+    addProperty("hue",  "Hue",   GizmoProperty::Number, 0.0,
+                {{"softMinimum", 0.0}, {"softMaximum", 1.0}});
 }
 
 QString HueGizmo::text() const

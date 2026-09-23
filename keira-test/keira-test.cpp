@@ -6,6 +6,7 @@
 #include <map>
 #include "keira-global.h"
 #include "evaluationtest.h"
+#include "parameterrangetest.h"
 
 
 int main(int argc, char *argv[])
@@ -25,6 +26,7 @@ int main(int argc, char *argv[])
     std::map<QString, std::unique_ptr<QObject>> tests;
 
     tests.emplace("fixture_collection_test", std::make_unique<keira::EvaluationTest>());
+    tests.emplace("parameter_range_test", std::make_unique<keira::ParameterRangeTest>());
 
     if (arguments.size() >= 3 && arguments[1] == "-select") {
         QString testName = arguments[2];

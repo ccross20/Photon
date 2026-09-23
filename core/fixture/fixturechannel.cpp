@@ -10,6 +10,8 @@
 #include "capability/wheelslotrotationcapability.h"
 #include "capability/prismrotationcapability.h"
 #include "capability/prismcapability.h"
+#include "capability/ctocapability.h"
+#include "capability/uvcapability.h"
 
 namespace photon {
 
@@ -30,6 +32,8 @@ void FixtureChannel::Impl::addCapability(const QJsonObject &t_json)
         capability = new AngleCapability(Capability_Focus);
     else if(typeString == "intensity")
         capability = new DimmerCapability(Capability_Dimmer);
+    else if(typeString == "colortemperature")
+        capability = new CTOCapability();
     else if(typeString == "wheelslot")
         capability = new WheelSlotCapability();
     else if(typeString == "wheelshake")
@@ -67,10 +71,8 @@ void FixtureChannel::Impl::addCapability(const QJsonObject &t_json)
             capability = new ColorIntensityCapability(Capability_White);
         else if(colorString == "indigo")
             capability = new ColorIntensityCapability(Capability_Indigo);
-        else if(colorString == "uv")
-            capability = new ColorIntensityCapability(Capability_UV);
-        else if(colorString == "violet")
-            capability = new ColorIntensityCapability(Capability_UV);
+        else if(colorString == "uv" || colorString == "violet")
+            capability = new UVCapability();
     }
 
     if(capability)

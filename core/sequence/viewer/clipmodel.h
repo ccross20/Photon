@@ -9,11 +9,7 @@
 
 namespace photon {
 
-class ClipParameterData;
 class ClipGraphData;
-class PixelLayoutFolderData;
-class FixtureClip;
-class ClipStateData;
 
 
 class ClipData : public AbstractTreeData
@@ -30,70 +26,14 @@ private slots:
 
 private:
     FolderData *m_channelFolder;
-    ClipStateData *m_stateData;
-    ClipParameterData *m_parameterData;
     ClipGraphData *m_graphData = nullptr;
-    PixelLayoutFolderData *m_pixelLayoutData;
     Clip *m_clip;
 
-};
-
-class MasterLayerData : public AbstractTreeData
-{
-    Q_OBJECT
-public:
-    MasterLayerData(MasterLayer *);
-    MasterLayer *layer() const{return m_layer;}
-
-private:
-    FolderData *m_channelFolder;
-    MasterLayer *m_layer;
-
-};
-
-class PixelLayoutData : public AbstractTreeData
-{
-public:
-    PixelLayoutData(PixelLayout*);
-    PixelLayout *pixelLayout() const{return m_pixelLayout;}
-
-private:
-    PixelLayout *m_pixelLayout;
-
-};
-
-class PixelLayoutFolderData : public AbstractTreeData
-{
-    Q_OBJECT
-public:
-    PixelLayoutFolderData(CanvasLayerGroup*);
-    PixelLayoutData *findPixelLayoutData(PixelLayout *);
-
-    CanvasLayerGroup *layer() const{return m_layer;}
-
-private slots:
-    void pixelLayoutAdded(photon::PixelLayout*);
-    void pixelLayoutRemoved(photon::PixelLayout*);
-
-private:
-    CanvasLayerGroup *m_layer;
-};
-
-class ClipParameterData : public AbstractTreeData
-{
-    Q_OBJECT
-public:
-    ClipParameterData(Clip*);
-
-    Clip *clip() const{return m_clip;}
-
-private:
-    Clip *m_clip;
 };
 
 // A leaf node for a clip that has a content graph (Clip::contentGraph()) - lets
 // the editor show/edit that graph (e.g. FixtureClip's internal FixtureStateNode
-// routine) inline, the same way Parameters/State do for their own data.
+// routine) inline.
 class ClipGraphData : public AbstractTreeData
 {
     Q_OBJECT
@@ -104,19 +44,6 @@ public:
 
 private:
     Clip *m_clip;
-};
-
-
-class ClipStateData : public AbstractTreeData
-{
-public:
-    ClipStateData(FixtureClip*);
-
-    State *state() const;
-    FixtureClip *clip() const{return m_clip;}
-
-private:
-    FixtureClip *m_clip;
 };
 
 class ClipModel : public QAbstractItemModel
@@ -148,8 +75,6 @@ public:
     void addClip(Clip *);
     void removeClip(Clip *);
     QVector<Clip*> clips() const;
-    void addMasterLayer(MasterLayer *);
-    void removeMasterLayer(MasterLayer *);
     RootData *root() const{return m_root;}
 
 private slots:

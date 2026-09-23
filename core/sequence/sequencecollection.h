@@ -11,7 +11,12 @@ class PHOTONCORE_EXPORT SequenceCollection : public QObject
 {
     Q_OBJECT
 public:
-    explicit SequenceCollection(QObject *parent = nullptr);
+    // ownsSequences: whether clear()/the destructor delete the Sequences
+    // they hold. True for PhotonCore's app-wide collection, the actual owner
+    // of every Sequence's lifetime; false for Project's own collection
+    // (see Project::sequences()), which is just a membership list over the
+    // same objects and must not double-delete them.
+    explicit SequenceCollection(bool ownsSequences = true, QObject *parent = nullptr);
     ~SequenceCollection();
 
     void clear();
@@ -23,6 +28,9 @@ public:
     void setActiveSequencePanel(SequencePanel *panel);
     SequencePanel *activeSequencePanel() const;
     Sequence *activeSequence() const;
+    // The sequence's open editor panel, or nullptr if its tab has been
+    // closed (it stays loaded here either way - see panelDestroyed()).
+    SequencePanel *panelFor(Sequence *) const;
 
 signals:
     void sequenceWillBeAdded(photon::Sequence *, int);

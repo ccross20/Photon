@@ -33,6 +33,7 @@ public:
     bool mirror() const{return m_mirror;}
     float * process(float *value, uint size, double time) const override;
     ChannelEffectEditor *createEditor() override;
+    QWidget *createPropertyEditor() override;
 
     void readFromJson(const QJsonObject &) override;
     void writeToJson(QJsonObject &) const override;

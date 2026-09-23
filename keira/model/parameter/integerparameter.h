@@ -14,8 +14,21 @@ public:
     IntegerParameter(const QByteArray &t_id, const QString &t_name, int t_default, int connectionOptions = AllowSingleInput);
     ~IntegerParameter();
 
+    // Hard bounds: the absolute ceiling on the value. See DecimalParameter's
+    // matching methods for the full rationale (shared with NumberScrubField).
     void setMinimum(int);
     void setMaximum(int);
+    int minimum() const;
+    int maximum() const;
+
+    // Soft bounds: the interactive slider/scrub range, independent of the
+    // hard range. Defaults to mirroring the hard bounds.
+    void setSoftMinimum(int);
+    void setSoftMaximum(int);
+    void setSoftRange(int minimum, int maximum);
+    int softMinimum() const;
+    int softMaximum() const;
+    bool hasSoftRange() const;
 
     // Also accept a decimal source (its value is truncated/rounded on read)
     // and a boolean one (false = 0, true = 1).

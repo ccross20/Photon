@@ -61,6 +61,7 @@ public:
 Viewer::Viewer(NodeLibrary *t_library, QWidget *parent) : QGraphicsView{parent},m_impl(new Impl)
 {
     m_impl->library = t_library;
+    setAcceptDrops(true);
     setSceneRect(QRect(-5000,-5000,10000,10000));
     setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
@@ -305,7 +306,7 @@ void Viewer::mousePressEvent(QMouseEvent *event)
     //
     // Testing for the NodeItem itself (rather than any descendant) keeps this
     // off the parameter widgets, where Ctrl+drag already means something - a
-    // coarse scrub in NumberScrubField.
+    // coarse scrub in photon::NumberScrubField.
     if(event->button() == Qt::LeftButton && (event->modifiers() & Qt::ControlModifier))
     {
         if(auto *nodeItem = dynamic_cast<NodeItem*>(pressItem))

@@ -20,6 +20,7 @@
 #include "graph/bus/dmxwriternode.h"
 #include "graph/bus/dmxsubgraphnode.h"
 #include "graph/bus/identifyfixturenode.h"
+#include "graph/bus/colorcalibrationnode.h"
 #include "graph/bus/dmxreadernode.h"
 #include "graph/bus/sequencenode.h"
 #include "graph/bus/surfacenode.h"
@@ -47,6 +48,9 @@
 #include "graph/node/fixture/allfixturesnode.h"
 #include "graph/node/fixture/selectfixturesnode.h"
 #include "graph/node/fixture/fixturegroupnode.h"
+#include "graph/node/library/savedcolornode.h"
+#include "graph/node/library/savedgradientnode.h"
+#include "graph/node/library/savedpalettenode.h"
 #include "graph/node/scene/sceneobjectinfonode.h"
 #include "graph/node/scene/matrixdecomposenode.h"
 #include "graph/node/math/pointcomposenode.h"
@@ -82,7 +86,6 @@
 
 #include "sequence/constantchanneleffect.h"
 #include "sequence/gradientchanneleffect.h"
-#include "sequence/masterlayerchanneleffect.h"
 #include "channel/splinechanneleffect.h"
 #include "audio/levelanalysisprocess.h"
 #include "audio/virtualdjcaptureprocess.h"
@@ -113,7 +116,6 @@
 #include "graph/parameter/gradientparameter.h"
 
 #include "sequence/fixtureclip.h"
-#include "sequence/canvasclip.h"
 
 namespace photon {
 
@@ -233,6 +235,7 @@ void PluginFactory::init()
     registerNode(SurfaceNode::info());
     registerNode(DMXSubGraphNode::info());
     registerNode(IdentifyFixtureNode::info());
+    registerNode(ColorCalibrationNode::info());
     registerNode(NumberInputNode::info());
     registerNode(ColorInputNode::info());
     registerNode(PointInputNode::info());
@@ -277,6 +280,9 @@ void PluginFactory::init()
     registerNode(AllFixturesNode::info());
     registerNode(SelectFixturesNode::info());
     registerNode(FixtureGroupNode::info());
+    registerNode(SavedColorNode::info());
+    registerNode(SavedGradientNode::info());
+    registerNode(SavedPaletteNode::info());
     registerNode(PixelGraph::info());
     registerNode(CanvasSubGraphNode::info());
     registerNode(CanvasOutputNode::info());
@@ -299,14 +305,12 @@ void PluginFactory::init()
 
     registerChannelEffect(ConstantChannelEffect::info());
     registerChannelEffect(GradientChannelEffect::info());
-    registerChannelEffect(MasterLayerChannelEffect::info());
     registerChannelEffect(SplineChannelEffect::info());
 
     registerAudioProcessor(LevelAnalysisProcess::info());
     registerAudioProcessor(VirtualDJCaptureProcess::info());
 
     registerClip(FixtureClip::info());
-    registerClip(CanvasClip::info());
 
     m_impl->nodeLibrary.registerParameter(keira::AnyParameter::ParameterId,    [](){return new keira::AnyParameter();});
     m_impl->nodeLibrary.registerParameter(keira::DecimalParameter::ParameterId,[](){return new keira::DecimalParameter();});

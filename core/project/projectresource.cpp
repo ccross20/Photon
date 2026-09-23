@@ -5,6 +5,8 @@
 
 namespace photon {
 
+const QByteArray ProjectResource::ProjectResourceMime = "photon.core.project-resource";
+
 ProjectResourceNotifier::ProjectResourceNotifier(ProjectResource *t_resource, QObject *parent)
     : QObject{parent}, m_resource(t_resource)
 {

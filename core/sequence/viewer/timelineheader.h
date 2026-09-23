@@ -5,6 +5,9 @@
 #include "photon-global.h"
 
 class QLabel;
+class QToolButton;
+class QContextMenuEvent;
+class QMouseEvent;
 
 namespace photon {
 
@@ -20,32 +23,14 @@ public:
 
     virtual QSize sizeHint() const override;
 
+private slots:
+    void renameClicked();
+    void muteToggled(bool);
+
 protected:
      virtual void paintEvent(QPaintEvent *event) override;
-
-private:
-    class Impl;
-    Impl *m_impl;
-};
-
-class PHOTONCORE_EXPORT LayerGroupHeader : public LayerHeader
-{
-    Q_OBJECT
-public:
-    LayerGroupHeader(LayerGroup *);
-    ~LayerGroupHeader();
-    LayerGroup *group() const;
-
-    void buildLayout() override;
-
-signals:
-    void editLayer(photon::Layer *);
-
-private slots:
-    void editLayerSlot();
-    void layerUpdated(photon::Layer *);
-    void layerAdded(photon::Layer *);
-    void layerRemoved(photon::Layer *);
+     virtual void contextMenuEvent(QContextMenuEvent *event) override;
+     virtual void mouseDoubleClickEvent(QMouseEvent *event) override;
 
 private:
     class Impl;

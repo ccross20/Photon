@@ -18,12 +18,19 @@ public:
 
     FixtureCollection *fixtures() const;
     RoutineCollection *routines() const;
+    // Sequences embedded in this project's own file (see readFromJson/
+    // writeToJson) - distinct from the Song Library's sequences, which live
+    // in their own .seq files and are tracked by SongLibrary instead.
+    SequenceCollection *sequences() const;
     PixelLayoutCollection *pixelLayouts() const;
     BusGraph *bus() const;
     SceneObject *sceneRoot() const;
     SceneManager *scene() const;
     FixtureGroupCollection *groups() const;
     SurfaceCollection *surfaces() const;
+    ColorCollection *colors() const;
+    GradientCollection *gradients() const;
+    ColorPaletteCollection *colorPalettes() const;
 
     // Every tag currently in use anywhere in the project - every scene object,
     // fixture group, routine, surface, pixel layout and sequence - deduped and
@@ -59,7 +66,25 @@ public:
     void setPropertiesWidget(QWidget *widget);
 
     void save(const QString &path = QString{}) const;
-    void load(const QString &path = QString{});
+
+    // Recently opened/saved project file paths, most-recent-first, deduplicated
+    // and capped. Updated automatically by save() and load() whenever a real
+    // file path is involved (not on a cancelled file dialog). Read by the
+    // startup dialog to offer quick access to recent projects.
+    static QStringList recentProjects();
+
+    // Small per-project bag for UI state that belongs with the project rather
+    // than the machine - e.g. the Properties panel's pinned tabs, which point
+    // at specific nodes and gizmos and are meaningless in another project.
+    // Keyed by panel so panels don't collide; round-trips through the project
+    // file under "uiState".
+    QJsonObject uiState(const QByteArray &key) const;
+    void setUiState(const QByteArray &key, const QJsonObject &state);
+    // Returns false (and does nothing else) if path is empty and the user
+    // cancels the resulting file-open dialog, or if the file can't be opened -
+    // lets a caller (e.g. the startup dialog) tell a real load apart from a
+    // cancelled one.
+    bool load(const QString &path = QString{});
     void restore(Project &);
     void readFromJson(const QJsonObject &json);
     void writeToJson(QJsonObject &json) const;

@@ -3,11 +3,7 @@
 #include "timelinescene.h"
 #include "sequence/sequence.h"
 #include "sequence/cliplayer.h"
-#include "sequence/canvaslayergroup.h"
-#include "sequence/masterlayer.h"
 #include "timelinecliplayer.h"
-#include "timelinemasterlayer.h"
-#include "timelinelayergroup.h"
 #include "photoncore.h"
 #include "project/project.h"
 #include "pixel/canvas.h"
@@ -35,21 +31,6 @@ TimelineScene::Impl::Impl(TimelineScene *t_facade, Sequence *t_sequence):facade(
 
 LayerItem *TimelineScene::Impl::findLayer(Layer *t_layer)
 {
-
-    for(auto layer : layers)
-    {
-        if(layer->layer() == t_layer)
-            return layer;
-
-        if(layer->layer()->isGroup())
-        {
-            auto result = static_cast<TimelineLayerGroup *>(layer)->findLayer(t_layer);
-            if(result)
-                return result;
-        }
-    }
-
-
     auto result = std::find_if(layers.cbegin(), layers.cend(),[t_layer](const LayerItem *t_testLayer){
                      return t_testLayer->layer() == t_layer;
                  });
@@ -71,31 +52,6 @@ LayerItem *TimelineScene::Impl::addLayer(Layer *t_layer)
 
         return timelineLayer;
     }
-
-    auto masterLayer = dynamic_cast<MasterLayer*>(t_layer);
-    if(masterLayer)
-    {
-        TimelineMasterLayer *timelineLayer = new TimelineMasterLayer(masterLayer);
-
-        layers.append(timelineLayer);
-        facade->addItem(timelineLayer);
-        timelineLayer->addedToScene(facade);
-
-        return timelineLayer;
-    }
-
-    auto canvasGroup = dynamic_cast<CanvasLayerGroup*>(t_layer);
-    if(canvasGroup)
-    {
-        TimelineLayerGroup *timelineLayer = new TimelineLayerGroup(canvasGroup);
-
-        layers.append(timelineLayer);
-        facade->addItem(timelineLayer);
-        timelineLayer->addedToScene(facade);
-
-        return timelineLayer;
-    }
-
 
     return nullptr;
 
@@ -182,18 +138,7 @@ LayerItem *TimelineScene::layerAtY(double t_y) const
         //qDebug() << layer->boundingRect();
         auto globalRect = layer->mapRectToScene(layer->boundingRect());
         if(globalRect.top() < t_y && globalRect.bottom() > t_y)
-        {
-            auto group = dynamic_cast<TimelineLayerGroup*>(layer);
-            if(group)
-            {
-                auto subLayer = group->layerAtY(t_y);
-
-                if(subLayer)
-                    return subLayer;
-            }
-
             return layer;
-        }
     }
     return nullptr;
 }
@@ -218,13 +163,6 @@ void TimelineScene::createLayer()
     m_impl->sequence->addLayer(layer);
 }
 
-void TimelineScene::createCanvasLayerGroup()
-{
-    CanvasLayerGroup *layer = new CanvasLayerGroup("Canvas Group");
-
-    m_impl->sequence->addLayer(layer);
-}
-
 void TimelineScene::contextMenuEvent(QGraphicsSceneContextMenuEvent *contextMenuEvent)
 {
     QGraphicsScene::contextMenuEvent(contextMenuEvent);
@@ -235,16 +173,6 @@ void TimelineScene::contextMenuEvent(QGraphicsSceneContextMenuEvent *contextMenu
     QMenu menu;
     QAction *createLayer = menu.addAction("Create Empty Layer");
     connect(createLayer, &QAction::triggered, this, &TimelineScene::createLayer);
-
-    QAction *createCanvasLayer = menu.addAction("Create Canvas Layer Group");
-    connect(createCanvasLayer, &QAction::triggered, this, &TimelineScene::createCanvasLayerGroup);
-
-    menu.addSeparator();
-
-    menu.addAction("Create Master Curve",[this](){
-        MasterLayer *layer = new MasterLayer("Master Curve");
-        m_impl->sequence->addLayer(layer);
-    });
 
     menu.exec(contextMenuEvent->screenPos());
 }

@@ -20,6 +20,11 @@ public:
     Graph *graph() const;
     void setNodeLibrary(NodeLibrary *);
 
+    // Lets the host handle drag-and-drop from outside the graph (e.g. its own
+    // asset browser) without keira needing to know what's being dragged - see
+    // ExternalDropInterpreter in keira-global.h.
+    void setExternalDropInterpreter(ExternalDropInterpreter);
+
     NodeItem *itemForNode(Node *) const;
 
 public slots:
@@ -34,6 +39,9 @@ signals:
 
 protected:
     void contextMenuEvent(QGraphicsSceneContextMenuEvent *contextMenuEvent) override;
+    void dragEnterEvent(QGraphicsSceneDragDropEvent *event) override;
+    void dragMoveEvent(QGraphicsSceneDragDropEvent *event) override;
+    void dropEvent(QGraphicsSceneDragDropEvent *event) override;
 
 private slots:
 
