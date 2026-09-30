@@ -23,8 +23,7 @@
 #include "graph/bus/surfacenode.h"
 #include "graph/bus/dmxwriternode.h"
 #include "graph/bus/dmxsubgraphnode.h"
-#include "graph/bus/identifyfixturenode.h"
-#include "graph/bus/colorcalibrationnode.h"
+#include "graph/bus/outputoverridesnode.h"
 #include "scene/sceneobject.h"
 #include "scene/scenemanager.h"
 #include "surface/surfacecollection.h"
@@ -121,40 +120,29 @@ Project::Impl::Impl()
     surfaces.addSurface(defaultSurface);
     sequenceNode->setSurfaceId(defaultSurface->uniqueId());
 
-    // Last in the chain before the output node — overrides one fixture's
-    // dimmer/shutter/color when the DMX Patch panel's Identify toggle is on.
-    IdentifyFixtureNode *identifyNode = new IdentifyFixtureNode;
-    identifyNode->setName("Identify");
-    identifyNode->createParameters();
-    identifyNode->setPosition(QPointF(750,0));
-
-    // Right after Identify — overrides one fixture's color capabilities with
-    // raw per-channel percentages while the Color Calibration dialog is open,
-    // so it can preview exactly what a slider drag would produce live.
-    ColorCalibrationNode *colorCalibrationNode = new ColorCalibrationNode;
-    colorCalibrationNode->setName("Color Calibration");
-    colorCalibrationNode->createParameters();
-    colorCalibrationNode->setPosition(QPointF(825,0));
+    // Last before output: identify, calibration preview and laser arming, in
+    // that order, so nothing upstream can enable a laser (see OutputOverridesNode).
+    OutputOverridesNode *overridesNode = new OutputOverridesNode;
+    overridesNode->createParameters();
+    overridesNode->setPosition(QPointF(800,0));
 
     DMXWriterNode *writerNode = new DMXWriterNode;
     writerNode->setName("output");
     writerNode->createParameters();
-    writerNode->setPosition(QPointF(900,0));
+    writerNode->setPosition(QPointF(1000,0));
 
     bus = new BusGraph;
 
     bus->addNode(generateNode);
     bus->addNode(initialValuesNode);
     bus->addNode(sequenceNode);
-    bus->addNode(identifyNode);
-    bus->addNode(colorCalibrationNode);
+    bus->addNode(overridesNode);
     bus->addNode(writerNode);
 
     bus->connectParameters(generateNode->findParameter(DMXGenerateMatrixNode::OutputDMX), initialValuesNode->findParameter(DMXSubGraphNode::InputDMX));
     bus->connectParameters(initialValuesNode->findParameter(DMXSubGraphNode::OutputDMX), sequenceNode->findParameter(SurfaceNode::InputDMX));
-    bus->connectParameters(sequenceNode->findParameter(SurfaceNode::OutputDMX), identifyNode->findParameter(IdentifyFixtureNode::InputDMX));
-    bus->connectParameters(identifyNode->findParameter(IdentifyFixtureNode::OutputDMX), colorCalibrationNode->findParameter(ColorCalibrationNode::InputDMX));
-    bus->connectParameters(colorCalibrationNode->findParameter(ColorCalibrationNode::OutputDMX), writerNode->findParameter(DMXWriterNode::InputDMX));
+    bus->connectParameters(sequenceNode->findParameter(SurfaceNode::OutputDMX), overridesNode->findParameter(OutputOverridesNode::InputDMX));
+    bus->connectParameters(overridesNode->findParameter(OutputOverridesNode::OutputDMX), writerNode->findParameter(DMXWriterNode::InputDMX));
 
     bus->drainCommandQueue();
 
@@ -632,59 +620,6 @@ void Project::readFromJson(const QJsonObject &json)
     {
         QJsonObject busObj = json.value("bus").toObject();
         m_impl->bus->readFromJson(busObj, photonApp->plugins()->nodeLibrary());
-    }
-
-    // Projects saved before the Identify node existed won't have one in their
-    // bus graph — splice one in between the Surface node and the output node
-    // so upgraded projects still get the DMX Patch panel's identify feature.
-    if(!m_impl->bus->findNode("Identify"))
-    {
-        auto *surfaceNode = m_impl->bus->findNode("Surface");
-        auto *outputNode = m_impl->bus->findNode("output");
-        if(surfaceNode && outputNode)
-        {
-            auto *surfaceOut = surfaceNode->findParameter(SurfaceNode::OutputDMX);
-            auto *writerIn = outputNode->findParameter(DMXWriterNode::InputDMX);
-            if(surfaceOut && writerIn)
-            {
-                auto *identifyNode = new IdentifyFixtureNode;
-                identifyNode->setName("Identify");
-                identifyNode->createParameters();
-                identifyNode->setPosition(surfaceNode->position() + QPointF(150, 100));
-
-                m_impl->bus->addNode(identifyNode);
-                m_impl->bus->disconnectParameters(surfaceOut, writerIn);
-                m_impl->bus->connectParameters(surfaceOut, identifyNode->findParameter(IdentifyFixtureNode::InputDMX));
-                m_impl->bus->connectParameters(identifyNode->findParameter(IdentifyFixtureNode::OutputDMX), writerIn);
-                m_impl->bus->drainCommandQueue();
-            }
-        }
-    }
-
-    // Same idea, for projects saved before the Color Calibration node existed
-    // - splice one in between Identify and the output node.
-    if(!m_impl->bus->findNode("Color Calibration"))
-    {
-        auto *identifyNode = m_impl->bus->findNode("Identify");
-        auto *outputNode = m_impl->bus->findNode("output");
-        if(identifyNode && outputNode)
-        {
-            auto *identifyOut = identifyNode->findParameter(IdentifyFixtureNode::OutputDMX);
-            auto *writerIn = outputNode->findParameter(DMXWriterNode::InputDMX);
-            if(identifyOut && writerIn)
-            {
-                auto *colorCalibrationNode = new ColorCalibrationNode;
-                colorCalibrationNode->setName("Color Calibration");
-                colorCalibrationNode->createParameters();
-                colorCalibrationNode->setPosition(identifyNode->position() + QPointF(75, 100));
-
-                m_impl->bus->addNode(colorCalibrationNode);
-                m_impl->bus->disconnectParameters(identifyOut, writerIn);
-                m_impl->bus->connectParameters(identifyOut, colorCalibrationNode->findParameter(ColorCalibrationNode::InputDMX));
-                m_impl->bus->connectParameters(colorCalibrationNode->findParameter(ColorCalibrationNode::OutputDMX), writerIn);
-                m_impl->bus->drainCommandQueue();
-            }
-        }
     }
 }
 

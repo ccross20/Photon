@@ -32,6 +32,7 @@ public:
     SurfaceCollection *surfaces() const;
     RhiContext *rhiContext() const;
     VirtualDJConnector *djConnector() const;
+    VirtualDJPlayback *djPlayback() const;
     SongLibrary *songLibrary() const;
     FixtureLibrary *fixtureLibrary() const;
 

@@ -5,6 +5,8 @@
 #include <QPushButton>
 #include <QTreeView>
 #include <QAbstractItemModel>
+#include <QDialog>
+#include <QPointer>
 #include "waveformheader.h"
 
 namespace photon {
@@ -63,6 +65,7 @@ public:
     Sequence *sequence;
     QPushButton *addButton;
     QPushButton *layerMenuButton;
+    QPointer<QDialog> convertDialog;   // Convert Beats to Markers, while open
 };
 
 }

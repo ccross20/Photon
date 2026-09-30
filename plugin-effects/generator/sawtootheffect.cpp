@@ -14,11 +14,13 @@ SawtoothEffectEditor::SawtoothEffectEditor(SawtoothEffect *t_effect):ChannelEffe
 
     photon::NumberScrubField *freqSpin = new photon::NumberScrubField;
     freqSpin->setMinimum(.001);   // frequency of 0 divides by zero → NaN
+    freqSpin->setSoftRange(.001,5);
     freqSpin->setValue(m_effect->frequency());
     connect(freqSpin, &photon::NumberScrubField::valueChanged, this, &SawtoothEffectEditor::frequencyChanged);
 
 
     photon::NumberScrubField *ampSpin = new photon::NumberScrubField;
+    ampSpin->setSoftRange(-5,5);
     ampSpin->setValue(m_effect->amplitude());
     connect(ampSpin, &photon::NumberScrubField::valueChanged, this, &SawtoothEffectEditor::amplitudeChanged);
 

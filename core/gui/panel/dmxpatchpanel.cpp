@@ -91,7 +91,7 @@ void DMXPatchPanel::projectDidOpen(Project *project)
 
     // The bus graph is rebuilt fresh on every project load, so the node
     // pointer must be re-resolved each time rather than cached across projects.
-    m_impl->identifyNode = dynamic_cast<IdentifyFixtureNode*>(project->bus()->findNode("Identify"));
+    m_impl->identifyNode = OutputOverridesNode::find(project->bus());
     if(m_impl->identifyNode)
         m_impl->identifyNode->setIdentifyEnabled(false);
     m_impl->identifyButton->blockSignals(true);

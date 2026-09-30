@@ -9,8 +9,8 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(QT NAMES Qt6 REQUIRED COMPONENTS Core Gui GuiPrivate Widgets ShaderTools)
-find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Gui GuiPrivate Widgets ShaderTools)
+find_package(QT NAMES Qt6 REQUIRED COMPONENTS Core Gui GuiPrivate Widgets ShaderTools Multimedia)
+find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Gui GuiPrivate Widgets ShaderTools Multimedia)
 
 set(SOURCES
     rhi/rhicamera.h
@@ -31,6 +31,8 @@ set(SOURCES
     pluginvisualizer.h
     visualizerpanel.h
     visualizerpanel.cpp
+    laserpreview.h
+    laserpreview.cpp
 )
 
 qt_add_resources(SOURCES resources.qrc)
@@ -67,6 +69,7 @@ target_link_libraries(plugin-visualizer PRIVATE Qt${QT_VERSION_MAJOR}::Core)
 target_link_libraries(plugin-visualizer PRIVATE Qt${QT_VERSION_MAJOR}::Gui)
 target_link_libraries(plugin-visualizer PRIVATE Qt${QT_VERSION_MAJOR}::GuiPrivate)
 target_link_libraries(plugin-visualizer PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)
+target_link_libraries(plugin-visualizer PRIVATE Qt${QT_VERSION_MAJOR}::Multimedia)
 
 #target_compile_definitions(plugin-visualizer PRIVATE PLUGINVISUALIZER_LIBRARY)
 

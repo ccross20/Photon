@@ -3,10 +3,12 @@
 #include <QGraphicsSceneContextMenuEvent>
 #include <QMenu>
 #include "sequenceclip.h"
+#include "timelinescene.h"
 #include "sequence/clip.h"
 #include "sequence/cliplayer.h"
 #include "routine/routine.h"
 #include "photoncore.h"
+#include "tag/tagcolor.h"
 
 namespace photon {
 
@@ -62,7 +64,8 @@ void SequenceClip::paint(QPainter *painter, const QStyleOptionGraphicsItem *item
     float strengthY = m_impl->clip->layer()->height() * m_impl->clip->strength();
     float h = m_impl->clip->layer()->height();
 
-    painter->fillRect(scaledRect.adjusted(1,1,-1,-1), QColor(Qt::red).darker());
+    const QColor baseColor = m_impl->clip->color().isValid() ? m_impl->clip->color() : QColor(Qt::red);
+    painter->fillRect(scaledRect.adjusted(1,1,-1,-1), baseColor.darker());
     QPainterPath path;
     path.moveTo(0,scaledRect.height());
 
@@ -107,7 +110,7 @@ void SequenceClip::paint(QPainter *painter, const QStyleOptionGraphicsItem *item
     path.lineTo(scaledRect.right(),scaledRect.height());
     path.closeSubpath();
 
-    painter->fillPath(path, m_impl->isHovering ? Qt::yellow : Qt::red);
+    painter->fillPath(path, m_impl->isHovering ? baseColor.lighter(140) : baseColor);
     if(isSelected())
     {
         painter->setPen(QPen(Qt::cyan,2));
@@ -119,6 +122,7 @@ void SequenceClip::paint(QPainter *painter, const QStyleOptionGraphicsItem *item
 
     painter->fillRect(QRectF(scaledRect.topLeft() + QPointF(inX, h - 4 - handleY),QSize(4,4)), Qt::black);
     painter->fillRect(QRectF(scaledRect.topLeft() + QPointF(outX, h - 4 - handleY) - QPoint(4,0),QSize(4,4)), Qt::black);
+    painter->setPen(tagTextColor(baseColor));
     painter->drawText(inX + 2,20,m_impl->clip->name());
 
 }
@@ -187,9 +191,37 @@ void SequenceClip::contextMenuEvent(QGraphicsSceneContextMenuEvent *event)
         menu.addSeparator();
     }
 
-    menu.addAction("Remove Clip", [clip](){
-        clip->layer()->removeClip(clip);
-        delete clip;
+    // Copy/Cut act on the selection; right-clicking an unselected clip
+    // selects just it first, the way a left click would.
+    auto *timelineScene = static_cast<TimelineScene*>(scene());
+    if(timelineScene && !isSelected())
+    {
+        timelineScene->clearSelection();
+        setSelected(true);
+    }
+    if(timelineScene)
+    {
+        menu.addAction("Copy", [timelineScene](){ timelineScene->copySelectedClips(); });
+        menu.addAction("Cut", [timelineScene](){ timelineScene->cutSelectedClips(); });
+        menu.addSeparator();
+    }
+
+    // Right-clicking inside a multi-selection removes the whole selection.
+    QVector<Clip*> removeTargets{clip};
+    if(isSelected() && scene())
+    {
+        removeTargets.clear();
+        for(auto *item : scene()->selectedItems())
+            if(auto *selectedClip = dynamic_cast<SequenceClip*>(item))
+                removeTargets.append(selectedClip->clip());
+    }
+    menu.addAction(removeTargets.size() > 1 ? QString("Remove %1 Clips").arg(removeTargets.size()) : QString("Remove Clip"),
+                   [removeTargets](){
+        for(Clip *target : removeTargets)
+        {
+            target->layer()->removeClip(target);
+            delete target;
+        }
     });
 
     auto easeInMenu = menu.addMenu("Ease In Mode");

@@ -33,8 +33,11 @@ protected:
     void mouseReleaseEvent(QMouseEvent *event) override;
 
     void wheelEvent(QWheelEvent *event) override;
+    void keyPressEvent(QKeyEvent *event) override;
 
 private:
+    void duplicateMovingClips();
+
     class Impl;
     Impl *m_impl;
 };

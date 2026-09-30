@@ -22,6 +22,10 @@ set(PROJECT_SOURCES
     fixture/fixturecapabilitytest.cpp
     fixture/colorcalibrationtest.h
     fixture/colorcalibrationtest.cpp
+    fixture/lasertest.h
+    fixture/lasertest.cpp
+    virtualdj/virtualdjplaybacktest.h
+    virtualdj/virtualdjplaybacktest.cpp
     fixture/fixturecollectiontest.h
     fixture/fixturecollectiontest.cpp
     sequence/sequencetest.h
@@ -50,6 +54,7 @@ add_test(NAME photon-core-test COMMAND test)
 target_link_libraries(photon-core-test PRIVATE Qt${QT_VERSION_MAJOR}::Test)
 target_link_libraries(photon-core-test PRIVATE photon-core)
 target_link_libraries(photon-core-test PRIVATE keira)
+target_compile_definitions(photon-core-test PRIVATE PHOTON_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
 
 
 target_link_libraries(photon-core-test PRIVATE Qt${QT_VERSION_MAJOR}::Core)

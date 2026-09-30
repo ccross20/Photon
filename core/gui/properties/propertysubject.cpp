@@ -26,6 +26,7 @@
 #include "sequence/layer.h"
 #include "sequence/cliplayer.h"
 #include "sequence/clip.h"
+#include "sequence/viewer/clippropertyeditor.h"
 
 namespace photon {
 
@@ -250,6 +251,47 @@ QWidget *ChannelEffectPropertySubject::createEditor()
 }
 
 // ---------------------------------------------------------------------------
+// Clip
+
+ClipPropertySubject::ClipPropertySubject(Clip *t_clip) : m_clip(t_clip)
+{
+}
+
+Clip *ClipPropertySubject::clip() const
+{
+    return m_clip.data();
+}
+
+bool ClipPropertySubject::isValid() const
+{
+    // A clip removed from its layer is on its way to being deleted.
+    return m_clip && m_clip->layer();
+}
+
+QString ClipPropertySubject::title() const
+{
+    if(!isValid())
+        return QStringLiteral("(missing clip)");
+    return m_clip->name().isEmpty() ? QStringLiteral("Clip") : m_clip->name();
+}
+
+PropertyAddress ClipPropertySubject::address() const
+{
+    PropertyAddress address;
+    if(!isValid())
+        return address;
+    if(Sequence *sequence = m_clip->sequence())
+        address.append(PropertyAddress::KindResource, sequence->resourceId(), sequence->resourceName());
+    address.append(PropertyAddress::KindClip, m_clip->uniqueId(), title());
+    return address;
+}
+
+QWidget *ClipPropertySubject::createEditor()
+{
+    return isValid() ? new ClipPropertyEditor(m_clip) : nullptr;
+}
+
+// ---------------------------------------------------------------------------
 // Factory
 
 namespace PropertySubjectFactory {
@@ -273,6 +315,13 @@ PropertySubject *forResource(ProjectResource *t_resource)
     if (!t_resource)
         return nullptr;
     return new ResourcePropertySubject(t_resource);
+}
+
+PropertySubject *forClip(Clip *t_clip)
+{
+    if (!t_clip || !t_clip->layer())
+        return nullptr;
+    return new ClipPropertySubject(t_clip);
 }
 
 PropertySubject *forChannelEffect(ChannelEffect *t_effect)
@@ -370,6 +419,22 @@ ChannelEffect *findEffectAnywhere(const QByteArray &effectId)
     return nullptr;
 }
 
+Clip *findClipAnywhere(const QByteArray &clipId)
+{
+    if (!photonApp || !photonApp->sequences())
+        return nullptr;
+    for (Sequence *sequence : photonApp->sequences()->sequences()) {
+        for (Layer *layer : sequence->layers()) {
+            if (auto *clipLayer = dynamic_cast<ClipLayer *>(layer)) {
+                for (Clip *clip : clipLayer->clips())
+                    if (clip->uniqueId() == clipId)
+                        return clip;
+            }
+        }
+    }
+    return nullptr;
+}
+
 ProjectResource *findResourceAnywhere(const QByteArray &id)
 {
     Project *project = photonApp ? photonApp->project() : nullptr;
@@ -451,6 +516,11 @@ PropertySubject *resolve(const PropertyAddress &t_address)
 
         // The root graph (the Bus) is neither of those - nothing to show.
         return nullptr;
+    }
+
+    if (leaf.kind == PropertyAddress::KindClip) {
+        Clip *clip = findClipAnywhere(leaf.id);
+        return clip ? new ClipPropertySubject(clip) : nullptr;
     }
 
     if (leaf.kind == PropertyAddress::KindChannelEffect) {

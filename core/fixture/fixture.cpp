@@ -2,6 +2,8 @@
 #include <QColor>
 #include <QJsonDocument>
 #include <QFile>
+#include <QMutex>
+#include <atomic>
 #include "fixturechannel_p.h"
 #include "fixturevirtualchannel.h"
 #include "fixtureeditorwidget.h"
@@ -43,6 +45,14 @@ public:
     int universe = 1;
     int selectedMode = -1;
     int uniqueIndex = 0;
+
+    // Read by OutputOverridesNode on the eval thread while the setup dialog
+    // edits them on the main thread.
+    std::atomic<bool> laserArmed = false;
+    std::atomic<bool> laserSetupActive = false;
+    mutable QMutex laserSetupMutex;
+    Fixture::LaserSetup laserSetup;
+    QString laserPreviewFolder;
 };
 
 const QByteArray Fixture::FixtureMime = "application/x-photonfixture";
@@ -56,6 +66,65 @@ Fixture::Fixture(const QString &path) :SceneObject("fixture"), m_impl(new Impl)
 Fixture::~Fixture()
 {
     delete m_impl;
+}
+
+bool Fixture::isLaser() const
+{
+    return m_impl->categories.contains("Laser", Qt::CaseInsensitive);
+}
+
+bool Fixture::isLaserArmed() const
+{
+    return m_impl->laserArmed;
+}
+
+void Fixture::setLaserArmed(bool t_armed)
+{
+    if(m_impl->laserArmed.exchange(t_armed) == t_armed)
+        return;
+    emit metadataChanged(this);
+}
+
+bool Fixture::isLaserSetupActive() const
+{
+    return m_impl->laserSetupActive;
+}
+
+void Fixture::setLaserSetupActive(bool t_active)
+{
+    if(m_impl->laserSetupActive.exchange(t_active) == t_active)
+        return;
+    emit metadataChanged(this);
+}
+
+Fixture::LaserSetup Fixture::laserSetup() const
+{
+    QMutexLocker lock(&m_impl->laserSetupMutex);
+    return m_impl->laserSetup;
+}
+
+void Fixture::setLaserSetup(const LaserSetup &t_setup)
+{
+    {
+        QMutexLocker lock(&m_impl->laserSetupMutex);
+        if(m_impl->laserSetup == t_setup)
+            return;
+        m_impl->laserSetup = t_setup;
+    }
+    emit metadataChanged(this);
+}
+
+QString Fixture::laserPreviewFolder() const
+{
+    return m_impl->laserPreviewFolder;
+}
+
+void Fixture::setLaserPreviewFolder(const QString &t_folder)
+{
+    if(m_impl->laserPreviewFolder == t_folder)
+        return;
+    m_impl->laserPreviewFolder = t_folder;
+    emit metadataChanged(this);
 }
 
 QWidget *Fixture::createEditor()
@@ -889,6 +958,21 @@ void Fixture::readFromJson(const QJsonObject &json, const LoadContext &t_context
     m_impl->identifier = json.value("identifier").toString();
     m_impl->definitionPath = json.value("definitionPath").toString();
     m_impl->uniqueIndex = json.value("uniqueIndex").toInt(0);
+    if(json.contains("laserSetup"))
+    {
+        const QJsonObject setupObj = json.value("laserSetup").toObject();
+        LaserSetup setup;
+        setup.masterIntensity = setupObj.value("masterIntensity").toDouble(1.0);
+        setup.testFrame = setupObj.value("testFrame").toInt(0);
+        setup.sizeX = setupObj.value("sizeX").toDouble(0.0);
+        setup.sizeY = setupObj.value("sizeY").toDouble(0.0);
+        setup.positionX = setupObj.value("positionX").toDouble(0.0);
+        setup.positionY = setupObj.value("positionY").toDouble(0.0);
+        setup.rotation = setupObj.value("rotation").toDouble(0.0);
+        QMutexLocker lock(&m_impl->laserSetupMutex);
+        m_impl->laserSetup = setup;
+    }
+    m_impl->laserPreviewFolder = json.value("laserPreviewFolder").toString();
     loadFixtureDefinition(m_impl->definitionPath);
     setMode(json.value("selectedMode").toInt(-1));
 }
@@ -915,6 +999,21 @@ void Fixture::writeToJson(QJsonObject &json) const
     json.insert("selectedMode", m_impl->selectedMode);
     json.insert("definitionPath", m_impl->definitionPath);
     json.insert("uniqueIndex", m_impl->uniqueIndex);
+
+    if(isLaser())
+    {
+        const LaserSetup setup = laserSetup();
+        QJsonObject setupObj;
+        setupObj.insert("masterIntensity", setup.masterIntensity);
+        setupObj.insert("testFrame", setup.testFrame);
+        setupObj.insert("sizeX", setup.sizeX);
+        setupObj.insert("sizeY", setup.sizeY);
+        setupObj.insert("positionX", setup.positionX);
+        setupObj.insert("positionY", setup.positionY);
+        setupObj.insert("rotation", setup.rotation);
+        json.insert("laserSetup", setupObj);
+        json.insert("laserPreviewFolder", m_impl->laserPreviewFolder);
+    }
 }
 
 } // namespace photon

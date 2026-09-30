@@ -8,6 +8,8 @@
 #include "project/project.h"
 #include "pixel/canvas.h"
 #include "sequence/clip.h"
+#include "sequence/clipclipboard.h"
+#include "sequenceclip.h"
 
 namespace photon {
 
@@ -20,6 +22,7 @@ public:
     void layoutLayers();
 
     Sequence *sequence = nullptr;
+    ClipLayer *activeLayer = nullptr;
     QVector<LayerItem*> layers;
     TimelineScene *facade;
 };
@@ -111,6 +114,15 @@ void TimelineScene::setSequence(Sequence *t_sequence)
     if(!t_sequence)
         return;
 
+    for(Layer *layer : t_sequence->layers())
+    {
+        if(auto *clipLayer = dynamic_cast<ClipLayer*>(layer))
+        {
+            setActiveLayer(clipLayer);
+            break;
+        }
+    }
+
     connect(m_impl->sequence, &Sequence::layerAdded, this, &TimelineScene::layerAdded);
     connect(m_impl->sequence, &Sequence::layerRemoved, this, &TimelineScene::layerRemoved);
 
@@ -124,11 +136,67 @@ Sequence *TimelineScene::sequence() const
     return m_impl->sequence;
 }
 
+ClipLayer *TimelineScene::activeLayer() const
+{
+    return m_impl->activeLayer;
+}
+
+QVector<Clip*> TimelineScene::selectedClips() const
+{
+    QVector<Clip*> clips;
+    for(auto *item : selectedItems())
+        if(auto *clipItem = dynamic_cast<SequenceClip*>(item))
+            clips.append(clipItem->clip());
+    return clips;
+}
+
+void TimelineScene::copySelectedClips()
+{
+    ClipClipboard::copy(selectedClips());
+}
+
+void TimelineScene::cutSelectedClips()
+{
+    const QVector<Clip*> clips = selectedClips();
+    if(clips.isEmpty())
+        return;
+    ClipClipboard::copy(clips);
+    for(Clip *clip : clips)
+    {
+        clip->layer()->removeClip(clip);
+        delete clip;
+    }
+}
+
+void TimelineScene::pasteClips(double t_time, ClipLayer *t_layer)
+{
+    ClipLayer *target = t_layer ? t_layer : m_impl->activeLayer;
+    const QVector<Clip*> pasted = ClipClipboard::paste(m_impl->sequence, target, t_time);
+    if(pasted.isEmpty())
+        return;
+
+    clearSelection();
+    for(Clip *clip : pasted)
+        if(auto *item = itemForClip(clip))
+            item->setSelected(true);
+}
+
+void TimelineScene::setActiveLayer(ClipLayer *t_layer)
+{
+    if(m_impl->activeLayer == t_layer)
+        return;
+    m_impl->activeLayer = t_layer;
+    update();   // lanes repaint their highlight
+    emit activeLayerChanged(t_layer);
+}
+
 void TimelineScene::layerAdded(photon::Layer* t_layer)
 {
     if(!m_impl->findLayer(t_layer))
         m_impl->addLayer(t_layer);
     m_impl->layoutLayers();
+    if(!m_impl->activeLayer)
+        setActiveLayer(dynamic_cast<ClipLayer*>(t_layer));
 }
 
 LayerItem *TimelineScene::layerAtY(double t_y) const
@@ -154,6 +222,21 @@ void TimelineScene::layerRemoved(photon::Layer* t_layer)
     m_impl->layers.removeOne(foundLayer);
     delete foundLayer;
     m_impl->layoutLayers();
+
+    if(t_layer == m_impl->activeLayer)
+    {
+        ClipLayer *replacement = nullptr;
+        for(Layer *layer : m_impl->sequence->layers())
+        {
+            auto *clipLayer = dynamic_cast<ClipLayer*>(layer);
+            if(clipLayer && layer != t_layer)
+            {
+                replacement = clipLayer;
+                break;
+            }
+        }
+        setActiveLayer(replacement);
+    }
 }
 
 void TimelineScene::createLayer()

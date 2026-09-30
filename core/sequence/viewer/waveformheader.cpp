@@ -4,6 +4,11 @@
 #include <QMenu>
 #include <QColorDialog>
 #include <QMessageBox>
+#include <QComboBox>
+#include <QDialog>
+#include <QDialogButtonBox>
+#include <QFormLayout>
+#include <QLabel>
 #include "waveformheader_p.h"
 #include "sequence/sequence.h"
 #include "plugin/pluginfactory.h"
@@ -11,7 +16,9 @@
 #include "gui/menufactory.h"
 #include "photoncore.h"
 #include "sequence/cuelayer.h"
+#include "sequencewaveformeditor.h"
 #include "audio/songdata.h"
+#include "numberscrubfield.h"
 
 namespace photon {
 
@@ -290,6 +297,22 @@ WaveformHeader::WaveformHeader(QWidget *parent)
     QMenu *layerMenu = new QMenu(m_impl->layerMenuButton);
     layerMenu->addAction("Delete Selected Layer", this, &WaveformHeader::deleteSelectedLayerClicked);
     layerMenu->addAction("Convert Beats to Markers", this, &WaveformHeader::convertBeatsToMarkersClicked);
+    layerMenu->addSeparator();
+    // Act on the markers selected in the waveform, or the whole editable
+    // layer when none are; paste goes into the editable layer.
+    QAction *cutAction = layerMenu->addAction("Cut Markers", this, &WaveformHeader::cutMarkersRequested);
+    cutAction->setShortcut(QKeySequence::Cut);
+    QAction *copyAction = layerMenu->addAction("Copy Markers", this, &WaveformHeader::copyMarkersRequested);
+    copyAction->setShortcut(QKeySequence::Copy);
+    QAction *pasteAction = layerMenu->addAction("Paste Markers", this, &WaveformHeader::pasteMarkersRequested);
+    pasteAction->setShortcut(QKeySequence::Paste);
+    connect(layerMenu, &QMenu::aboutToShow, this, [this, cutAction, copyAction, pasteAction]() {
+        CueLayer *layer = m_impl->sequence ? m_impl->sequence->editableCueLayer() : nullptr;
+        const bool hasMarkers = layer && !layer->markers().isEmpty();
+        cutAction->setEnabled(hasMarkers);
+        copyAction->setEnabled(hasMarkers);
+        pasteAction->setEnabled(layer && SequenceWaveformEditor::clipboardHasMarkers());
+    });
     m_impl->layerMenuButton->setMenu(layerMenu);
 }
 
@@ -336,29 +359,95 @@ void WaveformHeader::convertBeatsToMarkersClicked()
     if(!m_impl->sequence)
         return;
 
-    CueLayer *layer = m_impl->sequence->editableCueLayer();
-    if(!layer)
+    if(m_impl->convertDialog)
+    {
+        m_impl->convertDialog->raise();
+        m_impl->convertDialog->activateWindow();
+        return;
+    }
+
+    if(!m_impl->sequence->editableCueLayer())
     {
         QMessageBox::information(this, "Convert Beats to Markers", "No layer is currently editable.");
         return;
     }
-
-    SongData *songData = m_impl->sequence->songData();
-    const BeatGrid &grid = songData->beats();
-    if(grid.isEmpty())
+    if(m_impl->sequence->songData()->beats().isEmpty())
     {
         QMessageBox::information(this, "Convert Beats to Markers",
             "This sequence has no analysed beat grid to convert.");
         return;
     }
 
-    QList<float> markers;
-    markers.reserve(grid.count());
-    for(double beat : grid.beats())
-        markers.append(static_cast<float>(beat));
+    // Same rate choices and offset (in beats) as the DJ Connector node, so a
+    // marker grid can match what a live graph is pulsing to. Remembered for
+    // the session so repeat conversions don't need re-entering.
+    struct Rate { const char *label; double multiplier; };
+    static const Rate kRates[] = { {"/4", 0.25}, {"/2", 0.5}, {"1", 1.0}, {"x2", 2.0}, {"x4", 4.0}, {"x8", 8.0} };
+    static int s_rateIndex = 2;
+    static double s_offset = 0.0;
 
-    layer->addMarkers(markers);
-    layer->sort();
+    // Non-modal so the waveform can still be zoomed and scrolled to check the
+    // previewed markers against the audio before committing.
+    auto *dialog = new QDialog(this);
+    dialog->setAttribute(Qt::WA_DeleteOnClose);
+    dialog->setWindowTitle("Convert Beats to Markers");
+    m_impl->convertDialog = dialog;
+    auto *form = new QFormLayout(dialog);
+
+    auto *rateCombo = new QComboBox;
+    for(const Rate &rate : kRates)
+        rateCombo->addItem(rate.label);
+    rateCombo->setCurrentIndex(s_rateIndex);
+    form->addRow("Rate", rateCombo);
+
+    auto *offsetField = new NumberScrubField;
+    offsetField->setDecimals(2);
+    offsetField->setSoftRange(-4.0, 4.0);
+    offsetField->setValue(s_offset);
+    form->addRow("Offset (beats)", offsetField);
+
+    auto *countLabel = new QLabel;
+    form->addRow(countLabel);
+
+    auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
+    buttons->button(QDialogButtonBox::Ok)->setText("Add Markers");
+    connect(buttons, &QDialogButtonBox::accepted, dialog, &QDialog::accept);
+    connect(buttons, &QDialogButtonBox::rejected, dialog, &QDialog::reject);
+    form->addRow(buttons);
+
+    // Recomputed from the sequence each time rather than captured, in case its
+    // beat grid is re-analysed while the dialog is open.
+    auto pulseTimes = [this, rateCombo, offsetField]() {
+        const BeatGrid &grid = m_impl->sequence->songData()->beats();
+        return grid.pulseTimes(kRates[rateCombo->currentIndex()].multiplier, offsetField->value());
+    };
+    auto refreshPreview = [this, pulseTimes, countLabel]() {
+        const QVector<double> times = pulseTimes();
+        countLabel->setText(QString("%1 markers").arg(times.size()));
+        emit previewMarkersChanged(times);
+    };
+    connect(rateCombo, &QComboBox::currentIndexChanged, dialog, refreshPreview);
+    connect(offsetField, &NumberScrubField::valueChanged, dialog, refreshPreview);
+
+    connect(dialog, &QDialog::accepted, this, [this, pulseTimes, rateCombo, offsetField]() {
+        s_rateIndex = rateCombo->currentIndex();
+        s_offset = offsetField->value();
+
+        CueLayer *layer = m_impl->sequence->editableCueLayer();
+        if(!layer)
+            return;
+        QList<float> markers;
+        for(double time : pulseTimes())
+            markers.append(static_cast<float>(time));
+        layer->addMarkers(markers);
+        layer->sort();
+    });
+    connect(dialog, &QDialog::finished, this, [this]() {
+        emit previewMarkersChanged({});
+    });
+
+    refreshPreview();
+    dialog->show();
 }
 
 void WaveformHeader::addAudioProcessor(AudioProcessor *t_processor)
@@ -373,6 +462,8 @@ void WaveformHeader::addAudioProcessor(AudioProcessor *t_processor)
 
 void WaveformHeader::setSequence(Sequence *t_sequence)
 {
+    if(m_impl->convertDialog)
+        m_impl->convertDialog->close();
     m_impl->sequence = t_sequence;
     m_impl->cueModel->setSequence(t_sequence);
 }

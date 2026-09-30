@@ -4,6 +4,7 @@
 #include "data/dmxmatrix.h"
 #include "graph/bus/dmxgeneratematrixnode.h"
 #include "graph/bus/dmxwriternode.h"
+#include "graph/bus/outputoverridesnode.h"
 #include "model/parameter/parameter.h"
 #include "routine/routineevaluationcontext.h"
 #include "photoncore.h"
@@ -18,6 +19,7 @@ public:
     BusGraph *bus = nullptr;
     DMXMatrix writeMatrix;
     DMXMatrix readMatrix;
+    DMXMatrix laserPreviewMatrix;
     mutable QMutex matrixMutex;
     keira::GraphEvaluator *graphEvaluator = nullptr;
     qlonglong frame = 0;
@@ -30,6 +32,7 @@ BusEvaluator::BusEvaluator(QObject *parent)
     // Creates a RoutineEvaluationContext referencing the write-side DMX buffer.
     auto factory = [this](const keira::FrameTime &t) -> keira::EvaluationContext* {
         m_impl->writeMatrix = DMXMatrix{2};
+        OutputOverridesNode::writeLaserNeutralValues(m_impl->writeMatrix);
 
         if (m_impl->bus) {
             auto *genNode = m_impl->bus->findNode("DMX Generator");
@@ -61,8 +64,10 @@ BusEvaluator::BusEvaluator(QObject *parent)
         auto *param = outputNode->findParameter(DMXWriterNode::InputDMX);
         if (!param)
             return;
+        auto *overrides = OutputOverridesNode::find(m_impl->bus);
         QMutexLocker lock(&m_impl->matrixMutex);
         m_impl->readMatrix = param->value().value<DMXMatrix>();
+        m_impl->laserPreviewMatrix = overrides ? overrides->laserPreviewMatrix() : m_impl->readMatrix;
     };
 
     // No Qt parent — lifetime is managed manually so we can guarantee
@@ -98,6 +103,12 @@ DMXMatrix BusEvaluator::dmxMatrix() const
 {
     QMutexLocker lock(&m_impl->matrixMutex);
     return m_impl->readMatrix;
+}
+
+DMXMatrix BusEvaluator::laserPreviewMatrix() const
+{
+    QMutexLocker lock(&m_impl->matrixMutex);
+    return m_impl->laserPreviewMatrix;
 }
 
 keira::GraphEvaluator *BusEvaluator::graphEvaluator() const

@@ -5,6 +5,7 @@
 #include <QHash>
 #include "model/node.h"
 #include "photon-global.h"
+#include "fixture/capability/fixturecapability.h"
 
 namespace keira { class BooleanParameter; }
 
@@ -33,11 +34,17 @@ public:
     const static QByteArray Fixtures;
     const static QByteArray Enable;
 
+    struct CapabilityOption { QString name; CapabilityType type; };
+
     struct EnableSample { double time; bool enabled; };
     struct ValueSample { double time; QVariant value; };
 
     FixtureStateNode();
     ~FixtureStateNode();
+
+    // Capabilities offered by the editor's "Add Capability" menu. Every type
+    // must have a case in State::Impl::addCapability.
+    virtual QVector<CapabilityOption> addableCapabilities() const;
 
     void createParameters() override;
     void evaluate(keira::EvaluationContext *) const override;
@@ -66,6 +73,9 @@ public:
 
     void readFromJson(const QJsonObject &, keira::NodeLibrary *) override;
     void writeToJson(QJsonObject &) const override;
+
+protected:
+    FixtureStateNode(const QByteArray &nodeId, const QString &name);
 
 private:
     // Applies the state to one fixture, reading exposed channels from `values`.

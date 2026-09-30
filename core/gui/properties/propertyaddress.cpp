@@ -12,6 +12,7 @@ const QByteArray PropertyAddress::KindRig      = "rig";
 const QByteArray PropertyAddress::KindObject   = "object";
 const QByteArray PropertyAddress::KindResource = "resource";
 const QByteArray PropertyAddress::KindChannelEffect = "channelEffect";
+const QByteArray PropertyAddress::KindClip = "clip";
 
 void PropertyAddress::append(const QByteArray &kind, const QByteArray &id, const QString &label)
 {

@@ -9,7 +9,7 @@
 #include <QScrollArea>
 #include "dmxpatchpanel.h"
 #include "gui/dmxpatch/dmxpatchgrid.h"
-#include "graph/bus/identifyfixturenode.h"
+#include "graph/bus/outputoverridesnode.h"
 
 namespace photon {
 
@@ -25,9 +25,9 @@ public:
     QScrollArea *scrollArea;
     DMXPatchGrid *grid;
 
-    // The bus graph's fixed "Identify" node, resolved per-project since the
+    // The bus graph's Output Overrides node (hosts Identify), resolved per-project since the
     // bus graph is recreated on every project load.
-    IdentifyFixtureNode *identifyNode = nullptr;
+    OutputOverridesNode *identifyNode = nullptr;
 };
 
 }

@@ -13,6 +13,7 @@ public:
     CapabilityType type;
     QByteArray uniqueId;
     bool isEnabled = true;
+    bool isCollapsed = false;
     int index = 0;
 };
 
@@ -152,6 +153,16 @@ void StateCapability::setIsEnabled(bool t_value)
 }
 
 
+bool StateCapability::isCollapsed() const
+{
+    return m_impl->isCollapsed;
+}
+
+void StateCapability::setCollapsed(bool t_value)
+{
+    m_impl->isCollapsed = t_value;
+}
+
 uint StateCapability::index() const
 {
     return m_impl->index;
@@ -171,6 +182,7 @@ void StateCapability::readFromJson(const QJsonObject &t_json, const LoadContext 
 {
     m_impl->uniqueId = t_json.value("uniqueId").toString().toLatin1();
     m_impl->isEnabled = t_json.value("isEnabled").toBool();
+    m_impl->isCollapsed = t_json.value("isCollapsed").toBool(false);
     m_impl->index = t_json.value("index").toInt();
     m_impl->type = static_cast<CapabilityType>(t_json.value("type").toInt());
 
@@ -194,6 +206,7 @@ void StateCapability::writeToJson(QJsonObject &t_json) const
 {
     t_json.insert("uniqueId", QString{m_impl->uniqueId});
     t_json.insert("isEnabled", m_impl->isEnabled);
+    t_json.insert("isCollapsed", m_impl->isCollapsed);
     t_json.insert("index", m_impl->index);
     t_json.insert("type", m_impl->type);
 

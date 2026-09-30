@@ -1,3 +1,4 @@
+#include <cmath>
 #include <QJsonDocument>
 #include <QFile>
 #include "sequence_p.h"
@@ -197,23 +198,23 @@ void Sequence::removeCueLayer(CueLayer *t_layer)
 bool Sequence::snapTime(float t_time, float *t_outTime, float t_tolerance, const QVector<Clip*> &t_excludeClips) const
 {
     *t_outTime = t_time;
+    float bestDistance = t_tolerance;
     bool hasSnap = false;
-    float winner = 100000000.f;
+    auto consider = [&](float t_candidate) {
+        const float distance = std::abs(t_candidate - t_time);
+        if(distance <= bestDistance)
+        {
+            bestDistance = distance;
+            *t_outTime = t_candidate;
+            hasSnap = true;
+        }
+    };
 
     for(auto cueLayer : m_impl->cueLayers)
     {
-        if(cueLayer->isSnappable())
-        {
-            float snapTime = 0;
-            if(cueLayer->snapToMarker(t_time, &snapTime, t_tolerance))
-            {
-                if(abs(snapTime - t_time) < abs(winner - t_time) || !hasSnap)
-                {
-                    winner = snapTime;
-                    hasSnap = true;
-                }
-            }
-        }
+        float markerTime = 0;
+        if(cueLayer->isSnappable() && cueLayer->snapToMarker(t_time, &markerTime, t_tolerance))
+            consider(markerTime);
     }
 
     for(auto layer : m_impl->layers)
@@ -226,25 +227,11 @@ bool Sequence::snapTime(float t_time, float *t_outTime, float t_tolerance, const
         {
             if(t_excludeClips.contains(clip))
                 continue;
-
-            for(float candidate : {static_cast<float>(clip->startTime()), static_cast<float>(clip->endTime())})
-            {
-                if(abs(candidate - t_time) > t_tolerance)
-                    continue;
-
-                if(abs(candidate - t_time) < abs(winner - t_time) || !hasSnap)
-                {
-                    winner = candidate;
-                    hasSnap = true;
-                }
-            }
+            consider(static_cast<float>(clip->startTime()));
+            consider(static_cast<float>(clip->endTime()));
         }
     }
 
-    if(hasSnap)
-    {
-        *t_outTime = winner;
-    }
     return hasSnap;
 }
 

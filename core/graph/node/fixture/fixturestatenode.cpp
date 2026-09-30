@@ -29,9 +29,13 @@ keira::NodeInformation FixtureStateNode::info()
     return toReturn;
 }
 
-FixtureStateNode::FixtureStateNode() : keira::Node("photon.node.fixture-state")
+FixtureStateNode::FixtureStateNode() : FixtureStateNode("photon.node.fixture-state", "Fixture State")
 {
-    setName("Fixture State");
+}
+
+FixtureStateNode::FixtureStateNode(const QByteArray &t_nodeId, const QString &t_name) : keira::Node(t_nodeId)
+{
+    setName(t_name);
     setWidth(160);
     // Always evaluate so the Enable history keeps filling even when nothing
     // upstream changed — the per-fixture offset delay reads from it.
@@ -119,6 +123,28 @@ void FixtureStateNode::setChannelExposed(StateCapability *t_cap, int t_index, bo
             m_retiredParams.append(existing);
         }
     }
+}
+
+QVector<FixtureStateNode::CapabilityOption> FixtureStateNode::addableCapabilities() const
+{
+    // Kept in step with the clip state editor's menu (sequence/viewer/stateeditor.cpp).
+    return {
+        {"Dimmer", Capability_Dimmer},
+        {"CTO",    Capability_CTO},
+        {"UV",     Capability_UV},
+        {"Color",  Capability_Color},
+        {"Pan",    Capability_Pan},
+        {"Tilt",   Capability_Tilt},
+        {"Strobe", Capability_Strobe},
+        {"Focus",  Capability_Focus},
+        {"Zoom",   Capability_Zoom},
+        {"Color Slot", Capability_ColorWheelSlot},
+        {"Gobo Slot", Capability_WheelSlot},
+        {"Wheel Rotation", Capability_WheelRotation},
+        {"Wheel Slot Rotation", Capability_WheelSlotRotation},
+        {"Lens Rotation", Capability_LensRotation},
+        {"Prism", Capability_Prism},
+    };
 }
 
 State *FixtureStateNode::state() const

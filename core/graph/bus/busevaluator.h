@@ -19,6 +19,9 @@ public:
     BusGraph *bus();
 
     DMXMatrix dmxMatrix() const;
+    // The frame as it was before laser arming was applied, so the
+    // visualizer can preview lasers that are disarmed in the real rig.
+    DMXMatrix laserPreviewMatrix() const;
 
     keira::GraphEvaluator *graphEvaluator() const;
 

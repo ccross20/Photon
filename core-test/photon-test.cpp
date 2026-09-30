@@ -9,6 +9,8 @@
 #include "fixture/fixturecollectiontest.h"
 #include "fixture/fixturecapabilitytest.h"
 #include "fixture/colorcalibrationtest.h"
+#include "fixture/lasertest.h"
+#include "virtualdj/virtualdjplaybacktest.h"
 #include "sequence/sequencetest.h"
 #include "scene/sceneobjecttest.h"
 #include "project/surfaceownershiptest.h"
@@ -44,6 +46,8 @@ int main(int argc, char *argv[])
     tests.emplace("fixture_collection_test", std::make_unique<photon::FixtureCollectionTest>());
     tests.emplace("fixture_capability_test", std::make_unique<photon::FixtureCapabilityTest>());
     tests.emplace("color_calibration_test", std::make_unique<photon::ColorCalibrationTest>());
+    tests.emplace("laser_test", std::make_unique<photon::LaserTest>());
+    tests.emplace("virtualdj_playback_test", std::make_unique<photon::VirtualDJPlaybackTest>());
     tests.emplace("sequence_test", std::make_unique<photon::SequenceTest>());
     tests.emplace("scene_object_test", std::make_unique<photon::SceneObjectTest>());
     tests.emplace("surface_ownership_test", std::make_unique<photon::SurfaceOwnershipTest>());

@@ -18,12 +18,14 @@
 #include <QAudioOutput>
 #include "sequencewidget.h"
 #include "gui/properties/propertycontroller.h"
+#include "gui/properties/propertysubject.h"
 #include "model/node.h"
 #include "timelineviewer.h"
 #include "timelinescene.h"
 #include "sequenceclip.h"
 #include "waveformheader.h"
 #include "sequence/sequence.h"
+#include "sequence/cliplayer.h"
 #include "photoncore.h"
 #include "timekeeper.h"
 #include "graph/node/library/savedresourcedrop.h"
@@ -149,6 +151,14 @@ SequenceWidget::SequenceWidget(QWidget *parent)
     m_impl->viewer = new TimelineViewer;
     m_impl->waveform = new SequenceWaveformEditor;
     m_impl->waveformHeader = new WaveformHeader;
+    connect(m_impl->waveformHeader, &WaveformHeader::previewMarkersChanged,
+            m_impl->waveform, &SequenceWaveformEditor::setPreviewMarkers);
+    connect(m_impl->waveformHeader, &WaveformHeader::cutMarkersRequested,
+            m_impl->waveform, &SequenceWaveformEditor::cutMarkers);
+    connect(m_impl->waveformHeader, &WaveformHeader::copyMarkersRequested,
+            m_impl->waveform, &SequenceWaveformEditor::copyMarkers);
+    connect(m_impl->waveformHeader, &WaveformHeader::pasteMarkersRequested,
+            m_impl->waveform, &SequenceWaveformEditor::pasteMarkers);
     //m_impl->viewer->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
     m_impl->viewer->setScene(m_impl->scene);
     m_impl->viewer->setScale(m_impl->scale);
@@ -234,6 +244,12 @@ SequenceWidget::SequenceWidget(QWidget *parent)
     m_impl->horizontalSplitter->addWidget(m_impl->verticalSplitter);
     setLayout(vLayout);
     connect(photonApp->timekeeper(), &Timekeeper::tick, this, &SequenceWidget::tick);
+    // Active layer: the headers and the timeline lanes both set and show it.
+    connect(m_impl->details, &TimelineHeader::layerActivated, m_impl->scene, [this](photon::Layer *layer){
+        if(auto *clipLayer = dynamic_cast<ClipLayer*>(layer))
+            m_impl->scene->setActiveLayer(clipLayer);
+    });
+    connect(m_impl->scene, &TimelineScene::activeLayerChanged, m_impl->details, &TimelineHeader::setActiveLayer);
     connect(m_impl->viewer->verticalScrollBar(), &QAbstractSlider::valueChanged, m_impl->details, &TimelineHeader::offsetChanged);
     connect(m_impl->viewer, &TimelineViewer::scaleChanged, this, &SequenceWidget::setScale);
 
@@ -243,7 +259,12 @@ SequenceWidget::SequenceWidget(QWidget *parent)
     connect(m_impl->horizontalSplitter, &QSplitter::splitterMoved, this, &SequenceWidget::horizontalSplitterMoved);
     connect(m_impl->curvePropertyEditor, &ClipStructureViewer::selectEffect, this, &SequenceWidget::selectEffect);
     connect(m_impl->curvePropertyEditor, &ClipStructureViewer::selectClipGraph, this, &SequenceWidget::selectClipGraph);
-    connect(m_impl->curvePropertyEditor, &ClipStructureViewer::clearSelection, this, &SequenceWidget::showDefaultEditor);
+    connect(m_impl->curvePropertyEditor, &ClipStructureViewer::clearSelection, this, [this](){
+        showDefaultEditor();
+        // Its parameter page in the Properties panel goes with it.
+        if(dynamic_cast<ChannelEffectPropertySubject*>(PropertyController::instance()->subject()))
+            PropertyController::instance()->clear();
+    });
     connect(m_impl->timebar, &TimeBar::changeTime, this, &SequenceWidget::gotoTime);
     connect(m_impl->viewer, &TimelineViewer::offsetChanged, this, &SequenceWidget::setOffset);
     connect(m_impl->details, &TimelineHeader::editLayer, this, &SequenceWidget::editLayer);
@@ -266,6 +287,7 @@ void SequenceWidget::setSequence(Sequence *t_sequence)
     m_impl->scene->setSequence(t_sequence);
     //m_impl->viewer->centerOn(0,0);
     m_impl->details->setSequence(t_sequence);
+    m_impl->details->setActiveLayer(m_impl->scene->activeLayer());
     m_impl->player->setSource(t_sequence->filePath());
     m_impl->waveform->setSequence(t_sequence);
     m_impl->waveformHeader->setSequence(t_sequence);
@@ -470,40 +492,36 @@ void SequenceWidget::showDefaultEditor()
 
 void SequenceWidget::selectionChanged()
 {
-    auto newSelection = m_impl->scene->selectedItems();
-    QVector<SequenceClip*> removed;
-    QVector<SequenceClip*> added;
+    const auto newSelection = m_impl->scene->selectedItems();
+    SequenceClip *previousPrimary = m_impl->selectedClips.isEmpty() ? nullptr : m_impl->selectedClips.last();
 
-    for(auto item : m_impl->selectedClips)
+    // Kept in selection order, so the property editor can follow the most
+    // recently selected clip that's still selected.
+    for(auto it = m_impl->selectedClips.begin(); it != m_impl->selectedClips.end();)
     {
-        if(!newSelection.contains(item))
-        {
-            SequenceClip *clip = dynamic_cast<SequenceClip*>(item);
-            removed.append(item);
-            if(clip)
-                m_impl->curvePropertyEditor->setClip(nullptr);
-        }
+        if(newSelection.contains(*it))
+            ++it;
+        else
+            it = m_impl->selectedClips.erase(it);
     }
-
     for(auto item : newSelection)
     {
-        SequenceClip *clip = dynamic_cast<SequenceClip*>(item);
-        if(clip)
-        {
-            if(!m_impl->selectedClips.contains(clip))
-            {
-                added.append(clip);
-                m_impl->curvePropertyEditor->setClip(clip->clip());
-            }
-        }
+        auto *clip = dynamic_cast<SequenceClip*>(item);
+        if(clip && !m_impl->selectedClips.contains(clip))
+            m_impl->selectedClips.append(clip);
     }
 
-    for(auto clip : removed)
-        m_impl->selectedClips.removeOne(clip);
+    SequenceClip *primary = m_impl->selectedClips.isEmpty() ? nullptr : m_impl->selectedClips.last();
+    if(primary == previousPrimary)
+        return;
 
-    m_impl->selectedClips.append(added);
-
+    m_impl->curvePropertyEditor->setClip(primary ? primary->clip() : nullptr);
     m_impl->curvePropertyEditor->restoreState();
+
+    if(primary)
+        PropertyController::instance()->selectClip(primary->clip());
+    else if(dynamic_cast<ClipPropertySubject*>(PropertyController::instance()->subject()))
+        PropertyController::instance()->clear();
 }
 
 void SequenceWidget::gotoTime(double t_time)

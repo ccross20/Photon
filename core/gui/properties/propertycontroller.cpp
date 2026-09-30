@@ -51,6 +51,11 @@ void PropertyController::selectChannelEffect(ChannelEffect *t_effect)
     setSubject(PropertySubjectFactory::forChannelEffect(t_effect));
 }
 
+void PropertyController::selectClip(Clip *t_clip)
+{
+    setSubject(PropertySubjectFactory::forClip(t_clip));
+}
+
 void PropertyController::clear()
 {
     setSubject(nullptr);

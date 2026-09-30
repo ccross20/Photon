@@ -25,7 +25,7 @@ public:
 
     void setSceneRoot(SceneObject *root);
     void setSelectedSceneObjects(const QVector<SceneObject *> &objs);
-    void setDmxState(const DMXMatrix &dmx);
+    void setDmxState(const DMXMatrix &dmx, const DMXMatrix &laserPreview);
 
 signals:
     void selectionChanged(const QVector<photon::SceneObject *> &objs);

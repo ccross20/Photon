@@ -12,6 +12,7 @@
 #include <QSet>
 #include <QElapsedTimer>
 #include <QImage>
+#include <memory>
 #include "rhigizmo.h"
 #include "rhimodel.h"
 #include "data/dmxmatrix.h"
@@ -34,6 +35,7 @@ class Fixture;
 class FixtureChannel;
 class RhiMesh;
 class RhiCamera;
+class LaserPreview;
 
 // Owns all QRhi GPU resources for the visualizer and records the frame.
 // Milestone A: a ground grid plus one lit box per fixture in the scene tree.
@@ -56,7 +58,13 @@ public:
     }
 
     // Latest evaluated DMX output. Drives live fixture color/intensity and beams.
-    void setDmxState(const DMXMatrix &dmx) { m_dmx = dmx; }
+    // laserPreview is the same frame before laser arming was applied, so lasers
+    // preview even while disarmed in the real rig.
+    void setDmxState(const DMXMatrix &dmx, const DMXMatrix &laserPreview)
+    {
+        m_dmx = dmx;
+        m_laserDmx = laserPreview;
+    }
 
     void setBeamMode(BeamMode mode) { m_beamMode = mode; }
     BeamMode beamMode() const { return m_beamMode; }
@@ -107,12 +115,16 @@ private:
         QVector4D  fadePlane;       // volumetric beams: xyz = plane normal (toward apex),
                                     // w = offset (signed dist = dot(n,X)+w); zero = no fade
         bool       volumetric = false; // beams only: raymarched (true) vs flat cone (false)
+        float      laserLayer = 0.0f;  // beams only: laser projection layer (0 = none, 1..N)
     };
 
     void collectDrawables(SceneObject *obj, QVector<Drawable> &out,
                           QSet<SceneObject *> &seenTrusses);
     // Appends a beam-cone drawable for every lit fixture in the subtree.
     void collectBeams(SceneObject *obj, QVector<Drawable> &out) const;
+    // Appends the projection-textured shaft for one laser fixture, if its current
+    // cue has preview media and it's lit.
+    void collectLaserBeam(Fixture *fixture, QVector<Drawable> &out) const;
     // Appends a lit-plane drawable for every wall/floor surface in the subtree.
     void collectSurfaces(SceneObject *obj, QVector<Drawable> &out) const;
     // Appends wireframe-box line verts (pos+color, 6 floats each) for every SceneZone
@@ -274,6 +286,13 @@ private:
     QRhiSampler *m_goboSampler = nullptr;
     bool m_goboUploaded = false;
 
+    // Live laser projections: one layer per visible laser, re-uploaded each frame
+    // (kept apart from the gobo array so its mip chain isn't regenerated per frame).
+    QRhiTexture *m_laserTex = nullptr;
+    QRhiSampler *m_laserSampler = nullptr;
+    std::unique_ptr<LaserPreview> m_laserPreview;
+    mutable QVector<QImage> m_laserFrames;   // index = laser layer - 1, rebuilt per frame
+
     QRhiShaderResourceBindings *m_meshSrb = nullptr;
     QRhiShaderResourceBindings *m_lineSrb = nullptr;
     QRhiShaderResourceBindings *m_beamSrb = nullptr;     // frame + per-beam params
@@ -325,6 +344,7 @@ private:
     mutable QHash<SceneObject *, float> m_goboWheelPos;  // smoothed gobo-wheel layer position
 
     DMXMatrix m_dmx;   // latest evaluated DMX output
+    DMXMatrix m_laserDmx;   // m_dmx before laser arming (see setDmxState)
 
 };
 

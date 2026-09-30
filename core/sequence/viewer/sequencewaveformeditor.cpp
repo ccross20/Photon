@@ -1,6 +1,9 @@
 #include <QPainter>
 #include <QMouseEvent>
 #include <QToolButton>
+#include <QClipboard>
+#include <QGuiApplication>
+#include <QMimeData>
 #include <algorithm>
 #include <cmath>
 #include "sequencewaveformeditor.h"
@@ -9,6 +12,15 @@
 #include "audio/songdata.h"
 
 namespace photon {
+
+namespace {
+
+const QString kMarkerMime = QStringLiteral("application/x-photon-cue-markers");
+
+// Markers closer than this are the same marker (a paste onto its own layer).
+constexpr float kSameMarkerTolerance = 0.001f;
+
+}
 
 class SequenceWaveformEditor::Impl
 {
@@ -25,6 +37,7 @@ public:
     QVector<float> selectedMarkers;
     QVector<float> selectedMarkersInitial;
     CueLayer *editableLayer = nullptr;
+    QVector<double> previewMarkers;
     DragMode dragMode = DragNone;
     double initialTime = 0;
     Range selectionRange;
@@ -119,6 +132,21 @@ void SequenceWaveformEditor::layerRemoved(photon::CueLayer* t_layer)
 {
     disconnect(t_layer, &CueLayer::markersChanged, this, &SequenceWaveformEditor::markersUpdated);
     disconnect(t_layer, &CueLayer::metadataChanged, this, &SequenceWaveformEditor::markersMetadataUpdated);
+
+    // The caller deletes the layer right after removing it, so nothing here may
+    // keep pointing at it - including the working copy of its markers.
+    if(t_layer == m_impl->editableLayer)
+    {
+        m_impl->editableLayer = nullptr;
+        m_impl->otherMarkers.clear();
+        m_impl->selectedMarkers.clear();
+        m_impl->selectedMarkersInitial.clear();
+        m_impl->dragMode = Impl::DragNone;
+        updateMarkerDeleteButton();
+    }
+
+    update();
+    emit contentChanged();
 }
 
 void SequenceWaveformEditor::editableCueLayerChanged(photon::CueLayer* t_layer)
@@ -134,6 +162,88 @@ void SequenceWaveformEditor::editableCueLayerChanged(photon::CueLayer* t_layer)
         m_impl->otherMarkers = t_layer->markers();
         disconnect(t_layer, &CueLayer::markersChanged, this, &SequenceWaveformEditor::markersUpdated);
     }
+}
+
+void SequenceWaveformEditor::setPreviewMarkers(const QVector<double> &t_times)
+{
+    if(m_impl->previewMarkers.isEmpty() && t_times.isEmpty())
+        return;
+    m_impl->previewMarkers = t_times;
+    update();
+    emit contentChanged();
+}
+
+bool SequenceWaveformEditor::clipboardHasMarkers()
+{
+    const QMimeData *mime = QGuiApplication::clipboard()->mimeData();
+    return mime && mime->hasFormat(kMarkerMime);
+}
+
+void SequenceWaveformEditor::copyMarkers()
+{
+    if(!m_impl->editableLayer)
+        return;
+
+    const QList<float> markers = m_impl->selectedMarkers.isEmpty()
+                                     ? m_impl->editableLayer->markers()
+                                     : m_impl->selectedMarkers;
+    if(markers.isEmpty())
+        return;
+
+    // Times as plain text too, so they can be pasted into a spreadsheet.
+    QStringList lines;
+    for(float marker : markers)
+        lines.append(QString::number(marker, 'f', 6));
+    const QString text = lines.join('\n');
+
+    auto *mime = new QMimeData;
+    mime->setData(kMarkerMime, text.toUtf8());
+    mime->setText(text);
+    QGuiApplication::clipboard()->setMimeData(mime);
+}
+
+void SequenceWaveformEditor::cutMarkers()
+{
+    if(!m_impl->editableLayer)
+        return;
+
+    copyMarkers();
+    if(m_impl->selectedMarkers.isEmpty())
+        m_impl->otherMarkers.clear();
+    m_impl->selectedMarkers.clear();
+    m_impl->editableLayer->replaceMarkers(m_impl->otherMarkers);
+    updateMarkerDeleteButton();
+    update();
+}
+
+void SequenceWaveformEditor::pasteMarkers()
+{
+    if(!m_impl->editableLayer || !clipboardHasMarkers())
+        return;
+
+    const QString text = QString::fromUtf8(QGuiApplication::clipboard()->mimeData()->data(kMarkerMime));
+
+    // Whatever was selected joins the rest; the pasted markers become the
+    // selection so they can be dragged into place straight away.
+    m_impl->otherMarkers.append(m_impl->selectedMarkers);
+    m_impl->selectedMarkers.clear();
+
+    for(const QString &line : text.split('\n', Qt::SkipEmptyParts))
+    {
+        bool ok = false;
+        const float time = line.toFloat(&ok);
+        if(!ok)
+            continue;
+        const bool exists = std::any_of(m_impl->otherMarkers.cbegin(), m_impl->otherMarkers.cend(),
+                                        [time](float marker){ return std::abs(marker - time) < kSameMarkerTolerance; });
+        if(!exists)
+            m_impl->selectedMarkers.append(time);
+    }
+
+    m_impl->editableLayer->replaceMarkers(m_impl->selectedMarkers + m_impl->otherMarkers);
+    m_impl->editableLayer->sort();
+    updateMarkerDeleteButton();
+    update();
 }
 
 void SequenceWaveformEditor::markersUpdated(photon::CueLayer*)
@@ -313,13 +423,39 @@ void SequenceWaveformEditor::paintEvent(QPaintEvent *t_event)
         for(auto marker : m_impl->selectedMarkers)
             drawTick(marker, Qt::cyan);
     }
+
+    // Preview markers run the full height, dashed, so they read as "not added
+    // yet" and can be lined up against the existing ticks and the waveform.
+    if(!m_impl->previewMarkers.isEmpty())
+    {
+        QPen pen(QColor(255, 200, 40, 220));
+        pen.setStyle(Qt::DashLine);
+        painter.setPen(pen);
+        const Range visible = visibleRange();
+        for(double time : m_impl->previewMarkers)
+        {
+            if(time < visible.start || time > visible.end)
+                continue;
+            const double xd = timeToX(time);
+            if(!std::isfinite(xd))
+                continue;
+            const int x = static_cast<int>(std::clamp(xd, -1.0e6, 1.0e6));
+            painter.drawLine(x, 0, x, height());
+        }
+    }
 }
 
 void SequenceWaveformEditor::keyPressEvent(QKeyEvent *t_key)
 {
     WaveformWidget::keyPressEvent(t_key);
 
-    if(t_key->key() == Qt::Key_Delete)
+    if(t_key->matches(QKeySequence::Cut))
+        cutMarkers();
+    else if(t_key->matches(QKeySequence::Copy))
+        copyMarkers();
+    else if(t_key->matches(QKeySequence::Paste))
+        pasteMarkers();
+    else if(t_key->key() == Qt::Key_Delete)
     {
         deleteSelectedMarkers();
     }

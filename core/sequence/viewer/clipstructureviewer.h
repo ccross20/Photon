@@ -14,16 +14,17 @@ class ClipTreeView : public QTreeView
 public:
     ClipTreeView();
 
+signals:
+    void effectCreated(photon::ChannelEffect *);
+
 protected:
     void mousePressEvent(QMouseEvent *event) override;
 
 private:
-    // Selecting the newly-created effect's row right after channel->addEffect()
-    // doesn't stick - something later in the same gesture (the "Add Effect..."
-    // click opens a modal QMenu mid-mousePressEvent) re-applies the previous
-    // selection afterward. Re-assert once more on the next event loop turn so
-    // the effect wins regardless of what raced it.
-    void reassertSelection(const QPersistentModelIndex &index);
+    // Runs after the click that asked for it has been fully handled, so no
+    // part of that click's own selection handling can override selecting the
+    // new effect.
+    void showAddEffectMenu(photon::Channel *channel, const QPoint &globalPos);
 };
 
 
@@ -47,11 +48,15 @@ signals:
 
 private slots:
     void selectionChanged(const QItemSelection &selected, const QItemSelection &deselected);
+    void selectEffectRow(photon::ChannelEffect *);
+    void rowsRemoved();
 
 private:
     ClipTreeView *m_treeView;
     ClipModel *m_model;
     Clip *m_clip = nullptr;
+    // Whether an effect or clip graph is selected (and so open in the editor).
+    bool m_hasEditorSelection = false;
     QHash<QByteArray,QByteArray> m_states;
 
 };

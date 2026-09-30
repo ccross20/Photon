@@ -2,6 +2,7 @@
 #include <QMouseEvent>
 #include <QMenu>
 #include <QTimer>
+#include <QPointer>
 #include "clipstructureviewer.h"
 #include "sequence/channeleffect.h"
 #include "sequence/channel.h"
@@ -25,82 +26,65 @@ void ClipTreeView::mousePressEvent(QMouseEvent *event)
 {
     auto item = indexAt(event->pos());
     auto itemData = static_cast<ClipModel*>(model())->dataForIndex(item);
-    CreateData *createData = dynamic_cast<CreateData*>(itemData);
 
-    if(createData)
+    if(auto *createData = dynamic_cast<CreateData*>(itemData))
     {
-        auto parentData = createData->parent();
-
-        if(dynamic_cast<ChannelData*>(parentData))
+        if(auto *channelData = dynamic_cast<ChannelData*>(createData->parent()))
         {
-            Channel *channel = dynamic_cast<ChannelData*>(parentData)->channel();
-
-            MenuFactory<EffectInformation> factory;
-
-            auto effects = photonApp->plugins()->channelEffects();
-            for(auto &info : effects)
-            {
-                factory.addItem(info.categories, info);
-            }
-
-            EffectInformation selectedInfo;
-            if(factory.showMenu(event->globalPosition().toPoint(), selectedInfo))
-            {
-                auto effect = photonApp->plugins()->createChannelEffect(selectedInfo.effectId);
-
-                if(effect)
-                {
-                    channel->addEffect(effect);
-
-                    auto effectData = dynamic_cast<ChannelData*>(parentData)->findEffectData(effect);
-                    auto effectIndex = static_cast<ClipModel*>(model())->indexForData(effectData);
-
-                    if(effectIndex.isValid())
-                    {
-                        selectionModel()->select(effectIndex, QItemSelectionModel::ClearAndSelect);
-                        setCurrentIndex(effectIndex);
-                        reassertSelection(QPersistentModelIndex(effectIndex));
-                    }
-                }
-            }
-
+            QPointer<Channel> channel = channelData->channel();
+            const QPoint globalPos = event->globalPosition().toPoint();
+            QTimer::singleShot(0, this, [this, channel, globalPos](){
+                if(channel)
+                    showAddEffectMenu(channel, globalPos);
+            });
         }
-
+        event->accept();
+        return;
     }
-    else
+
+    if(!item.isValid())
     {
-        if(!item.isValid())
-            clearSelection();
-        else if(event->buttons() & Qt::RightButton)
-        {
-            auto itemData = static_cast<ClipModel*>(model())->dataForIndex(item);
-
-            if(dynamic_cast<ChannelEffectData*>(itemData))
-            {
-                auto effectItem = dynamic_cast<ChannelEffectData*>(itemData);
-
-                QMenu itemMenu;
-                itemMenu.addAction("Remove",[effectItem](){
-                    effectItem->effect()->channel()->removeEffect(effectItem->effect());
-                });
-
-                itemMenu.exec(event->globalPosition().toPoint());
-            }
-
-        }
+        clearSelection();
         QTreeView::mousePressEvent(event);
+        return;
     }
+
+    if(event->button() == Qt::RightButton)
+    {
+        if(auto *effectItem = dynamic_cast<ChannelEffectData*>(itemData))
+        {
+            ChannelEffect *effect = effectItem->effect();
+            QMenu itemMenu;
+            itemMenu.addAction("Remove", [effect](){
+                effect->channel()->removeEffect(effect);
+            });
+            itemMenu.exec(event->globalPosition().toPoint());
+            // Not handed on to the tree: the row under the cursor may now be
+            // a different one, and the tree would select it.
+            event->accept();
+            return;
+        }
+    }
+
+    QTreeView::mousePressEvent(event);
 }
 
-void ClipTreeView::reassertSelection(const QPersistentModelIndex &index)
+void ClipTreeView::showAddEffectMenu(Channel *t_channel, const QPoint &t_globalPos)
 {
-    QTimer::singleShot(0, this, [this, index](){
-        if(index.isValid())
-        {
-            selectionModel()->select(QModelIndex(index), QItemSelectionModel::ClearAndSelect);
-            setCurrentIndex(QModelIndex(index));
-        }
-    });
+    MenuFactory<EffectInformation> factory;
+    for(auto &info : photonApp->plugins()->channelEffects())
+        factory.addItem(info.categories, info);
+
+    EffectInformation selectedInfo;
+    if(!factory.showMenu(t_globalPos, selectedInfo))
+        return;
+
+    auto effect = photonApp->plugins()->createChannelEffect(selectedInfo.effectId);
+    if(!effect)
+        return;
+
+    t_channel->addEffect(effect);
+    emit effectCreated(effect);
 }
 
 ClipStructureViewer::ClipStructureViewer(QWidget *parent)
@@ -111,6 +95,10 @@ ClipStructureViewer::ClipStructureViewer(QWidget *parent)
     m_treeView->setHeaderHidden(true);
     m_treeView->setModel(m_model);
     connect(m_treeView->selectionModel(), &QItemSelectionModel::selectionChanged, this, &ClipStructureViewer::selectionChanged);
+    connect(m_treeView, &ClipTreeView::effectCreated, this, &ClipStructureViewer::selectEffectRow);
+    // Qt doesn't report a selection change when the selected row itself is
+    // removed, so watch for that separately.
+    connect(m_model, &QAbstractItemModel::rowsRemoved, this, &ClipStructureViewer::rowsRemoved);
 
     QVBoxLayout *vLayout = new QVBoxLayout;
     vLayout->addWidget(m_treeView);
@@ -128,6 +116,7 @@ void ClipStructureViewer::selectionChanged(const QItemSelection &selected, const
     auto indexes = selected.indexes();
     if(indexes.isEmpty())
     {
+        m_hasEditorSelection = false;
         emit clearSelection();
         return;
     }
@@ -136,20 +125,45 @@ void ClipStructureViewer::selectionChanged(const QItemSelection &selected, const
     ChannelEffectData *effectData = dynamic_cast<ChannelEffectData*>(itemData);
     if(effectData)
     {
+        m_hasEditorSelection = true;
         m_states.insert(m_clip->uniqueId(),effectData->effect()->uniqueId());
         emit selectEffect(effectData->effect());
     }
     else if(dynamic_cast<ClipGraphData*>(itemData))
     {
+        m_hasEditorSelection = true;
         m_states.insert(m_clip->uniqueId(),dynamic_cast<ClipGraphData*>(itemData)->clip()->uniqueId());
         emit selectClipGraph(dynamic_cast<ClipGraphData*>(itemData)->clip());
     }
     else
     {
+        m_hasEditorSelection = false;
         m_states.remove(m_clip->uniqueId());
         emit clearSelection();
     }
 
+}
+
+void ClipStructureViewer::selectEffectRow(ChannelEffect *t_effect)
+{
+    const QModelIndex index = m_model->indexForId(t_effect->uniqueId());
+    if(!index.isValid())
+        return;
+    m_treeView->scrollTo(index);
+    m_treeView->selectionModel()->select(index, QItemSelectionModel::ClearAndSelect);
+    m_treeView->selectionModel()->setCurrentIndex(index, QItemSelectionModel::NoUpdate);
+}
+
+void ClipStructureViewer::rowsRemoved()
+{
+    if(!m_hasEditorSelection || m_treeView->selectionModel()->hasSelection())
+        return;
+
+    // The selected effect (or its channel/clip) was removed.
+    m_hasEditorSelection = false;
+    if(m_clip)
+        m_states.remove(m_clip->uniqueId());
+    emit clearSelection();
 }
 
 void ClipStructureViewer::viewId(const QByteArray &t_id)

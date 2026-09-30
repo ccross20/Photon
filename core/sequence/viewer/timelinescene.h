@@ -21,6 +21,21 @@ public:
     LayerItem *itemForLayer(Layer*) const;
     SequenceClip *itemForClip(Clip*) const;
 
+    // The layer new clips are pasted into. Editor state only - not saved.
+    // Defaults to the first clip layer.
+    ClipLayer *activeLayer() const;
+    void setActiveLayer(photon::ClipLayer *);
+
+    QVector<Clip*> selectedClips() const;
+    // Clipboard (see ClipClipboard). Paste goes into `layer`, or the active
+    // layer when null, and leaves the pasted clips selected.
+    void copySelectedClips();
+    void cutSelectedClips();
+    void pasteClips(double time, photon::ClipLayer *layer = nullptr);
+
+signals:
+    void activeLayerChanged(photon::ClipLayer *);
+
 private slots:
     void layerAdded(photon::Layer*);
     void layerRemoved(photon::Layer*);

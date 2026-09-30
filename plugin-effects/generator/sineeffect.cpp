@@ -20,12 +20,14 @@ SineEffectEditor::SineEffectEditor(SineEffect *t_effect):ChannelEffectEditor(t_e
 
     auto *freqSpin = new photon::NumberScrubField;
     freqSpin->setRange(.001, 9999);
+    freqSpin->setSoftRange(.001,5);
     freqSpin->setValue(m_effect->frequency());
     connect(freqSpin, &photon::NumberScrubField::valueChanged, this, &SineEffectEditor::frequencyChanged);
 
 
     auto *ampSpin = new photon::NumberScrubField;
     ampSpin->setRange(-255, 255);
+    ampSpin->setSoftRange(-5,5);
     ampSpin->setValue(m_effect->amplitude());
     connect(ampSpin, &photon::NumberScrubField::valueChanged, this, &SineEffectEditor::amplitudeChanged);
 
@@ -149,10 +151,10 @@ QWidget *SineEffect::createPropertyEditor()
 {
     auto *form = new PropertyForm;
     form->addRow("Frequency", PropertyWidgets::createNumber(m_frequency,
-        {{PropertyWidgets::MetaMinimum, .001}, {PropertyWidgets::MetaMaximum, 9999.0}},
+        {{PropertyWidgets::MetaMinimum, .001}, {PropertyWidgets::MetaMaximum, 9999.0},{PropertyWidgets::MetaSoftMaximum, 10.0},{PropertyWidgets::MetaSoftMinimum, .001}},
         [this](double v){ setFrequency(v); }));
     form->addRow("Amplitude", PropertyWidgets::createNumber(m_amplitude,
-        {{PropertyWidgets::MetaMinimum, -255.0}, {PropertyWidgets::MetaMaximum, 255.0}},
+        {{PropertyWidgets::MetaMinimum, -255.0}, {PropertyWidgets::MetaMaximum, 255.0},{PropertyWidgets::MetaSoftMaximum, 5.0},{PropertyWidgets::MetaSoftMinimum, -5}},
         [this](double v){ setAmplitude(v); }));
     return form;
 }

@@ -128,9 +128,9 @@ void RhiViewport::setSelectedSceneObjects(const QVector<SceneObject *> &objs)
     m_window->setSelectedSceneObjects(objs);
 }
 
-void RhiViewport::setDmxState(const DMXMatrix &dmx)
+void RhiViewport::setDmxState(const DMXMatrix &dmx, const DMXMatrix &laserPreview)
 {
-    m_window->setDmxState(dmx);
+    m_window->setDmxState(dmx, laserPreview);
 }
 
 void RhiViewport::onGizmoModeChanged(RhiGizmo::Mode mode)

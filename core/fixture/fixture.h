@@ -77,8 +77,43 @@ public:
     };
 
 
+    // Values a laser only reads while in its setup profile - per-install
+    // projection calibration, persisted with the fixture.
+    struct LaserSetup
+    {
+        double masterIntensity = 1.0;   // 0..1
+        int testFrame = 0;              // 0 = off, 1-255 = test_xxx animation
+        double sizeX = 0.0;             // -1..1
+        double sizeY = 0.0;
+        double positionX = 0.0;
+        double positionY = 0.0;
+        double rotation = 0.0;          // degrees, 0..360
+
+        bool operator==(const LaserSetup &) const = default;
+    };
+
     Fixture(const QString &path = QString{});
     ~Fixture();
+
+    bool isLaser() const;
+
+    // Runtime only, never saved: a laser's output stays disabled (mode
+    // channel held off by OutputOverridesNode) until it is explicitly armed.
+    bool isLaserArmed() const;
+    void setLaserArmed(bool);
+
+    // Runtime only: while active, OutputOverridesNode holds the mode channel at
+    // the setup value and writes laserSetup() onto the setup channels.
+    bool isLaserSetupActive() const;
+    void setLaserSetupActive(bool);
+
+    LaserSetup laserSetup() const;
+    void setLaserSetup(const LaserSetup &);
+
+    // Folder of per-cue preview media for the visualizer, named after the
+    // laser's own content layout: P001C003.mp4 / .gif / .png / ...
+    QString laserPreviewFolder() const;
+    void setLaserPreviewFolder(const QString &);
 
     QString description() const;
     QString manufacturer() const;

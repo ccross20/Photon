@@ -1,6 +1,7 @@
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QPushButton>
+#include <QToolButton>
 #include <QMenu>
 #include <QLabel>
 #include <QComboBox>
@@ -141,15 +142,29 @@ void FixtureStateEditor::rebuild()
             auto *frame = new QFrame;
             frame->setFrameShape(QFrame::StyledPanel);
             auto *v = new QVBoxLayout(frame);
-            v->setContentsMargins(6, 4, 6, 4);
-            v->setSpacing(3);
+            v->setContentsMargins(4, 2, 4, 2);
+            v->setSpacing(2);
 
+            // Compact header: small flat buttons so the row is only as tall as
+            // its label.
             auto *header = new QHBoxLayout;
+            header->setContentsMargins(0, 0, 0, 0);
+            header->setSpacing(2);
+            auto *collapseBtn = new QToolButton;
+            collapseBtn->setAutoRaise(true);
+            collapseBtn->setFixedSize(16, 16);
+            collapseBtn->setArrowType(cap->isCollapsed() ? Qt::RightArrow : Qt::DownArrow);
+            collapseBtn->setToolTip(cap->isCollapsed() ? "Expand" : "Collapse");
+            header->addWidget(collapseBtn);
             header->addWidget(new QLabel("<b>" + cap->name() + "</b>"));
             header->addStretch();
-            auto *removeBtn = new QPushButton("×");
-            removeBtn->setFixedWidth(22);
-            connect(removeBtn, &QPushButton::clicked, this, [this, state, cap](){
+            auto *removeBtn = new QToolButton;
+            removeBtn->setAutoRaise(true);
+            removeBtn->setFixedSize(16, 16);
+            removeBtn->setIconSize(QSize(12, 12));
+            removeBtn->setIcon(QIcon(":/resources/icons/trash.svg"));
+            removeBtn->setToolTip("Remove capability");
+            connect(removeBtn, &QToolButton::clicked, this, [this, state, cap](){
                 state->removeCapability(cap);
                 delete cap;
                 if(m_node)
@@ -158,6 +173,23 @@ void FixtureStateEditor::rebuild()
             });
             header->addWidget(removeBtn);
             v->addLayout(header);
+
+            // The channel rows live in their own widget so the whole block can
+            // be folded away under the header.
+            auto *body = new QWidget;
+            auto *bodyLayout = new QVBoxLayout(body);
+            bodyLayout->setContentsMargins(0, 0, 0, 0);
+            bodyLayout->setSpacing(3);
+            body->setVisible(!cap->isCollapsed());
+            v->addWidget(body);
+
+            connect(collapseBtn, &QToolButton::clicked, this, [cap, collapseBtn, body](){
+                const bool collapsed = !cap->isCollapsed();
+                cap->setCollapsed(collapsed);
+                collapseBtn->setArrowType(collapsed ? Qt::RightArrow : Qt::DownArrow);
+                collapseBtn->setToolTip(collapsed ? "Expand" : "Collapse");
+                body->setVisible(!collapsed);
+            });
 
             const auto channels = cap->availableChannels();
             for(int i = 0; i < channels.size(); ++i)
@@ -201,7 +233,7 @@ void FixtureStateEditor::rebuild()
                 });
                 row->addWidget(exposeCheck);
 
-                v->addLayout(row);
+                bodyLayout->addLayout(row);
             }
 
             m_listLayout->addWidget(frame);
@@ -219,30 +251,8 @@ void FixtureStateEditor::openAddMenu()
     if(!state)
         return;
 
-    // Kept in step with the clip state editor's menu (sequence/viewer/stateeditor.cpp)
-    // so both offer the same capabilities. Every entry here must have a case in
-    // State::Impl::addCapability, or addCapability returns null and nothing happens.
-    struct Entry { const char *name; CapabilityType type; };
-    static const Entry entries[] = {
-        {"Dimmer", Capability_Dimmer},
-        {"CTO",    Capability_CTO},
-        {"UV",     Capability_UV},
-        {"Color",  Capability_Color},
-        {"Pan",    Capability_Pan},
-        {"Tilt",   Capability_Tilt},
-        {"Strobe", Capability_Strobe},
-        {"Focus",  Capability_Focus},
-        {"Zoom",   Capability_Zoom},
-        {"Color Slot", Capability_ColorWheelSlot},
-        {"Gobo Slot", Capability_WheelSlot},
-        {"Wheel Rotation", Capability_WheelRotation},
-        {"Wheel Slot Rotation", Capability_WheelSlotRotation},
-        {"Lens Rotation", Capability_LensRotation},
-        {"Prism", Capability_Prism},
-    };
-
     QMenu menu;
-    for(const auto &entry : entries)
+    for(const auto &entry : m_node->addableCapabilities())
     {
         const CapabilityType type = entry.type;
         menu.addAction(entry.name, this, [this, state, type](){

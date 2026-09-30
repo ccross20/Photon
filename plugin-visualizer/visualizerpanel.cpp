@@ -50,7 +50,8 @@ void VisualizerPanel::projectWillClose(Project *project)
 
 void VisualizerPanel::tick()
 {
-    m_viewport->setDmxState(photonApp->busEvaluator()->dmxMatrix());
+    m_viewport->setDmxState(photonApp->busEvaluator()->dmxMatrix(),
+                            photonApp->busEvaluator()->laserPreviewMatrix());
 }
 
 } // namespace photon

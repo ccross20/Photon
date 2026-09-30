@@ -1,6 +1,7 @@
 #ifndef PHOTON_CLIPLAYER_H
 #define PHOTON_CLIPLAYER_H
 
+#include <QJsonObject>
 #include "layer.h"
 
 namespace photon {
@@ -14,6 +15,12 @@ public:
 
     void addClip(Clip *);
     void removeClip(Clip *);
+    // Adds an independent copy of the clip (content, timing, easing) to this
+    // layer, with its own unique id. Null if the clip type can't be created.
+    Clip *duplicateClip(const Clip *);
+    // Adds a new clip built from saved clip JSON (Clip::writeToJson), with a
+    // fresh unique id. Null if the clip type can't be created.
+    Clip *addClipFromJson(QJsonObject clipJson);
     const QVector<Clip*> &clips() const;
 
     void processChannels(ProcessContext &) override;

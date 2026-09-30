@@ -148,14 +148,11 @@ void ClipModel::childWasRemoved(photon::AbstractTreeData*)
 
 QModelIndex ClipModel::indexForData(AbstractTreeData *t_data) const
 {
-    if(t_data == nullptr)
+    // The root is the model's invisible top, not a row: it (and anything
+    // outside the tree) has no index, and its children are top-level rows.
+    if(t_data == nullptr || t_data == m_root)
         return QModelIndex();
-    if(t_data->parent())
-    {
-        return index(t_data->index(),0, indexForData(static_cast<AbstractTreeData*>(t_data->parent())));
-    } else {
-        return index(t_data->index(),0);
-    }
+    return index(t_data->index(), 0, indexForData(static_cast<AbstractTreeData*>(t_data->parent())));
 }
 
 QModelIndex ClipModel::indexForId(const QByteArray &t_id) const
@@ -266,8 +263,8 @@ QModelIndex ClipModel::parent(const QModelIndex &index) const
         return QModelIndex();
 
     AbstractTreeData *parentData = static_cast<AbstractTreeData*>(childData->parent());
-    if (!parentData)
-        return QModelIndex();
+    if (!parentData || parentData == m_root)
+        return QModelIndex();   // top-level rows have no parent row
 
     return createIndex(parentData->index(), 0, parentData);
 }

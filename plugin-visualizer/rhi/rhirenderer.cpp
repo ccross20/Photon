@@ -11,6 +11,7 @@
 #include "rhirenderer.h"
 #include "rhimesh.h"
 #include "rhicamera.h"
+#include "laserpreview.h"
 #include "scene/sceneobject.h"
 #include "scene/truss.h"
 #include "scene/scenesurface.h"
@@ -51,7 +52,7 @@ QShader loadShader(const QString &path)
 
 constexpr quint32 kFramePayload  = 24 * sizeof(float); // mat4 + vec4 lightDir + vec4 camPos
 constexpr quint32 kObjectPayload = 20 * sizeof(float); // mat4 + vec4
-constexpr quint32 kBeamPayload   = 40 * sizeof(float); // mat4 + color + apex + axisCos + params + color2 + fadePlane
+constexpr quint32 kBeamPayload   = 44 * sizeof(float); // mat4 + color + apex + axisCos + params + color2 + fadePlane + laser
 constexpr quint32 kGizmoBytes    = 4096 * 6 * sizeof(float); // dynamic line verts
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -216,6 +217,10 @@ const QColor kFrontIndicatorColor(80, 220, 255);
 
 constexpr int    kGoboSize     = 1024;    // gobo texture layer resolution
 
+// Laser projections (see LaserPreview).
+constexpr int    kLaserLayers  = 8;       // lasers previewed at once
+constexpr float  kLaserLength  = 14.0f;   // visible throw of a laser shaft (world units)
+
 // Multi-cell (LED bar / pixel strip) rendering.
 constexpr float  kBarRowInset      = 0.9f;   // fraction of the model width the LED row spans
 constexpr float  kBarLensRadius    = 0.42f;  // lens disc radius as a fraction of cell pitch
@@ -317,7 +322,7 @@ void beamConeFromModel(const QMatrix4x4 &model, QVector3D &apex, QVector3D &axis
 
 } // namespace
 
-RhiRenderer::RhiRenderer() {}
+RhiRenderer::RhiRenderer() : m_laserPreview(std::make_unique<LaserPreview>()) {}
 
 RhiRenderer::~RhiRenderer()
 {
@@ -350,6 +355,8 @@ void RhiRenderer::releaseResources()
     delete m_gizmoBuffer;     m_gizmoBuffer = nullptr;
     delete m_goboTex;         m_goboTex = nullptr;
     delete m_goboSampler;     m_goboSampler = nullptr;
+    delete m_laserTex;        m_laserTex = nullptr;
+    delete m_laserSampler;    m_laserSampler = nullptr;
     m_goboUploaded = false;
     m_objectCapacity = 0;
     m_beamCapacity = 0;
@@ -395,7 +402,7 @@ void RhiRenderer::ensureObjectBuffer(int count)
     }
 
     // The surface SRB also references m_objectBuffer (binding 1), so rebuild it too.
-    if (m_frameBuffer && m_lightsBuffer && m_goboTex && m_goboSampler) {
+    if (m_frameBuffer && m_lightsBuffer && m_goboTex && m_goboSampler && m_laserTex && m_laserSampler) {
         const auto stages = QRhiShaderResourceBinding::VertexStage | QRhiShaderResourceBinding::FragmentStage;
         delete m_surfaceSrb;
         m_surfaceSrb = m_rhi->newShaderResourceBindings();
@@ -403,7 +410,8 @@ void RhiRenderer::ensureObjectBuffer(int count)
             QRhiShaderResourceBinding::uniformBuffer(0, stages, m_frameBuffer),
             QRhiShaderResourceBinding::uniformBufferWithDynamicOffset(1, stages, m_objectBuffer, kObjectPayload),
             QRhiShaderResourceBinding::uniformBuffer(2, QRhiShaderResourceBinding::FragmentStage, m_lightsBuffer),
-            QRhiShaderResourceBinding::sampledTexture(3, QRhiShaderResourceBinding::FragmentStage, m_goboTex, m_goboSampler)
+            QRhiShaderResourceBinding::sampledTexture(3, QRhiShaderResourceBinding::FragmentStage, m_goboTex, m_goboSampler),
+            QRhiShaderResourceBinding::sampledTexture(4, QRhiShaderResourceBinding::FragmentStage, m_laserTex, m_laserSampler)
         });
         m_surfaceSrb->create();
     }
@@ -423,14 +431,15 @@ void RhiRenderer::ensureBeamBuffer(int count)
     m_beamCapacity = newCap;
 
     // The beam SRB references m_beamBuffer by pointer, so rebuild it.
-    if (m_frameBuffer && m_goboTex && m_goboSampler) {
+    if (m_frameBuffer && m_goboTex && m_goboSampler && m_laserTex && m_laserSampler) {
         delete m_beamSrb;
         m_beamSrb = m_rhi->newShaderResourceBindings();
         const auto stages = QRhiShaderResourceBinding::VertexStage | QRhiShaderResourceBinding::FragmentStage;
         m_beamSrb->setBindings({
             QRhiShaderResourceBinding::uniformBuffer(0, stages, m_frameBuffer),
             QRhiShaderResourceBinding::uniformBufferWithDynamicOffset(1, stages, m_beamBuffer, kBeamPayload),
-            QRhiShaderResourceBinding::sampledTexture(2, QRhiShaderResourceBinding::FragmentStage, m_goboTex, m_goboSampler)
+            QRhiShaderResourceBinding::sampledTexture(2, QRhiShaderResourceBinding::FragmentStage, m_goboTex, m_goboSampler),
+            QRhiShaderResourceBinding::sampledTexture(3, QRhiShaderResourceBinding::FragmentStage, m_laserTex, m_laserSampler)
         });
         m_beamSrb->create();
     }
@@ -482,6 +491,13 @@ void RhiRenderer::initialize(QRhi *rhi, QRhiRenderPassDescriptor *rpDesc, int sa
                                       QRhiSampler::ClampToEdge, QRhiSampler::ClampToEdge);
     m_goboSampler->create();
     m_goboUploaded = false;
+
+    m_laserTex = m_rhi->newTextureArray(QRhiTexture::RGBA8, kLaserLayers,
+                                        QSize(LaserPreview::TextureSize, LaserPreview::TextureSize));
+    m_laserTex->create();
+    m_laserSampler = m_rhi->newSampler(QRhiSampler::Linear, QRhiSampler::Linear, QRhiSampler::None,
+                                       QRhiSampler::ClampToEdge, QRhiSampler::ClampToEdge);
+    m_laserSampler->create();
 
     // Creates m_objectBuffer, m_meshSrb and m_surfaceSrb.
     ensureObjectBuffer(64);
@@ -1550,6 +1566,11 @@ void RhiRenderer::collectBeams(SceneObject *obj, QVector<Drawable> &out) const
             collectBeams(child, out);
             continue;
         }
+        if (child->typeId() == "fixture" && static_cast<Fixture *>(child)->isLaser()) {
+            collectLaserBeam(static_cast<Fixture *>(child), out);
+            collectBeams(child, out);
+            continue;
+        }
         if (child->typeId() == "fixture" && isMultiCell(static_cast<Fixture *>(child))) {
             // Multi-cell fixture: one static cone per lit LED cell, sharing the
             // fixture's orientation (parallel beams) - unless it's a bee-eye (see
@@ -1781,6 +1802,38 @@ void RhiRenderer::collectBeams(SceneObject *obj, QVector<Drawable> &out) const
         }
         collectBeams(child, out);
     }
+}
+
+void RhiRenderer::collectLaserBeam(Fixture *fix, QVector<Drawable> &out) const
+{
+    if (m_laserFrames.size() >= kLaserLayers)
+        return;
+
+    float intensity = 0.0f;
+    QImage frame = m_laserPreview->frameFor(fix, m_laserDmx, m_frameDt, intensity);
+    if (frame.isNull() || intensity <= kBeamMinLevel)
+        return;
+    m_laserFrames.append(frame);
+
+    // Always volumetric: a flat cone can't show the pattern. Colour lives in the
+    // projection layer, so the beam colour only carries the level.
+    Drawable beam;
+    beam.mesh = m_beamCone;
+    beam.volumetric = true;
+    beam.color = QColor::fromRgbF(intensity, intensity, intensity, kBeamGain);
+    beam.color2 = beam.color;
+    beam.laserLayer = float(m_laserFrames.size());
+
+    // The square field is inscribed in the cone's disk, so the cone spans the
+    // field's diagonal.
+    const float tanHalf = LaserPreview::fieldTanHalf() * float(M_SQRT2);
+    QMatrix4x4 base = fixtureModelMatrix(fix, modelForFixture(fix));
+    const QVector3D apex = base.map(QVector3D(0, 0, 0));
+    const QVector3D axis = base.mapVector(QVector3D(0, -1, 0)).normalized();
+    beam.fadePlane = fadePlaneFor(apex, axis, kLaserLength);
+    base.scale(kLaserLength * tanHalf, kLaserLength, kLaserLength * tanHalf);
+    beam.model = base;
+    out.append(beam);
 }
 
 void RhiRenderer::collectSurfaces(SceneObject *obj, QVector<Drawable> &out) const
@@ -2156,7 +2209,10 @@ void RhiRenderer::render(QRhiCommandBuffer *cb, QRhiRenderTarget *rt, const RhiC
 
     QVector<Drawable> beams;
     gatherSurfacePlanes(m_sceneRoot);   // for volumetric beam soft-fade
+    m_laserFrames.clear();
+    m_laserPreview->beginFrame();
     collectBeams(m_sceneRoot, beams);
+    m_laserPreview->endFrame();
 
     QVector<Drawable> surfaces;
     collectSurfaces(m_sceneRoot, surfaces);
@@ -2210,6 +2266,15 @@ void RhiRenderer::render(QRhiCommandBuffer *cb, QRhiRenderTarget *rt, const RhiC
         }
         u->generateMips(m_goboTex);
         m_goboUploaded = true;
+    }
+
+    if (m_laserTex && !m_laserFrames.isEmpty()) {
+        QList<QRhiTextureUploadEntry> entries;
+        for (int i = 0; i < m_laserFrames.size(); ++i)
+            entries.append(QRhiTextureUploadEntry(i, 0, QRhiTextureSubresourceUploadDescription(m_laserFrames[i])));
+        QRhiTextureUploadDescription desc;
+        desc.setEntries(entries.cbegin(), entries.cend());
+        u->uploadTexture(m_laserTex, desc);
     }
 
     m_grid->upload(m_rhi, u);
@@ -2291,6 +2356,7 @@ void RhiRenderer::render(QRhiCommandBuffer *cb, QRhiRenderTarget *rt, const RhiC
             L[12] = beams[i].goboRot;     // gobo rotation (radians)
             L[13] = beams[i].gobo2;       // gobo layer B (wheel wipe)
             L[14] = beams[i].goboSplit;   // gobo wipe boundary (-1..1, <-1 = none)
+            L[15] = beams[i].laserLayer;  // laser projection layer (0 = none)
             L[16] = float(c2.redF()); L[17] = float(c2.greenF()); L[18] = float(c2.blueF());
             L[19] = beams[i].split;       // color split position (-1..1, <-1 = none)
             L[20] = up.x(); L[21] = up.y(); L[22] = up.z();   // gobo frame reference axis
@@ -2308,7 +2374,7 @@ void RhiRenderer::render(QRhiCommandBuffer *cb, QRhiRenderTarget *rt, const RhiC
         float cosH = 0.0f, length = 0.0f;
         beamConeFromModel(d.model, apex, axis, cosH, length);
 
-        float slot[40] = { 0.0f };
+        float slot[44] = { 0.0f };
         std::memcpy(slot, d.model.constData(), 16 * sizeof(float));
         slot[16] = float(d.color.redF());
         slot[17] = float(d.color.greenF());
@@ -2328,6 +2394,7 @@ void RhiRenderer::render(QRhiCommandBuffer *cb, QRhiRenderTarget *rt, const RhiC
         slot[35] = d.goboSplit; // color2.w = gobo wipe boundary (-1..1, <-1 = none)
         slot[36] = d.fadePlane.x(); slot[37] = d.fadePlane.y();
         slot[38] = d.fadePlane.z(); slot[39] = d.fadePlane.w();  // surface fade plane
+        slot[40] = d.laserLayer;  // laser.x = laser projection layer (0 = none)
         u->updateDynamicBuffer(m_beamBuffer, vi * m_beamSlotSize, kBeamPayload, slot);
     }
     for (int bi = 0; bi < basicBeams.size(); ++bi) {

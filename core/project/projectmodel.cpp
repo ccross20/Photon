@@ -10,6 +10,7 @@
 #include "scene/scenemodel.h"
 #include "scene/scenemanager.h"
 #include "fixture/fixturegroup.h"
+#include "fixture/fixture.h"
 #include "routine/routine.h"
 #include "routine/routinecollection.h"
 #include "sequence/sequence.h"
@@ -712,9 +713,19 @@ QVariant ProjectModel::data(const QModelIndex &t_index, int t_role) const
         case Qt::ForegroundRole:
             if(folder)
                 return QColor(160, 160, 160);
+            if(auto *fixture = dynamic_cast<Fixture*>(resource); fixture && fixture->isLaserArmed())
+                return QColor(235, 70, 60);
             return QVariant();
 
         case Qt::ToolTipRole:
+            if(auto *fixture = dynamic_cast<Fixture*>(resource); fixture && fixture->isLaser())
+            {
+                if(fixture->isLaserSetupActive())
+                    return resource->resourceName() + " (laser in setup mode)";
+                if(fixture->isLaserArmed())
+                    return resource->resourceName() + " (laser ARMED)";
+                return resource->resourceName() + " (laser disarmed)";
+            }
             return resource->resourceName();
 
         case Qt::CheckStateRole:

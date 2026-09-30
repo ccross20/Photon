@@ -32,6 +32,7 @@ public:
     static const QByteArray KindObject;    // a SceneObject
     static const QByteArray KindResource;  // any other ProjectResource
     static const QByteArray KindChannelEffect;  // a ChannelEffect on a sequence channel
+    static const QByteArray KindClip;      // a Clip inside the preceding sequence
 
     struct Segment
     {

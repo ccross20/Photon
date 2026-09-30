@@ -20,6 +20,7 @@
 #include "graph/parameter/textureparameter.h"
 #include "graph/parameter/rhitextureparameter.h"
 #include "virtualdj/virtualdjconnector.h"
+#include "virtualdj/virtualdjplayback.h"
 #include "library/songlibrary.h"
 #include "settings/applicationsettings.h"
 #include "fixture/fixturelibrary.h"
@@ -53,6 +54,7 @@ public:
     CanvasRenderManager *canvasRenderManager = nullptr;
     VirtualDJConnector *djConnector = nullptr;
     SongLibrary *songLibrary = nullptr;
+    VirtualDJPlayback *djPlayback = nullptr;
     FixtureLibrary *fixtureLibrary = nullptr;
 };
 
@@ -62,6 +64,7 @@ PhotonCore::Impl::Impl(PhotonCore *t_core):
     settings(new Settings(t_core)),
     plugins(new PluginFactory(t_core)),gui(new GuiManager),timekeeper(new Timekeeper),busEvaluator(new BusEvaluator),djConnector(new VirtualDJConnector),
     songLibrary(new SongLibrary),
+    djPlayback(new VirtualDJPlayback(djConnector, songLibrary, sequences)),
     fixtureLibrary(new FixtureLibrary)
 {
 }
@@ -87,6 +90,7 @@ PhotonCore::Impl::~Impl()
     // BusEvaluator's destructor synchronously stops/joins its eval thread before
     // returning, so the project below is guaranteed nothing can tick it anymore.
     delete busEvaluator;
+    delete djPlayback;   // references the connector, library and sequences below
     delete project;
 
     delete djConnector;
@@ -362,6 +366,11 @@ BusEvaluator *PhotonCore::busEvaluator() const
 VirtualDJConnector *PhotonCore::djConnector() const
 {
     return m_impl->djConnector;
+}
+
+VirtualDJPlayback *PhotonCore::djPlayback() const
+{
+    return m_impl->djPlayback;
 }
 
 SongLibrary *PhotonCore::songLibrary() const

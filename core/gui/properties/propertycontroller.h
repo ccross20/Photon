@@ -14,6 +14,7 @@ class Surface;
 class SurfaceGizmo;
 class ProjectResource;
 class ChannelEffect;
+class Clip;
 
 // The single place selection arrives from, for every kind of editable thing.
 //
@@ -40,6 +41,7 @@ public:
     void selectGizmo(Surface *surface, SurfaceGizmo *gizmo);
     void selectResource(ProjectResource *resource);
     void selectChannelEffect(ChannelEffect *effect);
+    void selectClip(Clip *clip);
     void clear();
 
 signals:

@@ -19,8 +19,8 @@
 #include "graph/bus/dmxgeneratematrixnode.h"
 #include "graph/bus/dmxwriternode.h"
 #include "graph/bus/dmxsubgraphnode.h"
-#include "graph/bus/identifyfixturenode.h"
-#include "graph/bus/colorcalibrationnode.h"
+#include "graph/bus/outputoverridesnode.h"
+#include "graph/bus/virtualdjplayernode.h"
 #include "graph/bus/dmxreadernode.h"
 #include "graph/bus/sequencenode.h"
 #include "graph/bus/surfacenode.h"
@@ -44,6 +44,7 @@
 #include "graph/node/gizmo/gizmovaluenode.h"
 #include "graph/node/fixture/fixturesubgraphnode.h"
 #include "graph/node/fixture/fixturestatenode.h"
+#include "graph/node/fixture/laserstatenode.h"
 #include "graph/node/graphcontextnode.h"
 #include "graph/node/fixture/allfixturesnode.h"
 #include "graph/node/fixture/selectfixturesnode.h"
@@ -234,8 +235,8 @@ void PluginFactory::init()
     registerNode(SequenceNode::info());
     registerNode(SurfaceNode::info());
     registerNode(DMXSubGraphNode::info());
-    registerNode(IdentifyFixtureNode::info());
-    registerNode(ColorCalibrationNode::info());
+    registerNode(OutputOverridesNode::info());
+    registerNode(VirtualDJPlayerNode::info());
     registerNode(NumberInputNode::info());
     registerNode(ColorInputNode::info());
     registerNode(PointInputNode::info());
@@ -262,6 +263,7 @@ void PluginFactory::init()
     registerNode(SliderGizmoNode::info());
     registerNode(GizmoValueNode::info());
     registerNode(FixtureStateNode::info());
+    registerNode(LaserStateNode::info());
     registerNode(FixtureSubGraphNode::info());
     registerNode(GraphContextNode::info());
     // Load-compat: pre-migration graphs serialized their Globals node under a

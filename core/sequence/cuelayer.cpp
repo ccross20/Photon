@@ -1,3 +1,4 @@
+#include <cmath>
 #include <QUuid>
 #include "cuelayer.h"
 
@@ -125,25 +126,20 @@ QColor CueLayer::color() const
 
 bool CueLayer::snapToMarker(float time, float *outTime, float tolerance) const
 {
-    bool foundSnap = false;
-    float winner = 10000000.f;
-    for(auto it = m_impl->markers.cbegin(); it != m_impl->markers.cend(); ++it)
+    *outTime = time;
+    float bestDistance = tolerance;
+    bool found = false;
+    for(float marker : m_impl->markers)
     {
-        if(abs(*it - time) < tolerance)
+        const float distance = std::abs(marker - time);
+        if(distance <= bestDistance)
         {
-            if(abs(*it - time) < abs(winner-time))
-                winner = *it;
-            else
-                return true;
-            *outTime = winner;
-            foundSnap = true;
+            bestDistance = distance;
+            *outTime = marker;
+            found = true;
         }
     }
-
-
-
-    *outTime = time;
-    return foundSnap;
+    return found;
 }
 
 const QList<float> &CueLayer::markers() const

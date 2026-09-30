@@ -5,6 +5,7 @@
 #include <QHeaderView>
 #include <QInputDialog>
 #include <QMenu>
+#include <QFileDialog>
 #include <QMouseEvent>
 #include <QPainter>
 #include <QStyle>
@@ -17,6 +18,7 @@
 #include "photoncore.h"
 #include "project/project.h"
 #include "fixture/fixture.h"
+#include "fixture/lasersetupdialog.h"
 #include "fixture/fixturecollection.h"
 #include "scene/scenedirection.h"
 #include "scene/sceneaxis.h"
@@ -1020,6 +1022,25 @@ void ProjectPanel::contextMenuRequested(const QPoint &t_pos)
         populateAddActions(menu, contentType, dynamic_cast<SceneObject*>(resource));
     else
         populateFullAddMenu(menu);
+
+    if(auto *fixture = dynamic_cast<Fixture*>(resource); fixture && fixture->isLaser())
+    {
+        if(!menu.isEmpty())
+            menu.addSeparator();
+        QAction *armAction = menu.addAction("Arm Laser");
+        armAction->setCheckable(true);
+        armAction->setChecked(fixture->isLaserArmed());
+        connect(armAction, &QAction::toggled, fixture, &Fixture::setLaserArmed);
+        menu.addAction("Laser Setup…", this, [this, fixture](){
+            LaserSetupDialog dialog(fixture, this);
+            dialog.exec();
+        });
+        menu.addAction("Laser Preview Folder…", this, [this, fixture](){
+            const QString folder = QFileDialog::getExistingDirectory(this, "Laser Preview Folder", fixture->laserPreviewFolder());
+            if(!folder.isEmpty())
+                fixture->setLaserPreviewFolder(folder);
+        });
+    }
 
     if(resource && !dynamic_cast<ProjectFolder*>(resource))
     {

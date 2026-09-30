@@ -38,7 +38,7 @@ public:
     void setSelectedSceneObjects(const QVector<SceneObject *> &objs);
     void setGizmoMode(RhiGizmo::Mode mode);
     void setGizmoSpace(RhiGizmo::Space space);
-    void setDmxState(const DMXMatrix &dmx);
+    void setDmxState(const DMXMatrix &dmx, const DMXMatrix &laserPreview);
     void setBeamMode(RhiRenderer::BeamMode mode);
     void setGoboIndex(int index);
     int goboCount() const;

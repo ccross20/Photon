@@ -1,0 +1,260 @@
+{
+  "name": "Pangolin FB4",
+  "categories": [
+    "Laser"
+  ],
+  "meta": {
+    "authors": [
+      "CCross"
+    ],
+    "createDate": "2026-09-26",
+    "lastModifyDate": "2026-09-26"
+  },
+  "comment": "Laser channels use Photon's custom {\"type\": \"Laser\", \"function\": ...} capability. Channels 2-13 only apply in the FB4 setup profile (Fixture Mode = 240).",
+  "availableChannels": {
+    "Fixture Mode": {
+      "capability": {
+        "type": "Laser",
+        "function": "mode"
+      }
+    },
+    "Master Intensity": {
+      "capability": {
+        "type": "Laser",
+        "function": "setupIntensity"
+      }
+    },
+    "Test Frame": {
+      "capability": {
+        "type": "Laser",
+        "function": "setupTestFrame"
+      }
+    },
+    "Geo X Size": {
+      "fineChannelAliases": [
+        "Geo X Size fine"
+      ],
+      "capability": {
+        "type": "Laser",
+        "function": "setupSizeX"
+      }
+    },
+    "Geo Y Size": {
+      "fineChannelAliases": [
+        "Geo Y Size fine"
+      ],
+      "capability": {
+        "type": "Laser",
+        "function": "setupSizeY"
+      }
+    },
+    "Geo X Position": {
+      "fineChannelAliases": [
+        "Geo X Position fine"
+      ],
+      "capability": {
+        "type": "Laser",
+        "function": "setupPositionX"
+      }
+    },
+    "Geo Y Position": {
+      "fineChannelAliases": [
+        "Geo Y Position fine"
+      ],
+      "capability": {
+        "type": "Laser",
+        "function": "setupPositionY"
+      }
+    },
+    "Geo Z Rotation": {
+      "fineChannelAliases": [
+        "Geo Z Rotation fine"
+      ],
+      "capability": {
+        "type": "Laser",
+        "function": "setupRotation"
+      }
+    },
+    "Page": {
+      "capability": {
+        "type": "Laser",
+        "function": "page"
+      }
+    },
+    "Cue": {
+      "capability": {
+        "type": "Laser",
+        "function": "cue"
+      }
+    },
+    "Cue Speed": {
+      "capability": {
+        "type": "Laser",
+        "function": "cueSpeed"
+      }
+    },
+    "Dimmer": {
+      "capability": {
+        "type": "Intensity"
+      }
+    },
+    "Zoom": {
+      "fineChannelAliases": [
+        "Zoom fine"
+      ],
+      "capability": {
+        "type": "Laser",
+        "function": "zoom"
+      }
+    },
+    "X Size": {
+      "fineChannelAliases": [
+        "X Size fine"
+      ],
+      "capability": {
+        "type": "Laser",
+        "function": "sizeX"
+      }
+    },
+    "Y Size": {
+      "fineChannelAliases": [
+        "Y Size fine"
+      ],
+      "capability": {
+        "type": "Laser",
+        "function": "sizeY"
+      }
+    },
+    "Z Angle": {
+      "fineChannelAliases": [
+        "Z Angle fine"
+      ],
+      "capability": {
+        "type": "Laser",
+        "function": "angle"
+      }
+    },
+    "Z Rotation": {
+      "fineChannelAliases": [
+        "Z Rotation fine"
+      ],
+      "capability": {
+        "type": "Laser",
+        "function": "rotation"
+      }
+    },
+    "X Position": {
+      "fineChannelAliases": [
+        "X Position fine"
+      ],
+      "capability": {
+        "type": "Laser",
+        "function": "positionX"
+      }
+    },
+    "Y Position": {
+      "fineChannelAliases": [
+        "Y Position fine"
+      ],
+      "capability": {
+        "type": "Laser",
+        "function": "positionY"
+      }
+    },
+    "Scanrate": {
+      "capability": {
+        "type": "Laser",
+        "function": "scanRate"
+      }
+    },
+    "Red": {
+      "capability": {
+        "type": "Laser",
+        "function": "red"
+      }
+    },
+    "Green": {
+      "capability": {
+        "type": "Laser",
+        "function": "green"
+      }
+    },
+    "Blue": {
+      "capability": {
+        "type": "Laser",
+        "function": "blue"
+      }
+    },
+    "Alpha": {
+      "capability": {
+        "type": "Laser",
+        "function": "colorMix"
+      }
+    },
+    "Visible Points Start": {
+      "capability": {
+        "type": "Laser",
+        "function": "visibleStart"
+      }
+    },
+    "Visible Points End": {
+      "capability": {
+        "type": "Laser",
+        "function": "visibleEnd"
+      }
+    },
+    "Strobe": {
+      "capability": {
+        "type": "Laser",
+        "function": "strobe"
+      }
+    }
+  },
+  "modes": [
+    {
+      "name": "39 Channel",
+      "shortName": "39ch",
+      "channels": [
+        "Fixture Mode",
+        "Master Intensity",
+        "Test Frame",
+        "Geo X Size",
+        "Geo X Size fine",
+        "Geo Y Size",
+        "Geo Y Size fine",
+        "Geo X Position",
+        "Geo X Position fine",
+        "Geo Y Position",
+        "Geo Y Position fine",
+        "Geo Z Rotation",
+        "Geo Z Rotation fine",
+        "Page",
+        "Cue",
+        "Cue Speed",
+        "Dimmer",
+        "Zoom",
+        "Zoom fine",
+        "X Size",
+        "X Size fine",
+        "Y Size",
+        "Y Size fine",
+        "Z Angle",
+        "Z Angle fine",
+        "Z Rotation",
+        "Z Rotation fine",
+        "X Position",
+        "X Position fine",
+        "Y Position",
+        "Y Position fine",
+        "Scanrate",
+        "Red",
+        "Green",
+        "Blue",
+        "Alpha",
+        "Visible Points Start",
+        "Visible Points End",
+        "Strobe"
+      ]
+    }
+  ]
+}

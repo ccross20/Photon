@@ -48,7 +48,7 @@ private:
     QVector<AbstractTreeData*> m_children;
     QString m_name;
     QByteArray m_id;
-    int m_index;
+    int m_index = -1;   // row within the parent; -1 until added to one
 };
 
 class RootData : public AbstractTreeData

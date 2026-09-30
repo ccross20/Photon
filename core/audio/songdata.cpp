@@ -133,6 +133,32 @@ void BeatGrid::addBeat(double t_time)
     m_beats.insert(it, t_time);
 }
 
+QVector<double> BeatGrid::pulseTimes(double t_rate, double t_offsetBeats) const
+{
+    QVector<double> times;
+    const int count = m_beats.size();
+    if(count < 2 || t_rate <= 0.0)
+        return count == 1 ? m_beats : times;
+
+    constexpr double kEpsilon = 1e-9;
+    const double step = 1.0 / t_rate;
+    // Beat index of pulse 0: beats are numbered from the bar, not from
+    // whichever beat happened to be analysed first.
+    const double anchor = t_offsetBeats - m_barStartOffset;
+    const double last = count - 1;
+
+    for(double k = std::ceil(-anchor / step - kEpsilon); ; k += 1.0)
+    {
+        const double position = anchor + k * step;
+        if(position > last + kEpsilon)
+            break;
+        const int index = std::clamp(int(std::floor(position + kEpsilon)), 0, count - 2);
+        const double fraction = position - index;
+        times.append(m_beats[index] + fraction * (m_beats[index + 1] - m_beats[index]));
+    }
+    return times;
+}
+
 int BeatGrid::beatIndexBefore(double t_time) const
 {
     if(m_beats.isEmpty() || t_time < m_beats.first())

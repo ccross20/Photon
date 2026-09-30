@@ -3,11 +3,13 @@
 #include "savedcolornode.h"
 #include "savedgradientnode.h"
 #include "savedpalettenode.h"
+#include "graph/node/fixture/selectfixturesnode.h"
 #include "project/projectmodel.h"
 #include "project/projectresource.h"
 #include "color/colorresource.h"
 #include "color/gradientresource.h"
 #include "color/colorpaletteresource.h"
+#include "tag/tagmime.h"
 
 namespace photon {
 
@@ -32,6 +34,11 @@ QVector<keira::ExternalDropNodeSpec> projectResourceDropInterpreter(const QMimeD
         {
             specs.append({SavedPaletteNode::info().nodeId, SavedPaletteNode::PaletteParam, QString::fromUtf8(resource->resourceId())});
         }
+    }
+
+    if(QStringList tags = decodeTagMime(t_mimeData); !tags.isEmpty())
+    {
+        specs.append({SelectFixturesNode::info().nodeId, SelectFixturesNode::TagsParam, tags.join(' ')});
     }
 
     return specs;

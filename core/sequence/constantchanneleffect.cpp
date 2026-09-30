@@ -1,5 +1,6 @@
 #include <QPen>
 #include "numberscrubfield.h"
+#include "propertywidgets.h"
 #include "constantchanneleffect.h"
 #include "sequence/viewer/stackedparameterwidget.h"
 #include "gizmo/gizmohandle.h"
@@ -14,12 +15,14 @@ ConstantEffectEditor::ConstantEffectEditor(ConstantChannelEffect *t_effect):Chan
     photon::NumberScrubField *constantSpin = new photon::NumberScrubField;
     constantSpin->setMinimum(-10000);
     constantSpin->setMaximum(10000);
+    constantSpin->setSoftRange(-100,100);
     constantSpin->setValue(m_effect->value());
     connect(constantSpin, &photon::NumberScrubField::valueChanged, this, &ConstantEffectEditor::valueChanged);
 
     photon::NumberScrubField *rateSpin = new photon::NumberScrubField;
     rateSpin->setMinimum(-10000);
     rateSpin->setMaximum(10000);
+    rateSpin->setSoftRange(-100,100);
     rateSpin->setValue(m_effect->rate()*100);
     connect(rateSpin, &photon::NumberScrubField::valueChanged, this, &ConstantEffectEditor::rateChanged);
 
@@ -116,6 +119,15 @@ float * ConstantChannelEffect::process(float *value, uint size, double time) con
 ChannelEffectEditor *ConstantChannelEffect::createEditor()
 {
     return new ConstantEffectEditor(this);
+}
+
+QWidget *ConstantChannelEffect::createPropertyEditor()
+{
+    auto *form = new PropertyForm;
+    form->addRow("Value", PropertyWidgets::createNumber(m_value, {}, [this](double v){ setValue(v); }));
+    // Shown x100, matching the curve editor's rate handle and field.
+    form->addRow("Rate", PropertyWidgets::createNumber(m_rate * 100.0, {}, [this](double v){ setRate(v / 100.0); }));
+    return form;
 }
 
 void ConstantChannelEffect::readFromJson(const QJsonObject &t_json)

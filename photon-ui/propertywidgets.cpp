@@ -5,10 +5,10 @@
 #include <QLineEdit>
 #include <QPushButton>
 #include <QComboBox>
-#include <QColorDialog>
 #include "propertywidgets.h"
 #include "numberscrubfield.h"
 #include "propertycombobox.h"
+#include "color/colorwheelswatch.h"
 
 namespace photon {
 
@@ -146,30 +146,12 @@ QWidget *createColor(const QColor &value, const QVariantHash &meta,
     if (isReadOnly(meta))
         return readOnlyLabel(value.name());
 
-    // A button whose own background is the swatch, so it reads as a colour
-    // rather than as a control containing one.
-    QPushButton *swatch = new QPushButton;
+    // The app's colour swatch everywhere a colour is edited: drag sideways to
+    // shift the hue, click for the full picker.
+    auto *swatch = new ColorWheelSwatch(value.isValid() ? value : QColor(Qt::black));
     swatch->setMaximumHeight(kEditorHeight);
-    swatch->setMinimumWidth(50);
-    swatch->setCursor(Qt::PointingHandCursor);
-
-    auto paint = [swatch](const QColor &c) {
-        swatch->setStyleSheet(QString("QPushButton { background-color: %1; border: 1px solid #2b2b2b;"
-                                      " border-radius: 3px; }"
-                                      "QPushButton:hover { border: 1px solid #777777; }")
-                                  .arg(c.name()));
-        swatch->setProperty("photonColor", c);
-    };
-    paint(value.isValid() ? value : Qt::black);
-
-    QObject::connect(swatch, &QPushButton::clicked, swatch, [swatch, paint, onChange]() {
-        const QColor current = swatch->property("photonColor").value<QColor>();
-        const QColor picked = QColorDialog::getColor(current, swatch, QStringLiteral("Select Color"),
-                                                     QColorDialog::ShowAlphaChannel);
-        if (!picked.isValid())
-            return;   // dialog cancelled - leave the value untouched
-        paint(picked);
-        if (onChange) onChange(picked);
+    QObject::connect(swatch, &ColorWheelSwatch::colorChanged, swatch, [onChange](const QColor &color) {
+        if (onChange) onChange(color);
     });
     return swatch;
 }

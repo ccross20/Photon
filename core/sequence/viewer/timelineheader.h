@@ -23,6 +23,11 @@ public:
 
     virtual QSize sizeHint() const override;
 
+    void setActive(bool);
+
+signals:
+    void activated(photon::Layer *);
+
 private slots:
     void renameClicked();
     void muteToggled(bool);
@@ -31,6 +36,7 @@ protected:
      virtual void paintEvent(QPaintEvent *event) override;
      virtual void contextMenuEvent(QContextMenuEvent *event) override;
      virtual void mouseDoubleClickEvent(QMouseEvent *event) override;
+     virtual void mousePressEvent(QMouseEvent *event) override;
 
 private:
     class Impl;
@@ -49,9 +55,13 @@ public:
 
 signals:
     void editLayer(photon::Layer *);
+    // A layer header was clicked - it should become the active layer.
+    void layerActivated(photon::Layer *);
 
 public slots:
     void offsetChanged(int);
+    // Highlights the active layer's header (null clears it).
+    void setActiveLayer(photon::Layer *);
 
 private slots:
     void layerUpdated(photon::Layer *);

@@ -69,7 +69,16 @@ enum CapabilityType{
     Capability_WheelRotation,
     Capability_PrismRotation,
     Capability_Prism,
-    Capability_LensRotation
+    Capability_LensRotation,
+    Capability_Laser,
+    Capability_LaserContent,
+    Capability_LaserSize,
+    Capability_LaserPosition,
+    Capability_LaserRotation,
+    Capability_LaserColor,
+    Capability_LaserScanRate,
+    Capability_LaserVisiblePoints,
+    Capability_LaserStrobe
 };
 
 enum FixtureUnit{

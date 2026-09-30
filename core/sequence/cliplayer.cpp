@@ -4,6 +4,7 @@
 #include "sequence.h"
 #include "plugin/pluginfactory.h"
 #include "photoncore.h"
+#include "project/project.h"
 #include "channel/parameter/channelparametercontainer.h"
 
 namespace photon {
@@ -95,6 +96,33 @@ void ClipLayer::restore(Project &t_project)
 
     for(auto clip : m_impl->clips)
         clip->restore(t_project);
+}
+
+Clip *ClipLayer::duplicateClip(const Clip *t_source)
+{
+    QJsonObject clipObj;
+    t_source->writeToJson(clipObj);
+    return addClipFromJson(clipObj);
+}
+
+Clip *ClipLayer::addClipFromJson(QJsonObject t_clipJson)
+{
+    // readFromJson mints a fresh id when none is stored.
+    t_clipJson.remove("uniqueId");
+
+    Clip *clip = photonApp->plugins()->createClip(t_clipJson.value("id").toString().toLatin1());
+    if(!clip)
+        return nullptr;
+
+    // Same order as loading: in the layer first, then its content, then
+    // re-linked to the project's fixtures/resources.
+    m_impl->addClip(clip);
+    LoadContext context{photonApp->project()};
+    clip->readFromJson(t_clipJson, context);
+    if(Project *project = photonApp->project())
+        clip->restore(*project);
+    emit clipAdded(clip);
+    return clip;
 }
 
 void ClipLayer::readFromJson(const QJsonObject &t_json, const LoadContext &t_context)

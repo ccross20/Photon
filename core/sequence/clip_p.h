@@ -1,6 +1,7 @@
 #ifndef CLIP_P_H
 #define CLIP_P_H
 
+#include <QColor>
 #include "clip.h"
 
 namespace photon
@@ -22,6 +23,7 @@ namespace photon
         QEasingCurve easeInCurve;
         QEasingCurve easeOutCurve;
         QString name;
+        QColor color;   // invalid = the timeline's default clip color
         QByteArray id;
         double easeInDuration = 0;
         double easeOutDuration = 0;

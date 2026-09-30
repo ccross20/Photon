@@ -75,7 +75,25 @@ QByteArray Clip::uniqueId() const
 
 void Clip::setName(const QString &t_value)
 {
+    if(m_impl->name == t_value)
+        return;
     m_impl->name = t_value;
+    m_impl->markChanged();
+    emit clipUpdated(this);
+}
+
+QColor Clip::color() const
+{
+    return m_impl->color;
+}
+
+void Clip::setColor(const QColor &t_color)
+{
+    if(m_impl->color == t_color)
+        return;
+    m_impl->color = t_color;
+    m_impl->markChanged();
+    emit clipUpdated(this);
 }
 
 void Clip::setId(const QByteArray &t_value)
@@ -405,6 +423,7 @@ void Clip::readFromJson(const QJsonObject &t_json, const LoadContext &t_context)
     m_impl->strength = t_json.value("strength").toDouble(1.0);
     m_impl->uniqueId = t_json.value("uniqueId").toString(QUuid::createUuid().toString()).toLatin1();
     m_impl->name = t_json.value("name").toString();
+    m_impl->color = t_json.contains("color") ? QColor(t_json.value("color").toString()) : QColor();
     m_impl->id = t_json.value("id").toString().toLatin1();
 
     for(auto channel : m_impl->channels)
@@ -438,6 +457,8 @@ void Clip::writeToJson(QJsonObject &t_json) const
     t_json.insert("uniqueId", QString(m_impl->uniqueId));
     t_json.insert("id", QString(m_impl->id));
     t_json.insert("name", QString(m_impl->name));
+    if(m_impl->color.isValid())
+        t_json.insert("color", m_impl->color.name(QColor::HexRgb));
 
     QJsonArray array;
     for(auto channel : m_impl->channels)

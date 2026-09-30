@@ -68,11 +68,11 @@ void RhiWindow::setGizmoSpace(RhiGizmo::Space space)
     requestUpdate();
 }
 
-void RhiWindow::setDmxState(const DMXMatrix &dmx)
+void RhiWindow::setDmxState(const DMXMatrix &dmx, const DMXMatrix &laserPreview)
 {
     if (!m_renderer)
         return;
-    m_renderer->setDmxState(dmx);
+    m_renderer->setDmxState(dmx, laserPreview);
     requestUpdate();
 }
 

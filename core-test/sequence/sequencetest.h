@@ -13,6 +13,8 @@ public:
 
 private slots:
     void simpleProcess();
+    void beatPulseTimes();
+    void clipModelStaysConsistent();
 
 signals:
 

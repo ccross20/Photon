@@ -18,12 +18,16 @@ layout(std140, binding = 1) uniform Beam {
     vec4 params;     // x = length, y = gobo layer A, z = gobo rotation, w = color split (-1..1)
     vec4 color2;     // rgb = second color-wheel color (split), w = gobo wipe boundary (-1..1)
     vec4 fadePlane;  // xyz = plane normal (toward apex), w = offset; zero = no fade
+    vec4 laser;      // x = laser projection layer (1-based, 0 = none)
 } beam;
 
 const int STEPS = 24;
 
 // Gobo texture array (rgb = transmitted color, a = transmittance).
 layout(binding = 2) uniform sampler2DArray goboTex;
+
+// Live laser projections (rgb = hue, a = brightness), see LaserPreview.
+layout(binding = 3) uniform sampler2DArray laserTex;
 
 vec2 rotate2(vec2 p, float ang)
 {
@@ -81,6 +85,7 @@ void main()
     int goboB = int(beam.apex.w + 0.5);
     float goboSplit = beam.color2.w;
     float goboRot = beam.params.z;
+    int laserLayer = int(beam.laser.x + 0.5);
     // Gobo reference frame from the cone's own local axes (model X/Z), so it carries
     // the fixture/prism roll and never flips. A world-up cross product (the old way)
     // is discontinuous when the beam points steeply, which made gobos flip.
@@ -138,7 +143,8 @@ void main()
         float rn = (coneR > 1e-4) ? r / coneR : 1.0;
         if (rn > 1.0)
             continue;
-        float fr = exp(-3.0 * rn * rn);        // soft bright core
+        // Lights get a soft bright core; a laser's brightness is all in its pattern.
+        float fr = (laserLayer > 0) ? 1.0 : exp(-3.0 * rn * rn);
         float fl = clamp(1.0 - s / L, 0.0, 1.0);          // fade with distance
         fl *= smoothstep(0.0, 0.06 * L, s);               // soften at the source
 
@@ -146,7 +152,11 @@ void main()
         float gx = dot(rvec, U) / max(coneR, 1e-4);   // -1..1 across the cone
         int gi = (gx < goboSplit) ? goboA : goboB;
         vec4 g = vec4(1.0);                    // rgb = glass tint, a = transmittance
-        if (gi > 0) {
+        if (laserLayer > 0) {
+            float theta = atan(dot(rvec, V), dot(rvec, U));
+            vec2 luv = vec2(cos(theta), sin(theta)) * rn;
+            g = texture(laserTex, vec3(luv * 0.5 + 0.5, float(laserLayer - 1)));
+        } else if (gi > 0) {
             float theta = atan(dot(rvec, V), dot(rvec, U));
             vec2 guv = rotate2(vec2(cos(theta), sin(theta)) * rn, goboRot);
             g = texture(goboTex, vec3(guv * 0.5 + 0.5, float(gi - 1)));
@@ -154,7 +164,8 @@ void main()
 
         // The gobo modulates the in-air haze but never fully erases it (scattered
         // light keeps the cone glowing), so sparse gobos don't make the beam vanish.
-        float trans = mix(0.4, 1.0, g.a);
+        // (Laser shafts exist only where the pattern is, so no haze floor there.)
+        float trans = (laserLayer > 0) ? g.a : mix(0.4, 1.0, g.a);
         float wgt = fr * fl * trans * surfFade * dt;
         accum += wgt;
         accumGobo += g.rgb * wgt;

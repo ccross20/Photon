@@ -119,6 +119,7 @@ class StateCapability;
 class Timekeeper;
 class Timeline;
 class VirtualDJConnector;
+class VirtualDJPlayback;
 
 struct LoadContext
 {

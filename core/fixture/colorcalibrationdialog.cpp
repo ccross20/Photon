@@ -13,7 +13,7 @@
 #include "fixturecollection.h"
 #include "capability/colorcapability.h"
 #include "capability/fixturecolorcalibration.h"
-#include "graph/bus/colorcalibrationnode.h"
+#include "graph/bus/outputoverridesnode.h"
 #include "graph/bus/busgraph.h"
 #include "project/project.h"
 #include "photoncore.h"
@@ -62,7 +62,7 @@ public:
     Fixture *fixture = nullptr;
     ColorCapability *colorCap = nullptr;
     FixtureColorCalibration calibration;
-    ColorCalibrationNode *previewNode = nullptr;
+    OutputOverridesNode *previewNode = nullptr;
     int activeSlot = -1;
     bool suppressSliders = false;
 
@@ -83,7 +83,7 @@ ColorCalibrationDialog::ColorCalibrationDialog(Fixture *t_fixture, QWidget *t_pa
 
     Project *project = photonApp->project();
     if(project)
-        m_impl->previewNode = dynamic_cast<ColorCalibrationNode*>(project->bus()->findNode("Color Calibration"));
+        m_impl->previewNode = OutputOverridesNode::find(project->bus());
 
     auto *layout = new QVBoxLayout;
 
@@ -170,8 +170,8 @@ ColorCalibrationDialog::ColorCalibrationDialog(Fixture *t_fixture, QWidget *t_pa
     if(m_impl->previewNode)
     {
         const QVariant fixtureId = m_impl->fixturePicker->currentData();
-        m_impl->previewNode->setTargetFixture(fixtureId.toByteArray());
-        m_impl->previewNode->setPreviewEnabled(true);
+        m_impl->previewNode->setCalibrationFixture(fixtureId.toByteArray());
+        m_impl->previewNode->setCalibrationPreviewEnabled(true);
     }
 
     if(!hueSlotList.isEmpty())
@@ -304,7 +304,7 @@ void ColorCalibrationDialog::sliderChanged()
 void ColorCalibrationDialog::fixturePickerChanged(int)
 {
     if(m_impl->previewNode)
-        m_impl->previewNode->setTargetFixture(m_impl->fixturePicker->currentData().toByteArray());
+        m_impl->previewNode->setCalibrationFixture(m_impl->fixturePicker->currentData().toByteArray());
 }
 
 void ColorCalibrationDialog::pushLivePreview()
@@ -312,17 +312,17 @@ void ColorCalibrationDialog::pushLivePreview()
     if(!m_impl->previewNode)
         return;
 
-    m_impl->previewNode->clearChannelPercents();
+    m_impl->previewNode->clearCalibrationChannelPercents();
     for(auto it = m_impl->sliders.cbegin(); it != m_impl->sliders.cend(); ++it)
-        m_impl->previewNode->setChannelPercent(it.key(), it.value()->value());
-    m_impl->previewNode->setTargetFixture(m_impl->fixturePicker->currentData().toByteArray());
-    m_impl->previewNode->setPreviewEnabled(true);
+        m_impl->previewNode->setCalibrationChannelPercent(it.key(), it.value()->value());
+    m_impl->previewNode->setCalibrationFixture(m_impl->fixturePicker->currentData().toByteArray());
+    m_impl->previewNode->setCalibrationPreviewEnabled(true);
 }
 
 void ColorCalibrationDialog::stopPreview()
 {
     if(m_impl->previewNode)
-        m_impl->previewNode->setPreviewEnabled(false);
+        m_impl->previewNode->setCalibrationPreviewEnabled(false);
 }
 
 void ColorCalibrationDialog::save()

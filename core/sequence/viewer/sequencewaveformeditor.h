@@ -17,6 +17,21 @@ public:
     void setSequence(Sequence *);
     Sequence *sequence() const;
 
+public slots:
+    // Candidate markers drawn over the view without being part of any layer,
+    // e.g. while choosing Convert Beats to Markers settings. Empty clears them.
+    void setPreviewMarkers(const QVector<double> &times);
+
+    // Clipboard for the editable cue layer's markers: the selected ones, or
+    // every marker on the layer when none are selected. Paste adds at the
+    // same times (skipping ones already there) and selects what it added.
+    void cutMarkers();
+    void copyMarkers();
+    void pasteMarkers();
+
+public:
+    static bool clipboardHasMarkers();
+
 private slots:
     void markersUpdated(photon::CueLayer*);
     void layerAdded(photon::CueLayer*);

@@ -141,10 +141,8 @@ set(PROJECT_SOURCES
         graph/bus/dmxwriternode.cpp
         graph/bus/dmxsubgraphnode.h
         graph/bus/dmxsubgraphnode.cpp
-        graph/bus/identifyfixturenode.h
-        graph/bus/identifyfixturenode.cpp
-        graph/bus/colorcalibrationnode.h
-        graph/bus/colorcalibrationnode.cpp
+        graph/bus/outputoverridesnode.h
+        graph/bus/outputoverridesnode.cpp
         graph/bus/sequencenode.h
         graph/bus/sequencenode.cpp
         graph/node/math/arithmeticnode.h
@@ -592,7 +590,16 @@ add_library(photon-core SHARED ${PROJECT_SOURCES}
     graph/node/canvas/gradientmixnode.h graph/node/canvas/gradientmixnode.cpp
     graph/node/canvas/canvasdmxsampler.h graph/node/canvas/canvasdmxsampler.cpp
     gui/panel/canvaspreviewwindow.h gui/panel/canvaspreviewwindow.cpp
-    gui/panel/canvaspreviewpanel.h gui/panel/canvaspreviewpanel.cpp)
+    gui/panel/canvaspreviewpanel.h gui/panel/canvaspreviewpanel.cpp
+    fixture/capability/lasercapability.h fixture/capability/lasercapability.cpp
+    virtualdj/virtualdjplayback.h virtualdj/virtualdjplayback.cpp
+    graph/bus/virtualdjplayernode.h graph/bus/virtualdjplayernode.cpp
+    sequence/viewer/clippropertyeditor.h sequence/viewer/clippropertyeditor.cpp
+    sequence/clipclipboard.h sequence/clipclipboard.cpp
+    fixture/lasersetupdialog.h fixture/lasersetupdialog.cpp
+    state/laserstates.h state/laserstates.cpp
+    graph/node/fixture/laserstatenode.h graph/node/fixture/laserstatenode.cpp
+    resources/fixtures/pangolin-fb4.json)
 
 qt6_add_shaders(photon-core "canvas_shaders"
     PREFIX "/canvas/shaders"

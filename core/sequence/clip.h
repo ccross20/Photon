@@ -2,6 +2,7 @@
 #define PHOTON_CLIP_H
 
 #include <QObject>
+#include <QColor>
 #include <QEasingCurve>
 #include "photon-global.h"
 #include "channel.h"
@@ -36,6 +37,9 @@ public:
 
     QString name() const;
     void setName(const QString &);
+    // Display color in the timeline. Invalid means "use the default".
+    QColor color() const;
+    void setColor(const QColor &);
     void setId(const QByteArray&);
     QByteArray id() const;
     QByteArray uniqueId() const;

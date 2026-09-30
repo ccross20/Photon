@@ -595,7 +595,7 @@ void Viewer::deleteSelected()
     {
         auto nodeItem = dynamic_cast<NodeItem*>(item);
 
-        if(nodeItem)
+        if(nodeItem && nodeItem->node()->isRemovable())
         {
             graph()->removeNode(nodeItem->node());
         }

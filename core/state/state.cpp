@@ -15,6 +15,7 @@
 #include "wheelslotrotationstate.h"
 #include "lensrotationstate.h"
 #include "prismstate.h"
+#include "laserstates.h"
 #include "fixture/capability/shutterstrobecapability.h"
 
 namespace photon {
@@ -77,6 +78,30 @@ StateCapability *State::Impl::addCapability(CapabilityType t_type)
             break;
         case Capability_Prism:
             toAdd = new PrismState;
+            break;
+        case Capability_LaserContent:
+            toAdd = new LaserContentState;
+            break;
+        case Capability_LaserSize:
+            toAdd = new LaserSizeState;
+            break;
+        case Capability_LaserPosition:
+            toAdd = new LaserPositionState;
+            break;
+        case Capability_LaserRotation:
+            toAdd = new LaserRotationState;
+            break;
+        case Capability_LaserColor:
+            toAdd = new LaserColorState;
+            break;
+        case Capability_LaserScanRate:
+            toAdd = new LaserScanRateState;
+            break;
+        case Capability_LaserVisiblePoints:
+            toAdd = new LaserVisiblePointsState;
+            break;
+        case Capability_LaserStrobe:
+            toAdd = new LaserStrobeState;
             break;
         default:
             break;

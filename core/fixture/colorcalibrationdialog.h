@@ -11,7 +11,7 @@ struct ColorCalibrationEntry;
 // Lets the user calibrate how this fixture's color-mixing LEDs (Red, Green,
 // Blue, Amber, Lime, White, ...) combine to reproduce a set of named
 // reference hues: pick a hue button, drag the per-channel sliders until the
-// real fixture (driven live through the project's "Color Calibration" bus
+// real fixture (driven live through the project's "Output Overrides" bus
 // node) matches, then Save. Calibration attaches to the fixture's
 // definition path, so it's shared by every patched fixture of that type.
 class PHOTONCORE_EXPORT ColorCalibrationDialog : public QDialog

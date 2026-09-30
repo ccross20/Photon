@@ -23,6 +23,10 @@ public:
     bool isEnabled() const;
     void setIsEnabled(bool);
 
+    // Editor-only: whether the capability's panel is folded in the state editor.
+    bool isCollapsed() const;
+    void setCollapsed(bool);
+
     QString name() const;
     void setName(const QString &);
     float getChannelFloat(const StateEvaluationContext &, uint index) const;

@@ -17,6 +17,7 @@ class SurfaceGizmo;
 class ProjectResource;
 class Channel;
 class ChannelEffect;
+class Clip;
 
 // One editable thing, as the Properties panel sees it.
 //
@@ -123,6 +124,23 @@ private:
     QByteArray m_effectId;
 };
 
+// A clip in a sequence. Clip is a QObject, so a QPointer guards it directly.
+class PHOTONCORE_EXPORT ClipPropertySubject : public PropertySubject
+{
+public:
+    explicit ClipPropertySubject(Clip *clip);
+
+    PropertyAddress address() const override;
+    QString title() const override;
+    bool isValid() const override;
+    QWidget *createEditor() override;
+
+    Clip *clip() const;
+
+private:
+    QPointer<Clip> m_clip;
+};
+
 // Turns a stored address back into a live subject. Used when restoring pinned
 // tabs from the project file, and by breadcrumb navigation.
 namespace PropertySubjectFactory {
@@ -135,6 +153,7 @@ PHOTONCORE_EXPORT PropertySubject *forNode(keira::Node *node);
 PHOTONCORE_EXPORT PropertySubject *forGizmo(Surface *surface, SurfaceGizmo *gizmo);
 PHOTONCORE_EXPORT PropertySubject *forResource(ProjectResource *resource);
 PHOTONCORE_EXPORT PropertySubject *forChannelEffect(ChannelEffect *effect);
+PHOTONCORE_EXPORT PropertySubject *forClip(Clip *clip);
 
 } // namespace PropertySubjectFactory
 

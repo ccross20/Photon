@@ -114,6 +114,13 @@ public:
     // Nearest beat within `tolerance` seconds. Returns false if none.
     bool nearestBeat(double time, double *outTime, double tolerance = 0.1) const;
 
+    // Times of a re-gridded pulse over the analysed beats, the same way the DJ
+    // Connector node re-grids live beats: `rate` pulses per beat (0.25 = every
+    // 4th beat, 2 = every half beat) shifted by `offsetBeats`. Anchored to the
+    // bar (barStartOffset), so slower rates land on downbeats. Fractional
+    // positions are interpolated between neighbouring beats.
+    QVector<double> pulseTimes(double rate, double offsetBeats) const;
+
     void write(QDataStream &) const;
     void read(QDataStream &);
 

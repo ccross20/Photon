@@ -28,6 +28,7 @@ public:
     QLabel *label;
     QToolButton *muteButton;
     Layer *layer;
+    bool active = false;
 };
 
 LayerHeader::LayerHeader(Layer *t_layer):m_impl(new Impl)
@@ -51,7 +52,15 @@ LayerHeader::LayerHeader(Layer *t_layer):m_impl(new Impl)
     m_impl->muteButton->setAutoRaise(true);
     connect(m_impl->muteButton, &QToolButton::toggled, this, &LayerHeader::muteToggled);
 
-    setStyleSheet("background-color:rgb(80,80,80);");
+    // Transparent so the header's own painted background (including the
+    // active-layer highlight, see paintEvent) shows through. Set on each child
+    // directly: a widget's own stylesheet beats the dark one the timeline's
+    // scroll area cascades down to everything inside it.
+    m_impl->label->setStyleSheet("background: transparent;");
+    m_impl->muteButton->setStyleSheet(
+        "QToolButton { background: transparent; border: none; }"
+        "QToolButton:hover { background: rgba(255,255,255,30); border-radius: 3px; }"
+        "QToolButton:checked { background: rgba(255,255,255,55); border-radius: 3px; }");
     setMinimumHeight(m_impl->layer->height());
     setMaximumHeight(m_impl->layer->height());
 }
@@ -84,7 +93,25 @@ void LayerHeader::buildLayout()
 void LayerHeader::paintEvent(QPaintEvent *event)
 {
     QPainter painter(this);
-    painter.fillRect(event->rect(), QColor(80,80,80));
+    // Active layer (where pastes land): tinted to match its timeline lane,
+    // with an accent bar on the left edge.
+    painter.fillRect(event->rect(), m_impl->active ? QColor(70,90,115) : QColor(80,80,80));
+    if(m_impl->active)
+        painter.fillRect(QRect(0, 0, 3, height()), QColor(61,174,233));
+}
+
+void LayerHeader::setActive(bool t_active)
+{
+    if(m_impl->active == t_active)
+        return;
+    m_impl->active = t_active;
+    update();
+}
+
+void LayerHeader::mousePressEvent(QMouseEvent *event)
+{
+    QWidget::mousePressEvent(event);
+    emit activated(m_impl->layer);
 }
 
 void LayerHeader::contextMenuEvent(QContextMenuEvent *event)
@@ -138,6 +165,7 @@ public:
     QScrollArea *scrollArea;
     QVBoxLayout *vLayout;
     Sequence *sequence = nullptr;
+    Layer *activeLayer = nullptr;
     int offset = 0;
 };
 
@@ -225,6 +253,13 @@ void TimelineHeader::offsetChanged(int t_offset)
     update();
 }
 
+void TimelineHeader::setActiveLayer(photon::Layer *t_layer)
+{
+    m_impl->activeLayer = t_layer;
+    for(auto *header : m_impl->headers)
+        header->setActive(header->layer() == t_layer);
+}
+
 void TimelineHeader::layerUpdated(photon::Layer *)
 {
 
@@ -233,6 +268,8 @@ void TimelineHeader::layerUpdated(photon::Layer *)
 void TimelineHeader::layerAdded(photon::Layer *t_layer)
 {
     LayerHeader *header = new LayerHeader(t_layer);
+    connect(header, &LayerHeader::activated, this, &TimelineHeader::layerActivated);
+    header->setActive(t_layer == m_impl->activeLayer);
 
     header->buildLayout();
     m_impl->vLayout->addWidget(header);

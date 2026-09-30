@@ -3,6 +3,8 @@
 #include <QGraphicsScene>
 #include <QGraphicsSceneContextMenuEvent>
 #include "timelinecliplayer.h"
+#include "timelinescene.h"
+#include "sequence/clipclipboard.h"
 #include "sequenceclip.h"
 #include "sequence/cliplayer.h"
 #include "sequence/routineclip.h"
@@ -141,7 +143,10 @@ QRectF TimelineClipLayer::boundingRect() const
 
 void TimelineClipLayer::paint(QPainter *painter, const QStyleOptionGraphicsItem *item, QWidget *widget)
 {
-    painter->fillRect(boundingRect(), QColor(40,40,40));
+    // The active layer (where pastes land) reads slightly lighter and bluer.
+    auto *timelineScene = static_cast<TimelineScene*>(scene());
+    const bool active = timelineScene && timelineScene->activeLayer() == layer();
+    painter->fillRect(boundingRect(), active ? QColor(44,52,64) : QColor(40,40,40));
 }
 
 void TimelineClipLayer::addRoutine(photon::Routine *t_routine, double t_time)
@@ -166,8 +171,17 @@ void TimelineClipLayer::contextMenuEvent(QGraphicsSceneContextMenuEvent *event)
 
 
     double time = event->scenePos().x();
+    auto *timelineScene = static_cast<TimelineScene*>(scene());
+    auto *clipLayer = static_cast<ClipLayer*>(layer());
+    timelineScene->setActiveLayer(clipLayer);
 
     QMenu menu;
+
+    QAction *pasteAction = menu.addAction("Paste Clips Here", this, [timelineScene, clipLayer, time](){
+        timelineScene->pasteClips(time, clipLayer);
+    });
+    pasteAction->setEnabled(ClipClipboard::hasClips());
+    menu.addSeparator();
 
     menu.addAction("Create Clip",this,[time, this](){
 

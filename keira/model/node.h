@@ -86,6 +86,8 @@ public:
     bool isDirty() const;
     int dirty() const;
     virtual bool isContainer() const {return false;}
+    // False for nodes the host app depends on; the graph editor won't delete them.
+    virtual bool isRemovable() const {return true;}
 
     virtual void restore();
     virtual void readFromJson(const QJsonObject &, NodeLibrary *library);

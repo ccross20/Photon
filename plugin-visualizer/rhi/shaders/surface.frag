@@ -17,7 +17,7 @@ layout(std140, binding = 1) uniform Object {
 } object;
 
 // Up to 64 spotlights, 6 vec4 each: posRange, dirCosOuter, (color.rgb, goboA),
-// (goboRot, goboB, goboSplit, -), (color2.rgb, split), (frameU.xyz, -).
+// (goboRot, goboB, goboSplit, laserLayer), (color2.rgb, split), (frameU.xyz, -).
 layout(std140, binding = 2) uniform Lights {
     vec4 countv;
     vec4 data[384];
@@ -25,6 +25,9 @@ layout(std140, binding = 2) uniform Lights {
 
 // Gobo texture array: one layer per loaded image (rgb = transmitted color, a = transmittance).
 layout(binding = 3) uniform sampler2DArray goboTex;
+
+// Live laser projections (rgb = hue, a = brightness), see LaserPreview.
+layout(binding = 4) uniform sampler2DArray laserTex;
 
 vec2 rotate2(vec2 p, float ang)
 {
@@ -50,6 +53,7 @@ void main()
         float goboRot  = lights.data[i * 6 + 3].x;
         int   goboB    = int(lights.data[i * 6 + 3].y + 0.5);
         float goboSplit = lights.data[i * 6 + 3].z;
+        int   laserLayer = int(lights.data[i * 6 + 3].w + 0.5);
         vec3  col2     = lights.data[i * 6 + 4].xyz;
         float split    = lights.data[i * 6 + 4].w;
         vec3  frameU   = lights.data[i * 6 + 5].xyz;   // gobo frame reference axis
@@ -67,7 +71,8 @@ void main()
         float ang     = acos(clamp(cosA, -1.0, 1.0));
         float halfAng = acos(clamp(cosOuter, -1.0, 1.0));
         float rn = clamp(ang / max(halfAng, 1e-4), 0.0, 1.0);
-        float shape = smoothstep(1.0, 0.65, rn);  // bright core, soft edge
+        // Lights: bright core, soft edge. Lasers: the pattern alone decides.
+        float shape = (laserLayer > 0) ? 1.0 : smoothstep(1.0, 0.65, rn);
 
         // Gobo frame from the beam's own local axis (passed in) so the pool's gobo
         // orientation matches the shaft and never flips at steep beam angles.
@@ -85,7 +90,12 @@ void main()
         int gi = (xsplit < goboSplit) ? goboA : goboB;
         vec3 goboRGB = vec3(1.0);
         float goboMask = 1.0;
-        if (gi > 0) {
+        if (laserLayer > 0) {
+            vec2 luv = vec2(cos(theta), sin(theta)) * rn;
+            vec4 g = texture(laserTex, vec3(luv * 0.5 + 0.5, float(laserLayer - 1)));
+            goboRGB = g.rgb;
+            goboMask = g.a;
+        } else if (gi > 0) {
             vec2 guv = rotate2(vec2(cos(theta), sin(theta)) * rn, goboRot);
             vec4 g = texture(goboTex, vec3(guv * 0.5 + 0.5, float(gi - 1)));
             goboRGB = g.rgb;
