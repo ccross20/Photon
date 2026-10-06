@@ -56,6 +56,11 @@ public:
     bool beginDrag(const QVector3D &rayOrigin, const QVector3D &rayDir, const RhiCamera &cam);
     void updateDrag(const QVector3D &rayOrigin, const QVector3D &rayDir);
     void endDrag();
+    // Swaps the objects a drag in progress is moving, keeping the grabbed
+    // handle - used by Cmd-drag to carry on dragging freshly made copies
+    // instead of the originals. The new targets must sit where the old ones
+    // did when the drag began (copies made before the drag moved anything).
+    void retargetDrag(const QVector<SceneObject *> &targets);
 
 private:
     // Returns world-space direction of axis i, respecting global/local space.

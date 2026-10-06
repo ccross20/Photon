@@ -8,6 +8,7 @@
 #include "rhi/rhibackend.h"
 #include "rhirenderer.h"
 #include "rhigizmo.h"
+#include "scene/sceneduplicate.h"
 
 namespace photon {
 
@@ -84,17 +85,13 @@ void RhiWindow::setBeamMode(RhiRenderer::BeamMode mode)
     requestUpdate();
 }
 
-void RhiWindow::setGoboIndex(int index)
+void RhiWindow::setGridVisible(bool visible)
 {
+    m_gridVisible = visible;
     if (!m_renderer)
         return;
-    m_renderer->setGoboIndex(index);
+    m_renderer->setGridVisible(visible);
     requestUpdate();
-}
-
-int RhiWindow::goboCount() const
-{
-    return m_renderer ? m_renderer->goboCount() : 0;
 }
 
 void RhiWindow::exposeEvent(QExposeEvent *)
@@ -165,6 +162,7 @@ void RhiWindow::initRhi()
 
     m_renderer = new RhiRenderer;
     m_renderer->setSceneRoot(m_sceneRoot);
+    m_renderer->setGridVisible(m_gridVisible);
     m_renderer->initialize(m_rhi, m_renderPass, m_sampleCount);
 
     m_initialized = true;
@@ -228,6 +226,7 @@ void RhiWindow::mousePressEvent(QMouseEvent *event)
     m_pressPos = event->position();
     m_dragged = false;
     m_gizmoActive = false;
+    m_duplicateOnDrag = false;
 
     // Try grabbing a gizmo handle first — that takes priority over camera nav.
     if (event->button() == Qt::LeftButton && m_renderer) {
@@ -235,6 +234,9 @@ void RhiWindow::mousePressEvent(QMouseEvent *event)
         rayFor(m_camera, event->position(), devicePixelRatio(), o, d);
         if (m_renderer->gizmo().beginDrag(o, d, m_camera)) {
             m_gizmoActive = true;
+            // Qt reports Command as ControlModifier on macOS.
+            m_duplicateOnDrag = (event->modifiers() & Qt::ControlModifier)
+                                && m_renderer->gizmo().mode() == RhiGizmo::Translate;
             return;
         }
     }
@@ -259,6 +261,20 @@ void RhiWindow::mouseMoveEvent(QMouseEvent *event)
         m_dragged = true;
 
     if (m_gizmoActive && m_renderer) {
+        if (m_duplicateOnDrag) {
+            // Wait for a real drag so a Cmd-click on a handle doesn't leave a
+            // copy stacked on the original; nothing has moved until then.
+            if (!m_dragged)
+                return;
+            m_duplicateOnDrag = false;
+            const QVector<SceneObject *> copies = duplicateSceneObjects(m_renderer->gizmo().targets());
+            if (!copies.isEmpty()) {
+                m_renderer->gizmo().retargetDrag(copies);
+                m_renderer->setSelection(copies);
+                emit selectionChanged(copies);
+            }
+        }
+
         QVector3D o, d;
         rayFor(m_camera, pos, devicePixelRatio(), o, d);
         m_renderer->gizmo().updateDrag(o, d);
@@ -280,6 +296,7 @@ void RhiWindow::mouseReleaseEvent(QMouseEvent *event)
     if (m_gizmoActive && m_renderer) {
         m_renderer->gizmo().endDrag();
         m_gizmoActive = false;
+        m_duplicateOnDrag = false;
         requestUpdate();
     } else if (event->button() == Qt::LeftButton && !m_dragged && m_renderer) {
         // A left click that did not drag is a selection. Shift adds, Ctrl

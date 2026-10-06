@@ -2,8 +2,8 @@ cmake_minimum_required(VERSION 3.5)
 
 project(photon-core-test LANGUAGES CXX)
 
-find_package(QT NAMES Qt6 Qt5 COMPONENTS Core Gui Test Widgets REQUIRED)
-find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Core Gui Test Widgets REQUIRED)
+find_package(QT NAMES Qt6 Qt5 COMPONENTS Core Gui Test Widgets Sql REQUIRED)
+find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Core Gui Test Widgets Sql REQUIRED)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
@@ -32,6 +32,8 @@ set(PROJECT_SOURCES
     sequence/sequencetest.cpp
     scene/sceneobjecttest.h
     scene/sceneobjecttest.cpp
+    scene/fallofftest.h
+    scene/fallofftest.cpp
     project/surfaceownershiptest.h
     project/surfaceownershiptest.cpp
     project/projectresourcetest.h
@@ -42,6 +44,8 @@ set(PROJECT_SOURCES
     project/tagtest.cpp
     gui/propertyaddresstest.h
     gui/propertyaddresstest.cpp
+    library/songlibrarytest.h
+    library/songlibrarytest.cpp
 )
 
 enable_testing(true)
@@ -51,7 +55,7 @@ add_executable(photon-core-test
 
 add_test(NAME photon-core-test COMMAND test)
 
-target_link_libraries(photon-core-test PRIVATE Qt${QT_VERSION_MAJOR}::Test)
+target_link_libraries(photon-core-test PRIVATE Qt${QT_VERSION_MAJOR}::Test Qt${QT_VERSION_MAJOR}::Sql)
 target_link_libraries(photon-core-test PRIVATE photon-core)
 target_link_libraries(photon-core-test PRIVATE keira)
 target_compile_definitions(photon-core-test PRIVATE PHOTON_SOURCE_DIR="${CMAKE_SOURCE_DIR}")

@@ -6,6 +6,7 @@
 #include <QGraphicsScene>
 #include <QGraphicsView>
 #include <QGraphicsItem>
+#include <QSet>
 #include <functional>
 #include "pixellayouteditor.h"
 
@@ -56,11 +57,13 @@ public:
     QPointF scale() const{return m_scale;}
     QPointF offset() const{return m_offset;}
 
-    // Marks t_source (or none, for nullptr) as the active source, so its
-    // points paint cyan instead of dark grey - kept in sync with the fixture
-    // list's current row. Independent of native Qt item selection (below).
-    void selectSource(PixelSourceLayout *t_source);
-    PixelSourceLayout *activeSourceLayout() const{return m_activeSourceLayout;}
+    // Marks t_sources as the active sources, so their points paint cyan
+    // instead of dark grey and can be picked/dragged - kept in sync with the
+    // fixture list's selected rows, so pixels from several fixtures can be
+    // selected and arranged together. Independent of native Qt item
+    // selection (below).
+    void setActiveSources(const QVector<PixelSourceLayout*> &t_sources);
+    bool isActiveSource(PixelSourceLayout *t_source) const{return m_activeSources.contains(t_source);}
 
     // Every currently-selected point (native QGraphicsItem selection, e.g.
     // from a rubber-band drag - independent of which source is "active"),
@@ -82,7 +85,7 @@ private:
 
     PixelLayout *m_layout;
     QHash<PixelSourceLayout*, QVector<PixelPointItem*>> m_pointItems;
-    PixelSourceLayout *m_activeSourceLayout = nullptr;
+    QSet<PixelSourceLayout*> m_activeSources;
     QPointF m_scale;
     QPointF m_offset;
     QPointF m_inverseScale;
@@ -119,8 +122,8 @@ public:
     // syncPointCount() adds new points.
     void reposition();
 
-    // Only the active source's points are selectable/draggable - kept in
-    // sync with PixelLayoutScene::selectSource(). Clears any existing
+    // Only active sources' points are selectable/draggable - kept in sync
+    // with PixelLayoutScene::setActiveSources(). Clears any existing
     // selection when turned off, since a point that can no longer be
     // selected shouldn't linger in a stale selected state.
     void setInteractive(bool);
@@ -145,7 +148,7 @@ public slots:
     void addClicked();
     void removeClicked();
     void arrangeClicked();
-    void selectedRow(int);
+    void listSelectionChanged();
     void sceneObjectsDropped(const QVector<SceneObject*> &objects);
 
 protected:

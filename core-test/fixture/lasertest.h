@@ -20,6 +20,7 @@ private slots:
     void rotationWords();
     void contentAndStrobe();
     void centeredExtremes();
+    void positionPointSaves();
 };
 
 } // namespace photon

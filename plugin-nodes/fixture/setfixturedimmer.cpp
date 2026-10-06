@@ -49,7 +49,7 @@ void SetFixtureDimmer::evaluate(keira::EvaluationContext *t_context) const
         int index = m_capabilityParam->value().toInt();
         if(index < dimmers.length())
         {
-            static_cast<DimmerCapability*>(dimmers[index])->setPercent(m_intensityParam->value().toDouble(), context->dmxMatrix, context->strength * m_blendParam->value().toDouble(),context->timeMachine);
+            static_cast<DimmerCapability*>(dimmers[index])->setPercent(m_intensityParam->value().toDouble(), context->dmxMatrix, context->strength * m_blendParam->value().toDouble());
         }
     }
 

@@ -85,6 +85,9 @@ add_library(plugin-nodes SHARED ${SOURCES}
     color/sparklenode.h color/sparklenode.cpp
     pixel/pixelsfromfixturelist.h pixel/pixelsfromfixturelist.cpp
     pixel/setpixelcolor.h pixel/setpixelcolor.cpp
+    pixel/pixellistrandomizenode.h pixel/pixellistrandomizenode.cpp
+    pixel/pixellistsubsetnode.h pixel/pixellistsubsetnode.cpp
+    pixel/pixellistintervalsubsetnode.h pixel/pixellistintervalsubsetnode.cpp
     math/remapvaluenode.h math/remapvaluenode.cpp
     utils/djconnectornode.h utils/djconnectornode.cpp
     fixture/scatterbeams.h fixture/scatterbeams.cpp

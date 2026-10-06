@@ -11,6 +11,22 @@ namespace photon {
 
 namespace {
 
+// The capture stops when VDJ's song position gets this close to the reported
+// song length...
+constexpr double kEndTolerance = 0.5;
+// ...or when, within this many seconds of the end, the deck stalls or jumps
+// back - a track whose audio ends a little short of its reported length never
+// gets within kEndTolerance; VDJ just stops it and sends it back to its start.
+constexpr double kEndWindow = 5.0;
+constexpr qint64 kStallMs = 1500;
+// A position this far behind the last one is a jump back (end of track, loop,
+// or a seek), not tick jitter.
+constexpr double kBackJump = 1.0;
+// Positions above this before the restart lands are stale, from wherever the
+// deck was when the import began.
+constexpr double kRestartedBelow = 2.0;
+constexpr qint64 kRestartTimeoutMs = 2000;
+
 // Resamples irregularly-timed (t_times[i], t_values[i]) pairs onto a uniform
 // grid of t_count samples starting at t_startTime, spaced 1/t_rate apart, via
 // linear interpolation against the real per-sample timestamps. FeatureTrack
@@ -89,6 +105,9 @@ void VirtualDJCaptureProcess::startProcessing()
     m_hiHatSamples.clear();
     m_firstSampleTime = 0.0;
     m_lastSampleTime = 0.0;
+    m_started = false;
+    m_startClock.start();
+    m_progressClock.start();
     m_active = true;
 
     connect(connector, &VirtualDJConnector::dataUpdated, this, &VirtualDJCaptureProcess::onDataUpdated);
@@ -106,13 +125,47 @@ void VirtualDJCaptureProcess::onDataUpdated()
         return;
 
     VirtualDJConnector *connector = photonApp->djConnector();
+    const double time = connector->time;
+
+    if(connector->title != m_expectedTitle || connector->artist != m_expectedArtist)
+    {
+        finalize();
+        return;
+    }
+
+    // Skip positions from before the restart command took effect (or start
+    // anyway if it never visibly does).
+    if(!m_started)
+    {
+        if(time > kRestartedBelow && m_startClock.elapsed() < kRestartTimeoutMs)
+            return;
+        m_started = true;
+        m_progressClock.restart();
+    }
+
+    const bool haveSamples = !m_sampleTimes.isEmpty();
+    const bool nearEnd = m_expectedSongLength > 0.0 && haveSamples
+                         && m_lastSampleTime >= m_expectedSongLength - kEndWindow;
+
+    if(haveSamples && time <= m_lastSampleTime)
+    {
+        // Not moving forward. Near the end, a jump back or a stall means the
+        // track finished; anywhere else (a seek back, a pause) just don't record
+        // until playback is past what's already captured, so the timeline stays
+        // in order.
+        const bool jumpedBack = time < m_lastSampleTime - kBackJump;
+        if(nearEnd && (jumpedBack || m_progressClock.elapsed() > kStallMs))
+            finalize();
+        return;
+    }
+    m_progressClock.restart();
 
     // Level/stems are continuous, unlike beats - one sample per tick,
     // unconditionally, straight from VDJ's own reported values.
     if(m_levelSamples.isEmpty())
-        m_firstSampleTime = connector->time;
-    m_lastSampleTime = connector->time;
-    m_sampleTimes.append(connector->time);
+        m_firstSampleTime = time;
+    m_lastSampleTime = time;
+    m_sampleTimes.append(time);
     m_levelSamples.append(static_cast<float>(connector->level));
     m_vocalSamples.append(static_cast<float>(connector->stemVocal));
     m_instruSamples.append(static_cast<float>(connector->stemInstru));
@@ -130,22 +183,19 @@ void VirtualDJCaptureProcess::onDataUpdated()
         // Back-calculate the exact beat-crossing time from VDJ's fractional beat
         // position and bpm, rather than stamping whichever tick happened to observe
         // the beat number incrementing - keeps precision independent of tick rate.
-        const double exactBeatTime = connector->time - connector->beatProgress * (60.0 / connector->bpm);
+        const double exactBeatTime = time - connector->beatProgress * (60.0 / connector->bpm);
 
         // A crossing must be finite and at-or-before now; reject and retry on the
         // next tick (m_lastBeatNumber is only advanced once a beat is actually
         // accepted) rather than silently banking a bad value.
-        if(std::isfinite(exactBeatTime) && exactBeatTime >= 0.0 && exactBeatTime <= connector->time)
+        if(std::isfinite(exactBeatTime) && exactBeatTime >= 0.0 && exactBeatTime <= time)
         {
             m_beats.append(exactBeatTime);
             m_lastBeatNumber = connector->beatNumber;
         }
     }
 
-    const bool songEnded = m_expectedSongLength > 0.0 && connector->time >= (m_expectedSongLength - 0.5);
-    const bool trackChanged = connector->title != m_expectedTitle || connector->artist != m_expectedArtist;
-
-    if(songEnded || trackChanged)
+    if(m_expectedSongLength > 0.0 && time >= m_expectedSongLength - kEndTolerance)
         finalize();
 }
 

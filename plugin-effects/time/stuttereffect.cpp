@@ -153,9 +153,9 @@ QWidget *StutterEffect::createPropertyEditor()
     auto *form = new PropertyForm;
     // A zero stutter duration divides by zero, same floor as the editor's field.
     form->addRow("Duration", PropertyWidgets::createNumber(m_duration,
-        {{PropertyWidgets::MetaMinimum, .001}}, [this](double v){ setDuration(v); }));
+        {{PropertyWidgets::MetaMinimum, .001}, {PropertyWidgets::MetaSoftMinimum, 0.01}, {PropertyWidgets::MetaSoftMaximum, 2.0}}, [this](double v){ setDuration(v); }));
     form->addRow("Gap", PropertyWidgets::createNumber(m_gap,
-        {{PropertyWidgets::MetaMinimum, 0.0}}, [this](double v){ setGap(v); }));
+        {{PropertyWidgets::MetaMinimum, 0.0}, {PropertyWidgets::MetaSoftMinimum, 0.0}, {PropertyWidgets::MetaSoftMaximum, 2.0}}, [this](double v){ setGap(v); }));
     return form;
 }
 

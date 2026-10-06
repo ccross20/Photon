@@ -1,4 +1,6 @@
 
+#include <algorithm>
+#include <functional>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QFormLayout>
@@ -47,7 +49,7 @@ void PixelLayoutScene::sourceAdded(photon::PixelSourceLayout *t_source)
         auto *item = new PixelPointItem(t_source, i);
         addItem(item);
         item->reposition();
-        item->setInteractive(t_source == m_activeSourceLayout);
+        item->setInteractive(m_activeSources.contains(t_source));
         items << item;
     }
     m_pointItems.insert(t_source, items);
@@ -78,8 +80,7 @@ void PixelLayoutScene::sourceRemoved(photon::PixelSourceLayout *t_source)
         delete item;
     m_pointItems.erase(it);
 
-    if(m_activeSourceLayout == t_source)
-        m_activeSourceLayout = nullptr;
+    m_activeSources.remove(t_source);
 }
 
 void PixelLayoutScene::syncPointCount(PixelSourceLayout *t_source)
@@ -99,7 +100,7 @@ void PixelLayoutScene::syncPointCount(PixelSourceLayout *t_source)
         auto *item = new PixelPointItem(t_source, items.size());
         addItem(item);
         item->reposition();
-        item->setInteractive(t_source == m_activeSourceLayout);
+        item->setInteractive(m_activeSources.contains(t_source));
         items << item;
     }
 }
@@ -114,22 +115,21 @@ void PixelLayoutScene::repositionSource(PixelSourceLayout *t_source)
         item->reposition();
 }
 
-void PixelLayoutScene::selectSource(PixelSourceLayout *t_source)
+void PixelLayoutScene::setActiveSources(const QVector<PixelSourceLayout*> &t_sources)
 {
-    if(m_activeSourceLayout == t_source)
+    const QSet<PixelSourceLayout*> active(t_sources.begin(), t_sources.end());
+    if(active == m_activeSources)
         return;
+    m_activeSources = active;
 
-    auto oldIt = m_pointItems.find(m_activeSourceLayout);
-    if(oldIt != m_pointItems.end())
-        for(auto *item : oldIt.value())
-            item->setInteractive(false);
-
-    m_activeSourceLayout = t_source;
-
-    auto newIt = m_pointItems.find(m_activeSourceLayout);
-    if(newIt != m_pointItems.end())
-        for(auto *item : newIt.value())
-            item->setInteractive(true);
+    // A fixture dropped from the selection also drops its selected pixels
+    // (setInteractive(false) deselects); ones still active keep theirs.
+    for(auto it = m_pointItems.cbegin(); it != m_pointItems.cend(); ++it)
+    {
+        const bool interactive = m_activeSources.contains(it.key());
+        for(auto *item : it.value())
+            item->setInteractive(interactive);
+    }
 
     update();
 }
@@ -216,9 +216,9 @@ PixelPointItem::PixelPointItem(PixelSourceLayout *t_sourceLayout, int t_index)
     : QGraphicsItem(), m_sourceLayout(t_sourceLayout), m_index(t_index)
 {
     // Selectable/movable is granted per-source by setInteractive(), driven by
-    // PixelLayoutScene::selectSource() - only the active source's points can
-    // be picked at all, so a rubber-band drag across the whole canvas can
-    // never touch another fixture's points.
+    // PixelLayoutScene::setActiveSources() - only the selected fixtures'
+    // points can be picked at all, so a rubber-band drag across the whole
+    // canvas never touches an unselected fixture's points.
     setFlags(ItemSendsScenePositionChanges);
 }
 
@@ -253,7 +253,7 @@ void PixelPointItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *, 
     painter->setRenderHint(QPainter::Antialiasing);
 
     auto *layoutScene = static_cast<PixelLayoutScene*>(scene());
-    bool active = layoutScene && layoutScene->activeSourceLayout() == m_sourceLayout;
+    bool active = layoutScene && layoutScene->isActiveSource(m_sourceLayout);
 
     painter->setPen(isSelected() ? QPen(Qt::yellow, 1) : Qt::NoPen);
     painter->setBrush(active ? Qt::cyan : Qt::darkGray);
@@ -351,6 +351,10 @@ PixelLayoutEditorSidePanel::PixelLayoutEditorSidePanel(PixelLayout *t_layout) : 
     arrangeButton = new QPushButton("Arrange");
     arrangeButton->setEnabled(false);
     layoutList = new PixelSourceListWidget;
+    // Cmd-click toggles a fixture, Shift-click selects a range: every
+    // selected fixture's pixels become pickable together, so a selection
+    // (and an Arrange) can span several fixtures.
+    layoutList->setSelectionMode(QAbstractItemView::ExtendedSelection);
 
     QHBoxLayout *buttonLayout = new QHBoxLayout;
     buttonLayout->addWidget(addButton);
@@ -368,7 +372,7 @@ PixelLayoutEditorSidePanel::PixelLayoutEditorSidePanel(PixelLayout *t_layout) : 
 
     setLayout(hLayout);
 
-    connect(layoutList, &QListWidget::currentRowChanged, this, &PixelLayoutEditorSidePanel::selectedRow);
+    connect(layoutList, &QListWidget::itemSelectionChanged, this, &PixelLayoutEditorSidePanel::listSelectionChanged);
     connect(addButton, &QPushButton::clicked, this, &PixelLayoutEditorSidePanel::addClicked);
     connect(removeButton, &QPushButton::clicked, this, &PixelLayoutEditorSidePanel::removeClicked);
     connect(arrangeButton, &QPushButton::clicked, this, &PixelLayoutEditorSidePanel::arrangeClicked);
@@ -395,43 +399,55 @@ PixelLayoutEditorSidePanel::PixelLayoutEditorSidePanel(PixelLayout *t_layout) : 
 
 }
 
-void PixelLayoutEditorSidePanel::selectedRow(int t_row)
+void PixelLayoutEditorSidePanel::listSelectionChanged()
 {
-    bool hasSelection = t_row >= 0 && t_row < pixelLayout->sourceLayouts().length();
-    removeButton->setEnabled(hasSelection);
+    // List rows and source layouts share an order (both appended together).
+    const auto sourceLayouts = pixelLayout->sourceLayouts();
+    QVector<PixelSourceLayout*> active;
+    for(const QModelIndex &index : layoutList->selectionModel()->selectedRows())
+    {
+        if(index.row() < sourceLayouts.length())
+            active << sourceLayouts[index.row()];
+    }
 
-    auto selected = hasSelection ? pixelLayout->sourceLayouts()[t_row] : nullptr;
-    scene->selectSource(selected);
+    removeButton->setEnabled(!active.isEmpty());
+    scene->setActiveSources(active);
 }
 
 void PixelLayoutEditorSidePanel::removeClicked()
 {
-    int row = layoutList->currentRow();
-    if(row < 0 || row >= pixelLayout->sourceLayouts().length())
-        return;
+    QVector<int> rows;
+    for(const QModelIndex &index : layoutList->selectionModel()->selectedRows())
+        rows << index.row();
+    // Highest first, so earlier removals don't shift the rows still to go.
+    std::sort(rows.begin(), rows.end(), std::greater<int>());
 
-    auto sourceLayout = pixelLayout->sourceLayouts()[row];
-    auto source = sourceLayout->source();
+    for(int row : rows)
+    {
+        if(row < 0 || row >= pixelLayout->sourceLayouts().length())
+            continue;
 
-    pixelLayout->removeSource(sourceLayout);
-    delete layoutList->takeItem(row);
+        auto sourceLayout = pixelLayout->sourceLayouts()[row];
+        auto source = sourceLayout->source();
 
-    // The layout owns neither the wrapper nor (for a fixture) the PixelSource
-    // it wraps - both were allocated fresh by tryAddSceneObject()/addSource()
-    // and nothing else references them, so removal is also where they're
-    // freed. A PixelSource that's itself a SceneObject (e.g. a PixelStrip) is
-    // owned by the scene, not by this list, and must be left alone.
-    delete sourceLayout;
-    if(dynamic_cast<FixturePixelSource*>(source))
-        delete source;
+        pixelLayout->removeSource(sourceLayout);
+        delete layoutList->takeItem(row);
 
-    // Qt only emits currentRowChanged() when the *row number* changes - if
-    // the removed row wasn't the last one, the item that shifts into its
-    // place keeps the same row number as current, so the signal never fires
-    // even though which source it points to just changed. Re-sync explicitly
-    // rather than relying on it, or the view keeps the old (now-deleted)
-    // source active until some other selection change happens to fire it.
-    selectedRow(layoutList->currentRow());
+        // The layout owns neither the wrapper nor (for a fixture) the
+        // PixelSource it wraps - both were allocated fresh by
+        // tryAddSceneObject()/addSource() and nothing else references them,
+        // so removal is also where they're freed. A PixelSource that's itself
+        // a SceneObject (e.g. a PixelStrip) is owned by the scene, not by
+        // this list, and must be left alone.
+        delete sourceLayout;
+        if(dynamic_cast<FixturePixelSource*>(source))
+            delete source;
+    }
+
+    // Re-sync explicitly: the rows that shifted into removed ones' places
+    // point at different sources now, which a selection signal may not
+    // report.
+    listSelectionChanged();
 }
 
 namespace {

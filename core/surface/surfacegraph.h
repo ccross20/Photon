@@ -13,7 +13,6 @@ struct SurfaceEvaluationContext : keira::EvaluationContext
 {
     SurfaceEvaluationContext(DMXMatrix &matrix):dmxMatrix(matrix){}
     DMXMatrix &dmxMatrix;
-    DMXTimeMachine *timeMachine = nullptr;
     Project *project = nullptr;
     Fixture *fixture = nullptr;
     Canvas *canvas = nullptr;

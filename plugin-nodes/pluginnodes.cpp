@@ -47,6 +47,9 @@
 #include "falloff/randomfalloffnode.h"
 #include "pixel/pixelsfromfixturelist.h"
 #include "pixel/setpixelcolor.h"
+#include "pixel/pixellistrandomizenode.h"
+#include "pixel/pixellistsubsetnode.h"
+#include "pixel/pixellistintervalsubsetnode.h"
 #include "utils/djconnectornode.h"
 
 //inline void initPluginResource() { Q_INIT_RESOURCE(resources); }
@@ -105,6 +108,9 @@ bool PluginNodes::initialize(const PluginContext &context)
     photonApp->plugins()->registerNode(SpatialFalloffNode::info());
     photonApp->plugins()->registerNode(SetPixelColor::info());
     photonApp->plugins()->registerNode(PixelsFromFixtureList::info());
+    photonApp->plugins()->registerNode(PixelListRandomizeNode::info());
+    photonApp->plugins()->registerNode(PixelListSubsetNode::info());
+    photonApp->plugins()->registerNode(PixelListIntervalSubsetNode::info());
     photonApp->plugins()->registerNode(DJConnectorNode::info());
 
     return true;

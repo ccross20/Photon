@@ -2,6 +2,7 @@
 #define PHOTON_SCENEOBJECT_H
 
 #include <QObject>
+#include <QSet>
 #include "photon-global.h"
 #include "project/projectresource.h"
 
@@ -18,6 +19,13 @@ public:
     virtual ~SceneObject();
 
     SceneObject *clone() const;
+
+    // A name for a copy of `name` that isn't in `taken`: a trailing number is
+    // bumped past the highest one already used with the same stem ("Spot" and
+    // "Spot 2" taken -> "Spot 3"), keeping the original's separator and zero
+    // padding ("Par 07" -> "Par 08"). A name with no number starts at 2.
+    static QString nextAvailableName(const QString &name, const QSet<QString> &taken);
+
     QVector3D position() const;
     QVector3D rotation() const;
     QVector3D globalPosition() const;

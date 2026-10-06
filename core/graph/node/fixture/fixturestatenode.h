@@ -80,7 +80,7 @@ protected:
 private:
     // Applies the state to one fixture, reading exposed channels from `values`.
     void applyToFixture(struct RoutineEvaluationContext &, Fixture *,
-                        const QHash<QByteArray, QVariant> &overrides) const;
+                        const QHash<QByteArray, QVariant> &overrides, double strength) const;
     // Display label for an exposed channel's port: the channel's own name,
     // qualified by the capability so two channels of one capability (and
     // same-named channels of different capabilities) stay tellable apart.

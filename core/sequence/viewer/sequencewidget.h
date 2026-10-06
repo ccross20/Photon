@@ -4,6 +4,8 @@
 #include <QWidget>
 #include "photon-global.h"
 
+namespace keira { class GraphWidget; }
+
 namespace photon {
 
 class PHOTONCORE_EXPORT SequenceWidget : public QWidget
@@ -45,6 +47,8 @@ private slots:
     void selectEffect(photon::ChannelEffect *);
     void selectClipGraph(photon::Clip *);
     void clearEditor();
+    // Reopens the graph/subgraph and node selection last used for the clip.
+    void restoreGraphView(photon::Clip *, keira::GraphWidget *);
     void showDefaultEditor();
     void toggleVdjSync(bool);
 

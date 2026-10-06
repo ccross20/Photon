@@ -27,6 +27,21 @@ public:
 
     NodeItem *itemForNode(Node *) const;
 
+    // Node clipboard - the system clipboard, so nodes can be copied from one
+    // graph and pasted into another (or another editor). What's copied is each
+    // selected node's saved form plus the connections between the copied
+    // nodes; wires to nodes left behind are dropped. Nodes that can't be
+    // removed (e.g. a subgraph's Globals) are structural, so they're skipped.
+    static const char *NodeClipboardMime;
+    bool hasSelectedNodes() const;
+    static bool clipboardHasNodes();
+    void copySelectedNodes();
+    void cutSelectedNodes();
+    // Adds the clipboard's nodes centred on t_scenePos with fresh ids and
+    // their internal wiring restored, and selects them. Node types the
+    // current graph doesn't allow are left out.
+    void pasteNodes(const QPointF &scenePos);
+
 public slots:
     void updateFromNodes();
 

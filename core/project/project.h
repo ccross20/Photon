@@ -65,7 +65,16 @@ public:
     QWidget *propertiesWidget() const;
     void setPropertiesWidget(QWidget *widget);
 
-    void save(const QString &path = QString{}) const;
+    // The file this project was loaded from or last saved to; empty for a new,
+    // never-saved project.
+    QString filePath() const;
+    // Overwrites filePath(), or asks for a location if there isn't one yet.
+    // Returns false if nothing was written (dialog cancelled, write failed).
+    bool save();
+    // Always asks for a location, then saves there and makes it filePath().
+    bool saveAs();
+    // Writes to the given file and makes it filePath().
+    bool saveTo(const QString &path);
 
     // Recently opened/saved project file paths, most-recent-first, deduplicated
     // and capped. Updated automatically by save() and load() whenever a real

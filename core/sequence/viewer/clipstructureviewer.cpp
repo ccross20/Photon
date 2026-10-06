@@ -113,6 +113,11 @@ ClipStructureViewer::~ClipStructureViewer()
 
 void ClipStructureViewer::selectionChanged(const QItemSelection &selected, const QItemSelection &deselected)
 {
+    // Only a choice the user makes changes what's remembered for the clip -
+    // not the selection shifting while a clip is swapped in or its view is
+    // being restored (see setClip() / restoreState()).
+    const bool remember = m_clip && !m_switching;
+
     auto indexes = selected.indexes();
     if(indexes.isEmpty())
     {
@@ -122,24 +127,34 @@ void ClipStructureViewer::selectionChanged(const QItemSelection &selected, const
     }
     auto itemData = m_model->dataForIndex(indexes.first());
 
-    ChannelEffectData *effectData = dynamic_cast<ChannelEffectData*>(itemData);
-    if(effectData)
+    // Remembered by the row's own id ("graph" for the clip graph row), which
+    // is what viewId() looks up. The clip's uniqueId would find the clip's
+    // own top-level row instead.
+    if(auto *effectData = dynamic_cast<ChannelEffectData*>(itemData))
     {
         m_hasEditorSelection = true;
-        m_states.insert(m_clip->uniqueId(),effectData->effect()->uniqueId());
+        if(remember)
+            m_states.insert(m_clip->uniqueId(), effectData->id());
         emit selectEffect(effectData->effect());
     }
-    else if(dynamic_cast<ClipGraphData*>(itemData))
+    else if(auto *graphData = dynamic_cast<ClipGraphData*>(itemData))
     {
         m_hasEditorSelection = true;
-        m_states.insert(m_clip->uniqueId(),dynamic_cast<ClipGraphData*>(itemData)->clip()->uniqueId());
-        emit selectClipGraph(dynamic_cast<ClipGraphData*>(itemData)->clip());
+        if(remember)
+            m_states.insert(m_clip->uniqueId(), graphData->id());
+        emit selectClipGraph(graphData->clip());
     }
     else
     {
+        // The clip's own (top-level) row shows its properties; the folder
+        // rows below it just show the default editor. Either is remembered
+        // like any other view.
         m_hasEditorSelection = false;
-        m_states.remove(m_clip->uniqueId());
+        if(remember)
+            m_states.insert(m_clip->uniqueId(), itemData->id());
         emit clearSelection();
+        if(auto *clipData = dynamic_cast<ClipData*>(itemData))
+            emit selectClipProperties(clipData->clip());
     }
 
 }
@@ -161,7 +176,7 @@ void ClipStructureViewer::rowsRemoved()
 
     // The selected effect (or its channel/clip) was removed.
     m_hasEditorSelection = false;
-    if(m_clip)
+    if(m_clip && !m_switching)
         m_states.remove(m_clip->uniqueId());
     emit clearSelection();
 }
@@ -171,7 +186,9 @@ void ClipStructureViewer::viewId(const QByteArray &t_id)
     auto data = m_model->root()->findDataWithId(t_id);
     if(data){
         auto index = m_model->indexForData(data);
+        m_treeView->scrollTo(index);
         m_treeView->selectionModel()->select(index,QItemSelectionModel::ClearAndSelect);
+        m_treeView->selectionModel()->setCurrentIndex(index, QItemSelectionModel::NoUpdate);
     }
 }
 
@@ -180,11 +197,18 @@ void ClipStructureViewer::restoreState()
     if(!m_clip)
         return;
 
-    if(m_states.contains(m_clip->uniqueId()))
-    {
-        viewId(m_states.value(m_clip->uniqueId()));
-        return;
-    }
+    m_switching = true;
+    QByteArray remembered = m_states.value(m_clip->uniqueId());
+    // Nothing remembered (or what was is gone): the clip's own row, so a
+    // clip opens on its properties.
+    if(remembered.isEmpty() || !m_model->indexForId(remembered).isValid())
+        remembered = m_clip->uniqueId();
+
+    // Cleared first so the selection always changes - reselecting a row
+    // that was already selected wouldn't re-show its view.
+    m_treeView->selectionModel()->clearSelection();
+    viewId(remembered);
+    m_switching = false;
 }
 
 void ClipStructureViewer::setClip(Clip *t_clip)
@@ -192,6 +216,10 @@ void ClipStructureViewer::setClip(Clip *t_clip)
     if(t_clip == m_clip)
         return;
 
+    // The selection shifts on its own as the old clip's rows go and the new
+    // one's arrive; m_switching keeps that from rewriting either clip's
+    // remembered view.
+    m_switching = true;
     if(m_clip)
         m_model->removeClip(m_clip);
 
@@ -206,6 +234,7 @@ void ClipStructureViewer::setClip(Clip *t_clip)
     {
         emit clearSelection();
     }
+    m_switching = false;
 
 }
 

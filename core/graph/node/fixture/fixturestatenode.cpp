@@ -255,11 +255,11 @@ static bool enabledAt(const std::deque<FixtureStateNode::EnableSample> &t_histor
 }
 
 void FixtureStateNode::applyToFixture(RoutineEvaluationContext &t_context, Fixture *t_fixture,
-                                      const QHash<QByteArray, QVariant> &t_overrides) const
+                                      const QHash<QByteArray, QVariant> &t_overrides, double t_strength) const
 {
     StateEvaluationContext local(t_context.dmxMatrix);
     local.fixture      = t_fixture;
-    local.strength     = t_context.strength;
+    local.strength     = t_strength;
     local.globalTime   = t_context.globalTime;
     local.relativeTime = t_context.relativeTime;
 
@@ -334,7 +334,7 @@ void FixtureStateNode::evaluate(keira::EvaluationContext *t_context) const
             overrides.insert(param->id(), param->value());
         }
 
-        applyToFixture(*context, context->fixture, overrides);
+        applyToFixture(*context, context->fixture, overrides, context->strength);
         return;
     }
 
@@ -381,11 +381,26 @@ void FixtureStateNode::evaluate(keira::EvaluationContext *t_context) const
 
     for(const auto &fixtureData : fixtures)
     {
+        context->maxFixtureOffset = std::max(context->maxFixtureOffset, fixtureData.offset);
+        context->minFixtureOffset = std::min(context->minFixtureOffset, fixtureData.offset);
+    }
+
+    for(const auto &fixtureData : fixtures)
+    {
         auto *fixture = photonApp->project()->fixtures()->fixtureWithId(fixtureData.fixtureId);
         if(!fixture)
             continue;
 
         const double delayedTime = now - fixtureData.offset;
+
+        // Inside a clip, each fixture follows the clip's strength and ease
+        // in/out at its own delayed time, the same as its animated values -
+        // otherwise the whole rig fades as one regardless of the falloff.
+        const double strength = context->clipStrengthAt
+                                    ? context->clipStrengthAt(context->clipTime - fixtureData.offset)
+                                    : context->strength;
+        if(strength <= 0.0)
+            continue;
 
         // Enable is delayed per fixture, so toggling it staggers across the rig.
         if(!enabledAt(m_enableHistory, delayedTime))
@@ -403,7 +418,7 @@ void FixtureStateNode::evaluate(keira::EvaluationContext *t_context) const
             overrides.insert(param->id(), sampleValueAt(history, delayedTime));
         }
 
-        applyToFixture(*context, fixture, overrides);
+        applyToFixture(*context, fixture, overrides, strength);
     }
 }
 

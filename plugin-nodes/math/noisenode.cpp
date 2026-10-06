@@ -26,11 +26,8 @@ NoiseNode::~NoiseNode()
 
 void NoiseNode::createParameters()
 {
-    inputXParam = new keira::DecimalParameter("inputX","Input X", 2.0);
-    addParameter(inputXParam);
-
-    inputYParam = new keira::DecimalParameter("inputY","Input Y", 2.0);
-    addParameter(inputYParam);
+    inputParam = new Point2DParameter("input","Input", QPointF(2.0, 2.0));
+    addParameter(inputParam);
 
 
     scaleParam = new Point2DParameter("scale","Scale", QPointF(10.0,10.0));
@@ -59,7 +56,8 @@ void NoiseNode::evaluate(keira::EvaluationContext *t_context) const
 {
     m_noise->setSeed(seedParam->value().toInt());
 
-    double d = inputYParam->value().toDouble();
+    const QPointF input = inputParam->value().value<QPointF>();
+    double d = input.y();
     qlonglong i = qlonglong(d)%100;
     double off = i + (d - floor(d));
 
@@ -72,7 +70,7 @@ void NoiseNode::evaluate(keira::EvaluationContext *t_context) const
 
     m_noise->setNoiseType(static_cast<NoiseGenerator::NoiseType>(noiseModeParam->value().toInt()));
 
-    outputParam->setValue(m_noise->noise1D(inputXParam->value().toDouble(),0,1.0));
+    outputParam->setValue(m_noise->noise1D(input.x(),0,1.0));
 }
 
 } // namespace photon

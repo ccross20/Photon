@@ -27,8 +27,12 @@ set(SOURCES
     generator/sineeffect.cpp
     generator/cuemarkereffect.h
     generator/cuemarkereffect.cpp
+    generator/markerintegereffect.h
+    generator/markerintegereffect.cpp
     modifier/easeeffect.h
     modifier/easeeffect.cpp
+    generator/durationcurveeffect.h
+    generator/durationcurveeffect.cpp
     modifier/comparatoreffect.h
     modifier/comparatoreffect.cpp
     modifier/peakholdeffect.h

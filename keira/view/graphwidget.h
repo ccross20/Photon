@@ -23,6 +23,11 @@ public:
     void setScene(Scene *t_scene);
     Scene *scene() const;
 
+    // Shows t_graph (an ancestor or nested subgraph of the scene's graph).
+    // Common landing point for the Up button and a breadcrumb click, and
+    // public so a host can reopen the subgraph the user was last in.
+    void navigateToGraph(Graph *t_graph);
+
 signals:
     // The selected node changed (null when the selection is empty or holds no
     // node). keira has no property UI of its own any more - photon-core listens
@@ -40,8 +45,6 @@ private:
     // one clickable crumb per ancestor (named for the node that contains it),
     // plus a final plain, non-clickable crumb for t_graph itself.
     void rebuildBreadcrumbs(Graph *t_graph);
-    // Common landing point for both the Up button and a breadcrumb click.
-    void navigateToGraph(Graph *t_graph);
 
     Scene *m_scene = nullptr;
     Viewer *m_viewer = nullptr;

@@ -11,7 +11,10 @@
 #include "scene/sceneboundaryrectangle.h"
 #include "scene/sceneboundaryoval.h"
 #include "scene/scenepointmarker.h"
-#include "scene/scenelinearfalloff.h"
+#include "scene/scenefalloff.h"
+#include "scene/scenebox.h"
+#include "scene/sceneambientlight.h"
+#include "scene/scenedirectionallight.h"
 
 namespace photon {
 
@@ -31,6 +34,12 @@ SceneObject *SceneFactory::createObject(const QByteArray &id)
         return new Truss();
     if(id == "surface")
         return new SceneSurface();
+    if(id == "directionallight")
+        return new SceneDirectionalLight();
+    if(id == "ambientlight")
+        return new SceneAmbientLight();
+    if(id == "box")
+        return new SceneBox();
     if(id == "zone")
         return new SceneZone();
     if(id == "pixelstrip")
@@ -47,8 +56,9 @@ SceneObject *SceneFactory::createObject(const QByteArray &id)
         return new SceneBoundaryOval();
     if(id == "pointmarker")
         return new ScenePointMarker();
-    if(id == "linearfalloff")
-        return new SceneLinearFalloff();
+    // "linearfalloff" is the Linear Falloff that Falloff replaced.
+    if(id == "falloff" || id == "linearfalloff")
+        return new SceneFalloff();
 
     return nullptr;
 }

@@ -71,8 +71,13 @@ void Window::closeEvent(QCloseEvent *event)
             event->ignore();
             return;
         }
-        if(choice == QMessageBox::Save)
-            photonApp->project()->save();
+        // A cancelled Save As (never-saved project) keeps the window open rather
+        // than closing without saving.
+        if(choice == QMessageBox::Save && !photonApp->project()->save())
+        {
+            event->ignore();
+            return;
+        }
     }
 
     QSettings qsettings;

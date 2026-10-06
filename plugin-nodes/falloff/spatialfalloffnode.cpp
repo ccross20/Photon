@@ -4,7 +4,7 @@
 #include <QVector3D>
 #include "spatialfalloffnode.h"
 #include "graph/parameter/fixturelistparameter.h"
-#include "scene/scenelinearfalloff.h"
+#include "scene/scenefalloff.h"
 #include "scene/sceneobject.h"
 #include "scene/sceneiterator.h"
 #include "scene/scenemanager.h"
@@ -35,7 +35,7 @@ void SpatialFalloffNode::createParameters()
     m_inParam = new FixtureListParameter("in", "Fixtures In", {});
     addParameter(m_inParam);
 
-    m_helperParam = new keira::StringOptionParameter("helper", "Linear Falloff", {}, 0);
+    m_helperParam = new keira::StringOptionParameter("helper", "Falloff", {}, 0);
     m_helperParam->setOptionLambda([]() {
         QVector<std::pair<QString, QString>> options;
         options.append({"(none)", QString()});
@@ -43,7 +43,7 @@ void SpatialFalloffNode::createParameters()
         {
             for(SceneObject *object : SceneIterator::ToList(project->sceneRoot()))
             {
-                if(object->typeId() == "linearfalloff")
+                if(object->typeId() == "falloff")
                     options.append({object->name(), QString::fromUtf8(object->uniqueId())});
             }
         }
@@ -71,7 +71,7 @@ void SpatialFalloffNode::evaluate(keira::EvaluationContext *) const
     SceneObject *object = (project && !helperId.isEmpty())
                               ? project->scene()->findObjectById(helperId)
                               : nullptr;
-    auto *helper = dynamic_cast<SceneLinearFalloff *>(object);
+    auto *helper = dynamic_cast<SceneFalloff *>(object);
 
     // Nothing to work with - pass the list through untouched rather than
     // stamping every fixture with 0.
@@ -81,55 +81,31 @@ void SpatialFalloffNode::evaluate(keira::EvaluationContext *) const
         return;
     }
 
-    const QMatrix4x4 m = helper->globalMatrix();
-    const QVector3D origin = m.map(QVector3D(0, 0, 0));
-    // The helper's arrow runs along its local +Y (see appendArrowLines / the
-    // scene-helper-objects notes).
-    QVector3D axis = m.mapVector(QVector3D(0, 1, 0));
-    if(axis.lengthSquared() < 1e-8f)
-    {
-        m_outParam->setValue(QVariant::fromValue(fixtures));
-        return;
-    }
-    axis.normalize();
-
-    // Signed distance of each fixture along the line from the helper's origin.
-    QVector<double> projected(fixtures.size());
-    for(int i = 0; i < fixtures.size(); ++i)
-    {
-        Fixture *fix = project->fixtures()->fixtureWithId(fixtures[i].fixtureId);
-        const QVector3D pos = fix ? fix->globalPosition() : origin;
-        projected[i] = QVector3D::dotProduct(pos - origin, axis);
-    }
-
     const double multiplier = m_multiplierParam->value().toDouble();
+    const QVector3D origin = helper->globalPosition();
+    auto fixturePosition = [&](const FixtureParameterData &data) {
+        Fixture *fix = project->fixtures()->fixtureWithId(data.fixtureId);
+        return fix ? fix->globalPosition() : origin;
+    };
 
     if(m_modeParam->value().toInt() == ModeUnbounded)
     {
-        // Direction only: normalise against the spread of the fixtures
-        // themselves, so the extremes land exactly on 0 and 1.
-        double lo = projected[0], hi = projected[0];
-        for(double v : projected)
-        {
-            lo = std::min(lo, v);
-            hi = std::max(hi, v);
-        }
-        const double span = hi - lo;
+        // The falloff only gives the shape and direction: its raw values are
+        // stretched so the fixtures' own extremes land exactly on 0 and 1.
+        QVector<double> raw(fixtures.size());
         for(int i = 0; i < fixtures.size(); ++i)
-        {
-            const double s = span > 1e-9 ? (projected[i] - lo) / span : 0.0;
-            fixtures[i].offset = s * multiplier;
-        }
+            raw[i] = helper->rawValueAt(fixturePosition(fixtures[i]));
+        const auto [lo, hi] = std::minmax_element(raw.cbegin(), raw.cend());
+        const double span = *hi - *lo;
+        for(int i = 0; i < fixtures.size(); ++i)
+            fixtures[i].offset = (span > 1e-9 ? (raw[i] - *lo) / span : 0.0) * multiplier;
     }
     else
     {
-        // Bounded: actual position on the line, 0 at the start bar, 1 at the tip.
-        const double length = std::max(1e-6, double(helper->length()));
+        // Bounded: the falloff's own amount - shape, mirroring and what happens
+        // past the end all included.
         for(int i = 0; i < fixtures.size(); ++i)
-        {
-            const double s = std::clamp(projected[i] / length, 0.0, 1.0);
-            fixtures[i].offset = s * multiplier;
-        }
+            fixtures[i].offset = helper->amountAt(fixturePosition(fixtures[i])) * multiplier;
     }
 
     m_outParam->setValue(QVariant::fromValue(fixtures));

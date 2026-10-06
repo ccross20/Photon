@@ -4,7 +4,6 @@
 #include "photon-global.h"
 #include "model/parameter/booleanparameter.h"
 #include "model/parameter/integerparameter.h"
-#include "data/dmxtimemachine.h"
 
 
 namespace photon {
@@ -37,7 +36,6 @@ protected:
 private:
     keira::IntegerParameter *m_priortyParam;
     keira::BooleanParameter *m_enabledParam;
-    keira::BooleanParameter *m_useTimeMachineParam;
     PixelListParameter *m_pixelsParam;
     GraphContextNode *m_globalsNode;
     // The default "Set Pixel Color" node seeded in the constructor - tracked
@@ -46,7 +44,6 @@ private:
     // already has its own nodes) is loaded in over it. Null if the node
     // library couldn't create it (e.g. plugin-nodes not loaded).
     keira::Node *m_seedSetColorNode = nullptr;
-    DMXTimeMachine *m_timeMachine;
 };
 
 } // namespace photon

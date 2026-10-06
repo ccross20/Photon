@@ -69,6 +69,10 @@ public:
     void setBeamMode(BeamMode mode) { m_beamMode = mode; }
     BeamMode beamMode() const { return m_beamMode; }
 
+    // The ground grid, toggled from the viewport toolbar.
+    void setGridVisible(bool visible) { m_gridVisible = visible; }
+    bool isGridVisible() const { return m_gridVisible; }
+
     // Global gobo selection for fixtures with no gobo wheel (0 = none, 1..goboCount()
     // selects a loaded gobo texture layer).
     void setGoboIndex(int index) { m_goboIndex = index; }
@@ -106,6 +110,8 @@ private:
         QMatrix4x4 model;
         QColor     color;
         bool       emissive = false; // meshes: render unlit/full-bright (e.g. lens face)
+        bool       solid = false;    // surfaces only: a closed solid (box) - lit one-sided
+        int        cull = 0;         // surfaces only: SceneSurface::DisplayCull (0 none, 1 back, 2 front)
         float      gobo = 0.0f;     // beams only: gobo layer (0 = none, 1..N)
         float      gobo2 = 0.0f;    // beams only: second gobo layer (wheel wipe)
         float      goboSplit = -2.0f; // beams only: gobo wipe boundary x in [-1,1]
@@ -116,6 +122,8 @@ private:
                                     // w = offset (signed dist = dot(n,X)+w); zero = no fade
         bool       volumetric = false; // beams only: raymarched (true) vs flat cone (false)
         float      laserLayer = 0.0f;  // beams only: laser projection layer (0 = none, 1..N)
+        float      gainScale = 1.0f;   // beams only: multiplies the colour alpha (the shader's
+                                       // gain), which QColor itself can't take above 1
     };
 
     void collectDrawables(SceneObject *obj, QVector<Drawable> &out,
@@ -134,6 +142,10 @@ private:
     // annotation/marker types (Arrow, Direction, Axis, Boundary Rectangle/Oval,
     // Point Marker) - kept as one shared tree-walk rather than one per type.
     void appendHelperWireframes(SceneObject *obj, QByteArray &out) const;
+    // Filled gradient (triangles, pos+colour like the line buffer) for every
+    // visible Falloff, coloured by its own 0..1 amount so mirroring and
+    // hold/repeat/ping-pong show exactly as nodes will see them.
+    void appendFalloffGradients(SceneObject *obj, QByteArray &out) const;
     // Draws a horizontal "front" arrow at each selected fixture with a pan
     // capability, pointing where Pan centered (0%) currently aims once its
     // panOffset calibration is applied - lets that offset be dialed in by
@@ -258,6 +270,7 @@ private:
     RhiMesh *m_grid = nullptr;
     RhiMesh *m_beamCone = nullptr;
     RhiMesh *m_plane = nullptr;
+    RhiMesh *m_unitBox = nullptr; // 1 m cube, scaled per SceneBox (drawn as a lit surface)
     RhiMesh *m_disc = nullptr;    // per-cell LED lens (multi-cell bar fixtures)
 
     // Per-truss geometry, rebuilt when a truss's parameters change.
@@ -303,6 +316,9 @@ private:
     QRhiGraphicsPipeline *m_beamPipeline = nullptr;    // basic: triangles, additive, depth-write off
     QRhiGraphicsPipeline *m_beamVolPipeline = nullptr; // volumetric raymarch
     QRhiGraphicsPipeline *m_gizmoPipeline = nullptr;   // lines, depth test off
+    QRhiGraphicsPipeline *m_falloffPipeline = nullptr; // falloff gradient fills: line shaders, triangles, soft-additive
+    QRhiBuffer *m_falloffBuffer = nullptr;             // dynamic, regrown as needed
+    int m_falloffBufferBytes = 0;
     QRhiBuffer *m_gizmoBuffer = nullptr;               // dynamic, rebuilt per frame
 
     // Fixture models, deduped by file path; type->path resolution cached separately
@@ -325,6 +341,7 @@ private:
     QVector<SceneObject *> m_highlightedObjects;   // m_selectedObjects + descendants of any selected group
     BeamMode     m_beamMode = BeamMode::Basic;
     int          m_goboIndex = 0;
+    bool         m_gridVisible = true;
     QElapsedTimer m_clock;   // drives gobo rotation
     mutable double m_lastClockSec = 0.0;
     mutable float  m_frameDt = 0.0f;                   // seconds since last frame

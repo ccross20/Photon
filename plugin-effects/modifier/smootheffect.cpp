@@ -134,9 +134,9 @@ QWidget *SmoothEffect::createPropertyEditor()
 {
     auto *form = new PropertyForm;
     form->addRow("Samples", PropertyWidgets::createInteger(m_samples,
-        {{PropertyWidgets::MetaMinimum, 3.0}}, [this](int v){ setSamples(v); }));
+        {{PropertyWidgets::MetaMinimum, 3.0}, {PropertyWidgets::MetaSoftMinimum, 3.0}, {PropertyWidgets::MetaSoftMaximum, 32.0}}, [this](int v){ setSamples(v); }));
     form->addRow("Spread", PropertyWidgets::createNumber(m_spread,
-        {{PropertyWidgets::MetaMinimum, .0001}}, [this](double v){ setSpread(v); }));
+        {{PropertyWidgets::MetaMinimum, .0001}, {PropertyWidgets::MetaSoftMinimum, 0.01}, {PropertyWidgets::MetaSoftMaximum, 2.0}}, [this](double v){ setSpread(v); }));
     return form;
 }
 

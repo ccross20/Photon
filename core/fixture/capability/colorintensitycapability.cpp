@@ -8,9 +8,9 @@ ColorIntensityCapability::ColorIntensityCapability(CapabilityType t_capability, 
 
 }
 
-void ColorIntensityCapability::setPercent(double value, DMXMatrix &t_matrix, double t_blend, DMXTimeMachine *t_timeMachine) const
+void ColorIntensityCapability::setPercent(double value, DMXMatrix &t_matrix, double t_blend) const
 {
-    t_matrix.setValuePercent(channel(), value, t_blend, t_timeMachine);
+    t_matrix.setValuePercent(channel(), value, t_blend);
 }
 
 double ColorIntensityCapability::getPercent(const DMXMatrix &t_matrix) const

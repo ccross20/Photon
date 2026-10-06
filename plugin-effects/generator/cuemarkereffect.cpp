@@ -232,6 +232,13 @@ CueLayer *CueMarkerEffect::resolveLayer() const
                 return layer;
     }
 
+    // Nothing chosen yet (a freshly added effect): the first cue layer - the
+    // one the Layer combo shows. Without this the combo displayed a layer
+    // the effect wasn't actually reading, so it output Off Value forever.
+    // writeToJson() pins whatever this resolves to.
+    if(m_layerId.isEmpty() && m_legacyLayerName.isEmpty() && !seq->cueLayers().isEmpty())
+        return seq->cueLayers().first();
+
     return nullptr;
 }
 
@@ -323,20 +330,20 @@ QWidget *CueMarkerEffect::createPropertyEditor()
     form->addRow("Layer", layerCombo);
 
     form->addRow("On Value", PropertyWidgets::createNumber(m_onValue,
-        {{PropertyWidgets::MetaMinimum, -10000.0}, {PropertyWidgets::MetaMaximum, 10000.0}},
+        {{PropertyWidgets::MetaMinimum, -10000.0}, {PropertyWidgets::MetaMaximum, 10000.0}, {PropertyWidgets::MetaSoftMinimum, 0.0}, {PropertyWidgets::MetaSoftMaximum, 1.0}},
         [this](double v){ setOnValue(v); }));
     form->addRow("Off Value", PropertyWidgets::createNumber(m_offValue,
-        {{PropertyWidgets::MetaMinimum, -10000.0}, {PropertyWidgets::MetaMaximum, 10000.0}},
+        {{PropertyWidgets::MetaMinimum, -10000.0}, {PropertyWidgets::MetaMaximum, 10000.0}, {PropertyWidgets::MetaSoftMinimum, 0.0}, {PropertyWidgets::MetaSoftMaximum, 1.0}},
         [this](double v){ setOffValue(v); }));
     form->addRow("Hold Duration", PropertyWidgets::createNumber(m_holdDuration,
-        {{PropertyWidgets::MetaMinimum, 0.0}, {PropertyWidgets::MetaMaximum, 9999.0}},
+        {{PropertyWidgets::MetaMinimum, 0.0}, {PropertyWidgets::MetaMaximum, 9999.0}, {PropertyWidgets::MetaSoftMinimum, 0.0}, {PropertyWidgets::MetaSoftMaximum, 5.0}},
         [this](double v){ setHoldDuration(v); }));
     // Same list-index-equals-QEasingCurve::Type-value assumption as
     // CueMarkerEffectEditor's own falloff combo.
     form->addRow("Falloff Type", PropertyWidgets::createOptions(easeStrings(), m_falloffType, {},
         [this](int v){ setFalloffType(static_cast<QEasingCurve::Type>(v)); }));
     form->addRow("Falloff Duration", PropertyWidgets::createNumber(m_falloffDuration,
-        {{PropertyWidgets::MetaMinimum, 0.0}, {PropertyWidgets::MetaMaximum, 9999.0}},
+        {{PropertyWidgets::MetaMinimum, 0.0}, {PropertyWidgets::MetaMaximum, 9999.0}, {PropertyWidgets::MetaSoftMinimum, 0.0}, {PropertyWidgets::MetaSoftMaximum, 5.0}},
         [this](double v){ setFalloffDuration(v); }));
 
     return form;
@@ -360,7 +367,15 @@ void CueMarkerEffect::readFromJson(const QJsonObject &t_json)
 void CueMarkerEffect::writeToJson(QJsonObject &t_json) const
 {
     ChannelEffect::writeToJson(t_json);
-    t_json.insert("layerId", QString::fromUtf8(m_layerId));
+    // The layer actually being read, so one picked by default stays put if
+    // layers are added or reordered later.
+    QByteArray layerId = m_layerId;
+    if(layerId.isEmpty())
+    {
+        if(CueLayer *layer = resolveLayer())
+            layerId = layer->uniqueId();
+    }
+    t_json.insert("layerId", QString::fromUtf8(layerId));
     t_json.insert("onValue", m_onValue);
     t_json.insert("offValue", m_offValue);
     t_json.insert("holdDuration", m_holdDuration);

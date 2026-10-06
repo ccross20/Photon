@@ -63,6 +63,7 @@ void GuiManager::Impl::createAppWindow()
     QMenu *fileMenu = new QMenu("File");
     fileMenu->addAction("Load...", QKeySequence::Open, [](){photonApp->loadProject();});
     fileMenu->addAction("Save", QKeySequence::Save, [](){photonApp->project()->save();});
+    fileMenu->addAction("Save As...", QKeySequence::SaveAs, [](){photonApp->project()->saveAs();});
     fileMenu->addAction("New", QKeySequence::New, [](){photonApp->newProject();});
     fileMenu->addSeparator();
     fileMenu->addAction("Settings...", [](){ SettingsDialog dialog; dialog.exec(); });

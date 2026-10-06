@@ -9,11 +9,15 @@ layout(std140, binding = 0) uniform Frame {
     mat4 viewProj;
     vec4 lightDir;   // xyz = dir, w = gobo index
     vec4 camPos;     // xyz = camera, w = time (seconds)
+    vec4 ambient;    // rgb = summed ambient lights, w = 1 if the scene has any
+    vec4 dirCount;   // x = number of directional lights (0 = use the built-in key)
+    vec4 dirLights[8]; // per light: (direction it shines along), (color * intensity)
 } frame;
 
 layout(std140, binding = 1) uniform Object {
     mat4 model;
-    vec4 color;
+    vec4 color;      // rgb = albedo; a = 1 for a solid (a box's faces), else a flat
+                     // surface: 0 = shown both sides, -1 = back hidden, -2 = front hidden
 } object;
 
 // Up to 64 spotlights, 6 vec4 each: posRange, dirCosOuter, (color.rgb, goboA),
@@ -38,9 +42,35 @@ vec2 rotate2(vec2 p, float ang)
 void main()
 {
     vec3 N = normalize(vNormal);
+
+    // Display cull: hide one side of a flat surface (front = the side its
+    // normal points out of) so the camera can see through it from there.
+    int cull = int(-object.color.a + 0.5);
+    if (cull > 0) {
+        bool viewingFront = dot(N, frame.camPos.xyz - vWorld) > 0.0;
+        if ((cull == 1 && !viewingFront) || (cull == 2 && viewingFront))
+            discard;
+    }
     vec3 albedo = object.color.rgb;
 
-    vec3 result = albedo * 0.06;   // faint ambient so unlit surfaces are still visible
+    // Solids light one-sided (a face turned away from a fixture stays dark)
+    // and get a little form shading so an unlit box still reads as a box.
+    bool solid = object.color.a > 0.5;
+
+    // The scene's ambient lights, or a faint fallback so unlit surfaces are
+    // still visible in a scene without any.
+    vec3 result = albedo * (frame.ambient.w > 0.5 ? frame.ambient.rgb : vec3(0.06));
+    int dirCount = int(frame.dirCount.x + 0.5);
+    if (dirCount > 0) {
+        // Directional lights: one-sided on solids, like the spotlights below.
+        for (int i = 0; i < dirCount; ++i) {
+            vec3 d = frame.dirLights[i * 2].xyz;
+            float ndl = solid ? max(dot(N, -d), 0.0) : abs(dot(N, d));
+            result += albedo * frame.dirLights[i * 2 + 1].rgb * ndl;
+        }
+    } else if (solid) {
+        result += albedo * 0.10 * max(dot(N, normalize(-frame.lightDir.xyz)), 0.0);
+    }
 
     int count = int(lights.countv.x);
     for (int i = 0; i < count; ++i) {
@@ -71,6 +101,9 @@ void main()
         float ang     = acos(clamp(cosA, -1.0, 1.0));
         float halfAng = acos(clamp(cosOuter, -1.0, 1.0));
         float rn = clamp(ang / max(halfAng, 1e-4), 0.0, 1.0);
+        // The laser shaft maps its pattern by tan(angle) (a flat projection), so
+        // the floor pattern must too or it won't line up with the beams.
+        float rnLaser = clamp(tan(ang) / max(tan(halfAng), 1e-4), 0.0, 1.0);
         // Lights: bright core, soft edge. Lasers: the pattern alone decides.
         float shape = (laserLayer > 0) ? 1.0 : smoothstep(1.0, 0.65, rn);
 
@@ -91,7 +124,7 @@ void main()
         vec3 goboRGB = vec3(1.0);
         float goboMask = 1.0;
         if (laserLayer > 0) {
-            vec2 luv = vec2(cos(theta), sin(theta)) * rn;
+            vec2 luv = vec2(cos(theta), sin(theta)) * rnLaser;
             vec4 g = texture(laserTex, vec3(luv * 0.5 + 0.5, float(laserLayer - 1)));
             goboRGB = g.rgb;
             goboMask = g.a;
@@ -102,7 +135,8 @@ void main()
             goboMask = g.a;
         }
 
-        float ndl = abs(dot(N, l));               // surfaces are double-sided
+        float ndl = solid ? max(dot(N, -l), 0.0)  // solids: only faces toward the light
+                          : abs(dot(N, l));       // flat surfaces are double-sided
         float atten = 1.0 / (1.0 + 0.025 * dist * dist);
 
         result += albedo * (lightCol * goboRGB) * (shape * goboMask * ndl * atten * 2.6);

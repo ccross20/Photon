@@ -11,6 +11,7 @@
 #include <functional>
 #include "fixturestateeditor.h"
 #include "numberscrubfield.h"
+#include "pointedit.h"
 #include "color/colorwheelswatch.h"
 #include "graph/node/fixture/fixturestatenode.h"
 #include "state/state.h"
@@ -18,6 +19,7 @@
 #include "sequence/channel.h"
 #include "fixture/capability/fixturecapability.h"
 #include "fixture/fixture.h"
+#include "fixture/capability/wheelslotcapability.h"
 
 namespace photon {
 
@@ -56,6 +58,15 @@ static QWidget *makeChannelEditor(StateCapability *t_cap, int t_index, const Cha
             t_onEdit();
         });
         return swatch;
+    }
+    case ChannelInfo::ChannelTypePoint:
+    {
+        auto *edit = new PointEdit;
+        if(t_info.hasRange())
+            edit->setRange(QPointF(t_info.minimum, t_info.minimum), QPointF(t_info.maximum, t_info.maximum));
+        edit->setValue(t_cap->getChannelValue(t_index).toPointF());
+        QObject::connect(edit, &PointEdit::valueChanged, edit, [t_cap, t_index, t_onEdit](const QPointF &v){ t_cap->setChannelValue(t_index, v); t_onEdit(); });
+        return edit;
     }
     case ChannelInfo::ChannelTypeBool:
     {
@@ -199,7 +210,22 @@ void FixtureStateEditor::rebuild()
                 row->addWidget(new QLabel(channels[i].name));
 
                 QStringList nameOptions;
-                if(channels[i].type == ChannelInfo::ChannelTypeString)
+                if(channels[i].type == ChannelInfo::ChannelTypeString
+                   && cap->fixtureCapabilityType() == Capability_WheelSlot)
+                {
+                    // Gobo Wheel Slot's Wheel: the wheel names its slots
+                    // match against, led by an empty entry - the fixture's
+                    // first gobo wheel.
+                    nameOptions.append(QString());
+                    for(Fixture *fx : m_node->resolvedFixtures())
+                        for(auto *capability : fx->findCapability(Capability_WheelSlot))
+                        {
+                            const QString wheel = static_cast<WheelSlotCapability*>(capability)->wheelName();
+                            if(!wheel.isEmpty() && !nameOptions.contains(wheel, Qt::CaseInsensitive))
+                                nameOptions.append(wheel);
+                        }
+                }
+                else if(channels[i].type == ChannelInfo::ChannelTypeString)
                 {
                     for(Fixture *fx : m_node->resolvedFixtures())
                         for(const QString &n : fx->channelNamesForCapability(cap->fixtureCapabilityType()))

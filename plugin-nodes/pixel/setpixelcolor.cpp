@@ -56,7 +56,7 @@ void SetPixelColor::evaluate(keira::EvaluationContext *t_context) const
         auto colorCap = context->fixture->colorAtIndex(m_pixelParam->value().toInt());
 
         if(colorCap)
-            static_cast<ColorCapability*>(colorCap)->setColor(m_colorParam->value().value<QColor>(), context->dmxMatrix, context->strength * m_blendParam->value().toDouble(),context->timeMachine);
+            static_cast<ColorCapability*>(colorCap)->setColor(m_colorParam->value().value<QColor>(), context->dmxMatrix, context->strength * m_blendParam->value().toDouble());
 
     }
 

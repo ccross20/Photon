@@ -10,7 +10,11 @@ class PHOTONUI_EXPORT Vector3Edit : public QWidget
 {
     Q_OBJECT
 public:
-    explicit Vector3Edit(QWidget *parent = nullptr);
+    // What the three numbers are, which sets their unit and range: scene
+    // positions and sizes are in metres, rotations in degrees.
+    enum Kind { Distance, Angle };
+
+    explicit Vector3Edit(Kind kind, QWidget *parent = nullptr);
     ~Vector3Edit();
 
     void setValue(const QVector3D &);

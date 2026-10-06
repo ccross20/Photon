@@ -25,7 +25,11 @@
 #include "scene/sceneboundaryrectangle.h"
 #include "scene/sceneboundaryoval.h"
 #include "scene/scenepointmarker.h"
-#include "scene/scenelinearfalloff.h"
+#include "scene/scenefalloff.h"
+#include "scene/sceneduplicate.h"
+#include "scene/scenebox.h"
+#include "scene/sceneambientlight.h"
+#include "scene/scenedirectionallight.h"
 #include "fixture/fixturegroup.h"
 #include "pixel/pixellayout.h"
 #include "pixel/pixellayoutcollection.h"
@@ -84,25 +88,6 @@ QByteArray contentTypeForResource(ProjectResource *t_resource)
     if(dynamic_cast<SceneObject*>(t_resource))
         return QByteArray("scene");
     return t_resource->resourceTypeId();
-}
-
-// The lowest DMX offset past every currently-patched fixture's channel range
-// in the given universe. Not true gap-filling (a hole left by a deleted
-// fixture won't be reused) - just append-after-the-highest, which is what
-// patching a new or duplicated fixture almost always wants, and cheap to
-// compute from the project's flat fixture list rather than walking the scene.
-int nextAvailableDMXOffset(int t_universe)
-{
-    int next = 0;
-    for(auto *fixture : photonApp->project()->fixtures()->fixtures())
-    {
-        if(fixture->universe() != t_universe)
-            continue;
-        const int end = fixture->dmxOffset() + fixture->dmxSize();
-        if(end > next)
-            next = end;
-    }
-    return next;
 }
 
 } // namespace
@@ -525,7 +510,7 @@ void ProjectPanel::filterChanged()
                 visible.insert("boundaryrectangle");
                 visible.insert("boundaryoval");
                 visible.insert("pointmarker");
-                visible.insert("linearfalloff");
+                visible.insert("falloff");
             }
             else
                 visible.insert(type);
@@ -742,6 +727,30 @@ void ProjectPanel::populateAddActions(QMenu &t_menu, const QByteArray &t_content
             floor->setParentSceneObject(sceneParent());
             photonApp->project()->setSelectedSceneObjects({floor});
         });
+        t_menu.addAction("Box", [sceneParent](){
+            auto *box = new SceneBox;
+            box->setName("Box");
+            // Resting on the floor rather than half sunk into it.
+            box->setPosition(QVector3D(0.0f, box->size().y() * 0.5f, 0.0f));
+            box->setParentSceneObject(sceneParent());
+            photonApp->project()->setSelectedSceneObjects({box});
+        });
+        t_menu.addAction("Ambient Light", [sceneParent](){
+            auto *light = new SceneAmbientLight;
+            light->setName("Ambient Light");
+            light->setParentSceneObject(sceneParent());
+            photonApp->project()->setSelectedSceneObjects({light});
+        });
+        t_menu.addAction("Directional Light", [sceneParent](){
+            auto *light = new SceneDirectionalLight;
+            light->setName("Directional Light");
+            // Up and in front of the stage, angled down, back and a little
+            // across, so walls and floor facing different ways shade apart.
+            light->setPosition(QVector3D(0.0f, 5.0f, 4.0f));
+            light->setRotation(QVector3D(35.0f, 30.0f, 0.0f));
+            light->setParentSceneObject(sceneParent());
+            photonApp->project()->setSelectedSceneObjects({light});
+        });
         t_menu.addAction("Zone", [sceneParent](){
             auto *zone = new SceneZone;
             zone->setName("Zone");
@@ -784,9 +793,11 @@ void ProjectPanel::populateAddActions(QMenu &t_menu, const QByteArray &t_content
             marker->setParentSceneObject(sceneParent());
             photonApp->project()->setSelectedSceneObjects({marker});
         });
-        t_menu.addAction("Linear Falloff", [sceneParent](){
-            auto *falloff = new SceneLinearFalloff;
-            falloff->setName("Linear Falloff");
+        t_menu.addAction("Falloff", [sceneParent](){
+            auto *falloff = new SceneFalloff;
+            falloff->setName("Falloff");
+            // Lying flat, so "flat" radial/conical falloffs ignore height.
+            falloff->setRotation(QVector3D(-90.0f, 0.0f, 0.0f));
             falloff->setParentSceneObject(sceneParent());
             photonApp->project()->setSelectedSceneObjects({falloff});
         });
@@ -940,53 +951,20 @@ void ProjectPanel::removeClicked()
 
 void ProjectPanel::duplicateClicked()
 {
-    // Carried over from RigPanel: cloned fixtures are renumbered past the
-    // highest DMX address currently in use in their own universe, so they
-    // don't collide with the fixtures they were copied from. Tracked lazily
-    // per universe (seeded from the existing patch on first use) rather than
-    // one shared counter, so duplicating a mixed-universe selection doesn't
-    // scatter later universes' clones onto whatever address an earlier
-    // universe happened to reach.
-    QHash<int, int> nextDMXByUniverse;
-    auto claimNextDMX = [&nextDMXByUniverse](int t_universe, int t_size) {
-        auto it = nextDMXByUniverse.find(t_universe);
-        if(it == nextDMXByUniverse.end())
-            it = nextDMXByUniverse.insert(t_universe, nextAvailableDMXOffset(t_universe));
-        const int offset = it.value();
-        it.value() += t_size;
-        return offset;
-    };
-
-    QList<SceneObject*> clones;
+    QVector<SceneObject*> originals;
     for(auto *resource : m_impl->selectedResources())
     {
-        auto *sceneObject = dynamic_cast<SceneObject*>(resource);
-        if(!sceneObject)
-            continue;
-
-        SceneObject *clone = sceneObject->clone();
-        if(!clone)
-            continue;
-
-        clone->setParentSceneObject(sceneObject->parentSceneObject());
-        clones.append(clone);
-
-        auto clonedFixtures = SceneIterator::FindMany(clone, [](SceneObject *object, bool *){
-            return dynamic_cast<Fixture*>(object) != nullptr;
-        });
-        for(auto *object : clonedFixtures)
-        {
-            auto *fixture = static_cast<Fixture*>(object);
-            fixture->setDMXOffset(claimNextDMX(fixture->universe(), fixture->dmxSize()));
-        }
+        if(auto *sceneObject = dynamic_cast<SceneObject*>(resource))
+            originals.append(sceneObject);
     }
 
     // Select the duplicates in place of the originals - same convention as
     // most apps' Cmd/Ctrl+D, and it reuses syncSelectionFromProject()'s
     // ancestor-expansion so a duplicate lands visible even under a collapsed
     // parent.
+    const QVector<SceneObject*> clones = duplicateSceneObjects(originals);
     if(!clones.isEmpty())
-        photonApp->project()->setSelectedSceneObjects(clones);
+        photonApp->project()->setSelectedSceneObjects(QList<SceneObject*>(clones.begin(), clones.end()));
 }
 
 void ProjectPanel::contextMenuRequested(const QPoint &t_pos)

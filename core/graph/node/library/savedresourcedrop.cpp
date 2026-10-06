@@ -10,6 +10,8 @@
 #include "color/gradientresource.h"
 #include "color/colorpaletteresource.h"
 #include "tag/tagmime.h"
+#include "scene/scenefalloff.h"
+#include "scene/scenemodel.h"
 
 namespace photon {
 
@@ -34,6 +36,15 @@ QVector<keira::ExternalDropNodeSpec> projectResourceDropInterpreter(const QMimeD
         {
             specs.append({SavedPaletteNode::info().nodeId, SavedPaletteNode::PaletteParam, QString::fromUtf8(resource->resourceId())});
         }
+    }
+
+    // A Falloff dragged from the project panel becomes a Spatial Falloff node
+    // pointed at it. That node lives in the nodes plugin, so it's named by id.
+    for(SceneObject *object : decodeSceneObjectMime(t_mimeData))
+    {
+        if(auto *falloff = dynamic_cast<SceneFalloff*>(object))
+            specs.append({QByteArrayLiteral("photon.falloff.spatial"), QByteArrayLiteral("helper"),
+                          QString::fromUtf8(falloff->uniqueId())});
     }
 
     if(QStringList tags = decodeTagMime(t_mimeData); !tags.isEmpty())

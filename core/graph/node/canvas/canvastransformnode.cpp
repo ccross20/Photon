@@ -4,8 +4,7 @@
 namespace photon {
 
 const QByteArray CanvasTransformNode::Input = "input";
-const QByteArray CanvasTransformNode::TranslateX = "translateX";
-const QByteArray CanvasTransformNode::TranslateY = "translateY";
+const QByteArray CanvasTransformNode::Translate = "translate";
 const QByteArray CanvasTransformNode::Rotation = "rotation";
 const QByteArray CanvasTransformNode::Scale = "scale";
 const QByteArray CanvasTransformNode::Output = "output";
@@ -31,11 +30,8 @@ void CanvasTransformNode::createParameters()
     m_input = new RhiTextureParameter(Input, "Canvas", RhiTextureData{}, keira::AllowSingleInput);
     addParameter(m_input);
 
-    m_translateX = new keira::DecimalParameter(TranslateX, "Translate X", 0.0);
-    addParameter(m_translateX);
-
-    m_translateY = new keira::DecimalParameter(TranslateY, "Translate Y", 0.0);
-    addParameter(m_translateY);
+    m_translate = new Point2DParameter(Translate, "Translate", QPointF(0.0, 0.0));
+    addParameter(m_translate);
 
     m_rotation = new keira::DecimalParameter(Rotation, "Rotation", 0.0);
     addParameter(m_rotation);
@@ -56,8 +52,9 @@ QVector<RhiTextureData> CanvasTransformNode::inputs() const
 void CanvasTransformNode::writeUniforms(QByteArray &out, const QSize &) const
 {
     float *f = reinterpret_cast<float *>(out.data());
-    f[0] = float(m_translateX->value().toDouble());
-    f[1] = float(m_translateY->value().toDouble());
+    const QPointF translate = m_translate->value().value<QPointF>();
+    f[0] = float(translate.x());
+    f[1] = float(translate.y());
     f[2] = float(m_rotation->value().toDouble() * M_PI / 180.0);   // degrees -> radians
     f[3] = float(m_scale->value().toDouble());
 }

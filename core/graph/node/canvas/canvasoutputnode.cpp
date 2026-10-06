@@ -142,7 +142,7 @@ void CanvasOutputNode::collectGatheredColors() const
     }
 }
 
-void CanvasOutputNode::writeDmx(ProcessContext &context) const
+void CanvasOutputNode::writeDmx(ProcessContext &context, double t_blend) const
 {
     QVector<QColor> colors;
     {
@@ -156,7 +156,7 @@ void CanvasOutputNode::writeDmx(ProcessContext &context) const
     context.gatheredIndex = 0;
     // Same layout order as buildSampleUVs() so each source pops its own colours.
     for (auto *layout : selectedLayouts())
-        layout->process(context);
+        layout->process(context, t_blend);
     context.gatheredColors = nullptr;
 }
 

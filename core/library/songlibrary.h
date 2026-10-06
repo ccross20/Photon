@@ -58,12 +58,24 @@ public:
     ~SongLibrary();
 
     // Opens (creating if needed) <libraryPath>/library.sqlite and its schema,
-    // then loads the catalog. Safe to call again with a new path (closes the
-    // old connection first). Returns false on failure (bad path, DB error).
+    // then loads the catalog and scans the library folder (see
+    // importFromFolder()), so a library copied from another computer comes
+    // up complete. Safe to call again with a new path (closes the old
+    // connection first). Returns false on failure (bad path, DB error).
     bool open(const QString &libraryPath);
     void close();
     bool isOpen() const;
     QString libraryPath() const;
+
+    // Brings the catalog in line with the library folder, so songs and
+    // sequences copied in from another computer show up:
+    //  - every songs/*.song not yet catalogued is added (a .song carries its
+    //    own title/artist/duration/source path);
+    //  - every sequences/*.seq not yet linked is linked to its song - by the
+    //    song key Sequence::save() writes into the file, or for older files
+    //    by its name matching exactly one song's title.
+    // Run by open(); returns how many songs + sequences were added.
+    int importFromFolder();
 
     int songCount() const;
     const QVector<SongLibraryEntry> &songs() const;

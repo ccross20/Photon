@@ -16,7 +16,7 @@ namespace photon {
 class SceneSurfaceEditorWidget::Impl
 {
 public:
-    Impl();
+    explicit Impl(SceneSurface *surface);
     SceneSurface *surface = nullptr;
     PropertyForm *form;
     QLineEdit *nameEdit;
@@ -28,7 +28,7 @@ public:
     Vector3Edit *rotationEdit;
 };
 
-SceneSurfaceEditorWidget::Impl::Impl()
+SceneSurfaceEditorWidget::Impl::Impl(SceneSurface *t_surface) : surface(t_surface)
 {
     form = new PropertyForm;
 
@@ -44,11 +44,13 @@ SceneSurfaceEditorWidget::Impl::Impl()
     form->addRow("Tags", tagEditor);
 
     widthSpin = new QDoubleSpinBox;
+    widthSpin->setSuffix(QStringLiteral(" m"));
     widthSpin->setMinimum(0.1);
     widthSpin->setMaximum(200.0);
     form->addRow("Width", widthSpin);
 
     heightSpin = new QDoubleSpinBox;
+    heightSpin->setSuffix(QStringLiteral(" m"));
     heightSpin->setMinimum(0.1);
     heightSpin->setMaximum(200.0);
     form->addRow("Height", heightSpin);
@@ -58,24 +60,25 @@ SceneSurfaceEditorWidget::Impl::Impl()
     colorButton = new QPushButton;
     form->addRow("Color", colorButton);
 
+    form->addRow("Display Cull", PropertyWidgets::createOptions({"None", "Back", "Front"}, int(surface->displayCull()), {},
+        [this](int index){ if(surface) surface->setDisplayCull(static_cast<SceneSurface::DisplayCull>(index)); }));
+
     form->addSection("Transform");
 
-    positionEdit = new Vector3Edit;
+    positionEdit = new Vector3Edit(Vector3Edit::Distance);
     form->addRow("Position", positionEdit);
 
-    rotationEdit = new Vector3Edit;
+    rotationEdit = new Vector3Edit(Vector3Edit::Angle);
     form->addRow("Rotation", rotationEdit);
 }
 
 SceneSurfaceEditorWidget::SceneSurfaceEditorWidget(SceneSurface *t_surface, QWidget *parent)
-    : QWidget{parent}, m_impl(new Impl)
+    : QWidget{parent}, m_impl(new Impl(t_surface))
 {
     QVBoxLayout *outer = new QVBoxLayout(this);
     outer->setContentsMargins(0, 0, 0, 0);
     outer->addWidget(m_impl->form);
     setSizePolicy(QSizePolicy{QSizePolicy::MinimumExpanding, QSizePolicy::Maximum});
-
-    m_impl->surface = t_surface;
 
     connect(m_impl->nameEdit, &QLineEdit::textEdited, this, &SceneSurfaceEditorWidget::setName);
     connect(m_impl->widthSpin, &QDoubleSpinBox::valueChanged, this, &SceneSurfaceEditorWidget::setWidth);
@@ -156,7 +159,18 @@ public:
     float width = 12.0f;
     float height = 6.0f;
     QColor color = QColor(180, 180, 185);
+    DisplayCull displayCull = CullNone;
 };
+
+namespace {
+
+const QStringList &displayCullNames()
+{
+    static const QStringList names{"none", "back", "front"};
+    return names;
+}
+
+} // namespace
 
 SceneSurface::SceneSurface() : SceneObject("surface"), m_impl(new Impl)
 {
@@ -190,6 +204,19 @@ void SceneSurface::setColor(const QColor &t_value)
     emit metadataChanged(this);
 }
 
+void SceneSurface::setDisplayCull(DisplayCull t_value)
+{
+    if (m_impl->displayCull == t_value)
+        return;
+    m_impl->displayCull = t_value;
+    emit metadataChanged(this);
+}
+
+SceneSurface::DisplayCull SceneSurface::displayCull() const
+{
+    return m_impl->displayCull;
+}
+
 float SceneSurface::surfaceWidth() const
 {
     return m_impl->width;
@@ -212,6 +239,8 @@ void SceneSurface::readFromJson(const QJsonObject &t_json, const LoadContext &t_
     m_impl->height = t_json.value("height").toDouble(m_impl->height);
     if (t_json.contains("color"))
         m_impl->color = QColor(t_json.value("color").toString());
+    const int cull = displayCullNames().indexOf(t_json.value("displayCull").toString());
+    m_impl->displayCull = cull < 0 ? CullNone : static_cast<DisplayCull>(cull);
 }
 
 void SceneSurface::writeToJson(QJsonObject &t_json) const
@@ -220,6 +249,7 @@ void SceneSurface::writeToJson(QJsonObject &t_json) const
     t_json.insert("width", m_impl->width);
     t_json.insert("height", m_impl->height);
     t_json.insert("color", m_impl->color.name());
+    t_json.insert("displayCull", displayCullNames().at(m_impl->displayCull));
 }
 
 } // namespace photon

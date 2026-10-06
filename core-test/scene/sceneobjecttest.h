@@ -15,6 +15,9 @@ public:
 
 private slots:
     void reparentingDoesNotLeakSignalRelays();
+    void nextAvailableName_data();
+    void nextAvailableName();
+    void boxSizeSaves();
 };
 
 } // namespace photon

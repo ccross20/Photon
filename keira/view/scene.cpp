@@ -1,3 +1,10 @@
+#include <QApplication>
+#include <QClipboard>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QMimeData>
+#include <QUuid>
 #include <QGraphicsLineItem>
 #include <QTimer>
 #include <QMenu>
@@ -258,6 +265,157 @@ void Scene::parametersWereDisconnected(keira::Parameter *t_out, keira::Parameter
 
 }
 
+const char *Scene::NodeClipboardMime = "application/x-keira-nodes";
+
+bool Scene::hasSelectedNodes() const
+{
+    for(auto *item : selectedItems())
+    {
+        auto *nodeItem = dynamic_cast<NodeItem*>(item);
+        if(nodeItem && nodeItem->node()->isRemovable())
+            return true;
+    }
+    return false;
+}
+
+bool Scene::clipboardHasNodes()
+{
+    const QMimeData *mime = QApplication::clipboard()->mimeData();
+    return mime && mime->hasFormat(NodeClipboardMime);
+}
+
+void Scene::copySelectedNodes()
+{
+    QVector<Node*> nodes;
+    for(auto *item : selectedItems())
+    {
+        auto *nodeItem = dynamic_cast<NodeItem*>(item);
+        if(nodeItem && nodeItem->node()->isRemovable())
+            nodes.append(nodeItem->node());
+    }
+    if(nodes.isEmpty())
+        return;
+
+    // Any edit still queued (e.g. a node just added) should be in the copy.
+    if(m_impl->graph)
+        m_impl->graph->drainCommandQueue();
+
+    QJsonArray nodeArray;
+    QJsonArray connectionArray;
+    for(Node *node : nodes)
+    {
+        QJsonObject nodeObj;
+        node->writeToJson(nodeObj);
+        nodeArray.append(nodeObj);
+
+        for(Parameter *param : node->parameters())
+        {
+            for(Parameter *target : param->outputParameters())
+            {
+                if(!nodes.contains(target->node()))
+                    continue;
+                QJsonObject connection;
+                connection.insert("outputNode", QString(node->uniqueId()));
+                connection.insert("outputParameter", QString(param->id()));
+                connection.insert("inputNode", QString(target->node()->uniqueId()));
+                connection.insert("inputParameter", QString(target->id()));
+                connectionArray.append(connection);
+            }
+        }
+    }
+
+    QJsonObject root;
+    root.insert("nodes", nodeArray);
+    root.insert("connections", connectionArray);
+
+    auto *mime = new QMimeData;
+    mime->setData(NodeClipboardMime, QJsonDocument(root).toJson(QJsonDocument::Compact));
+    QApplication::clipboard()->setMimeData(mime);
+}
+
+void Scene::cutSelectedNodes()
+{
+    copySelectedNodes();
+    for(auto *item : selectedItems())
+    {
+        auto *nodeItem = dynamic_cast<NodeItem*>(item);
+        if(nodeItem && nodeItem->node()->isRemovable())
+            m_impl->graph->removeNode(nodeItem->node());
+    }
+}
+
+void Scene::pasteNodes(const QPointF &t_scenePos)
+{
+    if(!m_impl->graph || !m_impl->library || !clipboardHasNodes())
+        return;
+
+    const QJsonObject root = QJsonDocument::fromJson(
+        QApplication::clipboard()->mimeData()->data(NodeClipboardMime)).object();
+    const QJsonArray nodeArray = root.value("nodes").toArray();
+    if(nodeArray.isEmpty())
+        return;
+
+    // Keep the group's layout, centred on the paste point.
+    QPointF centre;
+    for(const auto &value : nodeArray)
+    {
+        const QJsonObject position = value.toObject().value("position").toObject();
+        centre += QPointF(position.value("x").toDouble(), position.value("y").toDouble());
+    }
+    centre /= nodeArray.size();
+    const QPointF shift = t_scenePos - centre;
+
+    const QByteArray graphType = m_impl->graph->graphTypeId();
+    QHash<QString, Node*> pastedById;   // copied node's uniqueId -> its paste
+    for(const auto &value : nodeArray)
+    {
+        QJsonObject nodeObj = value.toObject();
+        const QByteArray nodeId = nodeObj.value("id").toString().toLatin1();
+        if(!m_impl->library->allowsNodeInGraph(nodeId, graphType))
+            continue;
+        Node *node = m_impl->library->createNode(nodeId);
+        if(!node)
+            continue;
+
+        // A node's uniqueId round-trips through its json; a fresh one keeps
+        // the paste from colliding with the original (findNode() and saved
+        // connections key on it).
+        const QString oldId = nodeObj.value("uniqueId").toString();
+        nodeObj.insert("uniqueId", QString(QUuid::createUuid().toByteArray(QUuid::WithoutBraces)));
+        node->readFromJson(nodeObj, m_impl->library);
+        node->setPosition(node->position() + shift);
+
+        m_impl->graph->addNode(node);
+        pastedById.insert(oldId, node);
+    }
+    if(pastedById.isEmpty())
+        return;
+
+    for(const auto &value : root.value("connections").toArray())
+    {
+        const QJsonObject connection = value.toObject();
+        Node *outNode = pastedById.value(connection.value("outputNode").toString());
+        Node *inNode = pastedById.value(connection.value("inputNode").toString());
+        if(!outNode || !inNode)
+            continue;
+        Parameter *outParam = outNode->findParameter(connection.value("outputParameter").toString().toLatin1());
+        Parameter *inParam = inNode->findParameter(connection.value("inputParameter").toString().toLatin1());
+        if(outParam && inParam)
+            m_impl->graph->connectParameters(outParam, inParam);
+    }
+
+    // Queued edits; apply now so the items exist to select (as a Ctrl-drag
+    // clone does).
+    m_impl->graph->drainCommandQueue();
+
+    clearSelection();
+    for(Node *node : pastedById)
+    {
+        if(auto *item = itemForNode(node))
+            item->setSelected(true);
+    }
+}
+
 void Scene::contextMenuEvent(QGraphicsSceneContextMenuEvent *contextMenuEvent)
 {
     QGraphicsScene::contextMenuEvent(contextMenuEvent);
@@ -268,6 +426,18 @@ void Scene::contextMenuEvent(QGraphicsSceneContextMenuEvent *contextMenuEvent)
     QMenu menu;
 
     QMenu *rootMenu = menu.addMenu("Add Node");
+
+    const QPointF clickPos = contextMenuEvent->scenePos();
+    menu.addSeparator();
+    QAction *cutAction = menu.addAction("Cut", [this](){ cutSelectedNodes(); });
+    cutAction->setShortcut(QKeySequence::Cut);
+    cutAction->setEnabled(hasSelectedNodes());
+    QAction *copyAction = menu.addAction("Copy", [this](){ copySelectedNodes(); });
+    copyAction->setShortcut(QKeySequence::Copy);
+    copyAction->setEnabled(hasSelectedNodes());
+    QAction *pasteAction = menu.addAction("Paste", [this, clickPos](){ pasteNodes(clickPos); });
+    pasteAction->setShortcut(QKeySequence::Paste);
+    pasteAction->setEnabled(clipboardHasNodes());
 
     auto graphType = graph()->graphTypeId();
     auto treeRoot = m_impl->library->createNodeTree([graphType](const keira::NodeInformation &info){return info.graphs.isEmpty() || info.graphs.contains(graphType);});

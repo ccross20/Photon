@@ -11,15 +11,13 @@ namespace photon {
 
 class FixtureListParameter;
 
-// Assigns a per-fixture time offset from each fixture's position along a Linear
-// Falloff helper object's line.
+// Assigns a per-fixture time offset from where each fixture sits in a Falloff
+// scene object (linear, radial or conical - see SceneFalloff).
 //
-//  - Bounded:   the fixture's projected position on the line, normalised by the
-//               helper's length and clamped to [0, 1]. Fixtures before the start
-//               get 0, past the end get 1.
-//  - Unbounded: the helper is only a direction. The fixture furthest along the
-//               negative axis gets 0, the furthest along the positive gets 1,
-//               and the rest interpolate linearly between those two extremes.
+//  - Bounded:   the falloff's own 0..1 amount at the fixture, including its
+//               mirroring and hold/repeat/ping-pong past the end.
+//  - Unbounded: the falloff only gives shape and direction. Its raw values are
+//               stretched so the fixtures' own extremes land on 0 and 1.
 //
 // Multiplier scales every resulting offset (default 1).
 class SpatialFalloffNode : public keira::Node

@@ -1,6 +1,7 @@
 #ifndef PHOTON_VIRTUALDJCAPTUREPROCESS_H
 #define PHOTON_VIRTUALDJCAPTUREPROCESS_H
 
+#include <QElapsedTimer>
 #include <QVector>
 #include <QString>
 #include "audioprocessor.h"
@@ -70,6 +71,13 @@ private:
     QVector<float> m_hiHatSamples;
     double m_firstSampleTime = 0.0;
     double m_lastSampleTime = 0.0;
+
+    // Recording starts once the restart has taken effect (stale positions from
+    // before it are skipped); m_progressClock measures how long the song
+    // position has gone without moving forward, for spotting a stopped deck.
+    bool m_started = false;
+    QElapsedTimer m_startClock;
+    QElapsedTimer m_progressClock;
 
     // Snapshot of the track being captured, taken at start - used to detect the user
     // changing tracks in VDJ mid-capture, and to populate SongData at the end.

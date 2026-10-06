@@ -37,7 +37,8 @@ keira::NodeInformation CanvasSubGraphNode::info()
     toReturn.name = "Canvas Graph";
     toReturn.nodeId = "photon.node.canvas-graph";
     toReturn.categories = {"Canvas"};
-    toReturn.graphs = QByteArrayList{"bus","surface"};
+    // "routine" covers routines and clip graphs (FixtureClip's content graph).
+    toReturn.graphs = QByteArrayList{"bus","surface","routine"};
 
     return toReturn;
 }
@@ -171,6 +172,18 @@ void CanvasSubGraphNode::evaluate(keira::EvaluationContext *t_context) const
     // actual GPU work happens on the main thread (CanvasRenderManager). No QRhi
     // calls here — the GL context is main-thread only.
     auto context = static_cast<RoutineEvaluationContext *>(t_context);
+
+    // A jump in time (or the first evaluation) makes the last render stale -
+    // see m_resyncGeneration. Normal playback steps by a frame at a time;
+    // anything bigger, or backwards, means time didn't simply run on.
+    constexpr double kMaxContinuousStep = 0.25;   // seconds
+    const quint64 generation = ++m_evalGeneration;
+    const double step = context->globalTime - m_lastEvalGlobalTime;
+    if (!m_hasEvaluated || step < 0.0 || step > kMaxContinuousStep)
+        m_resyncGeneration.store(generation);
+    m_hasEvaluated = true;
+    m_lastEvalGlobalTime = context->globalTime;
+
     m_relativeTime = context->relativeTime;
     m_globalTime = context->globalTime;
     m_rhiContext = context->rhiContext;   // non-null only in headless tests
@@ -203,6 +216,11 @@ QVector<CanvasOutputNode *> CanvasSubGraphNode::outputNodes() const
 
 void CanvasSubGraphNode::sampleDmx(RoutineEvaluationContext *context) const
 {
+    // Still showing a moment from before a time jump: write nothing this
+    // frame rather than the stale image (see m_resyncGeneration).
+    if (m_renderedGeneration.load() < m_resyncGeneration.load())
+        return;
+
     // DMX is driven per Output node: each writes the colours it gathered from its
     // own input texture to the layouts assigned to it.
     auto *app = qobject_cast<PhotonCore *>(QCoreApplication::instance());
@@ -211,8 +229,10 @@ void CanvasSubGraphNode::sampleDmx(RoutineEvaluationContext *context) const
     pc.globalTime = context->globalTime;
     pc.relativeTime = context->relativeTime;
 
+    // Written at the context's strength: inside a clip that's the clip's
+    // strength and ease in/out, so the canvas fades with it; 1 elsewhere.
     for (auto *output : outputNodes())
-        output->writeDmx(pc);
+        output->writeDmx(pc, context->strength);
 }
 
 void CanvasSubGraphNode::renderMainThread() const
@@ -236,6 +256,10 @@ void CanvasSubGraphNode::renderMainThread() const
     // The Globals (context) node publishes resolution/time to inner nodes from the
     // inner evaluation context below; exposed graph inputs are relayed by the base
     // SubGraphNode::applyInputs during evaluate().
+
+    // The evaluation this render reflects - taken before reading its inputs,
+    // so it never claims to be newer than what it actually drew.
+    const quint64 generation = m_evalGeneration.load();
 
     QRhiCommandBuffer *cb = nullptr;
     if (rhi->beginOffscreenFrame(&cb) != QRhi::FrameOpSuccess || !cb)
@@ -275,6 +299,7 @@ void CanvasSubGraphNode::renderMainThread() const
     // Pull each Output node's gathered colours for the worker thread to write.
     for (auto *output : outputNodes())
         output->collectGatheredColors();
+    m_renderedGeneration.store(generation);
 }
 
 void CanvasSubGraphNode::readFromJson(const QJsonObject &t_json, keira::NodeLibrary *t_library)

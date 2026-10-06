@@ -3,6 +3,7 @@
 
 #include "basecanvasnode.h"
 #include "model/parameter/decimalparameter.h"
+#include "graph/parameter/point2dparameter.h"
 
 namespace photon {
 
@@ -12,8 +13,7 @@ class PHOTONCORE_EXPORT CanvasTransformNode : public BaseCanvasNode
 {
 public:
     const static QByteArray Input;
-    const static QByteArray TranslateX;
-    const static QByteArray TranslateY;
+    const static QByteArray Translate;
     const static QByteArray Rotation;
     const static QByteArray Scale;
     const static QByteArray Output;
@@ -31,8 +31,7 @@ protected:
 
 private:
     RhiTextureParameter *m_input = nullptr;
-    keira::DecimalParameter *m_translateX = nullptr;
-    keira::DecimalParameter *m_translateY = nullptr;
+    Point2DParameter *m_translate = nullptr;
     keira::DecimalParameter *m_rotation = nullptr;
     keira::DecimalParameter *m_scale = nullptr;
 };

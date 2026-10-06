@@ -46,6 +46,7 @@ SceneArrowEditorWidget::Impl::Impl()
     form->addRow("Tags", tagEditor);
 
     sizeSpin = new QDoubleSpinBox;
+    sizeSpin->setSuffix(QStringLiteral(" m"));
     sizeSpin->setMinimum(.1);
     sizeSpin->setMaximum(20);
     form->addRow("Size", sizeSpin);
@@ -76,9 +77,9 @@ SceneArrowEditorWidget::SceneArrowEditorWidget(SceneArrow *t_arrow, QWidget *par
 
     m_impl->form->addSection("Transform");
 
-    m_impl->positionEdit = new Vector3Edit;
+    m_impl->positionEdit = new Vector3Edit(Vector3Edit::Distance);
     m_impl->form->addRow("Position", m_impl->positionEdit);
-    m_impl->rotationEdit = new Vector3Edit;
+    m_impl->rotationEdit = new Vector3Edit(Vector3Edit::Angle);
     m_impl->form->addRow("Rotation", m_impl->rotationEdit);
 
     connect(m_impl->positionEdit, &Vector3Edit::valueChanged, this, &SceneArrowEditorWidget::setPosition);

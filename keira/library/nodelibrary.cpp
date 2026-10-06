@@ -92,6 +92,16 @@ FolderElement *NodeLibrary::createNodeTree(std::function<bool(const NodeInformat
     return rootFolder;
 }
 
+bool NodeLibrary::allowsNodeInGraph(const QByteArray &t_nodeId, const QByteArray &t_graphTypeId) const
+{
+    for(const auto &info : m_impl->nodes)
+    {
+        if(info.nodeId == t_nodeId)
+            return info.graphs.isEmpty() || info.graphs.contains(t_graphTypeId);
+    }
+    return false;
+}
+
 Node *NodeLibrary::createNode(const QByteArray &nodeId)
 {
     auto result = std::find_if(m_impl->nodes.cbegin(), m_impl->nodes.cend(),[nodeId](const NodeInformation &t_info){

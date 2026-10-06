@@ -45,6 +45,7 @@ private:
 //
 // The selected layer is persisted/resolved by CueLayer::uniqueId() (see
 // resolveLayer()), so renaming a layer doesn't detach this effect from it.
+// Until one is chosen it reads the sequence's first cue layer.
 class CueMarkerEffect : public ChannelEffect
 {
 public:

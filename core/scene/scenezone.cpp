@@ -41,7 +41,7 @@ SceneZoneEditorWidget::Impl::Impl()
         [](){ return photonApp->project() ? photonApp->project()->allTags() : QStringList(); });
     form->addRow("Tags", tagEditor);
 
-    sizeEdit = new Vector3Edit;
+    sizeEdit = new Vector3Edit(Vector3Edit::Distance);
     form->addRow("Size", sizeEdit);
 }
 
@@ -74,9 +74,9 @@ SceneZoneEditorWidget::SceneZoneEditorWidget(SceneZone *t_zone, QWidget *parent)
 
     m_impl->form->addSection("Transform");
 
-    m_impl->positionEdit = new Vector3Edit;
+    m_impl->positionEdit = new Vector3Edit(Vector3Edit::Distance);
     m_impl->form->addRow("Position", m_impl->positionEdit);
-    m_impl->rotationEdit = new Vector3Edit;
+    m_impl->rotationEdit = new Vector3Edit(Vector3Edit::Angle);
     m_impl->form->addRow("Rotation", m_impl->rotationEdit);
 
     connect(m_impl->positionEdit, &Vector3Edit::valueChanged, this, &SceneZoneEditorWidget::setPosition);

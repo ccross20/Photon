@@ -64,6 +64,8 @@ public:
     Impl();
     ~Impl();
 
+    QString filePath;   // see Project::filePath()
+
     // Give any SurfaceNode that arrived without a surface reference one of its
     // own. Covers nodes dragged in from the palette; deserialized nodes already
     // carry an id, and Graph::readFromJson doesn't emit nodeWasAdded anyway.
@@ -384,50 +386,58 @@ ColorPaletteCollection *Project::colorPalettes() const
     return &m_impl->colorPalettes;
 }
 
-void Project::save(const QString &path) const
+QString Project::filePath() const
 {
-    QSettings qsettings;
+    return m_impl->filePath;
+}
 
-    qsettings.beginGroup("app");
-    QString startPath = qsettings.value("savepath", QDir::homePath()).toString();
-    qsettings.endGroup();
+bool Project::save()
+{
+    return m_impl->filePath.isEmpty() ? saveAs() : saveTo(m_impl->filePath);
+}
 
-    QString savePath = path;
-    if(savePath.isEmpty())
+bool Project::saveAs()
+{
+    QString startPath = m_impl->filePath;
+    if(startPath.isEmpty())
     {
-        savePath = QFileDialog::getSaveFileName(nullptr,"Save Project", startPath, "Photon Project (*.proj)");
+        QSettings qsettings;
+        qsettings.beginGroup("app");
+        startPath = qsettings.value("savepath", QDir::homePath()).toString();
+        qsettings.endGroup();
     }
 
-    if(savePath.isEmpty())
+    const QString path = QFileDialog::getSaveFileName(nullptr, "Save Project As", startPath, "Photon Project (*.proj)");
+    if(path.isEmpty())
+        return false;
+    return saveTo(path);
+}
+
+bool Project::saveTo(const QString &t_path)
+{
+    QFile saveFile(t_path);
+    if(!saveFile.open(QIODevice::WriteOnly))
     {
-        qWarning("There was no path to save to.");
-        return;
+        qWarning() << "Couldn't open save file" << t_path;
+        return false;
     }
-
-    QFile saveFile(savePath);
-
-    if (!saveFile.open(QIODevice::WriteOnly)) {
-             qWarning("Couldn't open save file.");
-             return;
-         }
-
-    qsettings.beginGroup("app");
-    qsettings.setValue("savepath", QFileInfo(savePath).path());
-    qsettings.endGroup();
 
     QJsonObject jsonObj;
     writeToJson(jsonObj);
-
     saveFile.write(QJsonDocument(jsonObj).toJson());
-
     qDebug() << "Saved to: " << saveFile.fileName();
 
+    m_impl->filePath = t_path;
+
+    QSettings qsettings;
     qsettings.beginGroup("app");
-    qsettings.setValue("loadpath", QFileInfo(savePath).path());
-    qsettings.setValue("lastproject", savePath);
+    qsettings.setValue("savepath", QFileInfo(t_path).path());
+    qsettings.setValue("loadpath", QFileInfo(t_path).path());
+    qsettings.setValue("lastproject", t_path);
     qsettings.endGroup();
 
-    rememberRecentProject(savePath);
+    rememberRecentProject(t_path);
+    return true;
 }
 
 QStringList Project::recentProjects()
@@ -475,6 +485,7 @@ bool Project::load(const QString &path)
 
     readFromJson(loadDoc.object());
     restore(*this);
+    m_impl->filePath = loadPath;
 
     qDebug() << "Load from: " << loadFile.fileName();
 

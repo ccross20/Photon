@@ -13,11 +13,13 @@
 #include "virtualdj/virtualdjplaybacktest.h"
 #include "sequence/sequencetest.h"
 #include "scene/sceneobjecttest.h"
+#include "scene/fallofftest.h"
 #include "project/surfaceownershiptest.h"
 #include "project/projectresourcetest.h"
 #include "project/projectmodeltest.h"
 #include "project/tagtest.h"
 #include "gui/propertyaddresstest.h"
+#include "library/songlibrarytest.h"
 
 
 int main(int argc, char *argv[])
@@ -50,10 +52,12 @@ int main(int argc, char *argv[])
     tests.emplace("virtualdj_playback_test", std::make_unique<photon::VirtualDJPlaybackTest>());
     tests.emplace("sequence_test", std::make_unique<photon::SequenceTest>());
     tests.emplace("scene_object_test", std::make_unique<photon::SceneObjectTest>());
+    tests.emplace("falloff_test", std::make_unique<photon::FalloffTest>());
     tests.emplace("surface_ownership_test", std::make_unique<photon::SurfaceOwnershipTest>());
     tests.emplace("project_resource_test", std::make_unique<photon::ProjectResourceTest>());
     tests.emplace("project_model_test", std::make_unique<photon::ProjectModelTest>());
     tests.emplace("tag_test", std::make_unique<photon::TagTest>());
+    tests.emplace("song_library_test", std::make_unique<photon::SongLibraryTest>());
 
     if (arguments.size() >= 3 && arguments[1] == "-select") {
         QString testName = arguments[2];

@@ -1,3 +1,5 @@
+#include <QJsonArray>
+#include <QJsonObject>
 #include "pixelgraph.h"
 #include "graph/node/graphcontextnode.h"
 #include "model/graph.h"
@@ -22,7 +24,8 @@ keira::NodeInformation PixelGraph::info()
     toReturn.name = "Pixel Graph";
     toReturn.nodeId = "photon.node.pixel-graph";
     toReturn.categories = {"Pixel"};
-    toReturn.graphs = QByteArrayList{"bus","surface"};
+    // "routine" covers routines and clip graphs (FixtureClip's content graph).
+    toReturn.graphs = QByteArrayList{"bus","surface","routine"};
 
     return toReturn;
 }
@@ -51,13 +54,10 @@ PixelGraph::PixelGraph() : keira::SubGraphNode("photon.node.pixel-graph") {
                                   // outlives m_globalsNode (see readFromJson below)
     graph()->setName("Pixel Graph");
     graph()->setGraphTypeId("pixel");
-
-    m_timeMachine = new DMXTimeMachine;
 }
 
 PixelGraph::~PixelGraph()
 {
-    delete m_timeMachine;
 }
 
 
@@ -69,9 +69,6 @@ void PixelGraph::createParameters()
 
     m_enabledParam = new keira::BooleanParameter(Enabled, "Enabled", true);
     addParameter(m_enabledParam);
-
-    m_useTimeMachineParam = new keira::BooleanParameter("useTimeMachine","Use Time Machine",false);
-    addParameter(m_useTimeMachineParam);
 
     m_priortyParam = new keira::IntegerParameter("priority","Priority",0);
     addParameter(m_priortyParam);
@@ -104,8 +101,20 @@ void PixelGraph::readFromJson(const QJsonObject &t_json, keira::NodeLibrary *t_l
     delete m_seedSetColorNode;
     m_seedSetColorNode = nullptr;
 
+    // "useTimeMachine" was a parameter of the removed DMX time machine. Drop
+    // it from older saves - keira recreates any saved parameter it doesn't
+    // know, which would bring back a "Use Time Machine" field that does
+    // nothing.
+    QJsonObject json = t_json;
+    QJsonArray parameters;
+    for(const auto &param : t_json.value("parameters").toArray())
+    {
+        if(param.toObject().value("id").toString() != QLatin1String("useTimeMachine"))
+            parameters.append(param);
+    }
+    json.insert("parameters", parameters);
 
-    keira::SubGraphNode::readFromJson(t_json, t_library);
+    keira::SubGraphNode::readFromJson(json, t_library);
 
     m_globalsNode = dynamic_cast<GraphContextNode*>(graph()->findNode("Globals"));
 }
@@ -124,13 +133,13 @@ void PixelGraph::evaluate(keira::EvaluationContext *t_context) const
         return;
 
     //qDebug() << name();
-    auto context = static_cast<RoutineEvaluationContext*>(t_context);
-    context->timeMachine = m_timeMachine;
-    m_timeMachine->initializeMatrix(&context->dmxMatrix, context->frame);
-    m_timeMachine->writeStoredData();
-    m_timeMachine->setTargetFrame(context->frame);
-
-    bool useTimeMachine = m_useTimeMachineParam->value().toBool();
+    // Evaluated on a copy: the per-pixel fixture/index set below
+    // must not leak back to the caller. In a clip graph a node evaluated after
+    // this one would otherwise inherit the last pixel's fixture - and a
+    // Fixture State that sees a fixture on its context switches to
+    // per-fixture mode and writes only that one.
+    RoutineEvaluationContext local(*static_cast<RoutineEvaluationContext*>(t_context));
+    auto *context = &local;
 
     auto pixels = m_pixelsParam->value().value<QVector<PixelParameterData>>();
 
@@ -156,10 +165,9 @@ void PixelGraph::evaluate(keira::EvaluationContext *t_context) const
             lastFixture = fix;
             context->fixture = fix;
             context->fixtureIndex = fixtureCounter;
-            context->relativeTime = context->globalTime;
+            // relativeTime is left as the caller set it: the clip's own time
+            // inside a clip, the same as globalTime in a bus or surface graph.
             context->timeOffset = 0;
-            if(useTimeMachine)
-                m_timeMachine->setTargetFrame(context->frame);
             // Pixel-specific ports aren't carried on the eval context — set them
             // directly; the context node fills fixture/index/time from the context.
             m_globalsNode->setValue(GraphContextNode::PixelIndexPort, pixel.index);
@@ -175,12 +183,6 @@ void PixelGraph::evaluate(keira::EvaluationContext *t_context) const
             qDebug() << "Could not find fixture";
         }
     }
-
-
-    m_timeMachine->releaseMatrix();
-
-
-
 }
 
 } // namespace photon

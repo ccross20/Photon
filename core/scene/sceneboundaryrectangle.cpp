@@ -41,11 +41,13 @@ SceneBoundaryRectangleEditorWidget::Impl::Impl()
     form->addRow("Tags", tagEditor);
 
     widthSpin = new QDoubleSpinBox;
+    widthSpin->setSuffix(QStringLiteral(" m"));
     widthSpin->setMinimum(0.1);
     widthSpin->setMaximum(200.0);
     form->addRow("Width", widthSpin);
 
     heightSpin = new QDoubleSpinBox;
+    heightSpin->setSuffix(QStringLiteral(" m"));
     heightSpin->setMinimum(0.1);
     heightSpin->setMaximum(200.0);
     form->addRow("Height", heightSpin);
@@ -76,9 +78,9 @@ SceneBoundaryRectangleEditorWidget::SceneBoundaryRectangleEditorWidget(SceneBoun
 
     m_impl->form->addSection("Transform");
 
-    m_impl->positionEdit = new Vector3Edit;
+    m_impl->positionEdit = new Vector3Edit(Vector3Edit::Distance);
     m_impl->form->addRow("Position", m_impl->positionEdit);
-    m_impl->rotationEdit = new Vector3Edit;
+    m_impl->rotationEdit = new Vector3Edit(Vector3Edit::Angle);
     m_impl->form->addRow("Rotation", m_impl->rotationEdit);
 
     connect(m_impl->positionEdit, &Vector3Edit::valueChanged, this, &SceneBoundaryRectangleEditorWidget::setPosition);

@@ -8,7 +8,7 @@ namespace photon {
 class Vector3Edit::Impl
 {
 public:
-    QDoubleSpinBox *createSpin();
+    QDoubleSpinBox *createSpin(Kind kind);
     QDoubleSpinBox *xSpin;
     QDoubleSpinBox *ySpin;
     QDoubleSpinBox *zSpin;
@@ -16,11 +16,19 @@ public:
     Vector3Edit *facade;
 };
 
-QDoubleSpinBox *Vector3Edit::Impl::createSpin()
+QDoubleSpinBox *Vector3Edit::Impl::createSpin(Kind kind)
 {
     QDoubleSpinBox *spin = new QDoubleSpinBox;
-    spin->setMinimum(-99);
-    spin->setMaximum(99);
+    if(kind == Angle)
+    {
+        spin->setRange(-360.0, 360.0);
+        spin->setSuffix(QStringLiteral("°"));
+    }
+    else
+    {
+        spin->setRange(-999.0, 999.0);
+        spin->setSuffix(QStringLiteral(" m"));
+    }
     spin->setDecimals(2);
 
     // QAbstractSpinBox sizes itself off the widest text this range/decimals
@@ -43,7 +51,7 @@ QDoubleSpinBox *Vector3Edit::Impl::createSpin()
     return spin;
 }
 
-Vector3Edit::Vector3Edit(QWidget *parent)
+Vector3Edit::Vector3Edit(Kind t_kind, QWidget *parent)
     : QWidget{parent},m_impl(new Impl)
 {
     m_impl->facade = this;
@@ -52,9 +60,9 @@ Vector3Edit::Vector3Edit(QWidget *parent)
     hLayout->setContentsMargins(0,0,0,0);
     hLayout->setSpacing(4);
 
-    m_impl->xSpin = m_impl->createSpin();
-    m_impl->ySpin = m_impl->createSpin();
-    m_impl->zSpin = m_impl->createSpin();
+    m_impl->xSpin = m_impl->createSpin(t_kind);
+    m_impl->ySpin = m_impl->createSpin(t_kind);
+    m_impl->zSpin = m_impl->createSpin(t_kind);
 
     hLayout->addWidget(m_impl->xSpin);
     hLayout->addWidget(m_impl->ySpin);

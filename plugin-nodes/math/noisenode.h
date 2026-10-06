@@ -24,8 +24,7 @@ public:
 
 private:
     Point2DParameter *scaleParam;
-    keira::DecimalParameter *inputXParam;
-    keira::DecimalParameter *inputYParam;
+    Point2DParameter *inputParam;
     Point2DParameter *inputFrequencyParam;
     keira::IntegerParameter *seedParam;
     keira::OptionParameter *noiseModeParam;

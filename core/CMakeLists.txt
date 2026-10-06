@@ -155,6 +155,10 @@ set(PROJECT_SOURCES
         graph/node/math/pointcomposenode.cpp
         graph/node/math/pointdecomposenode.h
         graph/node/math/pointdecomposenode.cpp
+        graph/node/math/point3dcomposenode.h
+        graph/node/math/point3dcomposenode.cpp
+        graph/node/math/point3ddecomposenode.h
+        graph/node/math/point3ddecomposenode.cpp
         graph/node/math/roundnode.h
         graph/node/math/roundnode.cpp
         graph/node/math/mathconstantnode.h
@@ -484,7 +488,11 @@ add_library(photon-core SHARED ${PROJECT_SOURCES}
     scene/sceneboundaryrectangle.h scene/sceneboundaryrectangle.cpp
     scene/sceneboundaryoval.h scene/sceneboundaryoval.cpp
     scene/scenepointmarker.h scene/scenepointmarker.cpp
-    scene/scenelinearfalloff.h scene/scenelinearfalloff.cpp
+    scene/scenefalloff.h scene/scenefalloff.cpp
+    scene/sceneduplicate.h scene/sceneduplicate.cpp
+    scene/scenebox.h scene/scenebox.cpp
+    scene/sceneambientlight.h scene/sceneambientlight.cpp
+    scene/scenedirectionallight.h scene/scenedirectionallight.cpp
     state/gobostate.h state/gobostate.cpp
     fixture/capability/wheelshakecapability.h fixture/capability/wheelshakecapability.cpp
     fixture/capability/wheelrotationcapability.h fixture/capability/wheelrotationcapability.cpp
@@ -557,7 +565,6 @@ add_library(photon-core SHARED ${PROJECT_SOURCES}
     fixture/capability/prismrotationcapability.h fixture/capability/prismrotationcapability.cpp
     fixture/capability/prismcapability.h fixture/capability/prismcapability.cpp
     graph/parameter/colorpaletteparameter.h graph/parameter/colorpaletteparameter.cpp
-    data/dmxtimemachine.h data/dmxtimemachine.cpp
     graph/node/pixel/pixelgraph.h graph/node/pixel/pixelgraph.cpp
     graph/parameter/pixellistparameter.h graph/parameter/pixellistparameter.cpp
     virtualdj/virtualdjconnector.h virtualdj/virtualdjconnector.cpp

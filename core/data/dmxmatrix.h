@@ -1,7 +1,6 @@
 #ifndef PHOTON_DMXMATRIX_H
 #define PHOTON_DMXMATRIX_H
 #include "fixture/fixturechannel.h"
-#include "data/dmxtimemachine.h"
 
 namespace photon {
 
@@ -29,13 +28,8 @@ public:
         return ((t_target - current) * t_blend) + current;
     }
 
-    void setValue(uint t_universe, uint t_channel, uchar t_value, double t_blend = 1.0, DMXTimeMachine *t_machine = nullptr)
+    void setValue(uint t_universe, uint t_channel, uchar t_value, double t_blend = 1.0)
     {
-        if(t_machine)
-        {
-            t_machine->storeData(DMXFrameData(t_universe, t_channel, t_value, t_blend, DMXFrameData::MODE_SET_VALUE));
-            return;
-        }
 
         if(t_universe < channels.size() && t_channel < 512)
             blend(channels[t_universe][t_channel], t_value, t_blend);
@@ -46,13 +40,8 @@ public:
         setRangeMappedValuePercent(t_channel, t_value, t_range.start, t_range.end);
     }
 
-    void setRangeMappedValuePercent(FixtureChannel *t_channel, double t_value,uchar t_min,uchar t_max, DMXTimeMachine *t_machine = nullptr)
+    void setRangeMappedValuePercent(FixtureChannel *t_channel, double t_value,uchar t_min,uchar t_max)
     {
-        if(t_machine)
-        {
-            t_machine->storeData(DMXFrameData(t_channel, t_value, 1.0, t_min, t_max));
-            return;
-        }
 
         double delta = t_max - t_min;
         delta *= t_value;
@@ -78,14 +67,8 @@ public:
 
 
     }
-    void setValuePercent(FixtureChannel *t_channel, double t_value, double t_blend = 1.0, DMXTimeMachine *t_machine = nullptr)
+    void setValuePercent(FixtureChannel *t_channel, double t_value, double t_blend = 1.0)
     {
-
-        if(t_machine)
-        {
-            t_machine->storeData(DMXFrameData(t_channel, t_value, t_blend, DMXFrameData::MODE_SET_VALUE_PERCENT));
-            return;
-        }
 
 
         double currentValue = valuePercent(t_channel);
@@ -115,26 +98,16 @@ public:
         }
 
     }
-    void setValuePercent(uint t_universe, uint t_channel, double t_value, double t_blend = 1.0, DMXTimeMachine *t_machine = nullptr)
+    void setValuePercent(uint t_universe, uint t_channel, double t_value, double t_blend = 1.0)
     {
-        if(t_machine)
-        {
-            t_machine->storeData(DMXFrameData(t_universe, t_channel, t_value, t_blend, DMXFrameData::MODE_SET_VALUE_PERCENT));
-            return;
-        }
 
 
         const double v = t_value < 0.0 ? 0.0 : (t_value > 1.0 ? 1.0 : t_value);
         if(t_universe < channels.size() && t_channel < 512)
             blend(channels[t_universe][t_channel], floor(v * 255.0), t_blend);
     }
-    void setValueIntFloor(uint t_universe, uint t_channel, int t_value, double t_blend = 1.0, DMXTimeMachine *t_machine = nullptr)
+    void setValueIntFloor(uint t_universe, uint t_channel, int t_value, double t_blend = 1.0)
     {
-        if(t_machine)
-        {
-            t_machine->storeData(DMXFrameData(t_universe, t_channel, std::min(std::max(t_value,0), 255), t_blend, DMXFrameData::MODE_SET_VALUE));
-            return;
-        }
 
 
         if(t_universe < channels.size() && t_channel < 512)

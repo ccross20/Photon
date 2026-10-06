@@ -1,6 +1,7 @@
 #include <QColor>
 #include "statecapability.h"
 #include "fixture/fixture.h"
+#include "util/utils.h"
 
 namespace photon {
 
@@ -59,6 +60,11 @@ float StateCapability::getChannelFloat(const StateEvaluationContext &t_context, 
 QColor StateCapability::getChannelColor(const StateEvaluationContext &t_context, uint t_index) const
 {
     return t_context.channelValues[channelId(t_index)].value<QColor>();
+}
+
+QPointF StateCapability::getChannelPoint(const StateEvaluationContext &t_context, uint t_index) const
+{
+    return t_context.channelValues[channelId(t_index)].toPointF();
 }
 
 int StateCapability::getChannelInteger(const StateEvaluationContext &t_context, uint t_index) const
@@ -196,7 +202,13 @@ void StateCapability::readFromJson(const QJsonObject &t_json, const LoadContext 
         int index = 0;
         for(auto value : valueArray)
         {
-            setChannelValue(index++,value.toVariant());
+            // Points are stored as {x, y} objects (see writeToJson).
+            const bool isPoint = index < m_impl->availableChannels.size()
+                                 && m_impl->availableChannels[index].type == ChannelInfo::ChannelTypePoint;
+            if(isPoint && value.isObject())
+                setChannelValue(index++, jsonToPointF(value.toObject()));
+            else
+                setChannelValue(index++, value.toVariant());
         }
     }
 
@@ -213,7 +225,11 @@ void StateCapability::writeToJson(QJsonObject &t_json) const
     QJsonArray valueArray;
     for(const auto &value : m_impl->values)
     {
-        valueArray.append(QJsonValue::fromVariant(value));
+        // QJsonValue::fromVariant has no conversion for points.
+        if(value.typeId() == QMetaType::QPointF)
+            valueArray.append(pointToJson(value.toPointF()));
+        else
+            valueArray.append(QJsonValue::fromVariant(value));
     }
     t_json.insert("values", valueArray);
 

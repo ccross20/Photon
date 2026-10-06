@@ -131,8 +131,8 @@ QWidget *SongFeatureEffect::createPropertyEditor()
     form->addRow("Feature", PropertyWidgets::createOptions(
         {"Level", "Low", "Mid", "High", "Vocal", "Instru", "Bass", "Kick", "HiHat"}, m_feature, {},
         [this](int v){ setFeature(static_cast<Feature>(v)); }));
-    form->addRow("Scale", PropertyWidgets::createNumber(m_scale, {}, [this](double v){ setScale(v); }));
-    form->addRow("Offset", PropertyWidgets::createNumber(m_offset, {}, [this](double v){ setOffset(v); }));
+    form->addRow("Scale", PropertyWidgets::createNumber(m_scale, {{PropertyWidgets::MetaSoftMinimum, 0.0}, {PropertyWidgets::MetaSoftMaximum, 2.0}}, [this](double v){ setScale(v); }));
+    form->addRow("Offset", PropertyWidgets::createNumber(m_offset, {{PropertyWidgets::MetaSoftMinimum, -1.0}, {PropertyWidgets::MetaSoftMaximum, 1.0}}, [this](double v){ setOffset(v); }));
     return form;
 }
 

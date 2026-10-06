@@ -110,6 +110,20 @@ private:
     // reads of plain doubles are benign here (last-writer-wins per frame).
     mutable double m_relativeTime = 0.0;
     mutable double m_globalTime = 0.0;
+
+    // DMX is sampled from the last finished render, which lags evaluation by
+    // a frame (rendering happens on the main thread afterwards). Harmless
+    // while time runs on, but after a jump - a clip coming back into play, a
+    // scrub, a seek - the last render shows a moment from before it (e.g.
+    // the mask wherever it was when the clip last ran). So each evaluation is
+    // numbered; a jump records its number as the resync point, each render
+    // records the evaluation it was made from, and DMX isn't written until a
+    // render from at or after the resync point has finished.
+    mutable std::atomic<quint64> m_evalGeneration{0};
+    mutable std::atomic<quint64> m_resyncGeneration{0};
+    mutable std::atomic<quint64> m_renderedGeneration{0};
+    mutable bool m_hasEvaluated = false;
+    mutable double m_lastEvalGlobalTime = 0.0;
     mutable RhiContext *m_rhiContext = nullptr;   // set only in headless tests via the context
 
     // Owned sink resources. Mutable because render is const (keira contract) but

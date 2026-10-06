@@ -56,36 +56,41 @@ TrussEditorWidget::Impl::Impl()
     form->addRow("Beams", beamSpin);
 
     segmentLengthSpin = new QDoubleSpinBox;
+    segmentLengthSpin->setSuffix(QStringLiteral(" m"));
     segmentLengthSpin->setMinimum(.1);
     segmentLengthSpin->setMaximum(1);
     form->addRow("Segment Length", segmentLengthSpin);
 
     radiusSpin = new QDoubleSpinBox;
+    radiusSpin->setSuffix(QStringLiteral(" m"));
     radiusSpin->setMinimum(.005);
     radiusSpin->setMaximum(.1);
     form->addRow("Radius", radiusSpin);
 
     offsetSpin = new QDoubleSpinBox;
+    offsetSpin->setSuffix(QStringLiteral(" m"));
     offsetSpin->setMinimum(.005);
     offsetSpin->setMaximum(.2);
     form->addRow("Offset", offsetSpin);
 
     lengthSpin = new QDoubleSpinBox;
+    lengthSpin->setSuffix(QStringLiteral(" m"));
     lengthSpin->setMinimum(.1);
     lengthSpin->setMaximum(20);
     form->addRow("Length", lengthSpin);
 
     angleSpin = new QDoubleSpinBox;
+    angleSpin->setSuffix(QStringLiteral("°"));
     angleSpin->setMinimum(-180);
     angleSpin->setMaximum(180);
     form->addRow("Angle", angleSpin);
 
     form->addSection("Transform");
 
-    positionEdit = new Vector3Edit;
+    positionEdit = new Vector3Edit(Vector3Edit::Distance);
     form->addRow("Position", positionEdit);
 
-    rotationEdit = new Vector3Edit;
+    rotationEdit = new Vector3Edit(Vector3Edit::Angle);
     form->addRow("Rotation", rotationEdit);
 
 }

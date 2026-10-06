@@ -161,10 +161,10 @@ FixtureEditorWidget::Impl::Impl()
 
     form->addSection("Transform");
 
-    positionEdit = new Vector3Edit;
+    positionEdit = new Vector3Edit(Vector3Edit::Distance);
     form->addRow("Position", positionEdit);
 
-    rotationEdit = new Vector3Edit;
+    rotationEdit = new Vector3Edit(Vector3Edit::Angle);
     form->addRow("Rotation", rotationEdit);
 
     panOffsetSpin = new QDoubleSpinBox;

@@ -275,18 +275,18 @@ QWidget *BeatIntegerEffect::createPropertyEditor()
 {
     auto *form = new PropertyForm;
     form->addRow("Minimum", PropertyWidgets::createInteger(m_min,
-        {{PropertyWidgets::MetaMinimum, -100000.0}, {PropertyWidgets::MetaMaximum, 100000.0}},
+        {{PropertyWidgets::MetaMinimum, -100000.0}, {PropertyWidgets::MetaMaximum, 100000.0}, {PropertyWidgets::MetaSoftMinimum, 0.0}, {PropertyWidgets::MetaSoftMaximum, 16.0}},
         [this](int v){ setMinRange(v); }));
     form->addRow("Maximum", PropertyWidgets::createInteger(m_max,
-        {{PropertyWidgets::MetaMinimum, -100000.0}, {PropertyWidgets::MetaMaximum, 100000.0}},
+        {{PropertyWidgets::MetaMinimum, -100000.0}, {PropertyWidgets::MetaMaximum, 100000.0}, {PropertyWidgets::MetaSoftMinimum, 0.0}, {PropertyWidgets::MetaSoftMaximum, 16.0}},
         [this](int v){ setMaxRange(v); }));
     form->addRow("Mode", PropertyWidgets::createOptions({"Increment","Decrement","Random"}, m_mode, {},
         [this](int v){ setMode(static_cast<BeatIntegerMode>(v)); }));
     form->addRow("Increment Every (n) Beats", PropertyWidgets::createInteger(m_incrementEvery,
-        {{PropertyWidgets::MetaMinimum, 1.0}, {PropertyWidgets::MetaMaximum, 1000.0}},
+        {{PropertyWidgets::MetaMinimum, 1.0}, {PropertyWidgets::MetaMaximum, 1000.0}, {PropertyWidgets::MetaSoftMinimum, 1.0}, {PropertyWidgets::MetaSoftMaximum, 16.0}},
         [this](int v){ setIncrementEvery(v); }));
     form->addRow("Start On Beat", PropertyWidgets::createInteger(m_startBeat,
-        {{PropertyWidgets::MetaMinimum, 1.0}, {PropertyWidgets::MetaMaximum, 100000.0}},
+        {{PropertyWidgets::MetaMinimum, 1.0}, {PropertyWidgets::MetaMaximum, 100000.0}, {PropertyWidgets::MetaSoftMinimum, 1.0}, {PropertyWidgets::MetaSoftMaximum, 64.0}},
         [this](int v){ setStartBeat(v); }));
     return form;
 }

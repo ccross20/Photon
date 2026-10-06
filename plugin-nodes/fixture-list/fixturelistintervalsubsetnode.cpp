@@ -34,7 +34,9 @@ void FixtureListIntervalSubsetNode::createParameters()
     m_inParam = new FixtureListParameter(FixturesInParam,"Fixtures In",{});
     m_outParam = new FixtureListParameter(FixturesOutParam,"Fixtures Out",{}, keira::AllowMultipleOutput);
     m_offsetParam = new keira::IntegerParameter(OffsetParam, "Offset", 0);
-    m_offsetParam->setMinimum(0);
+    // Wraps around the list (see evaluate()), so negative offsets just run
+    // the pattern the other way.
+    m_offsetParam->setMinimum(-1000);
     m_offsetParam->setMaximum(1000);
 
     m_selectParam = new keira::IntegerParameter(SelectIntervalParam, "Select #", 1);
@@ -65,16 +67,27 @@ void FixtureListIntervalSubsetNode::evaluate(keira::EvaluationContext *t_context
     int selectCount = m_selectParam->value().toInt();
     int skipCount = m_skipParam->value().toInt();
 
-    int counter = 0;
-    for(int i = offset; i < fixtures.length(); ++i)
+    // The select/skip pattern starts at the offset fixture and wraps past
+    // the end back to the start, so every fixture is covered whatever the
+    // offset, and offsets past the list's length loop around (with 8
+    // fixtures, offset 10 is offset 2). Stepping the offset therefore
+    // chases the pattern round the list. Selected fixtures keep their
+    // original list order.
+    const int count = int(fixtures.length());
+    const int period = selectCount + skipCount;
+    if(count > 0 && period > 0)
     {
-        results.append(fixtures[i]);
-        counter++;
-
-        if(counter >= selectCount)
+        const int start = ((offset % count) + count) % count;
+        QVector<bool> selected(count, false);
+        for(int step = 0; step < count; ++step)
         {
-            counter = 0;
-            i += skipCount;
+            if(step % period < selectCount)
+                selected[(start + step) % count] = true;
+        }
+        for(int i = 0; i < count; ++i)
+        {
+            if(selected[i])
+                results.append(fixtures[i]);
         }
     }
 

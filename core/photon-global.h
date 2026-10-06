@@ -48,7 +48,6 @@ class FeatureTrack;
 class BeatGrid;
 class BusGraph;
 class DMXMatrix;
-class DMXTimeMachine;
 class Canvas;
 class CanvasEffect;
 class Channel;

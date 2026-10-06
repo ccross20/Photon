@@ -1,3 +1,4 @@
+#include <QJsonObject>
 #include <QTest>
 #include "lasertest.h"
 #include "data/dmxmatrix.h"
@@ -15,7 +16,7 @@ namespace {
 enum : uint {
     ChMode = 0, ChMasterIntensity = 1, ChTestFrame = 2, ChGeoSizeX = 3,
     ChPage = 13, ChCue = 14, ChCueSpeed = 15, ChDimmer = 16, ChZoom = 17,
-    ChRotation = 25, ChPositionX = 27, ChScanRate = 31, ChStrobe = 38
+    ChRotation = 25, ChPositionX = 27, ChPositionY = 29, ChScanRate = 31, ChStrobe = 38
 };
 
 QString fb4Path()
@@ -174,15 +175,35 @@ void LaserTest::centeredExtremes()
     Fixture fixture(fb4Path());
     LaserPositionState position;
 
-    position.setChannelValue(0, -1.0);
+    position.setChannelValue(0, QPointF(-1.0, 0.0));
     DMXMatrix left(1);
     evaluateState(position, &fixture, left);
     QCOMPARE(word(left, ChPositionX), 0);
 
-    position.setChannelValue(0, 1.0);
+    position.setChannelValue(0, QPointF(1.0, 0.0));
     DMXMatrix right(1);
     evaluateState(position, &fixture, right);
     QCOMPARE(word(right, ChPositionX), 65535);
+    QCOMPARE(word(right, ChPositionY), 32768);   // y = 0 -> centred
+
+    position.setChannelValue(0, QPointF(0.0, -1.0));
+    DMXMatrix down(1);
+    evaluateState(position, &fixture, down);
+    QCOMPARE(word(down, ChPositionX), 32768);
+    QCOMPARE(word(down, ChPositionY), 0);
+}
+
+void LaserTest::positionPointSaves()
+{
+    LaserPositionState position;
+    position.setChannelValue(0, QPointF(0.25, -0.5));
+    QJsonObject json;
+    position.writeToJson(json);
+
+    LaserPositionState loaded;
+    LoadContext context{nullptr};
+    loaded.readFromJson(json, context);
+    QCOMPARE(loaded.getChannelValue(0).toPointF(), QPointF(0.25, -0.5));
 }
 
 } // namespace photon

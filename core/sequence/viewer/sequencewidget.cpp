@@ -41,10 +41,39 @@
 #include "plugin/pluginfactory.h"
 #include "routine/routine.h"
 #include "view/graphwidget.h"
+#include "view/nodeitem.h"
+#include "view/scene.h"
+#include "model/graph.h"
+#include "model/subgraphnode.h"
+#include <QPointer>
 #include "view/scene.h"
 #include "virtualdj/virtualdjconnector.h"
 
 namespace {
+
+// The toolbar's light foreground colour - the stock style icons are drawn
+// dark, which nearly vanishes on the toolbar's dark background.
+const QColor kToolbarIconColor(220, 220, 220);
+
+// A standard style icon recoloured to kToolbarIconColor, keeping its shape
+// (alpha), at both 1x and 2x so it stays crisp on Retina screens.
+QIcon lightIcon(const QStyle *t_style, QStyle::StandardPixmap t_pixmap)
+{
+    const QIcon source = t_style->standardIcon(t_pixmap);
+    QIcon result;
+    for(const qreal ratio : {1.0, 2.0})
+    {
+        QPixmap pixmap = source.pixmap(QSize(20, 20), ratio);
+        if(pixmap.isNull())
+            continue;
+        QPainter painter(&pixmap);
+        painter.setCompositionMode(QPainter::CompositionMode_SourceIn);
+        painter.fillRect(QRect(QPoint(0, 0), pixmap.deviceIndependentSize().toSize()), kToolbarIconColor);
+        painter.end();
+        result.addPixmap(pixmap);
+    }
+    return result;
+}
 
 // "Zoom to Fit" has no matching QStyle::StandardPixmap, unlike the other
 // transport actions - drawn by hand as four corner brackets (the common
@@ -58,7 +87,7 @@ QIcon zoomToFitIcon()
 
     QPainter painter(&pixmap);
     painter.setRenderHint(QPainter::Antialiasing);
-    QPen pen(QColor(220, 220, 220));
+    QPen pen(kToolbarIconColor);
     pen.setWidth(2);
     pen.setCapStyle(Qt::RoundCap);
     painter.setPen(pen);
@@ -100,11 +129,23 @@ public:
     WaveformHeader *waveformHeader;
     TimeBar *timebar;
     QToolBar *timeToolBar;
+    // Song Library sequences only (their own .seq file) - a project-embedded
+    // sequence is saved with the project instead.
+    QAction *saveAction = nullptr;
+    QAction *saveSeparator = nullptr;
     QAction *playAction = nullptr;
     ClipStructureViewer *curvePropertyEditor;
     QTabWidget *detailsTabWidget;
     QWidget *effectEditorContainer;
     QWidget *effectEditor = nullptr;
+    // The clip graph's scene while one is open, so clearEditor() can stop
+    // recording its selection before tearing it down.
+    QPointer<keira::Scene> graphScene;
+    // Per clip (by uniqueId): which graph was open (the content graph or a
+    // subgraph inside it) and which nodes were selected there, so reopening
+    // the clip's graph puts the user back where they were.
+    struct GraphView { QByteArray graphId; QByteArrayList nodeIds; };
+    QHash<QByteArray, GraphView> graphViews;
     SequenceWaveformEditor *waveform = nullptr;
     QMediaPlayer *player = nullptr;
     QAudioOutput *audioOutput = nullptr;
@@ -197,11 +238,21 @@ SequenceWidget::SequenceWidget(QWidget *parent)
     // Icon-only actions throughout - tooltips carry the label instead. The
     // playback pair (Rewind, Play) is grouped together first, separated from
     // the view and sync controls that follow.
-    auto rewindAction = m_impl->timeToolBar->addAction(style()->standardIcon(QStyle::SP_MediaSkipBackward), QString());
+    m_impl->saveAction = m_impl->timeToolBar->addAction(lightIcon(style(), QStyle::SP_DialogSaveButton), QString());
+    m_impl->saveAction->setToolTip("Save Sequence");
+    connect(m_impl->saveAction, &QAction::triggered, this, [this](){
+        if(Sequence *current = sequence(); current && current->isLibrarySequence())
+            current->save(current->filePath());
+    });
+    m_impl->saveSeparator = m_impl->timeToolBar->addSeparator();
+    m_impl->saveAction->setVisible(false);
+    m_impl->saveSeparator->setVisible(false);
+
+    auto rewindAction = m_impl->timeToolBar->addAction(lightIcon(style(), QStyle::SP_MediaSkipBackward), QString());
     rewindAction->setToolTip("Rewind");
     connect(rewindAction, &QAction::triggered, this, &SequenceWidget::rewind);
 
-    m_impl->playAction = m_impl->timeToolBar->addAction(style()->standardIcon(QStyle::SP_MediaPlay), QString());
+    m_impl->playAction = m_impl->timeToolBar->addAction(lightIcon(style(), QStyle::SP_MediaPlay), QString());
     m_impl->playAction->setToolTip("Play");
     m_impl->playAction->setShortcut(Qt::Key_Space);
     m_impl->playAction->setCheckable(true);
@@ -217,7 +268,7 @@ SequenceWidget::SequenceWidget(QWidget *parent)
 
     // VDJ Sync: while checked, Photon's transport (scrub, play/pause, rewind) is
     // mirrored to VirtualDJ - independent of Capture, useful any time during editing.
-    auto vdjSyncAction = m_impl->timeToolBar->addAction(style()->standardIcon(QStyle::SP_BrowserReload), QString());
+    auto vdjSyncAction = m_impl->timeToolBar->addAction(lightIcon(style(), QStyle::SP_BrowserReload), QString());
     vdjSyncAction->setToolTip("VDJ Sync");
     vdjSyncAction->setCheckable(true);
     connect(vdjSyncAction, &QAction::toggled, this, &SequenceWidget::toggleVdjSync);
@@ -259,10 +310,15 @@ SequenceWidget::SequenceWidget(QWidget *parent)
     connect(m_impl->horizontalSplitter, &QSplitter::splitterMoved, this, &SequenceWidget::horizontalSplitterMoved);
     connect(m_impl->curvePropertyEditor, &ClipStructureViewer::selectEffect, this, &SequenceWidget::selectEffect);
     connect(m_impl->curvePropertyEditor, &ClipStructureViewer::selectClipGraph, this, &SequenceWidget::selectClipGraph);
+    connect(m_impl->curvePropertyEditor, &ClipStructureViewer::selectClipProperties, this, [](photon::Clip *clip){
+        PropertyController::instance()->selectClip(clip);
+    });
     connect(m_impl->curvePropertyEditor, &ClipStructureViewer::clearSelection, this, [this](){
         showDefaultEditor();
-        // Its parameter page in the Properties panel goes with it.
-        if(dynamic_cast<ChannelEffectPropertySubject*>(PropertyController::instance()->subject()))
+        // Its parameter page in the Properties panel goes with it (and a
+        // clip's own page, which only stays up while its row is selected).
+        auto *subject = PropertyController::instance()->subject();
+        if(dynamic_cast<ChannelEffectPropertySubject*>(subject) || dynamic_cast<ClipPropertySubject*>(subject))
             PropertyController::instance()->clear();
     });
     connect(m_impl->timebar, &TimeBar::changeTime, this, &SequenceWidget::gotoTime);
@@ -284,6 +340,10 @@ SequenceWidget::~SequenceWidget()
 
 void SequenceWidget::setSequence(Sequence *t_sequence)
 {
+    const bool ownFile = t_sequence && t_sequence->isLibrarySequence();
+    m_impl->saveAction->setVisible(ownFile);
+    m_impl->saveSeparator->setVisible(ownFile);
+
     m_impl->scene->setSequence(t_sequence);
     //m_impl->viewer->centerOn(0,0);
     m_impl->details->setSequence(t_sequence);
@@ -458,14 +518,83 @@ void SequenceWidget::selectClipGraph(photon::Clip *t_clip)
         scene->setIsAutoEvaluate(false);
         graphWidget->setScene(scene);
 
+        restoreGraphView(t_clip, graphWidget);
+
+        // From here on, track where the user goes: selecting nodes, or
+        // navigating into or out of a subgraph.
+        m_impl->graphScene = scene;
+        const QByteArray clipId = t_clip->uniqueId();
+        auto record = [this, scene, clipId](){
+            Impl::GraphView view;
+            if(scene->graph())
+                view.graphId = scene->graph()->uniqueId();
+            for(auto *item : scene->selectedItems())
+            {
+                if(auto *nodeItem = dynamic_cast<keira::NodeItem*>(item))
+                    view.nodeIds.append(nodeItem->node()->uniqueId());
+            }
+            m_impl->graphViews.insert(clipId, view);
+        };
+        connect(scene, &QGraphicsScene::selectionChanged, this, record);
+        connect(scene, &keira::Scene::graphUpdated, this, record);
+
         layout->addWidget(graphWidget);
         m_impl->effectEditor = graphWidget;
         m_impl->effectEditorContainer->setLayout(layout);
     }
 }
 
+namespace {
+
+// The graph with this uniqueId: the given one or any subgraph nested in it.
+keira::Graph *findGraph(keira::Graph *t_graph, const QByteArray &t_id)
+{
+    if(!t_graph)
+        return nullptr;
+    if(t_graph->uniqueId() == t_id)
+        return t_graph;
+    for(auto *node : t_graph->nodes())
+    {
+        if(auto *subGraph = dynamic_cast<keira::SubGraphNode*>(node))
+        {
+            if(auto *found = findGraph(subGraph->graph(), t_id))
+                return found;
+        }
+    }
+    return nullptr;
+}
+
+} // namespace
+
+void SequenceWidget::restoreGraphView(Clip *t_clip, keira::GraphWidget *t_graphWidget)
+{
+    const auto it = m_impl->graphViews.constFind(t_clip->uniqueId());
+    keira::Scene *scene = t_graphWidget->scene();
+    if(it == m_impl->graphViews.constEnd() || !scene)
+        return;
+
+    // Back into the subgraph the user was in, if it's still there.
+    if(keira::Graph *graph = findGraph(t_clip->contentGraph(), it->graphId))
+        t_graphWidget->navigateToGraph(graph);
+
+    // Reselecting the nodes also puts the last one's page in the Properties
+    // panel (GraphWidget::nodeSelected). Nodes deleted since are skipped.
+    for(const QByteArray &id : it->nodeIds)
+    {
+        keira::Node *node = scene->graph() ? scene->graph()->findNode(id) : nullptr;
+        if(auto *item = node ? scene->itemForNode(node) : nullptr)
+            item->setSelected(true);
+    }
+}
+
 void SequenceWidget::clearEditor()
 {
+    // The scene's own teardown deselects everything - that's not the user
+    // changing the clip's graph view.
+    if(m_impl->graphScene)
+        m_impl->graphScene->disconnect(this);
+    m_impl->graphScene = nullptr;
+
     if(m_impl->effectEditorContainer->layout())
         delete m_impl->effectEditorContainer->layout();
     if(m_impl->effectEditor)
@@ -515,12 +644,12 @@ void SequenceWidget::selectionChanged()
     if(primary == previousPrimary)
         return;
 
+    // The Properties panel follows whatever view the clip reopens on (its
+    // own row shows the clip's properties - see ClipStructureViewer).
     m_impl->curvePropertyEditor->setClip(primary ? primary->clip() : nullptr);
     m_impl->curvePropertyEditor->restoreState();
 
-    if(primary)
-        PropertyController::instance()->selectClip(primary->clip());
-    else if(dynamic_cast<ClipPropertySubject*>(PropertyController::instance()->subject()))
+    if(!primary && dynamic_cast<ClipPropertySubject*>(PropertyController::instance()->subject()))
         PropertyController::instance()->clear();
 }
 
@@ -648,7 +777,7 @@ void SequenceWidget::togglePlay(bool t_value)
     // SequencePanel's own Space-bar handler calling this directly).
     if(m_impl->playAction)
     {
-        m_impl->playAction->setIcon(style()->standardIcon(t_value ? QStyle::SP_MediaPause : QStyle::SP_MediaPlay));
+        m_impl->playAction->setIcon(lightIcon(style(), t_value ? QStyle::SP_MediaPause : QStyle::SP_MediaPlay));
         m_impl->playAction->setToolTip(t_value ? "Pause" : "Play");
         if(m_impl->playAction->isChecked() != t_value)
         {

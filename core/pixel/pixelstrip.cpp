@@ -70,26 +70,29 @@ PixelStripEditorWidget::Impl::Impl(){
     form->addRow("Center", centerSpin);
 
     rotationSpin = new QDoubleSpinBox;
+    rotationSpin->setSuffix(QStringLiteral("°"));
     rotationSpin->setMinimum(-360.0);
     rotationSpin->setMaximum(360.0);
     form->addRow("Rotation", rotationSpin);
 
     bendSpin = new QDoubleSpinBox;
+    bendSpin->setSuffix(QStringLiteral("°"));
     bendSpin->setMinimum(-180);
     bendSpin->setMaximum(180);
     form->addRow("Bend", bendSpin);
 
     lengthSpin = new QDoubleSpinBox;
+    lengthSpin->setSuffix(QStringLiteral(" m"));
     lengthSpin->setMinimum(.1);
     lengthSpin->setMaximum(20);
     form->addRow("Length", lengthSpin);
 
     form->addSection("Transform");
 
-    positionEdit = new Vector3Edit;
+    positionEdit = new Vector3Edit(Vector3Edit::Distance);
     form->addRow("Position", positionEdit);
 
-    rotationEdit = new Vector3Edit;
+    rotationEdit = new Vector3Edit(Vector3Edit::Angle);
     form->addRow("Rotation", rotationEdit);
 }
 

@@ -45,7 +45,9 @@ public:
     // Main thread, after the frame ends: pulls the gathered colours from the GPU.
     void collectGatheredColors() const;
     // Worker thread: writes the gathered colours to DMX via the assigned layouts.
-    void writeDmx(ProcessContext &context) const;
+    // t_blend scales the write (0 = leaves the DMX as it was, 1 = full) - the
+    // enclosing clip's strength when the canvas runs in a clip graph.
+    void writeDmx(ProcessContext &context, double blend = 1.0) const;
 
 private:
     QVector<class PixelLayout *> selectedLayouts() const;   // resolves ids -> layouts (main or worker)

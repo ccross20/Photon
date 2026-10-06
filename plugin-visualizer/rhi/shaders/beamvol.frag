@@ -23,6 +23,11 @@ layout(std140, binding = 1) uniform Beam {
 
 const int STEPS = 24;
 
+// Laser projections are integrated one laser-texture texel at a time instead
+// (see the laser path in main()).
+const int LASER_MAX_STEPS = 192;
+const float LASER_TEX_SIZE = 256.0;
+
 // Gobo texture array (rgb = transmitted color, a = transmittance).
 layout(binding = 2) uniform sampler2DArray goboTex;
 
@@ -123,52 +128,108 @@ void main()
         float fsd = dot(beam.fadePlane.xyz, vWorld) + beam.fadePlane.w;
         fragFade = smoothstep(0.0, max(0.18 * L, 0.3), fsd);
     }
-    for (int i = 0; i < STEPS; ++i) {
-        float t = t0 + (float(i) + 0.5) * dt;
-        vec3 X = O + v * t;
-        vec3 ax = X - A;
-        float s = dot(ax, d);                 // distance along axis
-        if (s < 0.0 || s > L)
-            continue;
-        float surfFade = 1.0;
-        if (hasFade) {
-            float sd = dot(beam.fadePlane.xyz, X) + beam.fadePlane.w;
-            if (sd < 0.0)
-                continue;                     // behind the opaque surface
-            surfFade = smoothstep(0.0, fadeBand, sd);
+    if (laserLayer > 0) {
+        // A laser's pattern depends only on the direction from its apex, so a view
+        // ray crosses the laser texture along a straight line. Walking that line a
+        // texel at a time can't skip a thin bar the way fixed-distance steps do
+        // (which left only broken arcs of a sheet), and each sample is weighted by
+        // the real length of ray it covers: uv is a projective function of the
+        // distance t along the ray, so equal steps in uv are unequal steps in t.
+        float cod = dot(O - A, d);
+        float vdd = dot(v, d);
+        float sMinV = 0.001 * L;
+        float ta = t0;
+        float tb = t1;
+        if (abs(vdd) > 1e-6) {
+            float tA = (sMinV - cod) / vdd;
+            float tB = (L - cod) / vdd;
+            ta = max(ta, min(tA, tB));
+            tb = min(tb, max(tA, tB));
+        } else if (cod < sMinV || cod > L) {
+            tb = ta;
         }
-        float coneR = s * tanH;               // cone radius at this slice
-        vec3 rvec = ax - d * s;               // radial vector from axis
-        float r = length(rvec);
-        float rn = (coneR > 1e-4) ? r / coneR : 1.0;
-        if (rn > 1.0)
-            continue;
-        // Lights get a soft bright core; a laser's brightness is all in its pattern.
-        float fr = (laserLayer > 0) ? 1.0 : exp(-3.0 * rn * rn);
-        float fl = clamp(1.0 - s / L, 0.0, 1.0);          // fade with distance
-        fl *= smoothstep(0.0, 0.06 * L, s);               // soften at the source
-
-        // Pick the gobo layer by cross-beam position (the wheel wipe), then sample.
-        float gx = dot(rvec, U) / max(coneR, 1e-4);   // -1..1 across the cone
-        int gi = (gx < goboSplit) ? goboA : goboB;
-        vec4 g = vec4(1.0);                    // rgb = glass tint, a = transmittance
-        if (laserLayer > 0) {
-            float theta = atan(dot(rvec, V), dot(rvec, U));
-            vec2 luv = vec2(cos(theta), sin(theta)) * rn;
-            g = texture(laserTex, vec3(luv * 0.5 + 0.5, float(laserLayer - 1)));
-        } else if (gi > 0) {
-            float theta = atan(dot(rvec, V), dot(rvec, U));
-            vec2 guv = rotate2(vec2(cos(theta), sin(theta)) * rn, goboRot);
-            g = texture(goboTex, vec3(guv * 0.5 + 0.5, float(gi - 1)));
+        if (tb > ta) {
+            vec3 Xa = O + v * ta - A;
+            vec3 Xb = O + v * tb - A;
+            float Da = dot(Xa, d);
+            float Db = dot(Xb, d);
+            vec3 ra = Xa - d * Da;
+            vec3 rb = Xb - d * Db;
+            vec2 uva = vec2(dot(ra, U), dot(ra, V)) / (Da * tanH);
+            vec2 uvb = vec2(dot(rb, U), dot(rb, V)) / (Db * tanH);
+            float texels = length(uvb - uva) * 0.5 * LASER_TEX_SIZE;
+            int K = int(clamp(ceil(texels) + 1.0, 4.0, float(LASER_MAX_STEPS)));
+            for (int j = 0; j < LASER_MAX_STEPS; ++j) {
+                if (j >= K)
+                    break;
+                float lam = (float(j) + 0.5) / float(K);
+                float den = Db + lam * (Da - Db);
+                float tau = lam * Da / den;
+                float dtau = Da * Db / (den * den);
+                float t = ta + tau * (tb - ta);
+                float s = cod + t * vdd;
+                float surfFade = 1.0;
+                if (hasFade) {
+                    float sd = dot(beam.fadePlane.xyz, O + v * t) + beam.fadePlane.w;
+                    if (sd < 0.0)
+                        continue;             // behind the opaque surface
+                    surfFade = smoothstep(0.0, fadeBand, sd);
+                }
+                float fl = clamp(1.0 - s / L, 0.0, 1.0) * smoothstep(0.0, 0.06 * L, s);
+                vec4 g = textureLod(laserTex, vec3(mix(uva, uvb, lam) * 0.5 + 0.5, float(laserLayer - 1)), 0.0);
+                float wgt = fl * g.a * surfFade * (tb - ta) * dtau / float(K);
+                accum += wgt;
+                accumGobo += g.rgb * wgt;
+            }
         }
+    } else {
+        for (int i = 0; i < STEPS; ++i) {
+            float t = t0 + (float(i) + 0.5) * dt;
+            vec3 X = O + v * t;
+            vec3 ax = X - A;
+            float s = dot(ax, d);                 // distance along axis
+            if (s < 0.0 || s > L)
+                continue;
+            float surfFade = 1.0;
+            if (hasFade) {
+                float sd = dot(beam.fadePlane.xyz, X) + beam.fadePlane.w;
+                if (sd < 0.0)
+                    continue;                     // behind the opaque surface
+                surfFade = smoothstep(0.0, fadeBand, sd);
+            }
+            float coneR = s * tanH;               // cone radius at this slice
+            vec3 rvec = ax - d * s;               // radial vector from axis
+            float r = length(rvec);
+            float rn = (coneR > 1e-4) ? r / coneR : 1.0;
+            if (rn > 1.0)
+                continue;
+            // Lights get a soft bright core; a laser's brightness is all in its pattern.
+            float fr = (laserLayer > 0) ? 1.0 : exp(-3.0 * rn * rn);
+            float fl = clamp(1.0 - s / L, 0.0, 1.0);          // fade with distance
+            fl *= smoothstep(0.0, 0.06 * L, s);               // soften at the source
 
-        // The gobo modulates the in-air haze but never fully erases it (scattered
-        // light keeps the cone glowing), so sparse gobos don't make the beam vanish.
-        // (Laser shafts exist only where the pattern is, so no haze floor there.)
-        float trans = (laserLayer > 0) ? g.a : mix(0.4, 1.0, g.a);
-        float wgt = fr * fl * trans * surfFade * dt;
-        accum += wgt;
-        accumGobo += g.rgb * wgt;
+            // Pick the gobo layer by cross-beam position (the wheel wipe), then sample.
+            float gx = dot(rvec, U) / max(coneR, 1e-4);   // -1..1 across the cone
+            int gi = (gx < goboSplit) ? goboA : goboB;
+            vec4 g = vec4(1.0);                    // rgb = glass tint, a = transmittance
+            if (laserLayer > 0) {
+                float theta = atan(dot(rvec, V), dot(rvec, U));
+                vec2 luv = vec2(cos(theta), sin(theta)) * rn;
+                g = texture(laserTex, vec3(luv * 0.5 + 0.5, float(laserLayer - 1)));
+            } else if (gi > 0) {
+                float theta = atan(dot(rvec, V), dot(rvec, U));
+                vec2 guv = rotate2(vec2(cos(theta), sin(theta)) * rn, goboRot);
+                g = texture(goboTex, vec3(guv * 0.5 + 0.5, float(gi - 1)));
+            }
+
+            // The gobo modulates the in-air haze but never fully erases it (scattered
+            // light keeps the cone glowing), so sparse gobos don't make the beam vanish.
+            // (Laser shafts exist only where the pattern is, so no haze floor there.)
+            float trans = (laserLayer > 0) ? g.a : mix(0.4, 1.0, g.a);
+            float wgt = fr * fl * trans * surfFade * dt;
+            accum += wgt;
+            accumGobo += g.rgb * wgt;
+        }
     }
 
     // accum is an along-ray density integral (world-distance units). Scale by gain

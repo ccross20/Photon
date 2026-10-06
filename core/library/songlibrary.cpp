@@ -5,6 +5,8 @@
 #include <QSqlDatabase>
 #include <QSqlQuery>
 #include <QSqlError>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include "songlibrary.h"
 #include "audio/songdata.h"
 
@@ -60,6 +62,36 @@ public:
     QString connectionName;   // empty when closed
     QString libraryPath;
     QVector<SongLibraryEntry> songs;
+
+    // Sequence paths inside the library folder are stored relative to it,
+    // so the library still works when the folder is moved or copied to
+    // another computer; anything outside stays absolute. In memory (and to
+    // callers) paths are always absolute.
+    QString toStoredPath(const QString &absolutePath) const
+    {
+        const QDir library(libraryPath);
+        const QString relative = library.relativeFilePath(absolutePath);
+        if(!relative.startsWith(QLatin1String("..")) && !QDir::isAbsolutePath(relative))
+            return relative;
+        return QDir::cleanPath(absolutePath);
+    }
+
+    QString toAbsolutePath(const QString &storedPath) const
+    {
+        if(QDir::isRelativePath(storedPath))
+            return QDir::cleanPath(QDir(libraryPath).filePath(storedPath));
+
+        // An absolute path from another computer (or an older library that
+        // stored absolute paths before being moved): fall back to the same
+        // file in this library's sequences folder.
+        if(!QFileInfo::exists(storedPath))
+        {
+            const QString local = QDir(libraryPath).filePath("sequences/" + QFileInfo(storedPath).fileName());
+            if(QFileInfo::exists(local))
+                return QDir::cleanPath(local);
+        }
+        return QDir::cleanPath(storedPath);
+    }
 
     QString songDataPath(const QByteArray &trackKey) const
     {
@@ -126,6 +158,7 @@ public:
             songs.append(entry);
         }
 
+        QVector<QPair<qint64, QString>> pathFixes;   // rows to re-store
         QSqlQuery seqQuery(db);
         seqQuery.exec("SELECT id, song_id, file_path, name, is_default FROM sequences ORDER BY name");
         while(seqQuery.next())
@@ -133,13 +166,29 @@ public:
             SongLibrarySequenceEntry seq;
             seq.id = seqQuery.value(0).toLongLong();
             seq.songId = seqQuery.value(1).toLongLong();
-            seq.filePath = seqQuery.value(2).toString();
+            const QString stored = seqQuery.value(2).toString();
+            seq.filePath = toAbsolutePath(stored);
             seq.name = seqQuery.value(3).toString();
             seq.isDefault = seqQuery.value(4).toInt() != 0;
+
+            // Older rows hold absolute paths, possibly from another computer -
+            // rewrite them in the portable form.
+            const QString portable = toStoredPath(seq.filePath);
+            if(portable != stored)
+                pathFixes.append({seq.id, portable});
 
             auto it = indexById.constFind(seq.songId);
             if(it != indexById.constEnd())
                 songs[it.value()].sequences.append(seq);
+        }
+
+        for(const auto &fix : pathFixes)
+        {
+            QSqlQuery update(db);
+            update.prepare("UPDATE sequences SET file_path = ? WHERE id = ?");
+            update.addBindValue(fix.second);
+            update.addBindValue(fix.first);
+            update.exec();
         }
     }
 };
@@ -197,6 +246,9 @@ bool SongLibrary::open(const QString &t_libraryPath)
         }
     }   // db (a QSqlDatabase copy) must go out of scope before removeDatabase()
 
+    if(opened)
+        importFromFolder();
+
     if(!opened)
     {
         QSqlDatabase::removeDatabase(connectionName);
@@ -237,6 +289,106 @@ bool SongLibrary::isOpen() const
 QString SongLibrary::libraryPath() const
 {
     return m_impl->libraryPath;
+}
+
+int SongLibrary::importFromFolder()
+{
+    if(!isOpen())
+        return 0;
+
+    QSqlDatabase db = QSqlDatabase::database(m_impl->connectionName);
+    const QDir library(m_impl->libraryPath);
+    int added = 0;
+
+    // Songs: each .song is named by its song's key and describes itself.
+    const QStringList songFiles = QDir(library.filePath("songs")).entryList({"*.song"}, QDir::Files);
+    for(const QString &fileName : songFiles)
+    {
+        // The file name is the key songDataFor() looks it up by, so it's the
+        // key to catalogue it under whatever the file itself says.
+        const QByteArray key = QFileInfo(fileName).completeBaseName().toLatin1();
+        if(key.isEmpty() || findSongByTrackKey(key))
+            continue;
+
+        SongData data;
+        if(!data.load(library.filePath("songs/" + fileName)))
+            continue;
+        if(data.title().isEmpty() && data.artist().isEmpty())
+            continue;
+
+        // The library's source is how the song was added, which the file
+        // doesn't record directly: a local file path means a local song,
+        // anything else (e.g. VirtualDJ's netsearch:// paths) VirtualDJ.
+        const QString sourcePath = data.sourcePath();
+        const QByteArray source = QDir::isAbsolutePath(sourcePath) ? "local" : "virtualdj";
+
+        const qint64 id = insertSongRow(db, key, data.title(), data.artist(), data.duration(), source, sourcePath);
+        if(id < 0)
+            continue;
+
+        SongLibraryEntry entry;
+        entry.id = id;
+        entry.trackKey = key;
+        entry.title = data.title();
+        entry.artist = data.artist();
+        entry.duration = data.duration();
+        entry.source = source;
+        entry.sourcePath = sourcePath;
+        m_impl->songs.append(entry);
+        emit songAdded(id);
+        ++added;
+    }
+
+    // Sequences: link any not already linked to a song.
+    const QStringList sequenceFiles = QDir(library.filePath("sequences")).entryList({"*.seq"}, QDir::Files);
+    for(const QString &fileName : sequenceFiles)
+    {
+        const QString path = QDir::cleanPath(library.filePath("sequences/" + fileName));
+        if(findSongBySequencePath(path))
+            continue;
+
+        QFile file(path);
+        if(!file.open(QIODevice::ReadOnly))
+            continue;
+        const QJsonObject json = QJsonDocument::fromJson(file.readAll()).object();
+        file.close();
+
+        const QString stem = QFileInfo(fileName).completeBaseName();
+        const QString name = json.value("name").toString(stem);
+
+        // By the song key Sequence::save() records...
+        qint64 songId = -1;
+        if(auto *song = findSongByTrackKey(json.value("songTrackKey").toString().toLatin1()))
+            songId = song->id;
+
+        // ...or, for files saved before it did, a name that matches exactly
+        // one song's title - anything ambiguous is left for the user to link.
+        if(songId < 0)
+        {
+            int matches = 0;
+            for(const auto &song : std::as_const(m_impl->songs))
+            {
+                const QString title = song.title.trimmed();
+                if(title.compare(name.trimmed(), Qt::CaseInsensitive) == 0
+                   || title.compare(stem.trimmed(), Qt::CaseInsensitive) == 0)
+                {
+                    songId = song.id;
+                    ++matches;
+                }
+            }
+            if(matches != 1)
+            {
+                if(matches > 1)
+                    qWarning() << "SongLibrary: more than one song matches" << fileName << "- not linked";
+                continue;
+            }
+        }
+
+        if(addSequence(songId, path, name))
+            ++added;
+    }
+
+    return added;
 }
 
 int SongLibrary::songCount() const
@@ -398,7 +550,7 @@ SongLibrarySequenceEntry *SongLibrary::addSequence(qint64 t_songId, const QStrin
     QSqlQuery query(db);
     query.prepare("INSERT INTO sequences (song_id, file_path, name, is_default) VALUES (?, ?, ?, ?)");
     query.addBindValue(t_songId);
-    query.addBindValue(t_sequenceFilePath);
+    query.addBindValue(m_impl->toStoredPath(QFileInfo(t_sequenceFilePath).absoluteFilePath()));
     query.addBindValue(t_name);
     query.addBindValue(makeDefault ? 1 : 0);
     if(!query.exec())
@@ -410,7 +562,7 @@ SongLibrarySequenceEntry *SongLibrary::addSequence(qint64 t_songId, const QStrin
     SongLibrarySequenceEntry entry;
     entry.id = query.lastInsertId().toLongLong();
     entry.songId = t_songId;
-    entry.filePath = t_sequenceFilePath;
+    entry.filePath = QDir::cleanPath(QFileInfo(t_sequenceFilePath).absoluteFilePath());
     entry.name = t_name;
     entry.isDefault = makeDefault;
 

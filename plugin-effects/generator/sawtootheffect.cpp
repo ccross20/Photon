@@ -102,8 +102,8 @@ QWidget *SawtoothEffect::createPropertyEditor()
     auto *form = new PropertyForm;
     // Frequency 0 divides by zero (see process()), same floor as the editor's field.
     form->addRow("Frequency", PropertyWidgets::createNumber(m_frequency,
-        {{PropertyWidgets::MetaMinimum, .001}}, [this](double v){ setFrequency(v); }));
-    form->addRow("Amplitude", PropertyWidgets::createNumber(m_amplitude, {},
+        {{PropertyWidgets::MetaMinimum, .001}, {PropertyWidgets::MetaSoftMinimum, 0.05}, {PropertyWidgets::MetaSoftMaximum, 10.0}}, [this](double v){ setFrequency(v); }));
+    form->addRow("Amplitude", PropertyWidgets::createNumber(m_amplitude, {{PropertyWidgets::MetaSoftMinimum, -1.0}, {PropertyWidgets::MetaSoftMaximum, 1.0}},
         [this](double v){ setAmplitude(v); }));
     return form;
 }

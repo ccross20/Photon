@@ -72,10 +72,10 @@ QVector<CapabilityType> ColorCapability::channelTypes() const
     return types;
 }
 
-void ColorCapability::setChannelPercents(const QMap<CapabilityType, double> &t_percents, DMXMatrix &t_matrix, double t_blend, DMXTimeMachine *t_timeMachine) const
+void ColorCapability::setChannelPercents(const QMap<CapabilityType, double> &t_percents, DMXMatrix &t_matrix, double t_blend) const
 {
     for(auto channel : m_impl->channels)
-        channel->setPercent(t_percents.value(channel->type(), 0.0), t_matrix, t_blend, t_timeMachine);
+        channel->setPercent(t_percents.value(channel->type(), 0.0), t_matrix, t_blend);
 }
 
 void ColorCapability::setCalibration(const FixtureColorCalibration &t_calibration)
@@ -237,7 +237,7 @@ R_G_B_A_L_W rgb_to_rgbalw(const R_G_B& input_rgb, bool hasAmber, bool hasLime, b
     return output;
 }
 
-void ColorCapability::setColor(const QColor &t_color, DMXMatrix &t_matrix, double t_blend, DMXTimeMachine *t_timeMachine) const
+void ColorCapability::setColor(const QColor &t_color, DMXMatrix &t_matrix, double t_blend) const
 {
     if(m_impl->isCMY)
     {
@@ -247,13 +247,13 @@ void ColorCapability::setColor(const QColor &t_color, DMXMatrix &t_matrix, doubl
         {
             switch (channel->type()) {
             case Capability_Cyan:
-                channel->setPercent(c.cyanF(), t_matrix, t_blend, t_timeMachine);
+                channel->setPercent(c.cyanF(), t_matrix, t_blend);
                 break;
             case Capability_Magenta:
-                channel->setPercent(c.magentaF(), t_matrix, t_blend, t_timeMachine);
+                channel->setPercent(c.magentaF(), t_matrix, t_blend);
                 break;
             case Capability_Yellow:
-                channel->setPercent(c.yellowF(), t_matrix, t_blend, t_timeMachine);
+                channel->setPercent(c.yellowF(), t_matrix, t_blend);
                 break;
             default:
                 break;
@@ -266,7 +266,7 @@ void ColorCapability::setColor(const QColor &t_color, DMXMatrix &t_matrix, doubl
 
     if(m_impl->calibration.isValid())
     {
-        setChannelPercents(resolveCalibratedPercents(m_impl->calibration, t_color), t_matrix, t_blend, t_timeMachine);
+        setChannelPercents(resolveCalibratedPercents(m_impl->calibration, t_color), t_matrix, t_blend);
         return;
     }
 
@@ -296,22 +296,22 @@ void ColorCapability::setColor(const QColor &t_color, DMXMatrix &t_matrix, doubl
     {
         switch (channel->type()) {
         case Capability_Red:
-            channel->setPercent(ledColor.channels[LEDChannel::Red]/255.0, t_matrix, t_blend, t_timeMachine);
+            channel->setPercent(ledColor.channels[LEDChannel::Red]/255.0, t_matrix, t_blend);
             break;
         case Capability_Green:
-            channel->setPercent(ledColor.channels[LEDChannel::Green]/255.0, t_matrix, t_blend, t_timeMachine);
+            channel->setPercent(ledColor.channels[LEDChannel::Green]/255.0, t_matrix, t_blend);
             break;
         case Capability_Blue:
-            channel->setPercent(ledColor.channels[LEDChannel::Blue]/255.0, t_matrix, t_blend, t_timeMachine);
+            channel->setPercent(ledColor.channels[LEDChannel::Blue]/255.0, t_matrix, t_blend);
             break;
         case Capability_Lime:
-            channel->setPercent(ledColor.channels[LEDChannel::Lime]/255.0, t_matrix, t_blend, t_timeMachine);
+            channel->setPercent(ledColor.channels[LEDChannel::Lime]/255.0, t_matrix, t_blend);
             break;
         case Capability_Amber:
-            channel->setPercent(ledColor.channels[LEDChannel::Amber]/255.0, t_matrix, t_blend, t_timeMachine);
+            channel->setPercent(ledColor.channels[LEDChannel::Amber]/255.0, t_matrix, t_blend);
             break;
         case Capability_White:
-            channel->setPercent(ledColor.channels[LEDChannel::White]/255.0, t_matrix, t_blend, t_timeMachine);
+            channel->setPercent(ledColor.channels[LEDChannel::White]/255.0, t_matrix, t_blend);
             break;
             /*
         case Capability_UV:

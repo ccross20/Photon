@@ -124,9 +124,9 @@ ChannelEffectEditor *ConstantChannelEffect::createEditor()
 QWidget *ConstantChannelEffect::createPropertyEditor()
 {
     auto *form = new PropertyForm;
-    form->addRow("Value", PropertyWidgets::createNumber(m_value, {}, [this](double v){ setValue(v); }));
+    form->addRow("Value", PropertyWidgets::createNumber(m_value, {{PropertyWidgets::MetaSoftMinimum, 0.0}, {PropertyWidgets::MetaSoftMaximum, 1.0}}, [this](double v){ setValue(v); }));
     // Shown x100, matching the curve editor's rate handle and field.
-    form->addRow("Rate", PropertyWidgets::createNumber(m_rate * 100.0, {}, [this](double v){ setRate(v / 100.0); }));
+    form->addRow("Rate", PropertyWidgets::createNumber(m_rate * 100.0, {{PropertyWidgets::MetaSoftMinimum, -100.0}, {PropertyWidgets::MetaSoftMaximum, 100.0}}, [this](double v){ setRate(v / 100.0); }));
     return form;
 }
 

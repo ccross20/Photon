@@ -56,6 +56,8 @@
 #include "graph/node/scene/matrixdecomposenode.h"
 #include "graph/node/math/pointcomposenode.h"
 #include "graph/node/math/pointdecomposenode.h"
+#include "graph/node/math/point3dcomposenode.h"
+#include "graph/node/math/point3ddecomposenode.h"
 #include "graph/node/math/roundnode.h"
 #include "graph/node/math/mathconstantnode.h"
 #include "graph/node/math/absolutenode.h"
@@ -249,6 +251,8 @@ void PluginFactory::init()
     registerNode(MatrixDecomposeNode::info());
     registerNode(PointComposeNode::info());
     registerNode(PointDecomposeNode::info());
+    registerNode(Point3DComposeNode::info());
+    registerNode(Point3DDecomposeNode::info());
     registerNode(RoundNode::info());
     registerNode(MathConstantNode::info());
     registerNode(AbsoluteNode::info());

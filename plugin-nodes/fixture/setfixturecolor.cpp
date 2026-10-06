@@ -54,7 +54,7 @@ void SetFixtureColor::evaluate(keira::EvaluationContext *t_context) const
         {
             for(auto colorCap : pans)
             {
-                static_cast<ColorCapability*>(colorCap)->setColor(m_colorParam->value().value<QColor>(), context->dmxMatrix, context->strength * m_blendParam->value().toDouble(),context->timeMachine);
+                static_cast<ColorCapability*>(colorCap)->setColor(m_colorParam->value().value<QColor>(), context->dmxMatrix, context->strength * m_blendParam->value().toDouble());
             }
         }
         else
@@ -62,7 +62,7 @@ void SetFixtureColor::evaluate(keira::EvaluationContext *t_context) const
             int index = m_capabilityParam->value().toInt();
             if(index < pans.length())
             {
-                static_cast<ColorCapability*>(pans[index])->setColor(m_colorParam->value().value<QColor>(), context->dmxMatrix, context->strength * m_blendParam->value().toDouble(),context->timeMachine);
+                static_cast<ColorCapability*>(pans[index])->setColor(m_colorParam->value().value<QColor>(), context->dmxMatrix, context->strength * m_blendParam->value().toDouble());
             }
         }
 

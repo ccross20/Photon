@@ -3,14 +3,27 @@
 #include "rhicamera.h"
 #include "scene/sceneobject.h"
 #include "scene/scenezone.h"
+#include "scene/scenebox.h"
 
 namespace photon {
 
 namespace {
 
-SceneZone *asZone(SceneObject *o)
+// Objects the scale handles resize: zones and boxes, both centered boxes
+// with full extents = size().
+bool sizeOf(SceneObject *o, QVector3D &out)
 {
-    return (o && o->typeId() == "zone") ? static_cast<SceneZone *>(o) : nullptr;
+    if (o && o->typeId() == "zone") { out = static_cast<SceneZone *>(o)->size(); return true; }
+    if (o && o->typeId() == "box")  { out = static_cast<SceneBox *>(o)->size();  return true; }
+    return false;
+}
+
+void setSizeOf(SceneObject *o, const QVector3D &size)
+{
+    if (o->typeId() == "zone")
+        static_cast<SceneZone *>(o)->setSize(size);
+    else if (o->typeId() == "box")
+        static_cast<SceneBox *>(o)->setSize(size);
 }
 
 float comp(const QVector3D &v, int i) { return i == 0 ? v.x() : i == 1 ? v.y() : v.z(); }
@@ -183,12 +196,11 @@ void RhiGizmo::buildLines(const RhiCamera &cam, QByteArray &out) const
             pushSeg(out, c3, c0, col);
         }
     } else if (m_mode == Scale) {
-        // Per-axis size handles for a zone box (symmetric scaling about the center).
-        // Single-target only: the last selected object, if it's a zone.
-        SceneZone *zone = asZone(m_targets.last());
-        if (!zone)
+        // Per-axis size handles for a zone or box (symmetric scaling about the
+        // center). Single-target only: the last selected object, if sizeable.
+        QVector3D sz;
+        if (!sizeOf(m_targets.last(), sz))
             return;
-        const QVector3D sz = zone->size();
         const QMatrix4x4 gm = m_targets.last()->globalMatrix();
         for (int i = 0; i < 3; ++i) {
             const QVector3D ax = QVector3D(gm(0, i), gm(1, i), gm(2, i)).normalized();
@@ -275,10 +287,9 @@ bool RhiGizmo::beginDrag(const QVector3D &O, const QVector3D &D, const RhiCamera
     }
 
     if (m_mode == Scale) {
-        SceneZone *zone = asZone(m_targets.last());
-        if (!zone)
+        QVector3D sz;
+        if (!sizeOf(m_targets.last(), sz))
             return false;
-        const QVector3D sz = zone->size();
         const QMatrix4x4 gm = m_targets.last()->globalMatrix();
         float bestDist = scale * 0.12f;
         int bestAxis = -1;
@@ -343,8 +354,8 @@ void RhiGizmo::updateDrag(const QVector3D &O, const QVector3D &D)
         return;
 
     if (m_mode == Scale) {
-        SceneZone *zone = asZone(m_targets.last());
-        if (!zone)
+        QVector3D unused;
+        if (!sizeOf(m_targets.last(), unused))
             return;
         float dist, s;
         closestAxisParam(O, D, m_grabCenter, m_dragAxisDir, dist, s);
@@ -352,7 +363,7 @@ void RhiGizmo::updateDrag(const QVector3D &O, const QVector3D &D)
         const float newHalf = qMax(0.05f, startHalf + (s - m_startParam));
         QVector3D ns = m_startSize;
         setComp(ns, m_activeAxis, newHalf * 2.0f);   // symmetric: center stays put
-        zone->setSize(ns);
+        setSizeOf(m_targets.last(), ns);
         return;
     }
 
@@ -402,6 +413,14 @@ void RhiGizmo::updateDrag(const QVector3D &O, const QVector3D &D)
             m_targets[i]->setRotation(newQuat.toEulerAngles());
         }
     }
+}
+
+void RhiGizmo::retargetDrag(const QVector<SceneObject *> &targets)
+{
+    if (!m_dragging || targets.isEmpty())
+        return;
+    m_targets = targets;
+    captureTargetState(m_mode == Rotate);
 }
 
 void RhiGizmo::endDrag()

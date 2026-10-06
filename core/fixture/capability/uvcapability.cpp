@@ -21,9 +21,9 @@ UVCapability::~UVCapability()
     delete m_impl;
 }
 
-void UVCapability::setPercent(double value, DMXMatrix &t_matrix, double t_blend, DMXTimeMachine *t_timeMachine)
+void UVCapability::setPercent(double value, DMXMatrix &t_matrix, double t_blend)
 {
-    t_matrix.setValuePercent(channel(), value, t_blend, t_timeMachine);
+    t_matrix.setValuePercent(channel(), value, t_blend);
 }
 
 double UVCapability::getPercent(const DMXMatrix &t_matrix) const

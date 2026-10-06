@@ -9,6 +9,7 @@
 #include <QVideoSink>
 #include <QtMath>
 #include "laserpreview.h"
+#include "laserimagefilter.h"
 #include "data/dmxmatrix.h"
 #include "fixture/fixture.h"
 #include "fixture/capability/dimmercapability.h"
@@ -268,7 +269,12 @@ QImage LaserPreview::frameFor(Fixture *t_fixture, const DMXMatrix &t_dmx, float 
     const auto dimmers = t_fixture->findCapability<DimmerCapability *>();
     if(!dimmers.isEmpty())
         dimmer = dimmers.first()->getPercent(t_dmx);
-    t_outIntensity = float(dimmer) * strobeGate(t_fixture, t_dmx);
+
+    // The setup profile (Laser Setup dialog) is the laser's installed
+    // projection window and output limit; everything the show does happens
+    // inside it.
+    const Fixture::LaserSetup setup = t_fixture->laserSetup();
+    t_outIntensity = float(dimmer * setup.masterIntensity) * strobeGate(t_fixture, t_dmx);
     if(t_outIntensity <= 0.0f)
         return {};
 
@@ -288,12 +294,34 @@ QImage LaserPreview::frameFor(Fixture *t_fixture, const DMXMatrix &t_dmx, float 
     {
         QPainter painter(&layout);
         painter.setRenderHint(QPainter::SmoothPixmapTransform);
-        painter.translate(TextureSize / 2.0 + positionX * field / 2.0,
-                          TextureSize / 2.0 - positionY * field / 2.0);
+
+        // Outer: the setup window - the whole scan field is shifted, turned and
+        // squeezed (size 0 = unchanged, -100% = collapsed, +100% = double) so
+        // that a short setup Y shrinks the content to fit instead of cropping it.
+        painter.translate(TextureSize / 2.0 + setup.positionX * field / 2.0,
+                          TextureSize / 2.0 - setup.positionY * field / 2.0);
+        painter.rotate(setup.rotation);
+        painter.scale(std::max(0.0, 1.0 + setup.sizeX), std::max(0.0, 1.0 + setup.sizeY));
+
+        // Inner: this frame's live transform, inside that window.
+        painter.translate(positionX * field / 2.0, -positionY * field / 2.0);
         painter.rotate(angle);
         painter.scale(sizeX, sizeY);
         const QSizeF fitted = QSizeF(source.size()).scaled(field, field, Qt::KeepAspectRatio);
-        painter.drawImage(QRectF(QPointF(-fitted.width() / 2.0, -fitted.height() / 2.0), fitted), source);
+
+        // How many output pixels one source pixel covers along the frame's own
+        // axes, after every transform above. Below 1 the frame is being shrunk
+        // (a short setup size, a small live size), which sub-samples the thin
+        // lines unless the image is pre-filtered - they then flicker as the
+        // content moves.
+        const QTransform world = painter.worldTransform();
+        const double ratioX = std::hypot(world.m11(), world.m12()) * fitted.width() / source.width();
+        const double ratioY = std::hypot(world.m21(), world.m22()) * fitted.height() / source.height();
+        if(ratioX > 0.01 && ratioY > 0.01)
+        {
+            painter.drawImage(QRectF(QPointF(-fitted.width() / 2.0, -fitted.height() / 2.0), fitted),
+                              LaserImage::prefiltered(source, ratioX, ratioY));
+        }
     }
 
     const double mix = fraction(t_fixture, Function::Function_ColorMix, t_dmx, 0.0);

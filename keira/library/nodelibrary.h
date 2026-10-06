@@ -58,6 +58,11 @@ public:
 
     Node *createNode(const QByteArray &nodeId);
 
+    // Whether a node of this type may be added to a graph of this type (its
+    // NodeInformation lists no graphs, or lists this one). False for an
+    // unregistered node.
+    bool allowsNodeInGraph(const QByteArray &nodeId, const QByteArray &graphTypeId) const;
+
     // The nodeId of a registered GraphInputNode that exposes a port of the given
     // parameter typeId, or empty if none. Used to auto-create an input node when a
     // wire is dropped on a subgraph.

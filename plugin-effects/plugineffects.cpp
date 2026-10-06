@@ -8,10 +8,12 @@
 #include "generator/sawtootheffect.h"
 #include "generator/stepeffect.h"
 #include "generator/cuemarkereffect.h"
+#include "generator/markerintegereffect.h"
 #include "time/stuttereffect.h"
 #include "time/loopeffect.h"
 #include "modifier/smootheffect.h"
 #include "modifier/easeeffect.h"
+#include "generator/durationcurveeffect.h"
 #include "modifier/comparatoreffect.h"
 #include "modifier/peakholdeffect.h"
 #include "modifier/channelremapeffect.h"
@@ -34,11 +36,13 @@ bool PluginEffects::initialize(const PluginContext &context)
     photonApp->plugins()->registerChannelEffect(LoopEffect::info());
     photonApp->plugins()->registerChannelEffect(SmoothEffect::info());
     photonApp->plugins()->registerChannelEffect(EaseEffect::info());
+    photonApp->plugins()->registerChannelEffect(DurationCurveEffect::info());
     photonApp->plugins()->registerChannelEffect(ComparatorEffect::info());
     photonApp->plugins()->registerChannelEffect(PeakHoldEffect::info());
     photonApp->plugins()->registerChannelEffect(ChannelRemapEffect::info());
     photonApp->plugins()->registerChannelEffect(NoiseEffect::info());
     photonApp->plugins()->registerChannelEffect(CueMarkerEffect::info());
+    photonApp->plugins()->registerChannelEffect(MarkerIntegerEffect::info());
 
     return true;
 }

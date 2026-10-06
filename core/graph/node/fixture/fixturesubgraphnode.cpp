@@ -23,7 +23,8 @@ keira::NodeInformation FixtureSubGraphNode::info()
     toReturn.name = "Fixture Graph";
     toReturn.nodeId = "photon.node.fixture-graph";
     toReturn.categories = {"Fixture"};
-    toReturn.graphs = QByteArrayList{"bus","surface"};
+    // "routine" covers routines and clip graphs (FixtureClip's content graph).
+    toReturn.graphs = QByteArrayList{"bus","surface","routine"};
 
     return toReturn;
 }
@@ -232,7 +233,19 @@ void FixtureSubGraphNode::evaluate(keira::EvaluationContext *t_context) const
         fixtureCtx.fixture      = fix;
         fixtureCtx.fixtureIndex = i;
         fixtureCtx.timeOffset   = fixtureData.offset;
-        fixtureCtx.relativeTime = context->globalTime + fixtureData.offset;
+        // A fixture's offset delays it, the same as Fixture State's and the
+        // Delay node's: positive offsets run behind. Global time stays song
+        // time (unshifted); relative time - the clip's own time inside a
+        // clip, equal to global time in a bus or surface graph - carries the
+        // delay, keeping step with the rest of the enclosing graph.
+        fixtureCtx.relativeTime = context->relativeTime - fixtureData.offset;
+        // Inside a clip, each fixture also gets the clip's strength envelope
+        // (strength, ease in/out) at its own delayed time.
+        if(context->clipStrengthAt)
+        {
+            fixtureCtx.clipTime = context->clipTime - fixtureData.offset;
+            fixtureCtx.strength = context->clipStrengthAt(fixtureCtx.clipTime);
+        }
 
         m_subgraphPool[i]->evaluateAll(&fixtureCtx);
     });

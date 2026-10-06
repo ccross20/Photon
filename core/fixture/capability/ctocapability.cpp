@@ -21,9 +21,9 @@ CTOCapability::~CTOCapability()
     delete m_impl;
 }
 
-void CTOCapability::setPercent(double value, DMXMatrix &t_matrix, double t_blend, DMXTimeMachine *t_timeMachine)
+void CTOCapability::setPercent(double value, DMXMatrix &t_matrix, double t_blend)
 {
-    t_matrix.setValuePercent(channel(), value, t_blend, t_timeMachine);
+    t_matrix.setValuePercent(channel(), value, t_blend);
 }
 
 double CTOCapability::getPercent(const DMXMatrix &t_matrix) const

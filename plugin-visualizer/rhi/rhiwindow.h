@@ -40,8 +40,7 @@ public:
     void setGizmoSpace(RhiGizmo::Space space);
     void setDmxState(const DMXMatrix &dmx, const DMXMatrix &laserPreview);
     void setBeamMode(RhiRenderer::BeamMode mode);
-    void setGoboIndex(int index);
-    int goboCount() const;
+    void setGridVisible(bool visible);
 
 signals:
     void selectionChanged(const QVector<photon::SceneObject *> &objs);
@@ -67,6 +66,7 @@ private:
     QRhiRenderBuffer         *m_depthStencil = nullptr;
     QRhiRenderPassDescriptor *m_renderPass = nullptr;
     RhiRenderer              *m_renderer = nullptr;
+    bool                      m_gridVisible = true;   // survives renderer re-creation
 
     RhiCamera    m_camera;
     SceneObject *m_sceneRoot = nullptr;
@@ -81,6 +81,9 @@ private:
     bool    m_panning = false;
     bool    m_dragged = false;
     bool    m_gizmoActive = false;
+    // Cmd held when a translate handle was grabbed: the targets are copied on
+    // the first real movement and the copies are dragged instead.
+    bool    m_duplicateOnDrag = false;
 };
 
 } // namespace photon

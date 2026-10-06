@@ -14,7 +14,7 @@ public:
     ColorCapability(const QVector<ColorIntensityCapability*> &);
     ~ColorCapability();
 
-    void setColor(const QColor &, DMXMatrix &t_matrix, double t_blend = 1.0, DMXTimeMachine *timeMachine = nullptr) const;
+    void setColor(const QColor &, DMXMatrix &t_matrix, double t_blend = 1.0) const;
     QColor getColor(const DMXMatrix &t_matrix) const;
 
     bool hasWhite() const;
@@ -29,7 +29,7 @@ public:
     // Raw passthrough: stamps each percent directly onto its matching
     // ColorIntensityCapability channel, with no color math. Used both by the
     // live calibration preview and by setColor() once calibrated.
-    void setChannelPercents(const QMap<CapabilityType, double> &, DMXMatrix &t_matrix, double t_blend = 1.0, DMXTimeMachine *t_timeMachine = nullptr) const;
+    void setChannelPercents(const QMap<CapabilityType, double> &, DMXMatrix &t_matrix, double t_blend = 1.0) const;
 
     void setCalibration(const FixtureColorCalibration &);
     bool hasCalibration() const;

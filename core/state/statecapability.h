@@ -34,6 +34,7 @@ public:
     QString getChannelString(const StateEvaluationContext &, uint index) const;
     bool getChannelBool(const StateEvaluationContext &, uint index) const;
     QColor getChannelColor(const StateEvaluationContext &, uint index) const;
+    QPointF getChannelPoint(const StateEvaluationContext &, uint index) const;
     void setChannelValue(uint index, const QVariant &);
     QVariant getChannelValue(uint index) const;
     void resetChannelToDefault(uint index);

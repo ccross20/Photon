@@ -185,13 +185,13 @@ QWidget *NoiseEffect::createPropertyEditor()
 {
     auto *form = new PropertyForm;
     form->addRow("Frequency", PropertyWidgets::createNumber(m_frequency,
-        {{PropertyWidgets::MetaMinimum, .001}, {PropertyWidgets::MetaMaximum, 9999.0}},
+        {{PropertyWidgets::MetaMinimum, .001}, {PropertyWidgets::MetaMaximum, 9999.0}, {PropertyWidgets::MetaSoftMinimum, 0.05}, {PropertyWidgets::MetaSoftMaximum, 10.0}},
         [this](double v){ setFrequency(v); }));
     form->addRow("Amplitude", PropertyWidgets::createNumber(m_amplitude,
-        {{PropertyWidgets::MetaMinimum, -255.0}, {PropertyWidgets::MetaMaximum, 255.0}},
+        {{PropertyWidgets::MetaMinimum, -255.0}, {PropertyWidgets::MetaMaximum, 255.0}, {PropertyWidgets::MetaSoftMinimum, -1.0}, {PropertyWidgets::MetaSoftMaximum, 1.0}},
         [this](double v){ setAmplitude(v); }));
     form->addRow("Seed", PropertyWidgets::createInteger(m_seed,
-        {{PropertyWidgets::MetaMinimum, 0.0}, {PropertyWidgets::MetaMaximum, 9999.0}},
+        {{PropertyWidgets::MetaMinimum, 0.0}, {PropertyWidgets::MetaMaximum, 9999.0}, {PropertyWidgets::MetaSoftMinimum, 0.0}, {PropertyWidgets::MetaSoftMaximum, 100.0}},
         [this](int v){ setSeed(v); }));
     form->addRow("Type", PropertyWidgets::createOptions(
         {"Value","Value Fractal","Perlin","Perlin Fractal","Simplex","Simplex Fractal",

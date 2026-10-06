@@ -43,6 +43,8 @@ public:
 signals:
     void selectEffect(photon::ChannelEffect *);
     void selectClipGraph(photon::Clip*);
+    // The clip's own top-level row was selected: show the clip's properties.
+    void selectClipProperties(photon::Clip*);
     void selectPixelLayout(photon::PixelLayout *);
     void clearSelection();
 
@@ -57,6 +59,11 @@ private:
     Clip *m_clip = nullptr;
     // Whether an effect or clip graph is selected (and so open in the editor).
     bool m_hasEditorSelection = false;
+    // Set while a clip is swapped in or its view restored.
+    bool m_switching = false;
+    // Per clip (by uniqueId): the id of the row last selected for it (the
+    // clip itself, its graph, or an effect), so selecting the clip again
+    // reopens the same view.
     QHash<QByteArray,QByteArray> m_states;
 
 };

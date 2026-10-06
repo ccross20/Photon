@@ -1,3 +1,4 @@
+#include <QCursor>
 #include <QMouseEvent>
 #include <QScrollBar>
 #include <QJsonObject>
@@ -568,6 +569,34 @@ void Viewer::mouseReleaseEvent(QMouseEvent *event)
 void Viewer::keyPressEvent(QKeyEvent *event)
 {
     m_impl->key = event->key();
+
+    // Node clipboard - unless an item in the scene has keyboard focus (a text
+    // field on a node), whose own copy/paste should win.
+    auto *graphScene = static_cast<Scene*>(scene());
+    if(graphScene && !graphScene->focusItem())
+    {
+        if(event->matches(QKeySequence::Copy))
+        {
+            graphScene->copySelectedNodes();
+            return;
+        }
+        if(event->matches(QKeySequence::Cut))
+        {
+            m_impl->clonePendingItem = nullptr;
+            m_impl->cloneDragItem = nullptr;
+            graphScene->cutSelectedNodes();
+            return;
+        }
+        if(event->matches(QKeySequence::Paste))
+        {
+            // At the cursor when it's over the graph, else the view's centre.
+            const QPoint cursor = mapFromGlobal(QCursor::pos());
+            const QPoint at = viewport()->rect().contains(cursor) ? cursor : viewport()->rect().center();
+            graphScene->pasteNodes(mapToScene(at));
+            return;
+        }
+    }
+
     QGraphicsView::keyPressEvent(event);
 
     if(event->key() == Qt::Key_Delete || event->key() == Qt::Key_Backspace)

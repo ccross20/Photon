@@ -180,13 +180,13 @@ ChannelEffectEditor *PeakHoldEffect::createEditor()
 QWidget *PeakHoldEffect::createPropertyEditor()
 {
     auto *form = new PropertyForm;
-    form->addRow("Threshold", PropertyWidgets::createNumber(m_threshold, {},
+    form->addRow("Threshold", PropertyWidgets::createNumber(m_threshold, {{PropertyWidgets::MetaSoftMinimum, 0.0}, {PropertyWidgets::MetaSoftMaximum, 1.0}},
         [this](double v){ setThreshold(v); }));
     form->addRow("Hold Time", PropertyWidgets::createNumber(m_holdTime,
-        {{PropertyWidgets::MetaMinimum, 0.0}, {PropertyWidgets::MetaMaximum, 9999.0}},
+        {{PropertyWidgets::MetaMinimum, 0.0}, {PropertyWidgets::MetaMaximum, 9999.0}, {PropertyWidgets::MetaSoftMinimum, 0.0}, {PropertyWidgets::MetaSoftMaximum, 5.0}},
         [this](double v){ setHoldTime(v); }));
     form->addRow("Decay Time", PropertyWidgets::createNumber(m_decayTime,
-        {{PropertyWidgets::MetaMinimum, 0.0}, {PropertyWidgets::MetaMaximum, 9999.0}},
+        {{PropertyWidgets::MetaMinimum, 0.0}, {PropertyWidgets::MetaMaximum, 9999.0}, {PropertyWidgets::MetaSoftMinimum, 0.0}, {PropertyWidgets::MetaSoftMaximum, 5.0}},
         [this](double v){ setDecayTime(v); }));
     // Same full QEasingCurve::Type list (and list-index-equals-enum-value
     // assumption) as PeakHoldEffectEditor's own curve combo.

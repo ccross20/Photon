@@ -104,7 +104,7 @@ QWidget *LoopEffect::createPropertyEditor()
     auto *form = new PropertyForm;
     // A zero loop duration divides by zero, same floor as the editor's field.
     form->addRow("Duration", PropertyWidgets::createNumber(m_duration,
-        {{PropertyWidgets::MetaMinimum, .001}}, [this](double v){ setDuration(v); }));
+        {{PropertyWidgets::MetaMinimum, .001}, {PropertyWidgets::MetaSoftMinimum, 0.05}, {PropertyWidgets::MetaSoftMaximum, 8.0}}, [this](double v){ setDuration(v); }));
     form->addRow("Mirror", PropertyWidgets::createBoolean(m_mirror, {}, [this](bool v){ setMirror(v); }));
     return form;
 }

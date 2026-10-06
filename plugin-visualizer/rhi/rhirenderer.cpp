@@ -16,6 +16,9 @@
 #include "scene/truss.h"
 #include "scene/scenesurface.h"
 #include "scene/scenezone.h"
+#include "scene/scenebox.h"
+#include "scene/sceneambientlight.h"
+#include "scene/scenedirectionallight.h"
 #include "scene/scenehelperobject.h"
 #include "scene/scenearrow.h"
 #include "scene/scenedirection.h"
@@ -23,7 +26,7 @@
 #include "scene/sceneboundaryrectangle.h"
 #include "scene/sceneboundaryoval.h"
 #include "scene/scenepointmarker.h"
-#include "scene/scenelinearfalloff.h"
+#include "scene/scenefalloff.h"
 #include "fixture/fixture.h"
 #include "fixture/capability/colorcapability.h"
 #include "fixture/capability/dimmercapability.h"
@@ -50,10 +53,14 @@ QShader loadShader(const QString &path)
     return QShader();
 }
 
-constexpr quint32 kFramePayload  = 24 * sizeof(float); // mat4 + vec4 lightDir + vec4 camPos
+constexpr int     kMaxDirectionalLights = SceneDirectionalLight::MaximumLights;
+// mat4 + vec4 lightDir + vec4 camPos + vec4 ambient + vec4 dirCount
+// + (direction, color) per directional light
+constexpr quint32 kFramePayload  = (32 + 8 * kMaxDirectionalLights) * sizeof(float);
 constexpr quint32 kObjectPayload = 20 * sizeof(float); // mat4 + vec4
 constexpr quint32 kBeamPayload   = 44 * sizeof(float); // mat4 + color + apex + axisCos + params + color2 + fadePlane + laser
 constexpr quint32 kGizmoBytes    = 4096 * 6 * sizeof(float); // dynamic line verts
+constexpr float   kDirectionalLightArrowLength = 1.0f;          // metres
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helper-object wireframe glyphs (Arrow, Direction, Axis, Boundary Rectangle/
@@ -112,7 +119,7 @@ void appendDirectedArrowLines(const QVector3D &origin, const QVector3D &dir, flo
 }
 
 // An arrow along local +Y (origin to (0,len,0)) with a perpendicular cross-bar
-// at each end - the glyph a SceneLinearFalloff is drawn as. The start bar marks
+// at each end - the glyph a linear SceneFalloff is drawn as. The start bar marks
 // "full", the tip (arrowhead) marks "zero".
 void appendLinearFalloffLines(const QMatrix4x4 &m, float len, const QColor &c, QByteArray &out)
 {
@@ -125,6 +132,42 @@ void appendLinearFalloffLines(const QMatrix4x4 &m, float len, const QColor &c, Q
     appendLineVert(out, m.map(QVector3D( barHalf, 0, 0)), c);
     appendLineVert(out, m.map(QVector3D(-barHalf, len, 0)), c);
     appendLineVert(out, m.map(QVector3D( barHalf, len, 0)), c);
+}
+
+// Forward declaration: defined just below.
+void appendEllipseLines(const QMatrix4x4 &m, float radiusX, float radiusY, int segments,
+                        const QColor &c, QByteArray &out);
+
+// Outline glyph for a SceneFalloff (its gradient fill is drawn separately, see
+// RhiRenderer::appendFalloffGradients): linear keeps the arrow-with-bars, radial
+// is the 1.0 circle, conical is that circle plus the 0 ray (an arrow along +Y)
+// and the ray where the sweep reaches 1.
+void appendFalloffLines(const QMatrix4x4 &m, const SceneFalloff *falloff, const QColor &c, QByteArray &out)
+{
+    const float len = falloff->length();
+    switch (falloff->shape()) {
+    case SceneFalloff::ShapeRadial:
+        appendEllipseLines(m, len, len, 48, c, out);
+        appendLineVert(out, m.map(QVector3D(-len * 0.08f, 0, 0)), c);
+        appendLineVert(out, m.map(QVector3D( len * 0.08f, 0, 0)), c);
+        appendLineVert(out, m.map(QVector3D(0, -len * 0.08f, 0)), c);
+        appendLineVert(out, m.map(QVector3D(0,  len * 0.08f, 0)), c);
+        break;
+    case SceneFalloff::ShapeConical: {
+        appendEllipseLines(m, len, len, 48, c, out);
+        appendArrowLines(m, len, c, out);
+        if (falloff->sweep() < 359.5f) {
+            const float a = qDegreesToRadians(falloff->sweep());   // clockwise from +Y
+            appendLineVert(out, m.map(QVector3D(0, 0, 0)), c);
+            appendLineVert(out, m.map(QVector3D(len * std::sin(a), len * std::cos(a), 0)), c);
+        }
+        break;
+    }
+    case SceneFalloff::ShapeLinear:
+    default:
+        appendLinearFalloffLines(m, len, c, out);
+        break;
+    }
 }
 
 // 4-segment rectangle outline in the local XY plane, centered at the origin.
@@ -220,6 +263,8 @@ constexpr int    kGoboSize     = 1024;    // gobo texture layer resolution
 // Laser projections (see LaserPreview).
 constexpr int    kLaserLayers  = 8;       // lasers previewed at once
 constexpr float  kLaserLength  = 14.0f;   // visible throw of a laser shaft (world units)
+constexpr float  kLaserBeamGainScale = 3.0f;  // laser shaft strength, as a multiple of kBeamGain
+constexpr float  kLaserFloorGain = 2.5f;  // laser pattern strength on floors and walls
 
 // Multi-cell (LED bar / pixel strip) rendering.
 constexpr float  kBarRowInset      = 0.9f;   // fraction of the model width the LED row spans
@@ -320,6 +365,49 @@ void beamConeFromModel(const QMatrix4x4 &model, QVector3D &apex, QVector3D &axis
     cosH = 1.0f / std::sqrt(1.0f + tanH * tanH);
 }
 
+// Adds color * intensity of every visible ambient light under obj into out
+// (a hidden object hides its subtree, as for drawing). True if any were found
+// - even at zero intensity, so a light turned all the way down gives a dark
+// room rather than the fallback.
+bool sumAmbientLight(SceneObject *obj, QVector3D &out)
+{
+    if (!obj)
+        return false;
+    bool found = false;
+    for (SceneObject *child : obj->sceneChildren()) {
+        if (!child->isVisible())
+            continue;
+        if (child->typeId() == "ambientlight") {
+            auto *light = static_cast<SceneAmbientLight *>(child);
+            const QColor c = light->color();
+            out += QVector3D(float(c.redF()), float(c.greenF()), float(c.blueF())) * float(light->intensity());
+            found = true;
+        }
+        found |= sumAmbientLight(child, out);
+    }
+    return found;
+}
+
+// Every visible directional light under obj as (world direction it shines
+// along, color * intensity), in scene order.
+void collectDirectionalLights(SceneObject *obj, QVector<QPair<QVector3D, QVector3D>> &out)
+{
+    if (!obj)
+        return;
+    for (SceneObject *child : obj->sceneChildren()) {
+        if (!child->isVisible())
+            continue;
+        if (child->typeId() == "directionallight") {
+            auto *light = static_cast<SceneDirectionalLight *>(child);
+            const QVector3D dir = child->globalMatrix().mapVector(QVector3D(0, -1, 0)).normalized();
+            const QColor c = light->color();
+            out.append({ dir, QVector3D(float(c.redF()), float(c.greenF()), float(c.blueF()))
+                                  * float(light->intensity()) });
+        }
+        collectDirectionalLights(child, out);
+    }
+}
+
 } // namespace
 
 RhiRenderer::RhiRenderer() : m_laserPreview(std::make_unique<LaserPreview>()) {}
@@ -331,6 +419,7 @@ RhiRenderer::~RhiRenderer()
     delete m_grid;
     delete m_beamCone;
     delete m_plane;
+    delete m_unitBox;
     delete m_disc;
     qDeleteAll(m_models);
     m_models.clear();
@@ -353,6 +442,9 @@ void RhiRenderer::releaseResources()
     delete m_beamBuffer;      m_beamBuffer = nullptr;
     delete m_lightsBuffer;    m_lightsBuffer = nullptr;
     delete m_gizmoBuffer;     m_gizmoBuffer = nullptr;
+    delete m_falloffPipeline; m_falloffPipeline = nullptr;
+    delete m_falloffBuffer;   m_falloffBuffer = nullptr;
+    m_falloffBufferBytes = 0;
     delete m_goboTex;         m_goboTex = nullptr;
     delete m_goboSampler;     m_goboSampler = nullptr;
     delete m_laserTex;        m_laserTex = nullptr;
@@ -365,6 +457,7 @@ void RhiRenderer::releaseResources()
     if (m_grid)     m_grid->release();
     if (m_beamCone) m_beamCone->release();
     if (m_plane)    m_plane->release();
+    if (m_unitBox)  m_unitBox->release();
     if (m_disc)     m_disc->release();
     for (RhiModel *model : m_models)
         if (model) model->releaseGpu();
@@ -460,6 +553,8 @@ void RhiRenderer::initialize(QRhi *rhi, QRhiRenderPassDescriptor *rpDesc, int sa
         m_beamCone = RhiMesh::createCone(28);
     if (!m_plane)
         m_plane = RhiMesh::createPlane();
+    if (!m_unitBox)
+        m_unitBox = RhiMesh::createBox(0.5f, 0.5f, 0.5f);
     if (!m_disc)
         m_disc = RhiMesh::createDisc(20);
 
@@ -645,6 +740,25 @@ void RhiRenderer::initialize(QRhi *rhi, QRhiRenderPassDescriptor *rpDesc, int sa
     m_gizmoPipeline->setCullMode(QRhiGraphicsPipeline::None);
     m_gizmoPipeline->setTopology(QRhiGraphicsPipeline::Lines);
     m_gizmoPipeline->create();
+
+    // Falloff gradient fills: the line shaders' pos+colour vertices drawn as
+    // triangles, blended like beams so they glow over the scene without hiding
+    // it, depth tested against geometry but never occluding it.
+    m_falloffPipeline = m_rhi->newGraphicsPipeline();
+    m_falloffPipeline->setShaderStages({
+        { QRhiShaderStage::Vertex, lineVert },
+        { QRhiShaderStage::Fragment, lineFrag }
+    });
+    m_falloffPipeline->setVertexInputLayout(inputLayout);
+    m_falloffPipeline->setShaderResourceBindings(m_lineSrb);
+    m_falloffPipeline->setRenderPassDescriptor(rpDesc);
+    m_falloffPipeline->setSampleCount(sampleCount);
+    m_falloffPipeline->setTargetBlends({ beamBlend });
+    m_falloffPipeline->setDepthTest(true);
+    m_falloffPipeline->setDepthWrite(false);
+    m_falloffPipeline->setCullMode(QRhiGraphicsPipeline::None);
+    m_falloffPipeline->setTopology(QRhiGraphicsPipeline::Triangles);
+    m_falloffPipeline->create();
 }
 
 RhiMesh *RhiRenderer::trussMeshFor(SceneObject *obj)
@@ -948,10 +1062,13 @@ void RhiRenderer::collectDrawables(SceneObject *obj, QVector<Drawable> &out,
             out.append({ trussMeshFor(child), child->globalMatrix(), sel ? highlight : QColor(150, 150, 155) });
         } else if (type == "zone" || type == "arrow" || type == "direction" || type == "axis"
                    || type == "boundaryrectangle" || type == "boundaryoval" || type == "pointmarker"
-                   || type == "linearfalloff") {
+                   || type == "falloff" || type == "box" || type == "surface"
+                   || type == "ambientlight" || type == "directionallight") {
             // Helper/annotation objects draw as wireframe overlays in the gizmo
             // line pass (see appendZoneWireframes / appendHelperWireframes),
-            // not solid geometry.
+            // not solid geometry. Boxes, walls and floors draw in the lit
+            // surface pass (collectSurfaces); ambient lights only feed the
+            // frame's ambient term (sumAmbientLight).
         } else if (type != "group") {
             out.append({ m_box, child->globalMatrix(), sel ? highlight : QColor(150, 130, 95) });
         }
@@ -1820,7 +1937,10 @@ void RhiRenderer::collectLaserBeam(Fixture *fix, QVector<Drawable> &out) const
     Drawable beam;
     beam.mesh = m_beamCone;
     beam.volumetric = true;
+    // QColor's alpha (where the shader's gain travels) is capped at 1, so the
+    // boost rides separately in gainScale.
     beam.color = QColor::fromRgbF(intensity, intensity, intensity, kBeamGain);
+    beam.gainScale = kLaserBeamGainScale;
     beam.color2 = beam.color;
     beam.laserLayer = float(m_laserFrames.size());
 
@@ -1848,7 +1968,19 @@ void RhiRenderer::collectSurfaces(SceneObject *obj, QVector<Drawable> &out) cons
             auto *surf = static_cast<SceneSurface *>(child);
             QMatrix4x4 m = child->globalMatrix();
             m.scale(surf->surfaceWidth(), surf->surfaceHeight(), 1.0f);
-            out.append({ m_plane, m, surf->color() });
+            Drawable d{ m_plane, m, surf->color() };
+            d.cull = int(surf->displayCull());
+            out.append(d);
+        } else if (child->typeId() == "box" && m_unitBox) {
+            // A box is six lit faces, so it shares the surface pass: fixtures
+            // light it like walls. Scaling the unit cube keeps the face
+            // normals axis-aligned, so mat3(model) still orients them.
+            auto *box = static_cast<SceneBox *>(child);
+            QMatrix4x4 m = child->globalMatrix();
+            m.scale(box->size());
+            Drawable d{ m_unitBox, m, isSelected(child) ? QColor(255, 170, 40) : box->color() };
+            d.solid = true;
+            out.append(d);
         }
         collectSurfaces(child, out);
     }
@@ -1904,7 +2036,7 @@ void RhiRenderer::appendHelperWireframes(SceneObject *obj, QByteArray &out) cons
         const QByteArray type = child->typeId();
         if (type == "arrow" || type == "direction" || type == "axis"
             || type == "boundaryrectangle" || type == "boundaryoval" || type == "pointmarker"
-            || type == "linearfalloff") {
+            || type == "falloff") {
             auto *helper = static_cast<SceneHelperObject *>(child);
             const bool sel = isSelected(child);
             if (helper->visibilityMode() != SceneHelperObject::SelectedOnly || sel) {
@@ -1934,12 +2066,89 @@ void RhiRenderer::appendHelperWireframes(SceneObject *obj, QByteArray &out) cons
                 } else if (type == "pointmarker") {
                     auto *marker = static_cast<ScenePointMarker *>(child);
                     appendPointMarkerLines(m, marker->shape(), marker->size(), c, out);
-                } else if (type == "linearfalloff") {
-                    appendLinearFalloffLines(m, static_cast<SceneLinearFalloff *>(child)->length(), c, out);
+                } else if (type == "falloff") {
+                    appendFalloffLines(m, static_cast<SceneFalloff *>(child), c, out);
+                }
+            }
+        } else if (type == "directionallight") {
+            // An arrow along the way the light shines (local -Y): flip the
+            // frame, since appendArrowLines shafts along local +Y.
+            auto *light = static_cast<SceneDirectionalLight *>(child);
+            QMatrix4x4 m = child->globalMatrix();
+            m.rotate(180.0f, 1.0f, 0.0f, 0.0f);
+            const QColor c = isSelected(child) ? QColor(255, 170, 40) : light->color();
+            appendArrowLines(m, kDirectionalLightArrowLength, c, out);
+            // A ring around the arrow's tail, square to the beam.
+            QMatrix4x4 ring = child->globalMatrix();
+            ring.rotate(90.0f, 1.0f, 0.0f, 0.0f);
+            appendEllipseLines(ring, 0.15f, 0.15f, 16, c, out);
+        }
+        appendHelperWireframes(child, out);
+    }
+}
+
+void RhiRenderer::appendFalloffGradients(SceneObject *obj, QByteArray &out) const
+{
+    if (!obj)
+        return;
+    for (SceneObject *child : obj->sceneChildren()) {
+        if (!child->isVisible())
+            continue;
+        if (child->typeId() == "falloff") {
+            auto *falloff = static_cast<SceneFalloff *>(child);
+            const bool sel = isSelected(child);
+            if (falloff->visibilityMode() != SceneHelperObject::SelectedOnly || sel) {
+                const QMatrix4x4 m = child->globalMatrix();
+                const QColor base = sel ? QColor(255, 170, 40) : falloff->color();
+                const float len = falloff->length();
+                // Show a stretch past the end, longer when the pattern repeats.
+                const float reach = falloff->wrap() == SceneFalloff::WrapHold ? 1.25f : 3.0f;
+
+                auto vertex = [&](float x, float y) {
+                    const double amount = falloff->amountAtLocal(QVector3D(x, y, 0));
+                    // Premultiplied for the soft-additive blend: dim at 0, bright at 1.
+                    const float k = float(0.06 + 0.5 * amount);
+                    const QColor c = QColor::fromRgbF(float(base.redF()) * k, float(base.greenF()) * k,
+                                                      float(base.blueF()) * k);
+                    appendLineVert(out, m.map(QVector3D(x, y, 0)), c);
+                };
+                auto quad = [&](float x0, float y0, float x1, float y1, float x2, float y2, float x3, float y3) {
+                    vertex(x0, y0); vertex(x1, y1); vertex(x2, y2);
+                    vertex(x0, y0); vertex(x2, y2); vertex(x3, y3);
+                };
+
+                if (falloff->shape() == SceneFalloff::ShapeLinear) {
+                    // The amount only varies along Y: one strip of rows is enough.
+                    const float halfW = len * 0.5f;
+                    const float y0 = falloff->mirrorAcrossX() ? -len * reach : -len * 0.25f;
+                    const float y1 = len * reach;
+                    const int rows = 160;
+                    for (int i = 0; i < rows; ++i) {
+                        const float a = y0 + (y1 - y0) * i / rows;
+                        const float b = y0 + (y1 - y0) * (i + 1) / rows;
+                        quad(-halfW, a, halfW, a, halfW, b, -halfW, b);
+                    }
+                } else {
+                    // A disc, finer around for conical (the sweep varies with
+                    // angle) and finer outward for radial.
+                    const bool conical = falloff->shape() == SceneFalloff::ShapeConical;
+                    const float radius = conical ? len : len * reach;
+                    const int rings = conical ? 6 : 72;
+                    const int segments = conical ? 240 : 64;
+                    for (int r = 0; r < rings; ++r) {
+                        const float r0 = radius * r / rings, r1 = radius * (r + 1) / rings;
+                        for (int s = 0; s < segments; ++s) {
+                            // Angles clockwise from +Y, matching the conical sweep.
+                            const float a0 = 2.0f * float(M_PI) * s / segments;
+                            const float a1 = 2.0f * float(M_PI) * (s + 1) / segments;
+                            quad(r0 * std::sin(a0), r0 * std::cos(a0), r1 * std::sin(a0), r1 * std::cos(a0),
+                                 r1 * std::sin(a1), r1 * std::cos(a1), r0 * std::sin(a1), r0 * std::cos(a1));
+                        }
+                    }
                 }
             }
         }
-        appendHelperWireframes(child, out);
+        appendFalloffGradients(child, out);
     }
 }
 
@@ -2056,10 +2265,22 @@ bool RhiRenderer::localBounds(SceneObject *obj, QVector3D &outMin, QVector3D &ou
         outMax = QVector3D( hw,  hh,  0.05f);
         return true;
     }
+    if (type == "box") {
+        const QVector3D h = static_cast<SceneBox *>(obj)->size() * 0.5f;
+        outMin = -h;
+        outMax =  h;
+        return true;
+    }
     if (type == "zone") {
         const QVector3D h = static_cast<SceneZone *>(obj)->size() * 0.5f;
         outMin = -h;
         outMax =  h;
+        return true;
+    }
+    if (type == "directionallight") {
+        // The arrow, pointing down local -Y.
+        outMin = QVector3D(-0.15f, -kDirectionalLightArrowLength, -0.15f);
+        outMax = QVector3D( 0.15f, 0.15f, 0.15f);
         return true;
     }
     if (type == "arrow" || type == "direction") {
@@ -2069,10 +2290,16 @@ bool RhiRenderer::localBounds(SceneObject *obj, QVector3D &outMin, QVector3D &ou
         outMax = QVector3D( len * 0.15f, len,   len * 0.15f);
         return true;
     }
-    if (type == "linearfalloff") {
-        const float len = static_cast<SceneLinearFalloff *>(obj)->length();
-        outMin = QVector3D(-len * 0.18f, 0.0f, -len * 0.15f);
-        outMax = QVector3D( len * 0.18f, len,   len * 0.15f);
+    if (type == "falloff") {
+        auto *falloff = static_cast<SceneFalloff *>(obj);
+        const float len = falloff->length();
+        if (falloff->shape() == SceneFalloff::ShapeLinear) {
+            outMin = QVector3D(-len * 0.18f, 0.0f, -len * 0.15f);
+            outMax = QVector3D( len * 0.18f, len,   len * 0.15f);
+        } else {
+            outMin = QVector3D(-len, -len, -0.05f);
+            outMax = QVector3D( len,  len,  0.05f);
+        }
         return true;
     }
     if (type == "axis") {
@@ -2282,14 +2509,14 @@ void RhiRenderer::render(QRhiCommandBuffer *cb, QRhiRenderTarget *rt, const RhiC
         d.mesh->upload(m_rhi, u);
     if (!beams.isEmpty())
         m_beamCone->upload(m_rhi, u);
-    if (!surfaces.isEmpty())
-        m_plane->upload(m_rhi, u);
+    for (const Drawable &d : surfaces)
+        d.mesh->upload(m_rhi, u);
 
     // Frame constants: clip-space-corrected view-projection + light direction.
     const QMatrix4x4 viewProj =
         m_rhi->clipSpaceCorrMatrix() * camera.projectionMatrix() * camera.viewMatrix();
 
-    float frameData[24];
+    float frameData[32 + 8 * kMaxDirectionalLights] = {};
     std::memcpy(frameData, viewProj.constData(), 16 * sizeof(float));
     const QVector3D lightDir = QVector3D(-0.5f, -1.0f, -0.3f).normalized();
     frameData[16] = lightDir.x();
@@ -2301,6 +2528,29 @@ void RhiRenderer::render(QRhiCommandBuffer *cb, QRhiRenderTarget *rt, const RhiC
     frameData[21] = camPos.y();
     frameData[22] = camPos.z();
     frameData[23] = float(m_clock.isValid() ? m_clock.elapsed() / 1000.0 : 0.0); // time (camPos.w lane)
+    // Ambient: the scene's ambient lights summed; w = 0 when there are none,
+    // so the shaders keep their built-in dim fallback.
+    QVector3D ambient;
+    const bool hasAmbient = sumAmbientLight(m_sceneRoot, ambient);
+    frameData[24] = ambient.x();
+    frameData[25] = ambient.y();
+    frameData[26] = ambient.z();
+    frameData[27] = hasAmbient ? 1.0f : 0.0f;
+    // Directional lights: count, then (world direction, color * intensity)
+    // pairs. None leaves the shaders on their built-in key light.
+    QVector<QPair<QVector3D, QVector3D>> directional;
+    collectDirectionalLights(m_sceneRoot, directional);
+    const int dirCount = qMin(int(directional.size()), kMaxDirectionalLights);
+    frameData[28] = float(dirCount);
+    for (int i = 0; i < dirCount; ++i) {
+        float *slot = frameData + 32 + i * 8;
+        slot[0] = directional[i].first.x();
+        slot[1] = directional[i].first.y();
+        slot[2] = directional[i].first.z();
+        slot[4] = directional[i].second.x();
+        slot[5] = directional[i].second.y();
+        slot[6] = directional[i].second.z();
+    }
     u->updateDynamicBuffer(m_frameBuffer, 0, kFramePayload, frameData);
 
     // Per-object model + color.
@@ -2323,7 +2573,8 @@ void RhiRenderer::render(QRhiCommandBuffer *cb, QRhiRenderTarget *rt, const RhiC
         slot[16] = float(d.color.redF());
         slot[17] = float(d.color.greenF());
         slot[18] = float(d.color.blueF());
-        slot[19] = 1.0f;
+        // a: 1 = solid; otherwise 0 / -1 / -2 = flat with no / back / front cull.
+        slot[19] = d.solid ? 1.0f : -float(d.cull);
         u->updateDynamicBuffer(m_objectBuffer, (surfaceBase + i) * m_objectSlotSize,
                                kObjectPayload, slot);
     }
@@ -2351,7 +2602,8 @@ void RhiRenderer::render(QRhiCommandBuffer *cb, QRhiRenderTarget *rt, const RhiC
             float *L = lightData.data() + (1 + i * 6) * 4;
             L[0]  = apex.x(); L[1] = apex.y(); L[2] = apex.z(); L[3] = range;
             L[4]  = axis.x(); L[5] = axis.y(); L[6] = axis.z(); L[7] = cosOuter;
-            L[8]  = float(c.redF()); L[9] = float(c.greenF()); L[10] = float(c.blueF());
+            const float lightGain = beams[i].laserLayer > 0.0f ? kLaserFloorGain : 1.0f;
+            L[8]  = float(c.redF()) * lightGain; L[9] = float(c.greenF()) * lightGain; L[10] = float(c.blueF()) * lightGain;
             L[11] = beams[i].gobo;        // gobo layer A
             L[12] = beams[i].goboRot;     // gobo rotation (radians)
             L[13] = beams[i].gobo2;       // gobo layer B (wheel wipe)
@@ -2379,7 +2631,7 @@ void RhiRenderer::render(QRhiCommandBuffer *cb, QRhiRenderTarget *rt, const RhiC
         slot[16] = float(d.color.redF());
         slot[17] = float(d.color.greenF());
         slot[18] = float(d.color.blueF());
-        slot[19] = float(d.color.alphaF());
+        slot[19] = float(d.color.alphaF()) * d.gainScale;
         slot[20] = apex.x(); slot[21] = apex.y(); slot[22] = apex.z();
         slot[23] = d.gobo2;     // apex.w  = second gobo layer (wheel wipe)
         slot[24] = axis.x(); slot[25] = axis.y(); slot[26] = axis.z();
@@ -2404,7 +2656,7 @@ void RhiRenderer::render(QRhiCommandBuffer *cb, QRhiRenderTarget *rt, const RhiC
         slot[16] = float(d.color.redF());
         slot[17] = float(d.color.greenF());
         slot[18] = float(d.color.blueF());
-        slot[19] = float(d.color.alphaF());
+        slot[19] = float(d.color.alphaF()) * d.gainScale;
         u->updateDynamicBuffer(m_objectBuffer, (beamBase + bi) * m_objectSlotSize,
                                kObjectPayload, slot);
     }
@@ -2421,6 +2673,20 @@ void RhiRenderer::render(QRhiCommandBuffer *cb, QRhiRenderTarget *rt, const RhiC
     if (gizmoVertexCount > 0)
         u->updateDynamicBuffer(m_gizmoBuffer, 0, gizmoVerts.size(), gizmoVerts.constData());
 
+    QByteArray falloffVerts;
+    appendFalloffGradients(m_sceneRoot, falloffVerts);
+    const int falloffVertexCount = falloffVerts.size() / int(6 * sizeof(float));
+    if (falloffVertexCount > 0) {
+        if (!m_falloffBuffer || m_falloffBufferBytes < falloffVerts.size()) {
+            delete m_falloffBuffer;
+            m_falloffBufferBytes = falloffVerts.size() * 2;
+            m_falloffBuffer = m_rhi->newBuffer(QRhiBuffer::Dynamic, QRhiBuffer::VertexBuffer,
+                                               quint32(m_falloffBufferBytes));
+            m_falloffBuffer->create();
+        }
+        u->updateDynamicBuffer(m_falloffBuffer, 0, falloffVerts.size(), falloffVerts.constData());
+    }
+
     const QColor clear(28, 28, 32);
     const QSize pixelSize = rt->pixelSize();
 
@@ -2428,11 +2694,13 @@ void RhiRenderer::render(QRhiCommandBuffer *cb, QRhiRenderTarget *rt, const RhiC
     cb->setViewport(QRhiViewport(0, 0, pixelSize.width(), pixelSize.height()));
 
     // Ground grid.
-    cb->setGraphicsPipeline(m_linePipeline);
-    cb->setShaderResources(m_lineSrb);
-    const QRhiCommandBuffer::VertexInput gridInput(m_grid->vertexBuffer(), 0);
-    cb->setVertexInput(0, 1, &gridInput);
-    cb->draw(m_grid->vertexCount());
+    if (m_gridVisible) {
+        cb->setGraphicsPipeline(m_linePipeline);
+        cb->setShaderResources(m_lineSrb);
+        const QRhiCommandBuffer::VertexInput gridInput(m_grid->vertexBuffer(), 0);
+        cb->setVertexInput(0, 1, &gridInput);
+        cb->draw(m_grid->vertexCount());
+    }
 
     // Scene geometry (fixtures share the box mesh; trusses use their own).
     if (!drawables.isEmpty()) {
@@ -2452,16 +2720,28 @@ void RhiRenderer::render(QRhiCommandBuffer *cb, QRhiRenderTarget *rt, const RhiC
 
     // Surfaces (walls / floor): spotlight-lit planes, opaque (writes depth so beams
     // and other geometry occlude correctly).
-    if (!surfaces.isEmpty() && m_plane->vertexBuffer() && m_plane->isIndexed()) {
+    if (!surfaces.isEmpty()) {
         cb->setGraphicsPipeline(m_surfacePipeline);
-        const QRhiCommandBuffer::VertexInput vin(m_plane->vertexBuffer(), 0);
         for (int i = 0; i < surfaces.size(); ++i) {
+            RhiMesh *mesh = surfaces[i].mesh;
+            if (!mesh->vertexBuffer() || !mesh->isIndexed())
+                continue;
             const QRhiCommandBuffer::DynamicOffset off(1, quint32(surfaceBase + i) * m_objectSlotSize);
             cb->setShaderResources(m_surfaceSrb, 1, &off);
-            cb->setVertexInput(0, 1, &vin, m_plane->indexBuffer(), 0,
+            const QRhiCommandBuffer::VertexInput vin(mesh->vertexBuffer(), 0);
+            cb->setVertexInput(0, 1, &vin, mesh->indexBuffer(), 0,
                                QRhiCommandBuffer::IndexUInt16);
-            cb->drawIndexed(m_plane->indexCount());
+            cb->drawIndexed(mesh->indexCount());
         }
+    }
+
+    // Falloff gradients: over floors and walls, under the beams.
+    if (falloffVertexCount > 0) {
+        cb->setGraphicsPipeline(m_falloffPipeline);
+        cb->setShaderResources(m_lineSrb);
+        const QRhiCommandBuffer::VertexInput falloffInput(m_falloffBuffer, 0);
+        cb->setVertexInput(0, 1, &falloffInput);
+        cb->draw(falloffVertexCount);
     }
 
     // Light beams: additive over the scene (depth-tested, no depth write). Basic

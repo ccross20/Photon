@@ -60,10 +60,8 @@ RhiViewport::RhiViewport(QWidget *parent)
     m_beamBtn = makeToolBtn("Cones", "Toggle basic / volumetric light beams");
     m_beamBtn->setChecked(false);
 
-    // Gobo cycle button (test patterns) — not checkable; click cycles the pattern.
-    m_goboBtn = makeToolBtn("Gobo: Off", "Cycle projected test gobo pattern");
-    m_goboBtn->setCheckable(false);
-    m_goboBtn->setMinimumWidth(90);
+    m_gridBtn = makeToolBtn("Grid", "Show / hide the world grid");
+    m_gridBtn->setChecked(true);
 
     connect(m_modeGroup, &QButtonGroup::idClicked, m_window,
             [this](int id) { m_window->setGizmoMode(static_cast<RhiGizmo::Mode>(id)); });
@@ -79,19 +77,7 @@ RhiViewport::RhiViewport(QWidget *parent)
                                          : RhiRenderer::BeamMode::Basic);
     });
 
-    connect(m_goboBtn, &QToolButton::clicked, this, [this]() {
-        const int count = m_window->goboCount();
-        if (count <= 0) {
-            m_goboIndex = 0;
-            m_goboBtn->setText(QStringLiteral("Gobo: Off"));
-            m_window->setGoboIndex(0);
-            return;
-        }
-        m_goboIndex = (m_goboIndex + 1) % (count + 1);
-        m_goboBtn->setText(m_goboIndex == 0 ? QStringLiteral("Gobo: Off")
-                                            : QStringLiteral("Gobo: %1").arg(m_goboIndex));
-        m_window->setGoboIndex(m_goboIndex);
-    });
+    connect(m_gridBtn, &QToolButton::toggled, m_window, &RhiWindow::setGridVisible);
 
     QHBoxLayout *tbLayout = new QHBoxLayout(toolbar);
     tbLayout->setContentsMargins(4, 2, 4, 2);
@@ -105,7 +91,7 @@ RhiViewport::RhiViewport(QWidget *parent)
     tbLayout->addSpacing(12);
     tbLayout->addWidget(m_beamBtn);
     tbLayout->addSpacing(12);
-    tbLayout->addWidget(m_goboBtn);
+    tbLayout->addWidget(m_gridBtn);
     tbLayout->addStretch();
 
     // ── Main layout ──────────────────────────────────────────────────────────

@@ -1,5 +1,6 @@
 #include <cmath>
 #include <QColor>
+#include <QPointF>
 #include "laserstates.h"
 #include "fixture/capability/lasercapability.h"
 
@@ -51,16 +52,17 @@ void LaserSizeState::evaluate(const StateEvaluationContext &t_context) const
 LaserPositionState::LaserPositionState() : StateCapability(Capability_LaserPosition)
 {
     setName("Position");
-    addAvailableChannel(ChannelInfo(ChannelInfo::ChannelTypeNumber, "X", "-1 to 1, 0 = center", 0.0, -1.0, 1.0));
-    addAvailableChannel(ChannelInfo(ChannelInfo::ChannelTypeNumber, "Y", "-1 to 1, 0 = center", 0.0, -1.0, 1.0));
+    addAvailableChannel(ChannelInfo(ChannelInfo::ChannelTypePoint, "Position", "X and Y, -1 to 1, (0, 0) = center",
+                                    QPointF(0.0, 0.0), -1.0, 1.0));
 }
 
 void LaserPositionState::evaluate(const StateEvaluationContext &t_context) const
 {
+    const QPointF position = getChannelPoint(t_context, 0);
     if(auto *x = laserChannel(t_context, Function::Function_PositionX))
-        x->setCentered(getChannelFloat(t_context, 0), t_context.dmxMatrix, t_context.strength);
+        x->setCentered(position.x(), t_context.dmxMatrix, t_context.strength);
     if(auto *y = laserChannel(t_context, Function::Function_PositionY))
-        y->setCentered(getChannelFloat(t_context, 1), t_context.dmxMatrix, t_context.strength);
+        y->setCentered(position.y(), t_context.dmxMatrix, t_context.strength);
 }
 
 LaserRotationState::LaserRotationState() : StateCapability(Capability_LaserRotation)

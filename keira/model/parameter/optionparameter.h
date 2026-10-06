@@ -17,6 +17,13 @@ public:
     void setOptions(const QStringList &);
     QStringList options() const;
 
+    // Numbers, integers and booleans can drive an option: the value is taken
+    // as the option's index.
+    bool acceptsConnectionFrom(const Parameter *source) const override;
+    // Stores a whole index: a number is floored (2.7 picks option 2), and
+    // anything past either end is clamped to the first/last option.
+    void setValue(const QVariant &) override;
+
     QWidget *createWidget(NodeEditor *) const override;
     void updateWidget(QWidget *) const override;
     QVariant updateValue(QWidget *) const override;

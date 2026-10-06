@@ -1,3 +1,7 @@
+#include <algorithm>
+#include <cmath>
+#include <numeric>
+#include <QRandomGenerator>
 #include "fixturelistrandomsubsetnode.h"
 #include "graph/parameter/fixturelistparameter.h"
 #include "model/parameter/decimalparameter.h"
@@ -56,21 +60,38 @@ void FixtureListRandomSubsetNode::evaluate(keira::EvaluationContext *t_context) 
     QVector<FixtureParameterData> selected;
     QVector<FixtureParameterData> remaining;
 
-    double odds = m_oddsParam->value().toDouble();
+    // A fixed share rather than an independent roll per fixture: rolling
+    // each one let the count drift - 6 fixtures at 0.33 came out empty for a
+    // good number of seeds. The count is odds x fixtures, rounded (3 at 0.33
+    // -> 1, 6 -> 2), and never 0 while the odds are above 0; the seed only
+    // decides which fixtures make up that count.
+    const double odds = std::clamp(m_oddsParam->value().toDouble(), 0.0, 1.0);
+    const int total = int(fixtures.size());
+    int count = int(std::lround(odds * total));
+    if(odds > 0.0 && total > 0)
+        count = std::max(count, 1);
+    count = std::min(count, total);
+
+    // Seeded Fisher-Yates over the indices (Qt's generator, so a seed picks
+    // the same fixtures on every machine); the first `count` are selected.
+    QVector<int> order(total);
+    std::iota(order.begin(), order.end(), 0);
     QRandomGenerator generator(static_cast<uint>(m_seedParam->value().toInt()));
+    for(int i = total - 1; i > 0; --i)
+        order.swapItemsAt(i, int(generator.bounded(i + 1)));
 
-    // One draw per fixture, sorted into one output or the other. Keeping it to
-    // a single draw (rather than testing each output separately) is what makes
-    // the two lists exact complements, and leaves the Selected output picking
-    // the same fixtures it always did for a given seed.
-    for(auto fix : fixtures)
+    QVector<bool> isSelected(total, false);
+    for(int i = 0; i < count; ++i)
+        isSelected[order[i]] = true;
+
+    // Both outputs keep the original list order, and are exact complements.
+    for(int i = 0; i < total; ++i)
     {
-        if(generator.generateDouble() < odds)
-            selected.append(fix);
+        if(isSelected[i])
+            selected.append(fixtures[i]);
         else
-            remaining.append(fix);
+            remaining.append(fixtures[i]);
     }
-
 
     m_outParam->setValue(QVariant::fromValue(selected));
     m_remainingParam->setValue(QVariant::fromValue(remaining));

@@ -1,3 +1,4 @@
+#include <atomic>
 #include "fixtureclip.h"
 #include "state/stateevaluationcontext.h"
 #include "fixture/fixturecollection.h"
@@ -34,6 +35,11 @@ public:
     Routine *graph = nullptr;
     FixtureStateNode *stateNode = nullptr;
     FixtureClip *facade;
+
+    // How far before its start / after its end the clip's fixtures are still
+    // playing, from the per-fixture offsets its graph applied last frame.
+    std::atomic<double> leadIn = 0.0;
+    std::atomic<double> tailOut = 0.0;
 };
 
 FixtureClip::Impl::Impl(FixtureClip *t_facade)
@@ -64,6 +70,21 @@ void FixtureClip::Impl::connectGraphSignals()
     // via the Channel button or added by hand in the graph — appears in the editor.
     QObject::connect(graph, &keira::Graph::interfaceChanged, facade,
                      [f = facade]() { f->syncChannelsFromGraph(); });
+
+    // The clip's Fixture State can be deleted in the editor (a clip graph
+    // may do all its work in, say, a Fixture Graph instead) - forget it then
+    // rather than keep a dangling pointer, and adopt one added later so
+    // capability exposing works again. Direct (no context object): removal is
+    // applied on whichever thread drains the graph's command queue, and the
+    // pointer must be cleared before anything else touches it.
+    QObject::connect(graph, &keira::Graph::nodeWasRemoved, [this](keira::Node *t_node) {
+        if(t_node == stateNode)
+            stateNode = nullptr;
+    });
+    QObject::connect(graph, &keira::Graph::nodeWasAdded, [this](keira::Node *t_node) {
+        if(!stateNode)
+            stateNode = dynamic_cast<FixtureStateNode*>(t_node);
+    });
 }
 
 FixtureClip::FixtureClip(QObject *t_parent) : Clip(t_parent),m_impl(new Impl(this))
@@ -87,12 +108,16 @@ FixtureClip::~FixtureClip()
 
 bool FixtureClip::timeIsValid(double t_time) const
 {
-    return startTime() < t_time && t_time < endTime();
+    // Delayed fixtures finish (and early ones start) outside the clip's own
+    // span; keep evaluating until the last of them is done.
+    return startTime() - m_impl->leadIn < t_time && t_time < endTime() + m_impl->tailOut;
 }
 
 void FixtureClip::processChannels(ProcessContext &t_context)
 {
-    if(!m_impl->graph || !m_impl->stateNode)
+    // The graph is evaluated whether or not it still has a Fixture State -
+    // other nodes (a Fixture Graph, Set Fixture Tilt, ...) can do the work.
+    if(!m_impl->graph)
         return;
 
     // Apply any queued graph edits (e.g. a capability just exposed from the editor)
@@ -127,10 +152,15 @@ void FixtureClip::processChannels(ProcessContext &t_context)
     localContext.relativeTime = initialRelativeTime;
     localContext.project      = t_context.project;
     localContext.strength     = strengthAtTime(initialRelativeTime);
+    localContext.clipTime     = initialRelativeTime;
+    localContext.clipStrengthAt = [this](double t_time) { return strengthAtTime(t_time); };
 
     // Model (b): evaluate the graph once — the FixtureStateNode does the fixtures.
     m_impl->graph->evaluate(&localContext);
     m_impl->graph->markClean();
+
+    m_impl->tailOut = std::max(0.0, localContext.maxFixtureOffset);
+    m_impl->leadIn = std::max(0.0, -localContext.minFixtureOffset);
 }
 
 State *FixtureClip::state() const

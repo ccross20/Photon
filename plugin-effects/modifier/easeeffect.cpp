@@ -201,12 +201,12 @@ QWidget *EaseEffect::createPropertyEditor()
 {
     auto *form = new PropertyForm;
     form->addRow("Ease In Duration", PropertyWidgets::createNumber(m_easeInDuration,
-        {{PropertyWidgets::MetaMinimum, .001}, {PropertyWidgets::MetaMaximum, 9999.0}},
+        {{PropertyWidgets::MetaMinimum, .001}, {PropertyWidgets::MetaMaximum, 9999.0}, {PropertyWidgets::MetaSoftMinimum, 0.001}, {PropertyWidgets::MetaSoftMaximum, 5.0}},
         [this](double v){ setEaseInDuration(v); }));
     form->addRow("Ease In", PropertyWidgets::createOptions(easeStrings(), m_easeInType, {},
         [this](int v){ setEaseInType(static_cast<QEasingCurve::Type>(v)); }));
     form->addRow("Ease Out Duration", PropertyWidgets::createNumber(m_easeOutDuration,
-        {{PropertyWidgets::MetaMinimum, .001}, {PropertyWidgets::MetaMaximum, 9999.0}},
+        {{PropertyWidgets::MetaMinimum, .001}, {PropertyWidgets::MetaMaximum, 9999.0}, {PropertyWidgets::MetaSoftMinimum, 0.001}, {PropertyWidgets::MetaSoftMaximum, 5.0}},
         [this](double v){ setEaseOutDuration(v); }));
     form->addRow("Ease Out", PropertyWidgets::createOptions(easeStrings(), m_easeOutType, {},
         [this](int v){ setEaseOutType(static_cast<QEasingCurve::Type>(v)); }));

@@ -182,12 +182,18 @@ QIcon sceneHelperIcon(const QByteArray &t_typeId)
         return pixmapIcon(glyphPixmap("O", QColor(100, 140, 200)));
     if(t_typeId == "boundaryrectangle")
         return pixmapIcon(glyphPixmap("R", QColor(100, 140, 200)));
-    if(t_typeId == "linearfalloff")
+    if(t_typeId == "falloff")
         return pixmapIcon(glyphPixmap(QString::fromUtf8("\xE2\x89\x88"), QColor(160, 160, 90)));
     if(t_typeId == "group")
         return pixmapIcon(glyphPixmap("G", QColor(140, 140, 150)));
     if(t_typeId == "surface")
         return pixmapIcon(glyphPixmap("S", QColor(80, 130, 180)));
+    if(t_typeId == "directionallight")
+        return pixmapIcon(glyphPixmap(QString::fromUtf8("\xE2\x86\x98"), QColor(230, 190, 90)));
+    if(t_typeId == "ambientlight")
+        return pixmapIcon(glyphPixmap(QString::fromUtf8("\xE2\x98\x80"), QColor(230, 190, 90)));
+    if(t_typeId == "box")
+        return pixmapIcon(glyphPixmap(QString::fromUtf8("\xE2\x96\xA0"), QColor(80, 130, 180)));
     if(t_typeId == "pixelstrip")
         return pixmapIcon(glyphPixmap(QString::fromUtf8("\xE2\x80\xA6"), QColor(180, 90, 150)));
 

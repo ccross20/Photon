@@ -3,6 +3,8 @@
 #include <QJsonObject>
 #include <QWidget>
 #include <QQuaternion>
+#include <QRegularExpression>
+#include <QSet>
 #include "sceneobject_p.h"
 #include "scenefactory.h"
 #include "sceneiterator.h"
@@ -167,6 +169,44 @@ SceneObject *SceneObject::clone() const
     }
 
     return newObj;
+}
+
+QString SceneObject::nextAvailableName(const QString &t_name, const QSet<QString> &t_taken)
+{
+    static const QRegularExpression numbered(QStringLiteral("^(.*?)(\\s*)(\\d+)$"));
+
+    const QString name = t_name.trimmed();
+    QString stem = name;
+    QString separator = QStringLiteral(" ");
+    int width = 0;
+
+    const QRegularExpressionMatch match = numbered.match(name);
+    if(match.hasMatch())
+    {
+        stem = match.captured(1);
+        separator = match.captured(2);
+        const QString digits = match.captured(3);
+        if(digits.startsWith('0'))
+            width = digits.size();
+    }
+
+    // The bare stem counts as number 1, so copying "Spot" gives "Spot 2".
+    const QRegularExpression sibling("^" + QRegularExpression::escape(stem) + "\\s*(\\d+)$");
+    qint64 highest = 0;
+    for(const QString &taken : t_taken)
+    {
+        if(!stem.isEmpty() && taken == stem)
+            highest = std::max<qint64>(highest, 1);
+        else if(const auto m = sibling.match(taken); m.hasMatch())
+            highest = std::max(highest, m.captured(1).toLongLong());
+    }
+
+    qint64 number = std::max<qint64>(highest + 1, 2);
+    QString candidate;
+    do
+        candidate = stem + separator + QString::number(number++).rightJustified(width, '0');
+    while(t_taken.contains(candidate));
+    return candidate;
 }
 
 void SceneObject::generateNewUniqueId()

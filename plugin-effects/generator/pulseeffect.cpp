@@ -309,24 +309,24 @@ QWidget *PulseEffect::createPropertyEditor()
 {
     auto *form = new PropertyForm;
     form->addRow("Offset", PropertyWidgets::createNumber(m_offset,
-        {{PropertyWidgets::MetaMinimum, -9999.0}, {PropertyWidgets::MetaMaximum, 9999.0}},
+        {{PropertyWidgets::MetaMinimum, -9999.0}, {PropertyWidgets::MetaMaximum, 9999.0}, {PropertyWidgets::MetaSoftMinimum, 0.0}, {PropertyWidgets::MetaSoftMaximum, 10.0}},
         [this](double v){ setOffset(v); }));
     form->addRow("Frequency", PropertyWidgets::createNumber(m_frequency,
-        {{PropertyWidgets::MetaMinimum, .001}, {PropertyWidgets::MetaMaximum, 9999.0}},
+        {{PropertyWidgets::MetaMinimum, .001}, {PropertyWidgets::MetaMaximum, 9999.0}, {PropertyWidgets::MetaSoftMinimum, 0.05}, {PropertyWidgets::MetaSoftMaximum, 10.0}},
         [this](double v){ setFrequency(v); }));
     form->addRow("Amplitude", PropertyWidgets::createNumber(m_amplitude,
-        {{PropertyWidgets::MetaMinimum, -255.0}, {PropertyWidgets::MetaMaximum, 255.0}},
+        {{PropertyWidgets::MetaMinimum, -255.0}, {PropertyWidgets::MetaMaximum, 255.0}, {PropertyWidgets::MetaSoftMinimum, -1.0}, {PropertyWidgets::MetaSoftMaximum, 1.0}},
         [this](double v){ setAmplitude(v); }));
     form->addRow("Duration", PropertyWidgets::createNumber(m_duration,
-        {{PropertyWidgets::MetaMinimum, .001}, {PropertyWidgets::MetaMaximum, 9999.0}},
+        {{PropertyWidgets::MetaMinimum, .001}, {PropertyWidgets::MetaMaximum, 9999.0}, {PropertyWidgets::MetaSoftMinimum, 0.01}, {PropertyWidgets::MetaSoftMaximum, 5.0}},
         [this](double v){ setDuration(v); }));
     form->addRow("Ease In Duration", PropertyWidgets::createNumber(m_easeInDuration,
-        {{PropertyWidgets::MetaMinimum, .001}, {PropertyWidgets::MetaMaximum, 9999.0}},
+        {{PropertyWidgets::MetaMinimum, .001}, {PropertyWidgets::MetaMaximum, 9999.0}, {PropertyWidgets::MetaSoftMinimum, 0.001}, {PropertyWidgets::MetaSoftMaximum, 2.0}},
         [this](double v){ setEaseInDuration(v); }));
     form->addRow("Ease In", PropertyWidgets::createOptions(easeStrings(), m_easeInType, {},
         [this](int v){ setEaseInType(static_cast<QEasingCurve::Type>(v)); }));
     form->addRow("Ease Out Duration", PropertyWidgets::createNumber(m_easeOutDuration,
-        {{PropertyWidgets::MetaMinimum, .001}, {PropertyWidgets::MetaMaximum, 9999.0}},
+        {{PropertyWidgets::MetaMinimum, .001}, {PropertyWidgets::MetaMaximum, 9999.0}, {PropertyWidgets::MetaSoftMinimum, 0.001}, {PropertyWidgets::MetaSoftMaximum, 2.0}},
         [this](double v){ setEaseOutDuration(v); }));
     form->addRow("Ease Out", PropertyWidgets::createOptions(easeStrings(), m_easeOutType, {},
         [this](int v){ setEaseOutType(static_cast<QEasingCurve::Type>(v)); }));

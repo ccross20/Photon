@@ -1,6 +1,10 @@
 #include <QComboBox>
 #include <QLabel>
+#include <cmath>
 #include "optionparameter.h"
+#include "decimalparameter.h"
+#include "integerparameter.h"
+#include "booleanparameter.h"
 #include "view/nodeeditor.h"
 #include "propertycombobox.h"
 
@@ -30,6 +34,31 @@ OptionParameter::~OptionParameter()
     delete m_impl;
 }
 
+
+bool OptionParameter::acceptsConnectionFrom(const Parameter *source) const
+{
+    return Parameter::acceptsConnectionFrom(source)
+        || source->typeId() == DecimalParameter::ParameterId
+        || source->typeId() == IntegerParameter::ParameterId
+        || source->typeId() == BooleanParameter::ParameterId;
+}
+
+void OptionParameter::setValue(const QVariant &t_value)
+{
+    // QVariant's double -> int conversion rounds; an index wants the floor.
+    bool ok = false;
+    const double number = t_value.toDouble(&ok);
+    if(!ok)
+    {
+        Parameter::setValue(t_value);
+        return;
+    }
+
+    int index = int(std::floor(number));
+    if(!m_impl->options.isEmpty())
+        index = std::clamp(index, 0, int(m_impl->options.size()) - 1);
+    Parameter::setValue(index);
+}
 
 void OptionParameter::setOptions(const QStringList &t_options)
 {

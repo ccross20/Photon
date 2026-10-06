@@ -38,16 +38,22 @@ class PHOTONCORE_EXPORT SceneSurface : public SceneObject
 {
     Q_OBJECT
 public:
+    // Which side the visualizer hides, so you can see through a wall from
+    // behind. Front is the side the normal (+Z) points out of.
+    enum DisplayCull { CullNone, CullBack, CullFront };
+
     SceneSurface();
     ~SceneSurface();
 
     void setSurfaceWidth(float);
     void setSurfaceHeight(float);
     void setColor(const QColor &);
+    void setDisplayCull(DisplayCull);
 
     float surfaceWidth() const;
     float surfaceHeight() const;
     QColor color() const;
+    DisplayCull displayCull() const;
 
     QWidget *createEditor() override;
 

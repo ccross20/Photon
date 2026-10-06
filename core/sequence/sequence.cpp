@@ -92,6 +92,16 @@ void Sequence::save(const QString &t_path) const
     QJsonObject jsonObj;
     writeToJson(jsonObj);
 
+    // Which library song this sequence belongs to, so a library copied to
+    // another computer can relink it (SongLibrary::importFromFolder()).
+    {
+        SongLibrary *library = photonApp->songLibrary();
+        SongLibraryEntry *song = (library && library->isOpen())
+            ? library->findSongBySequencePath(t_path) : nullptr;
+        if(song)
+            jsonObj.insert("songTrackKey", QString::fromLatin1(song->trackKey));
+    }
+
     saveFile.write(QJsonDocument(jsonObj).toJson());
 
     qDebug() << "Saved to: " << saveFile.fileName();

@@ -93,11 +93,11 @@ ChannelEffectEditor *ComparatorEffect::createEditor()
 QWidget *ComparatorEffect::createPropertyEditor()
 {
     auto *form = new PropertyForm;
-    form->addRow("Threshold", PropertyWidgets::createNumber(m_threshold, {},
+    form->addRow("Threshold", PropertyWidgets::createNumber(m_threshold, {{PropertyWidgets::MetaSoftMinimum, 0.0}, {PropertyWidgets::MetaSoftMaximum, 1.0}},
         [this](double v){ setThreshold(v); }));
-    form->addRow("Below Value", PropertyWidgets::createNumber(m_belowValue, {},
+    form->addRow("Below Value", PropertyWidgets::createNumber(m_belowValue, {{PropertyWidgets::MetaSoftMinimum, 0.0}, {PropertyWidgets::MetaSoftMaximum, 1.0}},
         [this](double v){ setBelowValue(v); }));
-    form->addRow("Above Value", PropertyWidgets::createNumber(m_aboveValue, {},
+    form->addRow("Above Value", PropertyWidgets::createNumber(m_aboveValue, {{PropertyWidgets::MetaSoftMinimum, 0.0}, {PropertyWidgets::MetaSoftMaximum, 1.0}},
         [this](double v){ setAboveValue(v); }));
     return form;
 }

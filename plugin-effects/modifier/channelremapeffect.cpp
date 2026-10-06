@@ -187,15 +187,15 @@ ChannelEffectEditor *ChannelRemapEffect::createEditor()
 QWidget *ChannelRemapEffect::createPropertyEditor()
 {
     auto *form = new PropertyForm;
-    form->addRow("Min Input", PropertyWidgets::createNumber(m_minInput, {},
+    form->addRow("Min Input", PropertyWidgets::createNumber(m_minInput, {{PropertyWidgets::MetaSoftMinimum, 0.0}, {PropertyWidgets::MetaSoftMaximum, 1.0}},
         [this](double v){ setMinInput(v); }));
-    form->addRow("Max Input", PropertyWidgets::createNumber(m_maxInput, {},
+    form->addRow("Max Input", PropertyWidgets::createNumber(m_maxInput, {{PropertyWidgets::MetaSoftMinimum, 0.0}, {PropertyWidgets::MetaSoftMaximum, 1.0}},
         [this](double v){ setMaxInput(v); }));
     form->addRow("Ease Type", PropertyWidgets::createOptions(easeStrings(), m_easeType, {},
         [this](int v){ setEaseType(static_cast<QEasingCurve::Type>(v)); }));
-    form->addRow("Min Output", PropertyWidgets::createNumber(m_minOutput, {},
+    form->addRow("Min Output", PropertyWidgets::createNumber(m_minOutput, {{PropertyWidgets::MetaSoftMinimum, 0.0}, {PropertyWidgets::MetaSoftMaximum, 1.0}},
         [this](double v){ setMinOutput(v); }));
-    form->addRow("Max Output", PropertyWidgets::createNumber(m_maxOutput, {},
+    form->addRow("Max Output", PropertyWidgets::createNumber(m_maxOutput, {{PropertyWidgets::MetaSoftMinimum, 0.0}, {PropertyWidgets::MetaSoftMaximum, 1.0}},
         [this](double v){ setMaxOutput(v); }));
     form->addRow("Bounds Mode", PropertyWidgets::createOptions({"Limit","Loop","Ping Pong"}, m_boundsMode, {},
         [this](int v){ setBoundsMode(static_cast<BoundsMode>(v)); }));

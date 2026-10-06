@@ -11,6 +11,14 @@ namespace photon {
 namespace {
 // Id lookup first; falls back to treating the stored value as a name for
 // projects saved before this node switched from name- to id-keyed storage.
+//
+// Failing both - the chosen sequence isn't loaded, e.g. a project saved
+// playing one Song Library sequence reopened with a different one loaded -
+// the first loaded sequence. That's what the dropdown shows when its stored
+// choice isn't among the options, so what the node plays and what it shows
+// agree (previously it showed that sequence but played nothing). The stored
+// choice itself is left alone, so it's back in charge once that sequence is
+// loaded again.
 Sequence *resolveSequence(SequenceCollection *t_sequences, const QString &t_stored)
 {
     if(!t_sequences)
@@ -25,7 +33,8 @@ Sequence *resolveSequence(SequenceCollection *t_sequences, const QString &t_stor
         if(seq->name() == t_stored)
             return seq;
 
-    return nullptr;
+    const auto &loaded = t_sequences->sequences();
+    return loaded.isEmpty() ? nullptr : loaded.first();
 }
 }
 
