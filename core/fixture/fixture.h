@@ -83,8 +83,11 @@ public:
     {
         double masterIntensity = 1.0;   // 0..1
         int testFrame = 0;              // 0 = off, 1-255 = test_xxx animation
-        double sizeX = 0.0;             // -1..1
-        double sizeY = 0.0;
+        // The FB4's Geo size: absolute, -1..1 (1 = full size, 0 = collapsed,
+        // negative = mirrored), unlike the live Size channels, which change
+        // the cue's own size.
+        double sizeX = 1.0;
+        double sizeY = 1.0;
         double positionX = 0.0;
         double positionY = 0.0;
         double rotation = 0.0;          // degrees, 0..360

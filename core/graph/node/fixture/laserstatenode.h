@@ -16,6 +16,12 @@ public:
     QVector<CapabilityOption> addableCapabilities() const override;
 
     static keira::NodeInformation info();
+
+protected:
+    // A clip's strength fades the laser through its Dimmer only: content,
+    // size, position and the rest are written as set rather than blended
+    // part-way, which for a page/cue number or a position is meaningless.
+    bool strengthApplies(CapabilityType type) const override { return type == Capability_Dimmer; }
 };
 
 } // namespace photon

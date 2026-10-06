@@ -10,6 +10,7 @@ class QScrollArea;
 namespace photon {
 
 class FixtureStateNode;
+class StateCapability;
 
 // Custom node-editor widget for FixtureStateNode: manages the node's State by
 // adding/removing capabilities, editing each capability's channel values, and
@@ -25,6 +26,9 @@ public slots:
 
 private:
     void rebuild();
+    // Opens the laser content browser for a Laser Content capability and
+    // writes the chosen page/cue into it.
+    void browseLaserContent(StateCapability *cap);
 
     FixtureStateNode *m_node = nullptr;
     QScrollArea *m_scroll = nullptr;

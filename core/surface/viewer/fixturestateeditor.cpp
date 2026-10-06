@@ -8,6 +8,7 @@
 #include <QCheckBox>
 #include <QFrame>
 #include <QScrollArea>
+#include <QMessageBox>
 #include <functional>
 #include "fixturestateeditor.h"
 #include "numberscrubfield.h"
@@ -20,6 +21,7 @@
 #include "fixture/capability/fixturecapability.h"
 #include "fixture/fixture.h"
 #include "fixture/capability/wheelslotcapability.h"
+#include "fixture/lasercontentbrowser.h"
 
 namespace photon {
 
@@ -169,6 +171,18 @@ void FixtureStateEditor::rebuild()
             header->addWidget(collapseBtn);
             header->addWidget(new QLabel("<b>" + cap->name() + "</b>"));
             header->addStretch();
+
+            // Laser Content: pick the page and cue from the laser's content
+            // folder by eye (see LaserContentBrowser).
+            if(cap->fixtureCapabilityType() == Capability_LaserContent)
+            {
+                auto *browseBtn = new QToolButton;
+                browseBtn->setAutoRaise(true);
+                browseBtn->setText("Browse…");
+                browseBtn->setToolTip("Choose the page and cue from the laser's content");
+                connect(browseBtn, &QToolButton::clicked, this, [this, cap](){ browseLaserContent(cap); });
+                header->addWidget(browseBtn);
+            }
             auto *removeBtn = new QToolButton;
             removeBtn->setAutoRaise(true);
             removeBtn->setFixedSize(16, 16);
@@ -269,6 +283,39 @@ void FixtureStateEditor::rebuild()
     // Keep the frames packed at the top; the stretch absorbs any extra height
     // so they stay at their natural size instead of spreading to fill.
     m_listLayout->addStretch();
+}
+
+void FixtureStateEditor::browseLaserContent(StateCapability *t_cap)
+{
+    // The content folder of the first laser this node drives that has one.
+    QString folder;
+    for(Fixture *fixture : m_node->resolvedFixtures())
+    {
+        if(fixture->isLaser() && !fixture->laserPreviewFolder().isEmpty())
+        {
+            folder = fixture->laserPreviewFolder();
+            break;
+        }
+    }
+    if(!LaserContentBrowser::hasContent(folder))
+    {
+        QMessageBox::information(this, "Laser Content",
+            folder.isEmpty()
+                ? "None of this node's lasers has a content folder. Set one from the laser's menu in the Project panel."
+                : "No cue thumbnails were found in " + folder + "/thumbs.");
+        return;
+    }
+
+    // Channels 0 and 1 of the Content capability: Page and Cue.
+    LaserContentBrowser browser(folder, t_cap->getChannelValue(0).toInt(), t_cap->getChannelValue(1).toInt(), this);
+    if(browser.exec() != QDialog::Accepted)
+        return;
+
+    t_cap->setChannelValue(0, browser.selectedPage());
+    t_cap->setChannelValue(1, browser.selectedCue());
+    if(m_node)
+        m_node->markStateEdited();
+    rebuild();   // show the new Page/Cue in the fields
 }
 
 void FixtureStateEditor::openAddMenu()

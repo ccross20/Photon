@@ -604,6 +604,7 @@ add_library(photon-core SHARED ${PROJECT_SOURCES}
     sequence/viewer/clippropertyeditor.h sequence/viewer/clippropertyeditor.cpp
     sequence/clipclipboard.h sequence/clipclipboard.cpp
     fixture/lasersetupdialog.h fixture/lasersetupdialog.cpp
+    fixture/lasercontentbrowser.h fixture/lasercontentbrowser.cpp
     state/laserstates.h state/laserstates.cpp
     graph/node/fixture/laserstatenode.h graph/node/fixture/laserstatenode.cpp
     resources/fixtures/pangolin-fb4.json)

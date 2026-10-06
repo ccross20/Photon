@@ -1,0 +1,98 @@
+#ifndef PHOTON_LASERCONTENTBROWSER_H
+#define PHOTON_LASERCONTENTBROWSER_H
+
+#include <QDialog>
+#include <QFrame>
+#include <QImage>
+#include <QMap>
+#include <QPointer>
+#include "photon-global.h"
+
+class QComboBox;
+class QGridLayout;
+class QMediaPlayer;
+class QToolButton;
+class QVideoFrame;
+class QVideoSink;
+
+namespace photon {
+
+// One cue in the browser: its thumbnail, or the playing video while hovered.
+class LaserContentTile : public QFrame
+{
+    Q_OBJECT
+public:
+    LaserContentTile(int cue, const QImage &thumbnail, bool current, QWidget *parent = nullptr);
+
+    int cue() const { return m_cue; }
+    // Shown in place of the thumbnail while the cue's video plays; a null
+    // image goes back to the thumbnail.
+    void setFrame(const QImage &frame);
+
+signals:
+    void hovered(photon::LaserContentTile *tile, bool entered);
+    void clicked(int cue);
+
+protected:
+    void paintEvent(QPaintEvent *) override;
+    void enterEvent(QEnterEvent *) override;
+    void leaveEvent(QEvent *) override;
+    void mousePressEvent(QMouseEvent *) override;
+
+private:
+    int m_cue;
+    QImage m_thumbnail;
+    QImage m_frame;
+    bool m_current;
+    bool m_hovered = false;
+};
+
+// Picks a laser cue by eye. Reads a laser content folder laid out as
+//   <folder>/thumbs/PxxxCyyy.png  - a still of each cue (128x128)
+//   <folder>/mp4/PxxxCyyy.mp4     - the cue's recorded preview
+// and shows one page of cues at a time (only that page's thumbnails are
+// loaded). Hovering a cue plays its video in the tile; clicking it chooses
+// that page and cue and closes the browser.
+class PHOTONCORE_EXPORT LaserContentBrowser : public QDialog
+{
+    Q_OBJECT
+public:
+    LaserContentBrowser(const QString &contentFolder, int page, int cue, QWidget *parent = nullptr);
+    ~LaserContentBrowser();
+
+    // Whether a folder has any cue thumbnails to browse.
+    static bool hasContent(const QString &contentFolder);
+
+    int selectedPage() const { return m_selectedPage; }
+    int selectedCue() const { return m_selectedCue; }
+
+private:
+    void showPage(int page);
+    void tileHovered(LaserContentTile *tile, bool entered);
+    void videoFrameChanged(const QVideoFrame &frame);
+    void stopPreview();
+    QString videoPath(int page, int cue) const;
+
+    QString m_folder;
+    QMap<int, QList<int>> m_cuesByPage;   // page -> sorted cue numbers
+    int m_currentPage;                     // the capability's page/cue on open
+    int m_currentCue;
+    int m_shownPage = -1;
+    int m_selectedPage = 0;
+    int m_selectedCue = 0;
+
+    QComboBox *m_pageCombo = nullptr;
+    QToolButton *m_previousButton = nullptr;
+    QToolButton *m_nextButton = nullptr;
+    QWidget *m_gridHost = nullptr;
+    QGridLayout *m_grid = nullptr;
+
+    // One player for the whole browser, playing whichever tile is hovered.
+    QMediaPlayer *m_player = nullptr;
+    QVideoSink *m_sink = nullptr;
+    QPointer<LaserContentTile> m_previewTile;
+};
+
+} // namespace photon
+
+#endif // PHOTON_LASERCONTENTBROWSER_H

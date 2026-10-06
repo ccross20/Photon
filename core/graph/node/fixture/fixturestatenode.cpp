@@ -271,7 +271,31 @@ void FixtureStateNode::applyToFixture(RoutineEvaluationContext &t_context, Fixtu
     for(auto it = t_overrides.cbegin(); it != t_overrides.cend(); ++it)
         local.channelValues[it.key()] = it.value();
 
-    m_state->evaluate(local);
+    // Same as State::evaluate(), but only some capabilities take the
+    // strength (see strengthApplies()).
+    for(auto *capability : m_state->capabilities())
+    {
+        if(!capability->isEnabled())
+            continue;
+        local.strength = strengthApplies(capability->fixtureCapabilityType()) ? t_strength : 1.0;
+        capability->evaluate(local);
+    }
+}
+
+bool FixtureStateNode::strengthApplies(CapabilityType t_type) const
+{
+    switch(t_type)
+    {
+    case Capability_Dimmer:
+    case Capability_Color:
+    case Capability_Pan:
+    case Capability_Tilt:
+    case Capability_CTO:
+    case Capability_UV:
+        return true;
+    default:
+        return false;
+    }
 }
 
 void FixtureStateNode::evaluate(keira::EvaluationContext *t_context) const

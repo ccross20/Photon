@@ -77,6 +77,13 @@ public:
 protected:
     FixtureStateNode(const QByteArray &nodeId, const QString &name);
 
+    // Whether the strength (a clip's strength and ease in/out, or the
+    // context's) applies to capabilities of this type; the rest are written
+    // at full. Here: the ones that read as a fade or crossfade - Dimmer,
+    // Color, Pan, Tilt, CTO, UV. Slots, prism, focus, zoom, strobe and the
+    // like are choices, not levels, so blending them part-way means nothing.
+    virtual bool strengthApplies(CapabilityType type) const;
+
 private:
     // Applies the state to one fixture, reading exposed channels from `values`.
     void applyToFixture(struct RoutineEvaluationContext &, Fixture *,

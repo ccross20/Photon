@@ -127,15 +127,22 @@ QString LaserPreview::findMedia(const QString &t_folder, const QString &t_cueNam
     if(t_folder.isEmpty())
         return {};
 
-    const QDir dir(t_folder);
-    const QFileInfoList files = dir.entryInfoList(QDir::Files);
-    for(const QString &extension : kExtensions)
+    // Videos live in an mp4/ subfolder (beside thumbs/, see
+    // LaserContentBrowser); older content folders hold them directly.
+    for(const QString &subfolder : {QStringLiteral("mp4"), QString()})
     {
-        for(const QFileInfo &file : files)
+        const QDir dir(subfolder.isEmpty() ? t_folder : QDir(t_folder).filePath(subfolder));
+        if(!dir.exists())
+            continue;
+        const QFileInfoList files = dir.entryInfoList(QDir::Files);
+        for(const QString &extension : kExtensions)
         {
-            if(file.completeBaseName().compare(t_cueName, Qt::CaseInsensitive) == 0
-               && file.suffix().compare(extension, Qt::CaseInsensitive) == 0)
-                return file.absoluteFilePath();
+            for(const QFileInfo &file : files)
+            {
+                if(file.completeBaseName().compare(t_cueName, Qt::CaseInsensitive) == 0
+                   && file.suffix().compare(extension, Qt::CaseInsensitive) == 0)
+                    return file.absoluteFilePath();
+            }
         }
     }
     return {};
@@ -296,12 +303,13 @@ QImage LaserPreview::frameFor(Fixture *t_fixture, const DMXMatrix &t_dmx, float 
         painter.setRenderHint(QPainter::SmoothPixmapTransform);
 
         // Outer: the setup window - the whole scan field is shifted, turned and
-        // squeezed (size 0 = unchanged, -100% = collapsed, +100% = double) so
-        // that a short setup Y shrinks the content to fit instead of cropping it.
+        // scaled so that a short setup Y shrinks the content to fit instead of
+        // cropping it. The FB4's Geo size is absolute: 100% = full size, 0% =
+        // collapsed, negative = mirrored (see Fixture::LaserSetup).
         painter.translate(TextureSize / 2.0 + setup.positionX * field / 2.0,
                           TextureSize / 2.0 - setup.positionY * field / 2.0);
         painter.rotate(setup.rotation);
-        painter.scale(std::max(0.0, 1.0 + setup.sizeX), std::max(0.0, 1.0 + setup.sizeY));
+        painter.scale(setup.sizeX, setup.sizeY);
 
         // Inner: this frame's live transform, inside that window.
         painter.translate(positionX * field / 2.0, -positionY * field / 2.0);

@@ -49,6 +49,8 @@ signals:
 protected:
     void exposeEvent(QExposeEvent *) override;
     bool event(QEvent *) override;
+    // Gives keyboard focus back to the enclosing window (see the .cpp).
+    void releaseFocus();
     void mousePressEvent(QMouseEvent *) override;
     void mouseMoveEvent(QMouseEvent *) override;
     void mouseReleaseEvent(QMouseEvent *) override;

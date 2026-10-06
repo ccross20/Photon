@@ -15,7 +15,7 @@
   "physical": {
     "DMXconnector": "3-pin and 5-pin XLR",
     "lens": {
-      "degreesMinMax": [3, 30]
+      "degreesMinMax": [3, 3]
     }
   },
   "wheels": {

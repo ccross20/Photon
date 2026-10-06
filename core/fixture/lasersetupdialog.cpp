@@ -74,6 +74,9 @@ LaserSetupDialog::LaserSetupDialog(Fixture *t_fixture, QWidget *t_parent)
 
     form->addRow("Master Intensity (%)", m_impl->intensity);
     form->addRow("Test Frame (0 = off)", m_impl->testFrame);
+    const QString sizeTip = "100% = full size, 0% = collapsed, negative = mirrored";
+    m_impl->sizeX->setToolTip(sizeTip);
+    m_impl->sizeY->setToolTip(sizeTip);
     form->addRow("Size X (%)", m_impl->sizeX);
     form->addRow("Size Y (%)", m_impl->sizeY);
     form->addRow("Position X (%)", m_impl->positionX);

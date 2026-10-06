@@ -4,6 +4,7 @@
 #include <QMouseEvent>
 #include <QWheelEvent>
 #include <QKeyEvent>
+#include <QGuiApplication>
 #include "rhiwindow.h"
 #include "rhi/rhibackend.h"
 #include "rhirenderer.h"
@@ -115,11 +116,33 @@ void RhiWindow::exposeEvent(QExposeEvent *)
     }
 }
 
+void RhiWindow::releaseFocus()
+{
+    // This is a native child window (embedded via createWindowContainer). On
+    // macOS, once clicked it stays the first responder after the mouse moves
+    // on, and a context menu opened from another panel then spends its first
+    // click taking focus back - the click never reaches the menu item. Hand
+    // focus back to the enclosing top-level window as the mouse leaves; a
+    // click in the view takes it again for the gizmo shortcuts.
+    if (QGuiApplication::focusWindow() != this)
+        return;
+    QWindow *top = this;
+    while (top->parent())
+        top = top->parent();
+    if (top != this)
+        top->requestActivate();
+}
+
 bool RhiWindow::event(QEvent *e)
 {
     switch (e->type()) {
     case QEvent::UpdateRequest:
         renderFrame();
+        break;
+    case QEvent::Leave:
+        // Not mid-drag: a gizmo drag or orbit that strays outside keeps going.
+        if (QGuiApplication::mouseButtons() == Qt::NoButton)
+            releaseFocus();
         break;
     case QEvent::PlatformSurface:
         // The platform surface is going away — release GPU resources now, while a
@@ -331,6 +354,10 @@ void RhiWindow::mouseReleaseEvent(QMouseEvent *event)
 
     m_orbiting = false;
     m_panning = false;
+
+    // A drag that ended outside the view never sees a Leave of its own.
+    if (!QRect(QPoint(0, 0), size()).contains(event->position().toPoint()))
+        releaseFocus();
 }
 
 void RhiWindow::keyPressEvent(QKeyEvent *event)

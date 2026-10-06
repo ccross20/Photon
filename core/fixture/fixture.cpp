@@ -964,8 +964,8 @@ void Fixture::readFromJson(const QJsonObject &json, const LoadContext &t_context
         LaserSetup setup;
         setup.masterIntensity = setupObj.value("masterIntensity").toDouble(1.0);
         setup.testFrame = setupObj.value("testFrame").toInt(0);
-        setup.sizeX = setupObj.value("sizeX").toDouble(0.0);
-        setup.sizeY = setupObj.value("sizeY").toDouble(0.0);
+        setup.sizeX = setupObj.value("sizeX").toDouble(1.0);
+        setup.sizeY = setupObj.value("sizeY").toDouble(1.0);
         setup.positionX = setupObj.value("positionX").toDouble(0.0);
         setup.positionY = setupObj.value("positionY").toDouble(0.0);
         setup.rotation = setupObj.value("rotation").toDouble(0.0);
