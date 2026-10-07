@@ -38,6 +38,8 @@ public:
     MarkerIntegerMode mode() const { return m_mode; }
     void setIncrementEvery(int);
     int incrementEvery() const { return m_incrementEvery; }
+    void setIncrementAmount(int);
+    int incrementAmount() const { return m_incrementAmount; }
     void setStartMarker(int);
     int startMarker() const { return m_startMarker; }
 
@@ -66,6 +68,9 @@ private:
     // each chunk changes the value. "Start On Marker" (1-based) is where the
     // grouping starts counting.
     int m_incrementEvery = 1;
+    // How far each step moves the value (Increment/Decrement), wrapping
+    // around the Minimum..Maximum range.
+    int m_incrementAmount = 1;
     int m_startMarker = 1;
 };
 

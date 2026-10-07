@@ -21,9 +21,9 @@ namespace {
 
 using Function = LaserCapability::Function;
 
-// Half the laser's scan field along one axis at 100% size. The FB4's real
-// field depends on the projector; this is a typical show-laser value.
-constexpr float kFieldHalfAngleDeg = 30.0f;
+// Half the laser's scan field along one axis at 100% size: a 40 degree total
+// scan angle, the projector's maximum.
+constexpr float kFieldHalfAngleDeg = 20.0f;
 
 // Recordings of a black preview aren't truly black (compression noise, UI
 // antialiasing); anything below this is treated as no light.
@@ -285,7 +285,12 @@ QImage LaserPreview::frameFor(Fixture *t_fixture, const DMXMatrix &t_dmx, float 
     if(t_outIntensity <= 0.0f)
         return {};
 
-    laser.spin = float(std::fmod(laser.spin + rotationSpeed(t_fixture, t_dmx) * 360.0 * t_dt, 360.0));
+    // Continuous rotation builds up spin; with no speed (0, hold, or the
+    // cue's own, or no Rotation capability writing the channel at all) it's
+    // dropped, so the cue sits at its Angle again rather than wherever the
+    // last spin left it.
+    const double speed = rotationSpeed(t_fixture, t_dmx);
+    laser.spin = speed == 0.0 ? 0.0f : float(std::fmod(laser.spin + speed * 360.0 * t_dt, 360.0));
     const double angle = fraction(t_fixture, Function::Function_Angle, t_dmx, 0.0) * 360.0 + laser.spin;
     const double zoom = 1.0 + centered(t_fixture, Function::Function_Zoom, t_dmx);
     const double sizeX = std::max(0.0, zoom * (1.0 + centered(t_fixture, Function::Function_SizeX, t_dmx)));
@@ -301,6 +306,13 @@ QImage LaserPreview::frameFor(Fixture *t_fixture, const DMXMatrix &t_dmx, float 
     {
         QPainter painter(&layout);
         painter.setRenderHint(QPainter::SmoothPixmapTransform);
+
+        // The scan field is square - the galvos stop at +-fieldTanHalf on each
+        // axis - so anything pushed past it (a large setup or live size, an
+        // offset position) is cut off on a square, not the round edge of the
+        // cone the beam is drawn in. The beam and the surface projection both
+        // sample this image, so both come out as a square pyramid.
+        painter.setClipRect(QRectF((TextureSize - field) / 2.0, (TextureSize - field) / 2.0, field, field));
 
         // Outer: the setup window - the whole scan field is shifted, turned and
         // scaled so that a short setup Y shrinks the content to fit instead of

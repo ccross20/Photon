@@ -306,16 +306,18 @@ void FixtureStateEditor::browseLaserContent(StateCapability *t_cap)
         return;
     }
 
-    // Channels 0 and 1 of the Content capability: Page and Cue.
+    // Channels 0 and 1 of the Content capability: Page and Cue. Each pick in
+    // the browser (and Cancel's restore) is applied as it happens, so the
+    // laser previews the content while browsing.
     LaserContentBrowser browser(folder, t_cap->getChannelValue(0).toInt(), t_cap->getChannelValue(1).toInt(), this);
-    if(browser.exec() != QDialog::Accepted)
-        return;
-
-    t_cap->setChannelValue(0, browser.selectedPage());
-    t_cap->setChannelValue(1, browser.selectedCue());
-    if(m_node)
-        m_node->markStateEdited();
-    rebuild();   // show the new Page/Cue in the fields
+    connect(&browser, &LaserContentBrowser::contentSelected, this, [this, t_cap](int t_page, int t_cue){
+        t_cap->setChannelValue(0, t_page);
+        t_cap->setChannelValue(1, t_cue);
+        if(m_node)
+            m_node->markStateEdited();
+    });
+    browser.exec();
+    rebuild();   // show the final Page/Cue in the fields
 }
 
 void FixtureStateEditor::openAddMenu()

@@ -285,9 +285,28 @@ RhiMesh *RhiMesh::createCone(int sides)
         indices.append(reinterpret_cast<const char *>(idx), sizeof(idx));
     }
 
+    // Base cap, closing the cone. Volumetric beams raymarch the whole beam
+    // from every fragment and draw both sides (no culling), so a line of
+    // sight normally crosses two faces. Left open, one that came in through
+    // the base crossed only one and got half the light - a hard curved edge
+    // at the rim whenever a beam pointed toward the camera. Its own vertices
+    // carry alpha 0, so the flat-cone (basic) beams don't show a disc.
+    const quint16 capCentre = quint16(sides + 1);
+    pushV(QVector3D(0, -1.0f, 0), 0.0f);
+    for (int s = 0; s < sides; ++s) {
+        const float a = (2.0f * kPi) * float(s) / float(sides);
+        pushV(QVector3D(std::cos(a), -1.0f, std::sin(a)), 0.0f);
+    }
+    for (int s = 0; s < sides; ++s) {
+        const quint16 r0 = quint16(capCentre + 1 + s);
+        const quint16 r1 = quint16(capCentre + 1 + (s + 1) % sides);
+        const quint16 idx[3] = { capCentre, r1, r0 };
+        indices.append(reinterpret_cast<const char *>(idx), sizeof(idx));
+    }
+
     auto *mesh = new RhiMesh;
-    mesh->setVertexData(verts, sides + 1);
-    mesh->setIndexData(indices, sides * 3);
+    mesh->setVertexData(verts, 2 * sides + 2);
+    mesh->setIndexData(indices, sides * 6);
     return mesh;
 }
 

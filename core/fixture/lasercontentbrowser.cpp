@@ -1,4 +1,5 @@
 #include <QComboBox>
+#include <QDialogButtonBox>
 #include <QDir>
 #include <QEnterEvent>
 #include <QFileInfo>
@@ -56,12 +57,20 @@ QMap<int, QList<int>> scanThumbnails(const QString &t_folder)
 
 // ---- Tile ------------------------------------------------------------------
 
-LaserContentTile::LaserContentTile(int t_cue, const QImage &t_thumbnail, bool t_current, QWidget *t_parent)
-    : QFrame(t_parent), m_cue(t_cue), m_thumbnail(t_thumbnail), m_current(t_current)
+LaserContentTile::LaserContentTile(int t_cue, const QImage &t_thumbnail, bool t_selected, QWidget *t_parent)
+    : QFrame(t_parent), m_cue(t_cue), m_thumbnail(t_thumbnail), m_selected(t_selected)
 {
     setFixedSize(kTileSize + 8, kTileSize + 24);
     setCursor(Qt::PointingHandCursor);
     setToolTip(QString("Cue %1").arg(t_cue));
+}
+
+void LaserContentTile::setSelected(bool t_selected)
+{
+    if(m_selected == t_selected)
+        return;
+    m_selected = t_selected;
+    update();
 }
 
 void LaserContentTile::setFrame(const QImage &t_frame)
@@ -85,10 +94,10 @@ void LaserContentTile::paintEvent(QPaintEvent *)
         painter.drawImage(target, image);
     }
 
-    // The capability's current cue keeps a green frame; hover adds a light one.
-    if(m_current || m_hovered)
+    // The selected cue has a green frame; hover adds a light one.
+    if(m_selected || m_hovered)
     {
-        painter.setPen(QPen(m_current ? QColor(90, 200, 120) : QColor(220, 220, 220), 2));
+        painter.setPen(QPen(m_selected ? QColor(90, 200, 120) : QColor(220, 220, 220), 2));
         painter.setBrush(Qt::NoBrush);
         painter.drawRect(imageRect.adjusted(-1, -1, 1, 1));
     }
@@ -121,10 +130,19 @@ void LaserContentTile::mousePressEvent(QMouseEvent *t_event)
         QFrame::mousePressEvent(t_event);
 }
 
+void LaserContentTile::mouseDoubleClickEvent(QMouseEvent *t_event)
+{
+    if(t_event->button() == Qt::LeftButton)
+        emit doubleClicked(m_cue);
+    else
+        QFrame::mouseDoubleClickEvent(t_event);
+}
+
 // ---- Browser ---------------------------------------------------------------
 
 LaserContentBrowser::LaserContentBrowser(const QString &t_folder, int t_page, int t_cue, QWidget *t_parent)
-    : QDialog(t_parent), m_folder(t_folder), m_currentPage(t_page), m_currentCue(t_cue)
+    : QDialog(t_parent), m_folder(t_folder), m_originalPage(t_page), m_originalCue(t_cue),
+      m_selectedPage(t_page), m_selectedCue(t_cue)
 {
     setWindowTitle("Laser Content");
     m_cuesByPage = scanThumbnails(t_folder);
@@ -159,6 +177,11 @@ LaserContentBrowser::LaserContentBrowser(const QString &t_folder, int t_page, in
 
     if(m_cuesByPage.isEmpty())
         layout->addWidget(new QLabel("No cue thumbnails found in " + QDir(t_folder).filePath("thumbs")));
+
+    auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
+    connect(buttons, &QDialogButtonBox::accepted, this, &QDialog::accept);
+    connect(buttons, &QDialogButtonBox::rejected, this, &LaserContentBrowser::reject);
+    layout->addWidget(buttons);
 
     m_player = new QMediaPlayer(this);
     m_sink = new QVideoSink(this);
@@ -231,16 +254,47 @@ void LaserContentBrowser::showPage(int t_page)
     {
         const int cue = cues[i];
         const QImage thumbnail(thumbs.filePath(cueName(t_page, cue) + ".png"));
-        const bool current = t_page == m_currentPage && cue == m_currentCue;
-        auto *tile = new LaserContentTile(cue, thumbnail, current);
+        const bool selected = t_page == m_selectedPage && cue == m_selectedCue;
+        auto *tile = new LaserContentTile(cue, thumbnail, selected);
         connect(tile, &LaserContentTile::hovered, this, &LaserContentBrowser::tileHovered);
         connect(tile, &LaserContentTile::clicked, this, [this, t_page](int t_cue){
-            m_selectedPage = t_page;
-            m_selectedCue = t_cue;
+            select(t_page, t_cue);
+        });
+        connect(tile, &LaserContentTile::doubleClicked, this, [this, t_page](int t_cue){
+            select(t_page, t_cue);
             accept();
         });
         m_grid->addWidget(tile, i / kColumns, i % kColumns);
     }
+}
+
+void LaserContentBrowser::select(int t_page, int t_cue)
+{
+    if(t_page == m_selectedPage && t_cue == m_selectedCue)
+        return;
+    m_selectedPage = t_page;
+    m_selectedCue = t_cue;
+
+    // Move the green frame (only the shown page has tiles).
+    for(int i = 0; i < m_grid->count(); ++i)
+    {
+        if(auto *tile = qobject_cast<LaserContentTile *>(m_grid->itemAt(i)->widget()))
+            tile->setSelected(t_page == m_shownPage && tile->cue() == t_cue);
+    }
+
+    emit contentSelected(t_page, t_cue);
+}
+
+void LaserContentBrowser::reject()
+{
+    // Back to what the capability had when the browser opened.
+    if(m_selectedPage != m_originalPage || m_selectedCue != m_originalCue)
+    {
+        m_selectedPage = m_originalPage;
+        m_selectedCue = m_originalCue;
+        emit contentSelected(m_originalPage, m_originalCue);
+    }
+    QDialog::reject();
 }
 
 void LaserContentBrowser::tileHovered(LaserContentTile *t_tile, bool t_entered)

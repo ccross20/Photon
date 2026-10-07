@@ -53,6 +53,12 @@ void MarkerIntegerEffect::setIncrementEvery(int t_value)
     updated();
 }
 
+void MarkerIntegerEffect::setIncrementAmount(int t_value)
+{
+    m_incrementAmount = std::max(t_value, 1);
+    updated();
+}
+
 void MarkerIntegerEffect::setStartMarker(int t_value)
 {
     m_startMarker = std::max(t_value, 1);
@@ -104,9 +110,9 @@ int MarkerIntegerEffect::valueAt(double t_globalTime) const
     switch(m_mode)
     {
     case ModeIncrement:
-        return m_min + steps % rangeSize;
+        return m_min + int((qint64(steps) * m_incrementAmount) % rangeSize);
     case ModeDecrement:
-        return m_max - steps % rangeSize;
+        return m_max - int((qint64(steps) * m_incrementAmount) % rangeSize);
     case ModeRandom:
     default:
     {
@@ -203,6 +209,9 @@ QWidget *MarkerIntegerEffect::createPropertyEditor()
     form->addRow("Increment Every (n) Markers", PropertyWidgets::createInteger(m_incrementEvery,
         {{PropertyWidgets::MetaMinimum, 1.0}, {PropertyWidgets::MetaMaximum, 1000.0}, {PropertyWidgets::MetaSoftMinimum, 1.0}, {PropertyWidgets::MetaSoftMaximum, 16.0}},
         [this](int v){ setIncrementEvery(v); }));
+    form->addRow("Increment Amount", PropertyWidgets::createInteger(m_incrementAmount,
+        {{PropertyWidgets::MetaMinimum, 1.0}, {PropertyWidgets::MetaMaximum, 100000.0}, {PropertyWidgets::MetaSoftMinimum, 1.0}, {PropertyWidgets::MetaSoftMaximum, 16.0}},
+        [this](int v){ setIncrementAmount(v); }));
     form->addRow("Start On Marker", PropertyWidgets::createInteger(m_startMarker,
         {{PropertyWidgets::MetaMinimum, 1.0}, {PropertyWidgets::MetaMaximum, 100000.0}, {PropertyWidgets::MetaSoftMinimum, 1.0}, {PropertyWidgets::MetaSoftMaximum, 64.0}},
         [this](int v){ setStartMarker(v); }));
@@ -218,6 +227,7 @@ void MarkerIntegerEffect::readFromJson(const QJsonObject &t_json)
     m_max = t_json.value("max").toInt(m_max);
     m_mode = static_cast<MarkerIntegerMode>(std::clamp(t_json.value("mode").toInt(m_mode), 0, int(ModeRandom)));
     m_incrementEvery = std::max(t_json.value("incrementEvery").toInt(m_incrementEvery), 1);
+    m_incrementAmount = std::max(t_json.value("incrementAmount").toInt(m_incrementAmount), 1);
     m_startMarker = std::max(t_json.value("startMarker").toInt(m_startMarker), 1);
 }
 
@@ -237,6 +247,7 @@ void MarkerIntegerEffect::writeToJson(QJsonObject &t_json) const
     t_json.insert("max", m_max);
     t_json.insert("mode", m_mode);
     t_json.insert("incrementEvery", m_incrementEvery);
+    t_json.insert("incrementAmount", m_incrementAmount);
     t_json.insert("startMarker", m_startMarker);
 }
 

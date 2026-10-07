@@ -62,23 +62,69 @@ void main()
     float b = 2.0 * (vd * cod - dot(v, co) * cos2);
     float c = cod * cod - dot(co, co) * cos2;
 
+    // The stretch [t0, t1] of the view ray that's inside the finite cone: in
+    // front of the camera, within the beam's length (0 <= s <= L along the
+    // axis), and inside the cone's surface.
+    //
+    // Inside the double cone is f(t) = a t^2 + b t + c >= 0. Which side of
+    // the roots that is depends on a: looking across a beam (a < 0) it's
+    // between them, but looking along one - a beam pointed at the camera, or
+    // the camera inside it - (a > 0) it's beyond them. Taking "between" in
+    // that case sampled the wrong part of the beam, bending a laser's straight
+    // sheets like a fisheye.
     const float EPS = 1e-5;
-    float t0, t1;
+
+    // Within the length, s = cod + t*vd.
+    float t0 = 0.0;
+    float t1 = 1e20;
+    if (abs(vd) > EPS) {
+        float tA = (0.0 - cod) / vd;
+        float tB = (L - cod) / vd;
+        t0 = max(t0, min(tA, tB));
+        t1 = min(t1, max(tA, tB));
+    } else if (cod < 0.0 || cod > L) {
+        discard;
+    }
+    if (t1 <= t0)
+        discard;
+
+    // Inside the surface. 0 <= s keeps it to the forward nappe, so of the two
+    // "beyond" stretches when a > 0, at most one overlaps [t0, t1].
     if (abs(a) < EPS) {
-        if (abs(b) < EPS)
-            discard;
-        t0 = t1 = -c / b;
+        if (abs(b) < EPS) {
+            if (c < 0.0)
+                discard;
+        } else {
+            float r = -c / b;
+            if (b > 0.0)
+                t0 = max(t0, r);
+            else
+                t1 = min(t1, r);
+        }
     } else {
         float disc = b * b - 4.0 * a * c;
-        if (disc < 0.0)
-            discard;
-        float sq = sqrt(disc);
-        t0 = (-b - sq) / (2.0 * a);
-        t1 = (-b + sq) / (2.0 * a);
-        if (t0 > t1) { float tmp = t0; t0 = t1; t1 = tmp; }
+        if (disc < 0.0) {
+            if (a < 0.0)
+                discard;                // never inside
+            // a > 0: inside along its whole length range
+        } else {
+            float sq = sqrt(disc);
+            float r0 = (-b - sq) / (2.0 * a);
+            float r1 = (-b + sq) / (2.0 * a);
+            if (r0 > r1) { float tmp = r0; r0 = r1; r1 = tmp; }
+            if (a < 0.0) {
+                t0 = max(t0, r0);
+                t1 = min(t1, r1);
+            } else {
+                float aHi = min(t1, r0);    // before the first root
+                float bLo = max(t0, r1);    // after the second
+                if (t1 > bLo)
+                    t0 = bLo;
+                else
+                    t1 = aHi;
+            }
+        }
     }
-
-    t0 = max(t0, 0.0);
     if (t1 <= t0)
         discard;
 

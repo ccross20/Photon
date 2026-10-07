@@ -43,14 +43,15 @@ void OscillatorNode::evaluate(keira::EvaluationContext *) const
     const double min = m_minParam->value().toDouble();
     const double max = m_maxParam->value().toDouble();
 
-    // sin() mapped from [-1, 1] to [0, 1] so the output spans [min, max]; the
-    // midpoint at phase 0 means Time 0 lands halfway and rises first.
+    // A cosine wave starting at its low point: Min at Time 0, Max halfway
+    // through the cycle (Time = Speed / 2), back to Min at Time = Speed - so a
+    // fade driven by it starts dark.
     constexpr double kTwoPi = 6.28318530717958647692;
-    double unit = 0.5;
+    double unit = 0.0;
     if(std::abs(speed) > 1e-9)
     {
         const double phase = (time / speed) * kTwoPi;
-        unit = std::sin(phase) * 0.5 + 0.5;
+        unit = 0.5 - 0.5 * std::cos(phase);
     }
 
     m_outputParam->setValue(min + unit * (max - min));

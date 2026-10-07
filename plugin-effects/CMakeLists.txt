@@ -29,6 +29,8 @@ set(SOURCES
     generator/cuemarkereffect.cpp
     generator/markerintegereffect.h
     generator/markerintegereffect.cpp
+    generator/markerwaveeffect.h
+    generator/markerwaveeffect.cpp
     modifier/easeeffect.h
     modifier/easeeffect.cpp
     generator/durationcurveeffect.h

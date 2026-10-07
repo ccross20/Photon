@@ -10,6 +10,12 @@
     "createDate": "2026-09-26",
     "lastModifyDate": "2026-09-26"
   },
+  "physical": {
+    "DMXconnector": "3-pin and 5-pin XLR",
+    "lens": {
+      "degreesMinMax": [15, 15]
+    }
+  },
   "comment": "Laser channels use Photon's custom {\"type\": \"Laser\", \"function\": ...} capability. Channels 2-13 only apply in the FB4 setup profile (Fixture Mode = 240).",
   "availableChannels": {
     "Fixture Mode": {

@@ -92,6 +92,7 @@ add_library(plugin-nodes SHARED ${SOURCES}
     utils/djconnectornode.h utils/djconnectornode.cpp
     fixture/scatterbeams.h fixture/scatterbeams.cpp
     fixture-list/fixturelistmergenode.h fixture-list/fixturelistmergenode.cpp
+    fixture-list/fixturelistsortnode.h fixture-list/fixturelistsortnode.cpp
     math/ifnode.h math/ifnode.cpp)
 
 target_include_directories(plugin-nodes PUBLIC ../keira)
