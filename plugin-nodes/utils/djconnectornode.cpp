@@ -1,6 +1,7 @@
 #include <cmath>
 #include "djconnectornode.h"
 #include "virtualdj/virtualdjconnector.h"
+#include "virtualdj/virtualdjplayback.h"
 #include "photoncore.h"
 
 namespace photon {
@@ -78,6 +79,16 @@ void DJConnectorNode::createParameters()
     // values again whenever that same song comes back).
     songIdParam = new keira::IntegerParameter("songId","Song ID", 0, keira::AllowMultipleOutput);
     addParameter(songIdParam);
+
+    // Whether VirtualDJ is actually playing (its position is moving), and
+    // whether the track has a Song Library sequence to play - the same match
+    // the VirtualDJ Player node uses. Together: switch between a sequence and
+    // a generic live look.
+    isPlayingParam = new keira::BooleanParameter("isPlaying", "Is Playing", false, keira::AllowMultipleOutput);
+    addParameter(isPlayingParam);
+
+    sequenceExistsParam = new keira::BooleanParameter("sequenceExists", "Sequence Exists", false, keira::AllowMultipleOutput);
+    addParameter(sequenceExistsParam);
 }
 
 void DJConnectorNode::evaluate(keira::EvaluationContext *t_context) const
@@ -120,6 +131,10 @@ void DJConnectorNode::evaluate(keira::EvaluationContext *t_context) const
         m_songId = songIdFromIdentity(identity);
     }
     songIdParam->setValue(m_songId);
+
+    const VirtualDJPlayback *playback = photonApp->djPlayback();
+    isPlayingParam->setValue(playback && playback->isPlaying());
+    sequenceExistsParam->setValue(playback && playback->hasSequence());
 }
 
 } // namespace photon

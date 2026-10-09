@@ -4,6 +4,7 @@
 #include "model/parameter/decimalparameter.h"
 #include "model/parameter/integerparameter.h"
 #include "model/parameter/optionparameter.h"
+#include "model/parameter/booleanparameter.h"
 
 namespace photon {
 
@@ -24,6 +25,8 @@ private:
     keira::DecimalParameter *beatAmountParam;
     keira::IntegerParameter *beatParam;
     keira::IntegerParameter *songIdParam;
+    keira::BooleanParameter *isPlayingParam;
+    keira::BooleanParameter *sequenceExistsParam;
 
     // Beat-reducer controls: Rate re-grids the beat/progress outputs onto a
     // slower ("/4","/2") or faster ("x2","x4","x8") pulse than the DJ's own

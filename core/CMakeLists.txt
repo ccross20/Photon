@@ -165,6 +165,10 @@ set(PROJECT_SOURCES
         graph/node/math/mathconstantnode.cpp
         graph/node/math/absolutenode.h
         graph/node/math/absolutenode.cpp
+        graph/node/math/invertnode.h
+        graph/node/math/invertnode.cpp
+        graph/node/math/easeddelaynode.h
+        graph/node/math/easeddelaynode.cpp
         graph/node/math/squarerootnode.h
         graph/node/math/squarerootnode.cpp
         graph/node/math/mathfunctionnode.h

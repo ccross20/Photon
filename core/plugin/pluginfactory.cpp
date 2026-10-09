@@ -61,6 +61,8 @@
 #include "graph/node/math/roundnode.h"
 #include "graph/node/math/mathconstantnode.h"
 #include "graph/node/math/absolutenode.h"
+#include "graph/node/math/invertnode.h"
+#include "graph/node/math/easeddelaynode.h"
 #include "graph/node/math/squarerootnode.h"
 #include "graph/node/math/mathfunctionnode.h"
 #include "graph/node/math/clampnode.h"
@@ -256,6 +258,8 @@ void PluginFactory::init()
     registerNode(RoundNode::info());
     registerNode(MathConstantNode::info());
     registerNode(AbsoluteNode::info());
+    registerNode(InvertNode::info());
+    registerNode(EasedDelayNode::info());
     registerNode(SquareRootNode::info());
     registerNode(MathFunctionNode::info());
     registerNode(ClampNode::info());

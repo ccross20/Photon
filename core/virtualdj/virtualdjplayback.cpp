@@ -53,6 +53,22 @@ VirtualDJPlayback::~VirtualDJPlayback()
     m_sequence = nullptr;
 }
 
+bool VirtualDJPlayback::isPlaying() const
+{
+    QMutexLocker lock(&m_mutex);
+    return m_playing && m_clock.elapsed() - m_receivedMs <= kStaleAfterMs;
+}
+
+bool VirtualDJPlayback::hasSequence() const
+{
+    // Only while VirtualDJ is still there: the match from before a lost
+    // connection (or a VirtualDJ that stopped sending) doesn't count.
+    if(!m_connector->isConnected())
+        return false;
+    QMutexLocker lock(&m_mutex);
+    return m_sequence != nullptr && m_clock.elapsed() - m_receivedMs <= kStaleAfterMs;
+}
+
 bool VirtualDJPlayback::process(const std::function<void(Sequence *, double)> &t_fn) const
 {
     QMutexLocker lock(&m_mutex);

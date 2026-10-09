@@ -28,6 +28,14 @@ public:
     // sequence can't be unloaded while fn runs. Safe from any thread.
     bool process(const std::function<void(Sequence *, double songTime)> &fn) const;
 
+    // Whether VirtualDJ's song position is advancing (and its telemetry is
+    // still arriving). Safe from any thread.
+    bool isPlaying() const;
+    // Whether the current track matched a Song Library song with a sequence
+    // to play - what process() plays - while VirtualDJ is connected and
+    // sending. Safe from any thread.
+    bool hasSequence() const;
+
     // Human-readable match state, e.g. for logging or a status display.
     QString status() const;
 
