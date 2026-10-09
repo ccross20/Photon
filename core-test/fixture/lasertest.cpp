@@ -64,7 +64,7 @@ void LaserTest::neutralValues()
     DMXMatrix matrix(1);
     LaserCapability::writeNeutralValues(&fixture, matrix);
 
-    QCOMPARE(word(matrix, ChZoom), 32768);
+    QCOMPARE(word(matrix, ChZoom), 65535);   // sizes are absolute: full
     QCOMPARE(word(matrix, ChPositionX), 32768);
     QCOMPARE(word(matrix, ChRotation), 0);
     QCOMPARE(matrix.valueInt(0, ChCueSpeed), 100);

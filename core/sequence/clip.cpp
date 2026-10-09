@@ -87,6 +87,13 @@ QColor Clip::color() const
     return m_impl->color;
 }
 
+QColor Clip::displayColor() const
+{
+    if(m_impl->color.isValid())
+        return m_impl->color;
+    return m_impl->layer ? m_impl->layer->defaultClipColor() : QColor(214, 69, 65);
+}
+
 void Clip::setColor(const QColor &t_color)
 {
     if(m_impl->color == t_color)

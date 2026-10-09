@@ -64,7 +64,7 @@ void SequenceClip::paint(QPainter *painter, const QStyleOptionGraphicsItem *item
     float strengthY = m_impl->clip->layer()->height() * m_impl->clip->strength();
     float h = m_impl->clip->layer()->height();
 
-    const QColor baseColor = m_impl->clip->color().isValid() ? m_impl->clip->color() : QColor(Qt::red);
+    const QColor baseColor = m_impl->clip->displayColor();
     painter->fillRect(scaledRect.adjusted(1,1,-1,-1), baseColor.darker());
     QPainterPath path;
     path.moveTo(0,scaledRect.height());

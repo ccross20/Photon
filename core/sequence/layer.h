@@ -1,6 +1,7 @@
 #ifndef PHOTON_LAYER_H
 #define PHOTON_LAYER_H
 
+#include <QColor>
 #include "photon-global.h"
 
 namespace photon {
@@ -19,6 +20,11 @@ public:
     void setName(const QString &name);
     QUuid guid() const;
     QByteArray layerType() const;
+
+    // The colour its clips show when they have none of their own - one per
+    // layer, picked by the layer's position in the sequence so neighbouring
+    // layers stand apart.
+    QColor defaultClipColor() const;
 
     // Muted layers are skipped entirely by Sequence::processChannels - their
     // clips keep their data (nothing is deleted), they just stop contributing

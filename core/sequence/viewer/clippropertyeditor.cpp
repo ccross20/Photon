@@ -198,7 +198,7 @@ void ClipPropertyEditor::refresh()
         m_name->setText(m_clip->name());
     m_type->setText(clipTypeName(m_clip));
     m_layer->setText(m_clip->layer() ? m_clip->layer()->name() : QString());
-    m_color->setColor(m_clip->color().isValid() ? m_clip->color() : kDefaultClipColor);
+    m_color->setColor(m_clip->displayColor());
 
     m_start->setValue(m_clip->startTime());
     m_end->setValue(m_clip->endTime());

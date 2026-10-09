@@ -78,7 +78,8 @@ enum CapabilityType{
     Capability_LaserColor,
     Capability_LaserScanRate,
     Capability_LaserVisiblePoints,
-    Capability_LaserStrobe
+    Capability_LaserStrobe,
+    Capability_Fog
 };
 
 enum FixtureUnit{

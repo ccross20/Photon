@@ -34,9 +34,11 @@ void LaserContentState::evaluate(const StateEvaluationContext &t_context) const
 LaserSizeState::LaserSizeState() : StateCapability(Capability_LaserSize)
 {
     setName("Size");
-    addAvailableChannel(ChannelInfo(ChannelInfo::ChannelTypeNumber, "Zoom", "-1 to 1, 0 = unchanged", 0.0, -1.0, 1.0));
-    addAvailableChannel(ChannelInfo(ChannelInfo::ChannelTypeNumber, "Size X", "-1 to 1, 0 = unchanged", 0.0, -1.0, 1.0));
-    addAvailableChannel(ChannelInfo(ChannelInfo::ChannelTypeNumber, "Size Y", "-1 to 1, 0 = unchanged", 0.0, -1.0, 1.0));
+    // Absolute on the FB4: 1 = full size, 0 = collapsed, negative = mirrored.
+    // The content is Zoom x Size X wide and Zoom x Size Y tall.
+    addAvailableChannel(ChannelInfo(ChannelInfo::ChannelTypeNumber, "Zoom", "-1 to 1, 1 = full size, 0 = collapsed, negative = mirrored", 1.0, -1.0, 1.0));
+    addAvailableChannel(ChannelInfo(ChannelInfo::ChannelTypeNumber, "Size X", "-1 to 1, 1 = full width, 0 = collapsed, negative = mirrored", 1.0, -1.0, 1.0));
+    addAvailableChannel(ChannelInfo(ChannelInfo::ChannelTypeNumber, "Size Y", "-1 to 1, 1 = full height, 0 = collapsed, negative = mirrored", 1.0, -1.0, 1.0));
 }
 
 void LaserSizeState::evaluate(const StateEvaluationContext &t_context) const

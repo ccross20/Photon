@@ -5,6 +5,7 @@
 #include "dimmerstate.h"
 #include "ctostate.h"
 #include "uvstate.h"
+#include "fogstate.h"
 #include "zoomstate.h"
 #include "focusstate.h"
 #include "panstate.h"
@@ -48,6 +49,9 @@ StateCapability *State::Impl::addCapability(CapabilityType t_type)
             break;
         case Capability_UV:
             toAdd = new UVState;
+            break;
+        case Capability_Fog:
+            toAdd = new FogState;
             break;
         case Capability_Focus:
             toAdd = new FocusState;

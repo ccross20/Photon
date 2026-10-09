@@ -18,6 +18,10 @@
 #include "fixture-list/fixturelistintervalsubsetnode.h"
 #include "fixture-list/fixturelistmergenode.h"
 #include "fixture-list/fixturelistsortnode.h"
+#include "fixture-list/fixturelistrandomizenode.h"
+#include "fixture-list/fixturelistsubsetnode.h"
+#include "midi/midicuenode.h"
+#include "midi/midicontrollernode.h"
 #include "canvas/canvasreader.h"
 #include "canvas/canvaswriter.h"
 #include "canvas/drawrectangle.h"
@@ -91,6 +95,10 @@ bool PluginNodes::initialize(const PluginContext &context)
     photonApp->plugins()->registerNode(FixtureListIntervalSubsetNode::info());
     photonApp->plugins()->registerNode(FixtureListMergeNode::info());
     photonApp->plugins()->registerNode(FixtureListSortNode::info());
+    photonApp->plugins()->registerNode(FixtureListRandomizeNode::info());
+    photonApp->plugins()->registerNode(FixtureListSubsetNode::info());
+    photonApp->plugins()->registerNode(MidiCueNode::info());
+    photonApp->plugins()->registerNode(MidiControllerNode::info());
     photonApp->plugins()->registerNode(ColorPaletteNode::info());
     photonApp->plugins()->registerNode(ColorFromColorPalette::info());
     photonApp->plugins()->registerNode(FadeColorPaletteNode::info());

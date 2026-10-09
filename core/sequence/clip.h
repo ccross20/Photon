@@ -40,6 +40,9 @@ public:
     // Display color in the timeline. Invalid means "use the default".
     QColor color() const;
     void setColor(const QColor &);
+    // color() if set, else its layer's default clip colour - what the clip
+    // is drawn and shown in.
+    QColor displayColor() const;
     void setId(const QByteArray&);
     QByteArray id() const;
     QByteArray uniqueId() const;

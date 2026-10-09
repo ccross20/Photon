@@ -14,6 +14,7 @@ public:
     FixtureCapabilityTest(QObject *parent = nullptr);
 
 private slots:
+    void fogMachine();
     void unitTest();
 };
 

@@ -93,6 +93,10 @@ add_library(plugin-nodes SHARED ${SOURCES}
     fixture/scatterbeams.h fixture/scatterbeams.cpp
     fixture-list/fixturelistmergenode.h fixture-list/fixturelistmergenode.cpp
     fixture-list/fixturelistsortnode.h fixture-list/fixturelistsortnode.cpp
+    fixture-list/fixturelistrandomizenode.h fixture-list/fixturelistrandomizenode.cpp
+    fixture-list/fixturelistsubsetnode.h fixture-list/fixturelistsubsetnode.cpp
+    midi/midicuenode.h midi/midicuenode.cpp
+    midi/midicontrollernode.h midi/midicontrollernode.cpp
     math/ifnode.h math/ifnode.cpp)
 
 target_include_directories(plugin-nodes PUBLIC ../keira)

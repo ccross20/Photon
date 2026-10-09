@@ -127,13 +127,16 @@ int LaserCapability::neutralRaw() const
     const bool wide = is16Bit();
     switch(m_function)
     {
+    // Sizes are absolute on the FB4 (+100% = full, 0 = collapsed, negative =
+    // mirrored), so neutral is full size, not the centre word.
     case Function_Zoom:
     case Function_SizeX:
     case Function_SizeY:
-    case Function_PositionX:
-    case Function_PositionY:
     case Function_SetupSizeX:
     case Function_SetupSizeY:
+        return wide ? 65535 : 255;
+    case Function_PositionX:
+    case Function_PositionY:
     case Function_SetupPositionX:
     case Function_SetupPositionY:
         return wide ? 32768 : 128;

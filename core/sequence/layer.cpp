@@ -1,3 +1,4 @@
+#include <algorithm>
 #include "layer_p.h"
 #include "sequence.h"
 
@@ -121,5 +122,23 @@ void Layer::writeToJson(QJsonObject &t_json) const
 
 }
 
+
+QColor Layer::defaultClipColor() const
+{
+    // Distinct, mid-bright hues that read on the dark timeline; the first
+    // layer keeps the old red default.
+    static const QVector<QColor> palette = {
+        QColor(214, 69, 65),    // red
+        QColor(230, 145, 56),   // orange
+        QColor(214, 196, 60),   // yellow
+        QColor(96, 184, 87),    // green
+        QColor(58, 175, 169),   // teal
+        QColor(72, 133, 214),   // blue
+        QColor(142, 98, 204),   // purple
+        QColor(212, 88, 158),   // pink
+    };
+    const int index = sequence() ? int(sequence()->layers().indexOf(const_cast<Layer*>(this))) : 0;
+    return palette[std::max(index, 0) % palette.size()];
+}
 
 } // namespace photon

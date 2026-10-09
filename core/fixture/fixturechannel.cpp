@@ -12,6 +12,7 @@
 #include "capability/prismcapability.h"
 #include "capability/ctocapability.h"
 #include "capability/uvcapability.h"
+#include "capability/fogcapability.h"
 #include "capability/lasercapability.h"
 
 namespace photon {
@@ -51,6 +52,8 @@ void FixtureChannel::Impl::addCapability(const QJsonObject &t_json)
         capability = new PrismCapability();
     else if(typeString == "laser")
         capability = new LaserCapability();
+    else if(typeString == "fog" || typeString == "fogoutput")
+        capability = new FogCapability();
     else if(typeString == "colorintensity")
     {
         auto colorString = t_json.value("color").toString().toLower();

@@ -40,6 +40,11 @@ public:
     QVector<double> previewMarkers;
     DragMode dragMode = DragNone;
     double initialTime = 0;
+    // Cmd-drag on a marker: the selection is duplicated (originals left in
+    // place, the copies dragged) once the mouse has actually moved, so a
+    // Cmd-click that doesn't drag leaves no stacked copy.
+    bool duplicatePending = false;
+    int pressX = 0;
     Range selectionRange;
     QToolButton *deleteButton = nullptr;
 };
@@ -157,6 +162,8 @@ void SequenceWaveformEditor::editableCueLayerChanged(photon::CueLayer* t_layer)
         connect(m_impl->editableLayer, &CueLayer::markersChanged, this, &SequenceWaveformEditor::markersUpdated);
     }
     m_impl->editableLayer = t_layer;
+    // A selection belongs to the layer it was made on.
+    m_impl->selectedMarkers.clear();
     if(t_layer)
     {
         m_impl->otherMarkers = t_layer->markers();
@@ -223,19 +230,34 @@ void SequenceWaveformEditor::pasteMarkers()
 
     const QString text = QString::fromUtf8(QGuiApplication::clipboard()->mimeData()->data(kMarkerMime));
 
-    // Whatever was selected joins the rest; the pasted markers become the
-    // selection so they can be dragged into place straight away.
-    m_impl->otherMarkers.append(m_impl->selectedMarkers);
-    m_impl->selectedMarkers.clear();
-
+    QList<float> pasted;
     for(const QString &line : text.split('\n', Qt::SkipEmptyParts))
     {
         bool ok = false;
         const float time = line.toFloat(&ok);
-        if(!ok)
-            continue;
+        if(ok)
+            pasted.append(time);
+    }
+    if(pasted.isEmpty())
+        return;
+
+    // Placed at the playhead: the earliest pasted marker lands on it and the
+    // rest keep their spacing. (At their copied times they'd mostly coincide
+    // with the markers they were copied from and be dropped as duplicates.)
+    const float shift = float(playheadTime()) - *std::min_element(pasted.cbegin(), pasted.cend());
+
+    // Build on the layer's actual markers rather than the cached split,
+    // which can be stale if they changed elsewhere. Whatever was selected
+    // joins the rest; the pasted markers become the selection so they can be
+    // dragged into place straight away.
+    m_impl->otherMarkers = m_impl->editableLayer->markers();
+    m_impl->selectedMarkers.clear();
+
+    for(float marker : pasted)
+    {
+        const float time = marker + shift;
         const bool exists = std::any_of(m_impl->otherMarkers.cbegin(), m_impl->otherMarkers.cend(),
-                                        [time](float marker){ return std::abs(marker - time) < kSameMarkerTolerance; });
+                                        [time](float other){ return std::abs(other - time) < kSameMarkerTolerance; });
         if(!exists)
             m_impl->selectedMarkers.append(time);
     }
@@ -478,6 +500,50 @@ void SequenceWaveformEditor::mousePressEvent(QMouseEvent *t_event)
     auto x = t_event->pos().x();
     auto time = xToTime(t_event->pos().x());
     m_impl->initialTime = time;
+    m_impl->pressX = x;
+    m_impl->duplicatePending = false;
+
+    auto hitIndex = [this, x](const QVector<float> &t_markers) {
+        for(int i = 0; i < t_markers.size(); ++i)
+        {
+            if(!visibleRange().contains(t_markers[i]))
+                continue;
+            const auto markerX = timeToX(t_markers[i]);
+            if(x >= markerX && x <= markerX + 2)
+                return i;
+        }
+        return -1;
+    };
+
+    // Cmd on a marker: duplicate-drag the selection (or just that marker,
+    // added to the selection with Shift). Cmd on empty waveform still adds a
+    // marker, below.
+    if((t_event->modifiers() & Qt::ControlModifier) && m_impl->editableLayer)
+    {
+        bool onMarker = hitIndex(m_impl->selectedMarkers) >= 0;
+        if(!onMarker)
+        {
+            const int other = hitIndex(m_impl->otherMarkers);
+            if(other >= 0)
+            {
+                const float marker = m_impl->otherMarkers[other];
+                if(!(t_event->modifiers() & Qt::ShiftModifier))
+                    m_impl->clearMarkers();
+                m_impl->otherMarkers.removeOne(marker);
+                m_impl->selectedMarkers.append(marker);
+                updateMarkerDeleteButton();
+                onMarker = true;
+            }
+        }
+        if(onMarker)
+        {
+            m_impl->dragMode = Impl::DragMove;
+            m_impl->selectedMarkersInitial = m_impl->selectedMarkers;
+            m_impl->duplicatePending = true;
+            update();
+            return;
+        }
+    }
 
     if(t_event->modifiers() & Qt::ControlModifier)
     {
@@ -567,6 +633,17 @@ void SequenceWaveformEditor::mouseMoveEvent(QMouseEvent *t_event)
 
         if(m_impl->dragMode == Impl::DragMove)
         {
+            if(m_impl->duplicatePending)
+            {
+                // Not a drag yet: leave everything where it is.
+                if(std::abs(x - m_impl->pressX) < 3)
+                    return;
+                // Leave copies of the originals behind; the selection (now
+                // the duplicates) is what moves.
+                m_impl->otherMarkers.append(m_impl->selectedMarkersInitial);
+                m_impl->duplicatePending = false;
+            }
+
             m_impl->selectedMarkers = m_impl->selectedMarkersInitial;
             for(auto &marker : m_impl->selectedMarkers)
             {
@@ -633,6 +710,7 @@ void SequenceWaveformEditor::mouseReleaseEvent(QMouseEvent *t_event)
 
 
     m_impl->dragMode = Impl::DragNone;
+    m_impl->duplicatePending = false;
 }
 
 void SequenceWaveformEditor::deleteSelectedMarkers()

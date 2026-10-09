@@ -493,6 +493,7 @@ add_library(photon-core SHARED ${PROJECT_SOURCES}
     scene/scenebox.h scene/scenebox.cpp
     scene/sceneambientlight.h scene/sceneambientlight.cpp
     scene/scenedirectionallight.h scene/scenedirectionallight.cpp
+    midi/midioutput.h midi/midioutput.cpp
     state/gobostate.h state/gobostate.cpp
     fixture/capability/wheelshakecapability.h fixture/capability/wheelshakecapability.cpp
     fixture/capability/wheelrotationcapability.h fixture/capability/wheelrotationcapability.cpp
@@ -607,7 +608,10 @@ add_library(photon-core SHARED ${PROJECT_SOURCES}
     fixture/lasercontentbrowser.h fixture/lasercontentbrowser.cpp
     state/laserstates.h state/laserstates.cpp
     graph/node/fixture/laserstatenode.h graph/node/fixture/laserstatenode.cpp
-    resources/fixtures/pangolin-fb4.json)
+    resources/fixtures/pangolin-fb4.json
+    resources/fixtures/generic-fog-machine.json
+    fixture/capability/fogcapability.h fixture/capability/fogcapability.cpp
+    state/fogstate.h state/fogstate.cpp)
 
 qt6_add_shaders(photon-core "canvas_shaders"
     PREFIX "/canvas/shaders"
@@ -638,6 +642,10 @@ target_link_libraries(photon-core PUBLIC photon-ui)
 target_link_libraries(photon-core PRIVATE keira)
 target_link_libraries(photon-core PRIVATE Qt6::Concurrent)
 target_link_libraries(photon-core PRIVATE Qt6::Sql)
+if(APPLE)
+    # MidiOutput
+    target_link_libraries(photon-core PRIVATE "-framework CoreMIDI" "-framework CoreFoundation")
+endif()
 target_link_libraries(photon-core PRIVATE Qt6::Quick Qt6::Qml Qt6::QuickWidgets)
 
 target_link_libraries(photon-core PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)

@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QInputDialog>
@@ -180,6 +181,14 @@ void SongLibraryPanel::refreshTree()
         songItem->setText(0, songLabel(song));
         songItem->setData(0, IdRole, song.id);
         songItem->setData(0, KindRole, SongItem);
+
+        // Grey out songs with nothing to play: no default sequence (which,
+        // since the first sequence added becomes the default, means no
+        // sequence at all).
+        const bool hasDefault = std::any_of(song.sequences.cbegin(), song.sequences.cend(),
+                                            [](const SongLibrarySequenceEntry &seq){ return seq.isDefault; });
+        if(!hasDefault)
+            songItem->setForeground(0, QColor(130, 130, 130));
 
         // A song with only one sequence has nothing to disambiguate - the
         // song row itself stands in for it (double-click opens it directly).

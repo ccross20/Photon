@@ -144,6 +144,7 @@ QVector<FixtureStateNode::CapabilityOption> FixtureStateNode::addableCapabilitie
         {"Wheel Slot Rotation", Capability_WheelSlotRotation},
         {"Lens Rotation", Capability_LensRotation},
         {"Prism", Capability_Prism},
+        {"Fog", Capability_Fog},
     };
 }
 

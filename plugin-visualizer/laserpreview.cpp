@@ -49,6 +49,13 @@ double centered(const Fixture *t_fixture, Function t_function, const DMXMatrix &
     return word < center ? word / center - 1.0 : (word - center) / (top - center);
 }
 
+// An absolute size channel (Zoom, Size X/Y): -1..1, full size (1) when the
+// fixture has no such channel.
+double sizeValue(const Fixture *t_fixture, Function t_function, const DMXMatrix &t_dmx)
+{
+    return LaserCapability::find(t_fixture, t_function) ? centered(t_fixture, t_function, t_dmx) : 1.0;
+}
+
 double fraction(const Fixture *t_fixture, Function t_function, const DMXMatrix &t_dmx, double t_default)
 {
     auto *cap = LaserCapability::find(t_fixture, t_function);
@@ -292,9 +299,11 @@ QImage LaserPreview::frameFor(Fixture *t_fixture, const DMXMatrix &t_dmx, float 
     const double speed = rotationSpeed(t_fixture, t_dmx);
     laser.spin = speed == 0.0 ? 0.0f : float(std::fmod(laser.spin + speed * 360.0 * t_dt, 360.0));
     const double angle = fraction(t_fixture, Function::Function_Angle, t_dmx, 0.0) * 360.0 + laser.spin;
-    const double zoom = 1.0 + centered(t_fixture, Function::Function_Zoom, t_dmx);
-    const double sizeX = std::max(0.0, zoom * (1.0 + centered(t_fixture, Function::Function_SizeX, t_dmx)));
-    const double sizeY = std::max(0.0, zoom * (1.0 + centered(t_fixture, Function::Function_SizeY, t_dmx)));
+    // Absolute, like the setup size: +100% = full, 0 = collapsed, negative =
+    // mirrored; Zoom multiplies both axes.
+    const double zoom = sizeValue(t_fixture, Function::Function_Zoom, t_dmx);
+    const double sizeX = zoom * sizeValue(t_fixture, Function::Function_SizeX, t_dmx);
+    const double sizeY = zoom * sizeValue(t_fixture, Function::Function_SizeY, t_dmx);
     const double positionX = centered(t_fixture, Function::Function_PositionX, t_dmx);
     const double positionY = centered(t_fixture, Function::Function_PositionY, t_dmx);
 
